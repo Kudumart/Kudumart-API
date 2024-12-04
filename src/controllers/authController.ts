@@ -261,7 +261,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     // Check if user exists
     if (!user) {
-      res.status(400).json({ message: "Invalid email" });
+      res.status(400).json({ message: "Email doesn't exist" });
       return;
     }
 

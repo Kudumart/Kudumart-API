@@ -28,4 +28,6 @@ userRoutes.post('/messages', authMiddleware, validateSendMessage(), validate, us
 userRoutes.delete('/messages', authMiddleware, userController.deleteMessageHandler);
 userRoutes.patch('/mark/message/read', authMiddleware, userController.markAsReadHandler);
 
+// Bid
+userRoutes.post('/place/bid', authMiddleware, userController.placeBid)
 export default userRoutes;

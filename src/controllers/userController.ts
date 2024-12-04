@@ -14,6 +14,9 @@ import UserNotificationSetting from "../models/usernotificationsetting";
 import Message from "../models/message";
 import Product from "../models/product";
 import Conversation from "../models/conversation";
+import AuctionProduct from "../models/auctionproduct";
+import Bid from "../models/bid";
+import { io } from "../index";
 
 export const logout = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -225,12 +228,10 @@ export const updateProfileEmail = async (
     }
 
     // Send response
-    res
-      .status(200)
-      .json({
-        message: "New email verification code sent successfully",
-        data: newEmail,
-      });
+    res.status(200).json({
+      message: "New email verification code sent successfully",
+      data: newEmail,
+    });
   } catch (error) {
     logger.error("Error updating profile email:", error);
     res
@@ -349,12 +350,10 @@ export const updateProfilePhoneNumber = async (
     const smsMessage = `Your ${process.env.APP_NAME} OTP code to verify your new phone number is: ${otpCode}`;
     try {
       await sendSMS(newPhoneNumber, smsMessage);
-      res
-        .status(200)
-        .json({
-          message: "OTP sent to your new phone number for verification",
-          data: newPhoneNumber,
-        });
+      res.status(200).json({
+        message: "OTP sent to your new phone number for verification",
+        data: newPhoneNumber,
+      });
     } catch (smsError) {
       logger.error("Error sending SMS:", smsError);
       res
@@ -527,11 +526,9 @@ export const updateUserNotificationSettings = async (
     }
   } catch (error: any) {
     logger.error(error);
-    res
-      .status(500)
-      .json({
-        message: error.message || "Error updating notification settings.",
-      });
+    res.status(500).json({
+      message: error.message || "Error updating notification settings.",
+    });
   }
 };
 
@@ -596,12 +593,10 @@ export const getConversations = async (
       order: [["createdAt", "DESC"]],
     });
 
-    res
-      .status(200)
-      .json({
-        message: "Conversations fetched successfully",
-        data: conversations,
-      });
+    res.status(200).json({
+      message: "Conversations fetched successfully",
+      data: conversations,
+    });
   } catch (error: any) {
     logger.error("Error fetching conversations:", error);
     res.status(500).json({ message: error.message || "Internal server error" });
@@ -640,7 +635,7 @@ export const getAllConversationMessages = async (
         },
         {
           model: Product,
-          as: 'product',
+          as: "product",
           attributes: ["id", "name", "price"],
         },
       ],
@@ -648,7 +643,9 @@ export const getAllConversationMessages = async (
     });
 
     if (!conversation) {
-      res.status(404).json({ message: "No conversation found with the given ID." });
+      res
+        .status(404)
+        .json({ message: "No conversation found with the given ID." });
       return;
     }
 
@@ -682,11 +679,9 @@ export const sendMessageHandler = async (
 
   // Ensure userId is defined
   if (!userId) {
-    res
-      .status(400)
-      .json({
-        message: "Sender ID is required and user must be authenticated",
-      });
+    res.status(400).json({
+      message: "Sender ID is required and user must be authenticated",
+    });
     return;
   }
 
@@ -787,11 +782,9 @@ export const deleteMessageHandler = async (
 
   // Ensure userId is defined
   if (!userId) {
-    res
-      .status(400)
-      .json({
-        message: "Sender ID is required and user must be authenticated",
-      });
+    res.status(400).json({
+      message: "Sender ID is required and user must be authenticated",
+    });
     return;
   }
 
@@ -865,5 +858,126 @@ export const markAsReadHandler = async (
   } catch (error) {
     logger.error("Error marking message as read:", error);
     res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Bid
+export const placeBid = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { auctionProductId, bidAmount } = req.body;
+    const bidderId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID from middleware
+
+    // Fetch the auction product
+    const auctionProduct = await AuctionProduct.findOne({
+      where: {
+        id: auctionProductId,
+        auctionStatus: "ongoing",
+        startDate: { [Op.lte]: new Date() },
+        endDate: { [Op.gte]: new Date() },
+      },
+      include: [
+        {
+          model: Bid,
+          as: "bids",
+          include: [
+            {
+              model: User,
+              as: "user",
+            },
+          ],
+        },
+      ],
+      order: [[{ model: Bid, as: "bids" }, "bidAmount", "DESC"]], // Ordering the bids by amount descending
+    });
+  
+
+    if (!auctionProduct) {
+      res
+        .status(404)
+        .json({
+          message: "Auction product not found or auction is not ongoing.",
+        });
+      return;
+    }
+
+    // Get the current highest bid
+    const highestBid = auctionProduct?.bids?.[0];
+
+    // Determine minimum acceptable bid
+    const minAcceptableBid = highestBid
+      ? Number(highestBid.bidAmount) + (auctionProduct.bidIncrement || 0)
+      : auctionProduct.price;
+
+    if (bidAmount < minAcceptableBid) {
+      res.status(400).json({
+        message: `Bid amount must be at least ${minAcceptableBid.toFixed(2)}.`,
+      });
+      return;
+    }
+
+    // Check if the bidder has exceeded max number of bids
+    const userBidCount = await Bid.count({
+      where: { auctionProductId, bidderId },
+    });
+
+    if (
+      auctionProduct.maxBidsPerUser &&
+      userBidCount >= auctionProduct.maxBidsPerUser
+    ) {
+      res.status(400).json({
+        message:
+          "You have reached the maximum number of bids allowed for this auction.",
+      });
+      return;
+    }
+
+    // Notify previous highest bidder
+    if (highestBid && highestBid.user) {
+      // Send mail
+      let message = emailTemplates.outBidNotification(highestBid, auctionProduct);
+      try {
+        await sendMail(
+          highestBid.user.email,
+          `${process.env.APP_NAME} - Outbid Notification`,
+          message
+        );
+      } catch (emailError) {
+        logger.error("Error sending email:", emailError); // Log error for internal use
+      }
+    }
+
+    // Create the new bid
+    const newBid = await Bid.create({
+      auctionProductId,
+      bidderId,
+      bidAmount,
+    });
+
+    // Update previous highest bid status
+    if (highestBid) {
+      highestBid.isWinningBid = false;
+      await highestBid.save();
+    }
+
+    // Mark new bid as the winning bid
+    newBid.isWinningBid = true;
+    await newBid.save();
+
+    // Real-time bid update via WebSocket
+    io.to(auctionProductId).emit("newBid", {
+      auctionProductId,
+      bidAmount: newBid.bidAmount,
+      bidderId: newBid.bidderId,
+    });
+
+    res.status(200).json({
+      message: "Bid placed successfully.",
+      data: newBid,
+    });
+  } catch (error: any) {
+    logger.error("Error placing bid:", error);
+    res.status(500).json({
+      message: "An error occurred while placing your bid.",
+    });
   }
 };

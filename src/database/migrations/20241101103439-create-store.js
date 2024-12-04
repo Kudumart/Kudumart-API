@@ -38,6 +38,10 @@ module.exports = {
         type: Sequelize.TEXT, // Any tips for finding the store, e.g., "Near Central Mall, second floor"
         allowNull: true
       },
+      logo: {
+        type: Sequelize.TEXT, // Any tips for finding the store, e.g., "Near Central Mall, second floor"
+        allowNull: true
+      },
       isVerified: {
         type: Sequelize.BOOLEAN,
         defaultValue: false, // Default is not verified

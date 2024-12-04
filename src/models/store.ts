@@ -25,6 +25,7 @@ class Store extends Model {
   };
   public deliveryOptions!: DeliveryOption[];
   public tipsOnFinding!: string;
+  public logo!: string;
   public isVerified!: boolean;
   public createdAt!: Date;
   public updatedAt!: Date;
@@ -37,7 +38,7 @@ class Store extends Model {
     });
     // Associate with User model
     this.hasMany(models.Product, { 
-      as: 'product',
+      as: 'products',
       foreignKey: 'storeId' 
     });
   }
@@ -78,6 +79,10 @@ const initModel = (sequelize: Sequelize) => {
         allowNull: true
       },
       tipsOnFinding: {
+        type: DataTypes.TEXT, // Any tips for finding the store, e.g., "Near Central Mall, second floor"
+        allowNull: true
+      },
+      logo: {
         type: DataTypes.TEXT, // Any tips for finding the store, e.g., "Near Central Mall, second floor"
         allowNull: true
       },

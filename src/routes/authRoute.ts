@@ -25,5 +25,8 @@ authRoutes.post("/auth/admin/login", loginValidationRules(), validate, authContr
 authRoutes.get('/categories', homeController.getCategoriesWithSubcategories); // Fetch categories with subcategories
 authRoutes.get("/products", homeController.products);
 authRoutes.get('/product', homeController.getProductById); // Fetch a single product by ID
-
+authRoutes.get("/stores", homeController.getAllStores);
+authRoutes.get('/store/products', homeController.getStoreProducts); // Fetch a single product by ID
+authRoutes.get("/auction/products", homeController.getUpcomingAuctionProducts);
+authRoutes.get('/auction/product', homeController.getAuctionProductById); // Fetch a single product by ID
 export default authRoutes; // Export the router

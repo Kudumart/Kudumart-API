@@ -26,6 +26,9 @@ app.use("/api", apiRouter); // Mount the router to /api
 // Configure Socket.IO
 configureSocket(io);
 
+// Export the io instance so it can be used elsewhere
+export { io };
+
 // Initialize and sync Sequelize
 sequelizeService.init()
     .then(async () => {

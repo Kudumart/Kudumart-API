@@ -54,6 +54,19 @@ export const configureSocket = (io: Server) => {
             }
         );
 
+        // Listen for events from the client
+        socket.on("newBid", (data) => {
+            console.log("Received new bid:", data);
+            // Emit this new bid to all connected clients
+            io.emit("newBid", data);
+        });
+
+        // Optionally, listen for other events like auction status updates, etc.
+        socket.on("auctionEnded", (data) => {
+            console.log("Auction ended:", data);
+            // Update the UI to display the winner or end the auction
+        });
+
         // Handle disconnection
         socket.on("disconnect", () => {
             activeConnections.forEach((socketId, userId) => {

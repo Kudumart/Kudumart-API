@@ -1,5 +1,7 @@
 // models/AuctionProduct.ts
 import { Model, DataTypes, Sequelize } from 'sequelize';
+import Bid from './bid';
+import User from './user';
 
 class AuctionProduct extends Model {
   public id!: string;
@@ -22,6 +24,10 @@ class AuctionProduct extends Model {
   public auctionStatus!: 'upcoming' | 'ongoing' | 'cancelled' | 'ended';
   public createdAt?: Date;
   public updatedAt?: Date;
+  public vendor?: User;  // Declare the relationship to User (vendor)
+
+  // Adding the 'bids' property for type safety
+  public bids?: Bid[];
 
   static associate(models: any) {
     // Define associations here
@@ -40,6 +46,11 @@ class AuctionProduct extends Model {
       foreignKey: 'categoryId',
       onDelete: 'RESTRICT',
     });
+    this.hasMany(models.Bid, {
+      as: 'bids',
+      foreignKey: 'auctionProductId',
+      onDelete: 'CASCADE',
+    })
   }
 }
 

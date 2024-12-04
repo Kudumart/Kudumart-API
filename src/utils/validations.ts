@@ -400,6 +400,10 @@ export const createStoreValidation = () => {
         }
         return true; // if all checks pass
       }),
+    check("logo")
+      .optional()
+      .isString()
+      .withMessage("Logo must be a valid string."),
     check("tipsOnFinding")
       .optional()
       .isString()

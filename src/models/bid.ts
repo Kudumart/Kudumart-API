@@ -1,5 +1,6 @@
 // models/AuctionProduct.ts
 import { Model, DataTypes, Sequelize } from 'sequelize';
+import User from './user';
 
 class Bid extends Model {
   public id!: string;
@@ -9,6 +10,8 @@ class Bid extends Model {
   public isWinningBid!: boolean;
   public createdAt?: Date;
   public updatedAt?: Date;
+
+  public user?: User;
 
   static associate(models: any) {
     // Define associations here

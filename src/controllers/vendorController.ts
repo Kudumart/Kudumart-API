@@ -97,7 +97,7 @@ export const createStore = async (
 ): Promise<void> => {
     const vendorId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID from middleware
 
-    const { name, location, businessHours, deliveryOptions, tipsOnFinding } =
+    const { name, location, logo, businessHours, deliveryOptions, tipsOnFinding } =
         req.body;
 
     try {
@@ -120,6 +120,7 @@ export const createStore = async (
             location,
             businessHours,
             deliveryOptions,
+            logo,
             tipsOnFinding,
         });
 
@@ -144,6 +145,7 @@ export const updateStore = async (
         businessHours,
         deliveryOptions,
         tipsOnFinding,
+        logo
     } = req.body;
 
     try {
@@ -174,6 +176,7 @@ export const updateStore = async (
             businessHours,
             deliveryOptions,
             tipsOnFinding,
+            logo
         });
 
         res
