@@ -44,6 +44,10 @@ class User extends sequelize_1.Model {
             foreignKey: 'vendorId',
             onDelete: 'RESTRICT',
         });
+        this.hasMany(models.Bid, {
+            foreignKey: 'bidderId',
+            as: 'bids',
+        });
     }
     // Add method to fetch KYC record
     getKyc() {

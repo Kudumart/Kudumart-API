@@ -112,7 +112,7 @@ exports.getStore = getStore;
 const createStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _d;
     const vendorId = (_d = req.user) === null || _d === void 0 ? void 0 : _d.id; // Authenticated user ID from middleware
-    const { name, location, businessHours, deliveryOptions, tipsOnFinding } = req.body;
+    const { name, location, logo, businessHours, deliveryOptions, tipsOnFinding } = req.body;
     try {
         // Check if a store with the same name exists for this vendorId
         const existingStore = yield store_1.default.findOne({
@@ -131,6 +131,7 @@ const createStore = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             location,
             businessHours,
             deliveryOptions,
+            logo,
             tipsOnFinding,
         });
         res
@@ -146,7 +147,7 @@ exports.createStore = createStore;
 const updateStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _e;
     const vendorId = (_e = req.user) === null || _e === void 0 ? void 0 : _e.id; // Authenticated user ID from middleware
-    const { storeId, name, location, businessHours, deliveryOptions, tipsOnFinding, } = req.body;
+    const { storeId, name, location, businessHours, deliveryOptions, tipsOnFinding, logo } = req.body;
     try {
         const store = yield store_1.default.findOne({ where: { id: storeId } });
         if (!store) {
@@ -172,6 +173,7 @@ const updateStore = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             businessHours,
             deliveryOptions,
             tipsOnFinding,
+            logo
         });
         res
             .status(200)

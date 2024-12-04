@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.verifyPayment = exports.checkVendorAuctionProductLimit = exports.checkVendorProductLimit = exports.fetchAdminWithPermissions = exports.sendSMS = exports.capitalizeFirstLetter = exports.generateOTP = void 0;
+exports.shuffleArray = exports.verifyPayment = exports.checkVendorAuctionProductLimit = exports.checkVendorProductLimit = exports.fetchAdminWithPermissions = exports.sendSMS = exports.capitalizeFirstLetter = exports.generateOTP = void 0;
 // utils/helpers.ts
 const http_1 = __importDefault(require("http"));
 const https_1 = __importDefault(require("https"));
@@ -207,4 +207,13 @@ const verifyPayment = (refId, paystackSecretKey) => {
     });
 };
 exports.verifyPayment = verifyPayment;
+// Utility function to shuffle an array
+const shuffleArray = (array) => {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+};
+exports.shuffleArray = shuffleArray;
 //# sourceMappingURL=helpers.js.map

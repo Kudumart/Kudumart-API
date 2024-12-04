@@ -234,7 +234,7 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const user = yield user_1.default.scope("auth").findOne({ where: { email } });
         // Check if user exists
         if (!user) {
-            res.status(400).json({ message: "Invalid email" });
+            res.status(400).json({ message: "Email doesn't exist" });
             return;
         }
         // Check if user is inactive

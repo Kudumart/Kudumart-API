@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.markAsReadHandler = exports.deleteMessageHandler = exports.saveMessage = exports.sendMessageHandler = exports.getAllConversationMessages = exports.getConversations = exports.updateUserNotificationSettings = exports.getUserNotificationSettings = exports.confirmPhoneNumberUpdate = exports.updateProfilePhoneNumber = exports.confirmEmailUpdate = exports.updateProfileEmail = exports.updatePassword = exports.updateProfilePhoto = exports.updateProfile = exports.profile = exports.logout = void 0;
+exports.placeBid = exports.markAsReadHandler = exports.deleteMessageHandler = exports.saveMessage = exports.sendMessageHandler = exports.getAllConversationMessages = exports.getConversations = exports.updateUserNotificationSettings = exports.getUserNotificationSettings = exports.confirmPhoneNumberUpdate = exports.updateProfilePhoneNumber = exports.confirmEmailUpdate = exports.updateProfileEmail = exports.updatePassword = exports.updateProfilePhoto = exports.updateProfile = exports.profile = exports.logout = void 0;
 const user_1 = __importDefault(require("../models/user"));
 const sequelize_1 = require("sequelize");
 const helpers_1 = require("../utils/helpers");
@@ -26,6 +26,9 @@ const usernotificationsetting_1 = __importDefault(require("../models/usernotific
 const message_1 = __importDefault(require("../models/message"));
 const product_1 = __importDefault(require("../models/product"));
 const conversation_1 = __importDefault(require("../models/conversation"));
+const auctionproduct_1 = __importDefault(require("../models/auctionproduct"));
+const bid_1 = __importDefault(require("../models/bid"));
+const index_1 = require("../index");
 const logout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Get the token from the request
@@ -205,9 +208,7 @@ const updateProfileEmail = (req, res) => __awaiter(void 0, void 0, void 0, funct
             logger_1.default.error("Error sending email:", emailError); // Log error for internal use
         }
         // Send response
-        res
-            .status(200)
-            .json({
+        res.status(200).json({
             message: "New email verification code sent successfully",
             data: newEmail,
         });
@@ -308,9 +309,7 @@ const updateProfilePhoneNumber = (req, res) => __awaiter(void 0, void 0, void 0,
         const smsMessage = `Your ${process.env.APP_NAME} OTP code to verify your new phone number is: ${otpCode}`;
         try {
             yield (0, helpers_1.sendSMS)(newPhoneNumber, smsMessage);
-            res
-                .status(200)
-                .json({
+            res.status(200).json({
                 message: "OTP sent to your new phone number for verification",
                 data: newPhoneNumber,
             });
@@ -462,9 +461,7 @@ const updateUserNotificationSettings = (req, res) => __awaiter(void 0, void 0, v
     }
     catch (error) {
         logger_1.default.error(error);
-        res
-            .status(500)
-            .json({
+        res.status(500).json({
             message: error.message || "Error updating notification settings.",
         });
     }
@@ -526,9 +523,7 @@ const getConversations = (req, res) => __awaiter(void 0, void 0, void 0, functio
             },
             order: [["createdAt", "DESC"]],
         });
-        res
-            .status(200)
-            .json({
+        res.status(200).json({
             message: "Conversations fetched successfully",
             data: conversations,
         });
@@ -566,14 +561,16 @@ const getAllConversationMessages = (req, res) => __awaiter(void 0, void 0, void 
                 },
                 {
                     model: product_1.default,
-                    as: 'product',
+                    as: "product",
                     attributes: ["id", "name", "price"],
                 },
             ],
             order: [[{ model: message_1.default, as: "message" }, "createdAt", "ASC"]], // Order messages by creation date
         });
         if (!conversation) {
-            res.status(404).json({ message: "No conversation found with the given ID." });
+            res
+                .status(404)
+                .json({ message: "No conversation found with the given ID." });
             return;
         }
         // Mark messages not sent by the user as read
@@ -600,9 +597,7 @@ const sendMessageHandler = (req, res) => __awaiter(void 0, void 0, void 0, funct
     const userId = (_o = req.user) === null || _o === void 0 ? void 0 : _o.id; // Get the authenticated user's ID
     // Ensure userId is defined
     if (!userId) {
-        res
-            .status(400)
-            .json({
+        res.status(400).json({
             message: "Sender ID is required and user must be authenticated",
         });
         return;
@@ -682,9 +677,7 @@ const deleteMessageHandler = (req, res) => __awaiter(void 0, void 0, void 0, fun
     const userId = (_p = req.user) === null || _p === void 0 ? void 0 : _p.id; // Get the authenticated user's ID
     // Ensure userId is defined
     if (!userId) {
-        res
-            .status(400)
-            .json({
+        res.status(400).json({
             message: "Sender ID is required and user must be authenticated",
         });
         return;
@@ -750,4 +743,107 @@ const markAsReadHandler = (req, res) => __awaiter(void 0, void 0, void 0, functi
     }
 });
 exports.markAsReadHandler = markAsReadHandler;
+// Bid
+const placeBid = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _r, _s;
+    try {
+        const { auctionProductId, bidAmount } = req.body;
+        const bidderId = (_r = req.user) === null || _r === void 0 ? void 0 : _r.id; // Authenticated user ID from middleware
+        // Fetch the auction product
+        const auctionProduct = yield auctionproduct_1.default.findOne({
+            where: {
+                id: auctionProductId,
+                auctionStatus: "ongoing",
+                startDate: { [sequelize_1.Op.lte]: new Date() },
+                endDate: { [sequelize_1.Op.gte]: new Date() },
+            },
+            include: [
+                {
+                    model: bid_1.default,
+                    as: "bids",
+                    include: [
+                        {
+                            model: user_1.default,
+                            as: "user",
+                        },
+                    ],
+                },
+            ],
+            order: [[{ model: bid_1.default, as: "bids" }, "bidAmount", "DESC"]], // Ordering the bids by amount descending
+        });
+        if (!auctionProduct) {
+            res
+                .status(404)
+                .json({
+                message: "Auction product not found or auction is not ongoing.",
+            });
+            return;
+        }
+        // Get the current highest bid
+        const highestBid = (_s = auctionProduct === null || auctionProduct === void 0 ? void 0 : auctionProduct.bids) === null || _s === void 0 ? void 0 : _s[0];
+        // Determine minimum acceptable bid
+        const minAcceptableBid = highestBid
+            ? Number(highestBid.bidAmount) + (auctionProduct.bidIncrement || 0)
+            : auctionProduct.price;
+        if (bidAmount < minAcceptableBid) {
+            res.status(400).json({
+                message: `Bid amount must be at least ${minAcceptableBid.toFixed(2)}.`,
+            });
+            return;
+        }
+        // Check if the bidder has exceeded max number of bids
+        const userBidCount = yield bid_1.default.count({
+            where: { auctionProductId, bidderId },
+        });
+        if (auctionProduct.maxBidsPerUser &&
+            userBidCount >= auctionProduct.maxBidsPerUser) {
+            res.status(400).json({
+                message: "You have reached the maximum number of bids allowed for this auction.",
+            });
+            return;
+        }
+        // Notify previous highest bidder
+        if (highestBid && highestBid.user) {
+            // Send mail
+            let message = messages_1.emailTemplates.outBidNotification(highestBid, auctionProduct);
+            try {
+                yield (0, mail_service_1.sendMail)(highestBid.user.email, `${process.env.APP_NAME} - Outbid Notification`, message);
+            }
+            catch (emailError) {
+                logger_1.default.error("Error sending email:", emailError); // Log error for internal use
+            }
+        }
+        // Create the new bid
+        const newBid = yield bid_1.default.create({
+            auctionProductId,
+            bidderId,
+            bidAmount,
+        });
+        // Update previous highest bid status
+        if (highestBid) {
+            highestBid.isWinningBid = false;
+            yield highestBid.save();
+        }
+        // Mark new bid as the winning bid
+        newBid.isWinningBid = true;
+        yield newBid.save();
+        // Real-time bid update via WebSocket
+        index_1.io.to(auctionProductId).emit("newBid", {
+            auctionProductId,
+            bidAmount: newBid.bidAmount,
+            bidderId: newBid.bidderId,
+        });
+        res.status(200).json({
+            message: "Bid placed successfully.",
+            data: newBid,
+        });
+    }
+    catch (error) {
+        logger_1.default.error("Error placing bid:", error);
+        res.status(500).json({
+            message: "An error occurred while placing your bid.",
+        });
+    }
+});
+exports.placeBid = placeBid;
 //# sourceMappingURL=userController.js.map

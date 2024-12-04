@@ -45,5 +45,9 @@ authRoutes.post("/auth/admin/login", (0, validations_1.loginValidationRules)(), 
 authRoutes.get('/categories', homeController.getCategoriesWithSubcategories); // Fetch categories with subcategories
 authRoutes.get("/products", homeController.products);
 authRoutes.get('/product', homeController.getProductById); // Fetch a single product by ID
+authRoutes.get("/stores", homeController.getAllStores);
+authRoutes.get('/store/products', homeController.getStoreProducts); // Fetch a single product by ID
+authRoutes.get("/auction/products", homeController.getUpcomingAuctionProducts);
+authRoutes.get('/auction/product', homeController.getAuctionProductById); // Fetch a single product by ID
 exports.default = authRoutes; // Export the router
 //# sourceMappingURL=authRoute.js.map

@@ -367,6 +367,10 @@ const createStoreValidation = () => {
             }
             return true; // if all checks pass
         }),
+        (0, express_validator_1.check)("logo")
+            .optional()
+            .isString()
+            .withMessage("Logo must be a valid string."),
         (0, express_validator_1.check)("tipsOnFinding")
             .optional()
             .isString()

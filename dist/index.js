@@ -12,6 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.io = void 0;
 const dotenv_1 = __importDefault(require("dotenv"));
 const http_1 = __importDefault(require("http"));
 const socket_io_1 = require("socket.io");
@@ -30,6 +31,7 @@ const io = new socket_io_1.Server(server, {
         origin: "*", // Change to specific origins in production
     },
 });
+exports.io = io;
 app.use("/api", authRoute_1.default); // Mount the router to /api
 // Configure Socket.IO
 (0, socket_service_1.configureSocket)(io);

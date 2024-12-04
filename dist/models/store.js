@@ -12,7 +12,7 @@ class Store extends sequelize_1.Model {
         });
         // Associate with User model
         this.hasMany(models.Product, {
-            as: 'product',
+            as: 'products',
             foreignKey: 'storeId'
         });
     }
@@ -51,6 +51,10 @@ const initModel = (sequelize) => {
             allowNull: true
         },
         tipsOnFinding: {
+            type: sequelize_1.DataTypes.TEXT,
+            allowNull: true
+        },
+        logo: {
             type: sequelize_1.DataTypes.TEXT,
             allowNull: true
         },

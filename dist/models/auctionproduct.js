@@ -21,6 +21,11 @@ class AuctionProduct extends sequelize_1.Model {
             foreignKey: 'categoryId',
             onDelete: 'RESTRICT',
         });
+        this.hasMany(models.Bid, {
+            as: 'bids',
+            foreignKey: 'auctionProductId',
+            onDelete: 'CASCADE',
+        });
     }
 }
 const initModel = (sequelize) => {

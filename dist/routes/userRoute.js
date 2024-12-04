@@ -50,5 +50,7 @@ userRoutes.get('/messages', authMiddleware_1.default, userController.getAllConve
 userRoutes.post('/messages', authMiddleware_1.default, (0, validations_1.validateSendMessage)(), validations_1.validate, userController.sendMessageHandler);
 userRoutes.delete('/messages', authMiddleware_1.default, userController.deleteMessageHandler);
 userRoutes.patch('/mark/message/read', authMiddleware_1.default, userController.markAsReadHandler);
+// Bid
+userRoutes.post('/place/bid', authMiddleware_1.default, userController.placeBid);
 exports.default = userRoutes;
 //# sourceMappingURL=userRoute.js.map
