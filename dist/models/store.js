@@ -15,6 +15,10 @@ class Store extends sequelize_1.Model {
             as: 'products',
             foreignKey: 'storeId'
         });
+        this.belongsTo(models.Currency, {
+            as: 'currency',
+            foreignKey: 'currencyId'
+        });
     }
 }
 const initModel = (sequelize) => {
@@ -30,6 +34,15 @@ const initModel = (sequelize) => {
             allowNull: false,
             references: {
                 model: 'users',
+                key: 'id',
+            },
+            onDelete: 'RESTRICT',
+        },
+        currencyId: {
+            type: sequelize_1.DataTypes.UUID,
+            allowNull: false,
+            references: {
+                model: 'currencies',
                 key: 'id',
             },
             onDelete: 'RESTRICT',

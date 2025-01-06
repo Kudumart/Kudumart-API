@@ -1,70 +1,62 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.initModel = void 0;
-// models/Bid.ts
+// models/Cart.ts
 const sequelize_1 = require("sequelize");
-class Bid extends sequelize_1.Model {
+class Cart extends sequelize_1.Model {
     static associate(models) {
         // Define associations here
         this.belongsTo(models.User, {
             as: 'user',
-            foreignKey: 'bidderId',
+            foreignKey: 'userId',
             onDelete: 'RESTRICT',
         });
-        this.belongsTo(models.AuctionProduct, {
-            as: 'auctionProduct',
-            foreignKey: 'auctionProductId',
+        this.belongsTo(models.Product, {
+            as: 'product',
+            foreignKey: 'productId',
             onDelete: 'CASCADE',
         });
     }
 }
 const initModel = (sequelize) => {
-    Bid.init({
+    Cart.init({
         id: {
             type: sequelize_1.DataTypes.UUID,
             defaultValue: sequelize_1.DataTypes.UUIDV4,
             primaryKey: true,
             allowNull: false,
         },
-        auctionProductId: {
+        userId: {
             type: sequelize_1.DataTypes.UUID,
             allowNull: false,
             references: {
-                model: 'auction_products',
+                model: "users",
+                key: "id",
+            },
+            onDelete: "RESTRICT",
+        },
+        productId: {
+            type: sequelize_1.DataTypes.UUID,
+            allowNull: false,
+            references: {
+                model: 'products',
                 key: 'id',
             },
             onDelete: 'CASCADE',
         },
-        bidderId: {
-            type: sequelize_1.DataTypes.UUID,
-            allowNull: false,
-            references: {
-                model: 'users',
-                key: 'id',
-            },
-            onDelete: 'RESTRICT',
-        },
-        bidAmount: {
-            type: sequelize_1.DataTypes.DECIMAL(10, 2),
-            allowNull: false,
-        },
-        bidCount: {
+        quantity: {
             type: sequelize_1.DataTypes.INTEGER,
             allowNull: false,
-        },
-        isWinningBid: {
-            type: sequelize_1.DataTypes.BOOLEAN,
-            defaultValue: false,
-            allowNull: false
+            defaultValue: 1,
         },
     }, {
         sequelize,
-        modelName: 'Bid',
+        modelName: 'Cart',
         timestamps: true,
         paranoid: false,
-        tableName: 'bids',
+        tableName: 'carts',
     });
 };
 exports.initModel = initModel;
-exports.default = Bid;
-//# sourceMappingURL=bid.js.map
+exports.default = Cart;
+//# sourceMappingURL=cart.js.map

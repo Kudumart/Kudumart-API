@@ -49,20 +49,16 @@ const initModel = (sequelize) => {
             type: sequelize_1.DataTypes.STRING,
             allowNull: true,
         },
-        businessRegistrationNumber: {
+        businessAddress: {
             type: sequelize_1.DataTypes.STRING,
             allowNull: true,
         },
-        taxIdentificationNumber: {
+        businessRegistrationNumber: {
             type: sequelize_1.DataTypes.STRING,
             allowNull: true,
         },
         idVerification: {
             type: sequelize_1.DataTypes.JSON,
-            allowNull: true,
-        },
-        certificateOfIncorporation: {
-            type: sequelize_1.DataTypes.TEXT,
             allowNull: true,
         },
         adminNote: {

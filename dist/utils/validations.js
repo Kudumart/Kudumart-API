@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validate = exports.validateSendMessage = exports.validatePaymentGateway = exports.updateAuctionProductValidation = exports.auctionProductValidation = exports.updateProductValidation = exports.addProductValidation = exports.updateStoreValidation = exports.createStoreValidation = exports.validateKYCNotification = exports.kycValidationRules = exports.updateSubscriptionPlanValidationRules = exports.createSubscriptionPlanValidationRules = exports.updateSubAdminValidationRules = exports.createSubAdminValidationRules = exports.adminUpdateProfileValidationRules = exports.confirmProfilePhoneNumberValidationRules = exports.updateProfilePhoneNumberValidationRules = exports.confirmProfileEmailValidationRules = exports.updateProfileEmailValidationRules = exports.updatePasswordValidationRules = exports.resetPasswordValidationRules = exports.forgotPasswordValidationRules = exports.resendVerificationValidationRules = exports.loginValidationRules = exports.verificationValidationRules = exports.registrationValidationRules = void 0;
+exports.validate = exports.validateShowInterest = exports.validateUpdateCartItem = exports.validateAddItemToCart = exports.validatePlaceBid = exports.validateSendMessage = exports.validatePaymentGateway = exports.updateAuctionProductValidation = exports.auctionProductValidation = exports.updateProductValidation = exports.addProductValidation = exports.updateStoreValidation = exports.createStoreValidation = exports.validateKYCNotification = exports.kycValidationRules = exports.updateSubscriptionPlanValidationRules = exports.createSubscriptionPlanValidationRules = exports.updateSubAdminValidationRules = exports.createSubAdminValidationRules = exports.adminUpdateProfileValidationRules = exports.confirmProfilePhoneNumberValidationRules = exports.updateProfilePhoneNumberValidationRules = exports.confirmProfileEmailValidationRules = exports.updateProfileEmailValidationRules = exports.updatePasswordValidationRules = exports.resetPasswordValidationRules = exports.forgotPasswordValidationRules = exports.resendVerificationValidationRules = exports.loginValidationRules = exports.verificationValidationRules = exports.registrationValidationRules = void 0;
 const express_validator_1 = require("express-validator");
 // Validation rules for different functionalities
 // Registration validation rules
@@ -396,8 +396,25 @@ const updateStoreValidation = () => {
             .withMessage("Business hours must be a valid object."),
         (0, express_validator_1.check)("deliveryOptions")
             .optional()
-            .isObject()
-            .withMessage("Delivery options must be a valid object."),
+            .isArray()
+            .withMessage("Delivery options must be an array.")
+            .custom((value) => {
+            for (const option of value) {
+                if (typeof option !== "object" || option === null) {
+                    throw new Error("Each delivery option must be a valid object.");
+                }
+                if (!option.city || typeof option.city !== "string") {
+                    throw new Error("City must be a string.");
+                }
+                if (option.price === undefined || typeof option.price !== "number") {
+                    throw new Error("Price must be a number.");
+                }
+                if (!option.arrival_day || typeof option.arrival_day !== "string") {
+                    throw new Error("Arrival day must be a string.");
+                }
+            }
+            return true; // if all checks pass
+        }),
         (0, express_validator_1.check)("tipsOnFinding")
             .optional()
             .isString()
@@ -734,6 +751,65 @@ const validateSendMessage = () => {
     ];
 };
 exports.validateSendMessage = validateSendMessage;
+const validatePlaceBid = () => {
+    return [
+        // Validate auctionProductId
+        (0, express_validator_1.check)("auctionProductId")
+            .isString()
+            .withMessage("Auction product ID is required and must be a string")
+            .isUUID()
+            .withMessage("Auction product ID must be a valid UUID"),
+        // Validate bidAmount
+        (0, express_validator_1.check)("bidAmount")
+            .isNumeric()
+            .withMessage("BidAmount is required and must be a numerical value")
+    ];
+};
+exports.validatePlaceBid = validatePlaceBid;
+const validateAddItemToCart = () => {
+    return [
+        // Validate productId
+        (0, express_validator_1.check)("productId")
+            .isString()
+            .withMessage("Product ID is required and must be a string")
+            .isUUID()
+            .withMessage("Product ID is required and must be a valid UUID"),
+        // Validate quantity
+        (0, express_validator_1.check)("quantity")
+            .optional()
+            .isInt({ min: 1 })
+            .withMessage("Quantity must be a positive integer"),
+    ];
+};
+exports.validateAddItemToCart = validateAddItemToCart;
+const validateUpdateCartItem = () => {
+    return [
+        // Validate cartId
+        (0, express_validator_1.check)("cartId")
+            .isString()
+            .withMessage("Cart ID is required and must be a string")
+            .isUUID()
+            .withMessage("Cart ID is required and must be a valid UUID"),
+        // Validate quantity
+        (0, express_validator_1.check)("quantity")
+            .isInt({ min: 1 })
+            .withMessage("Quantity must be a positive integer"),
+    ];
+};
+exports.validateUpdateCartItem = validateUpdateCartItem;
+const validateShowInterest = () => {
+    return [
+        (0, express_validator_1.check)("auctionProductId")
+            .isString()
+            .withMessage("Auction product ID is required and must be a string")
+            .isUUID()
+            .withMessage("Auction product ID must be a valid UUID"),
+        (0, express_validator_1.check)("amountPaid")
+            .isNumeric()
+            .withMessage("Amount paid is required and must be a numeric value"),
+    ];
+};
+exports.validateShowInterest = validateShowInterest;
 // Middleware to handle validation errors, sending only the first error
 const validate = (req, res, next) => {
     const errors = (0, express_validator_1.validationResult)(req);

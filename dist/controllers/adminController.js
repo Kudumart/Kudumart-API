@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.setPaymentGatewayActive = exports.getAllPaymentGateways = exports.deletePaymentGateway = exports.updatePaymentGateway = exports.createPaymentGateway = exports.approveOrRejectKYC = exports.getAllKYC = exports.getAllSubCategories = exports.deleteSubCategory = exports.updateSubCategory = exports.createSubCategory = exports.getCategoriesWithSubCategories = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getAllCategories = exports.deleteSubscriptionPlan = exports.updateSubscriptionPlan = exports.createSubscriptionPlan = exports.getAllSubscriptionPlans = exports.deletePermission = exports.updatePermission = exports.getPermissions = exports.createPermission = exports.deletePermissionFromRole = exports.assignPermissionToRole = exports.viewRolePermissions = exports.updateRole = exports.getRoles = exports.createRole = exports.resendLoginDetailsSubAdmin = exports.deleteSubAdmin = exports.deactivateOrActivateSubAdmin = exports.updateSubAdmin = exports.createSubAdmin = exports.subAdmins = exports.updatePassword = exports.updateProfile = exports.logout = void 0;
+exports.deleteCurrency = exports.getAllCurrencies = exports.updateCurrency = exports.addCurrency = exports.setPaymentGatewayActive = exports.getAllPaymentGateways = exports.deletePaymentGateway = exports.updatePaymentGateway = exports.createPaymentGateway = exports.approveOrRejectKYC = exports.getAllKYC = exports.getAllSubCategories = exports.deleteSubCategory = exports.updateSubCategory = exports.createSubCategory = exports.getCategoriesWithSubCategories = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getAllCategories = exports.deleteSubscriptionPlan = exports.updateSubscriptionPlan = exports.createSubscriptionPlan = exports.getAllSubscriptionPlans = exports.deletePermission = exports.updatePermission = exports.getPermissions = exports.createPermission = exports.deletePermissionFromRole = exports.assignPermissionToRole = exports.viewRolePermissions = exports.updateRole = exports.getRoles = exports.createRole = exports.resendLoginDetailsSubAdmin = exports.deleteSubAdmin = exports.deactivateOrActivateSubAdmin = exports.updateSubAdmin = exports.createSubAdmin = exports.subAdmins = exports.updatePassword = exports.updateProfile = exports.logout = void 0;
 const sequelize_1 = require("sequelize");
 const mail_service_1 = require("../services/mail.service");
 const messages_1 = require("../utils/messages");
@@ -29,6 +29,7 @@ const subcategory_1 = __importDefault(require("../models/subcategory"));
 const user_1 = __importDefault(require("../models/user"));
 const kyc_1 = __importDefault(require("../models/kyc"));
 const paymentgateway_1 = __importDefault(require("../models/paymentgateway"));
+const currency_1 = __importDefault(require("../models/currency"));
 const logout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Get the token from the request
@@ -1213,4 +1214,117 @@ const setPaymentGatewayActive = (req, res) => __awaiter(void 0, void 0, void 0, 
     }
 });
 exports.setPaymentGatewayActive = setPaymentGatewayActive;
+// Currency
+const addCurrency = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { name, symbol } = req.body;
+    if (!name || typeof name !== 'string') {
+        res.status(400).json({ message: 'Name is required and must be a string.' });
+    }
+    if (!symbol || typeof symbol !== 'string') {
+        res.status(400).json({ message: 'Symbol is required and must be a string.' });
+    }
+    try {
+        // Check if the currency already exists (by name or symbol)
+        const existingCurrency = yield currency_1.default.findOne({
+            where: {
+                [sequelize_1.Op.or]: [
+                    { name: { [sequelize_1.Op.like]: name } },
+                    { symbol: { [sequelize_1.Op.like]: symbol } }
+                ]
+            }
+        });
+        if (existingCurrency) {
+            res.status(400).json({ message: 'Currency with the same name or symbol already exists.' });
+            return;
+        }
+        const currency = yield currency_1.default.create({ name, symbol });
+        res.status(200).json({ message: 'Currency added successfully', currency });
+    }
+    catch (error) {
+        logger_1.default.error('Error adding currency:', error);
+        res.status(500).json({ message: 'Failed to add currency' });
+    }
+});
+exports.addCurrency = addCurrency;
+const updateCurrency = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { currencyId, name, symbol } = req.body;
+    // Validate inputs
+    if (!currencyId) {
+        res.status(400).json({ message: 'Currency ID is required.' });
+        return;
+    }
+    if (name && typeof name !== 'string') {
+        res.status(400).json({ message: 'Name must be a string.' });
+        return;
+    }
+    if (symbol && typeof symbol !== 'string') {
+        res.status(400).json({ message: 'Symbol must be a string.' });
+        return;
+    }
+    try {
+        // Find the currency by ID
+        const currency = yield currency_1.default.findByPk(currencyId);
+        if (!currency) {
+            res.status(404).json({ message: 'Currency not found' });
+            return;
+        }
+        // Check for uniqueness of name and symbol, excluding the current record
+        const existingCurrency = yield currency_1.default.findOne({
+            where: {
+                [sequelize_1.Op.or]: [
+                    { name: { [sequelize_1.Op.like]: name } },
+                    { symbol: { [sequelize_1.Op.like]: symbol } }
+                ],
+                id: { [sequelize_1.Op.ne]: currencyId } // Exclude the current currency
+            }
+        });
+        if (existingCurrency) {
+            res.status(400).json({ message: 'Currency with the same name or symbol already exists.' });
+            return;
+        }
+        // Update the currency fields
+        yield currency.update({ name, symbol });
+        res.status(200).json({ message: 'Currency updated successfully', currency });
+    }
+    catch (error) {
+        logger_1.default.error('Error updating currency:', error);
+        res.status(500).json({ message: 'Failed to update currency' });
+    }
+});
+exports.updateCurrency = updateCurrency;
+const getAllCurrencies = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const currencies = yield currency_1.default.findAll();
+        res.status(200).json({ data: currencies });
+    }
+    catch (error) {
+        logger_1.default.error('Error fetching currencies:', error);
+        res.status(500).json({ message: 'Failed to fetch currencies' });
+    }
+});
+exports.getAllCurrencies = getAllCurrencies;
+const deleteCurrency = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const currencyId = req.query.currencyId;
+    try {
+        const currency = yield currency_1.default.findByPk(currencyId);
+        if (!currency) {
+            res.status(404).json({ message: 'Currency not found' });
+            return;
+        }
+        yield currency.destroy();
+        res.status(200).json({ message: 'Currency deleted successfully' });
+    }
+    catch (error) {
+        if (error instanceof sequelize_1.ForeignKeyConstraintError) {
+            res.status(400).json({
+                message: "Cannot delete currency because it is currently assigned to one or more stores. Please reassign or delete these associations before proceeding.",
+            });
+        }
+        else {
+            console.error('Error deleting currency:', error);
+            res.status(500).json({ message: 'Failed to delete currency' });
+        }
+    }
+});
+exports.deleteCurrency = deleteCurrency;
 //# sourceMappingURL=adminController.js.map

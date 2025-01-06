@@ -83,5 +83,10 @@ adminRoutes.put('/payment-gateway', adminAuthMiddleware_1.default, (0, validatio
 adminRoutes.delete('/payment-gateway', adminAuthMiddleware_1.default, adminController.deletePaymentGateway);
 adminRoutes.get('/payment-gateways', adminAuthMiddleware_1.default, adminController.getAllPaymentGateways);
 adminRoutes.patch('/payment-gateways/status', adminAuthMiddleware_1.default, adminController.setPaymentGatewayActive);
+// Currency
+adminRoutes.post('/currency', adminAuthMiddleware_1.default, adminController.addCurrency);
+adminRoutes.put('/currency', adminAuthMiddleware_1.default, adminController.updateCurrency);
+adminRoutes.delete('/currency', adminAuthMiddleware_1.default, adminController.deleteCurrency);
+adminRoutes.get('/currencies', adminAuthMiddleware_1.default, adminController.getAllCurrencies);
 exports.default = adminRoutes; // Export the router
 //# sourceMappingURL=adminRoute.js.map

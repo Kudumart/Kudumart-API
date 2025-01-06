@@ -23,7 +23,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.verifyCAC = exports.subscribe = exports.subscriptionPlans = exports.viewAuctionProduct = exports.fetchVendorAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchVendorProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.getStore = exports.getKYC = exports.submitOrUpdateKYC = void 0;
+exports.getAllCurrencies = exports.verifyCAC = exports.subscribe = exports.subscriptionPlans = exports.viewAuctionProduct = exports.fetchVendorAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchVendorProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.getStore = exports.getKYC = exports.submitOrUpdateKYC = void 0;
 const user_1 = __importDefault(require("../models/user"));
 const uuid_1 = require("uuid");
 const sequelize_1 = require("sequelize");
@@ -42,6 +42,7 @@ const notification_1 = __importDefault(require("../models/notification"));
 const transaction_1 = __importDefault(require("../models/transaction"));
 const paymentgateway_1 = __importDefault(require("../models/paymentgateway"));
 const helpers_2 = require("../utils/helpers");
+const currency_1 = __importDefault(require("../models/currency"));
 const submitOrUpdateKYC = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
@@ -65,7 +66,7 @@ const submitOrUpdateKYC = (req, res) => __awaiter(void 0, void 0, void 0, functi
         }
         else {
             // Create a new KYC record
-            const newKYC = yield kyc_1.default.create(Object.assign({ vendorId }, kycData));
+            const newKYC = yield kyc_1.default.create(Object.assign(Object.assign({ vendorId }, kycData), { isVerified: true }));
             res
                 .status(200)
                 .json({ message: "KYC created successfully", data: newKYC });
@@ -96,10 +97,18 @@ const getStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _c;
     const vendorId = (_c = req.user) === null || _c === void 0 ? void 0 : _c.id; // Authenticated user ID from middleware
     try {
-        const stores = yield store_1.default.findAll({ where: { vendorId } });
+        const stores = yield store_1.default.findAll({
+            where: { vendorId },
+            include: [
+                {
+                    model: currency_1.default,
+                    as: "currency"
+                },
+            ],
+        });
         // Check if any stores were found
         if (stores.length === 0) {
-            res.status(404).json({ message: "No stores found for this vendor." });
+            res.status(404).json({ message: "No stores found for this vendor.", data: [] });
             return;
         }
         res.status(200).json({ data: stores });
@@ -112,7 +121,11 @@ exports.getStore = getStore;
 const createStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _d;
     const vendorId = (_d = req.user) === null || _d === void 0 ? void 0 : _d.id; // Authenticated user ID from middleware
-    const { name, location, logo, businessHours, deliveryOptions, tipsOnFinding } = req.body;
+    const { currencyId, name, location, logo, businessHours, deliveryOptions, tipsOnFinding } = req.body;
+    if (!currencyId) {
+        res.status(400).json({ message: 'Currency ID is required.' });
+        return;
+    }
     try {
         // Check if a store with the same name exists for this vendorId
         const existingStore = yield store_1.default.findOne({
@@ -124,9 +137,16 @@ const createStore = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             });
             return;
         }
+        // Find the currency by ID
+        const currency = yield currency_1.default.findByPk(currencyId);
+        if (!currency) {
+            res.status(404).json({ message: 'Currency not found' });
+            return;
+        }
         // Create the store
         const store = yield store_1.default.create({
             vendorId,
+            currencyId: currency.id,
             name,
             location,
             businessHours,
@@ -147,11 +167,17 @@ exports.createStore = createStore;
 const updateStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _e;
     const vendorId = (_e = req.user) === null || _e === void 0 ? void 0 : _e.id; // Authenticated user ID from middleware
-    const { storeId, name, location, businessHours, deliveryOptions, tipsOnFinding, logo } = req.body;
+    const { storeId, currencyId, name, location, businessHours, deliveryOptions, tipsOnFinding, logo } = req.body;
     try {
         const store = yield store_1.default.findOne({ where: { id: storeId } });
         if (!store) {
             res.status(404).json({ message: "Store not found" });
+            return;
+        }
+        // Find the currency by ID
+        const currency = yield currency_1.default.findByPk(currencyId);
+        if (!currency) {
+            res.status(404).json({ message: 'Currency not found' });
             return;
         }
         // Check for unique name for this vendorId if name is being updated
@@ -168,6 +194,7 @@ const updateStore = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         }
         // Update store fields
         yield store.update({
+            currencyId,
             name,
             location,
             businessHours,
@@ -335,6 +362,18 @@ const fetchVendorProducts = (req, res) => __awaiter(void 0, void 0, void 0, func
                     as: "sub_category",
                     where: categoryName ? { name: categoryName } : undefined,
                 },
+                {
+                    model: store_1.default,
+                    as: "store",
+                    attributes: ['name'],
+                    include: [
+                        {
+                            model: currency_1.default,
+                            as: "currency",
+                            attributes: ['symbol']
+                        },
+                    ]
+                },
             ] }, ((name || sku || status || condition) && {
             where: Object.assign(Object.assign(Object.assign(Object.assign({}, (name && { name: { [sequelize_1.Op.like]: `%${name}%` } })), (sku && { sku })), (status && { status })), (condition && { condition })),
         })));
@@ -360,7 +399,17 @@ const viewProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 vendorId,
             },
             include: [
-                { model: store_1.default, as: "store" },
+                {
+                    model: store_1.default,
+                    as: "store",
+                    include: [
+                        {
+                            model: currency_1.default,
+                            as: "currency",
+                            attributes: ['symbol']
+                        },
+                    ]
+                },
                 { model: subcategory_1.default, as: "sub_category" },
             ],
         });
@@ -727,13 +776,25 @@ const fetchVendorAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 
                     as: "sub_category",
                     where: categoryName ? { name: categoryName } : undefined,
                 },
+                {
+                    model: store_1.default,
+                    as: "store",
+                    attributes: ['name'],
+                    include: [
+                        {
+                            model: currency_1.default,
+                            as: "currency",
+                            attributes: ['symbol']
+                        },
+                    ]
+                },
             ] }, ((name || sku || status || condition) && {
             where: Object.assign(Object.assign(Object.assign(Object.assign({}, (name && { name: { [sequelize_1.Op.like]: `%${name}%` } })), (sku && { sku })), (status && { status })), (condition && { condition })),
         })));
         if (auctionProducts.length === 0) {
             res
                 .status(404)
-                .json({ message: "No auction products found for this vendor." });
+                .json({ message: "No auction products found for this vendor.", data: [] });
             return;
         }
         res.status(200).json({
@@ -761,7 +822,17 @@ const viewAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 vendorId,
             },
             include: [
-                { model: store_1.default, as: "store" },
+                {
+                    model: store_1.default,
+                    as: "store",
+                    include: [
+                        {
+                            model: currency_1.default,
+                            as: "currency",
+                            attributes: ['symbol']
+                        },
+                    ]
+                },
                 { model: subcategory_1.default, as: "sub_category" },
             ],
         });
@@ -1049,4 +1120,15 @@ const verifyCAC = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
 });
 exports.verifyCAC = verifyCAC;
+const getAllCurrencies = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const currencies = yield currency_1.default.findAll();
+        res.status(200).json({ data: currencies });
+    }
+    catch (error) {
+        logger_1.default.error('Error fetching currencies:', error);
+        res.status(500).json({ message: 'Failed to fetch currencies' });
+    }
+});
+exports.getAllCurrencies = getAllCurrencies;
 //# sourceMappingURL=vendorController.js.map

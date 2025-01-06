@@ -23,6 +23,7 @@ const store_1 = __importDefault(require("../models/store"));
 const kyc_1 = __importDefault(require("../models/kyc"));
 const helpers_1 = require("../utils/helpers");
 const auctionproduct_1 = __importDefault(require("../models/auctionproduct"));
+const currency_1 = __importDefault(require("../models/currency"));
 const getCategoriesWithSubcategories = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const categories = yield category_1.default.findAll({
@@ -44,7 +45,7 @@ const getCategoriesWithSubcategories = (req, res) => __awaiter(void 0, void 0, v
 });
 exports.getCategoriesWithSubcategories = getCategoriesWithSubcategories;
 const products = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { storeId, minPrice, maxPrice, name, // Product name
+    const { country, storeId, minPrice, maxPrice, name, // Product name
     subCategoryName, // Subcategory name filter
     condition, // Product condition filter
      } = req.query;
@@ -82,6 +83,17 @@ const products = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                     : undefined,
                 attributes: ["id", "name"],
             },
+            {
+                model: store_1.default,
+                as: "store",
+                include: [
+                    {
+                        model: currency_1.default,
+                        as: "currency",
+                        attributes: ['symbol']
+                    },
+                ]
+            }
         ];
         // Fetch active products with subcategory details
         const products = yield product_1.default.findAll({
@@ -120,6 +132,13 @@ const getProductById = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 {
                     model: store_1.default,
                     as: "store",
+                    include: [
+                        {
+                            model: currency_1.default,
+                            as: "currency",
+                            attributes: ['symbol']
+                        },
+                    ]
                 },
                 {
                     model: subcategory_1.default,
@@ -143,6 +162,29 @@ const getProductById = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 id: { [sequelize_1.Op.ne]: product.id },
                 status: "active",
             },
+            include: [
+                {
+                    model: user_1.default,
+                    as: "vendor",
+                    required: true, // Make sure the user is included in the result
+                },
+                {
+                    model: store_1.default,
+                    as: "store",
+                    include: [
+                        {
+                            model: currency_1.default,
+                            as: "currency",
+                            attributes: ['symbol']
+                        },
+                    ]
+                },
+                {
+                    model: subcategory_1.default,
+                    as: "sub_category",
+                    attributes: ["id", "name"],
+                },
+            ],
             limit: 10,
             order: sequelize_1.Sequelize.fn('RAND'), // Randomize the order
         });
@@ -179,6 +221,13 @@ const getAllStores = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         // Fetch stores with filters and pagination
         const { rows: stores, count: total } = yield store_1.default.findAndCountAll({
             where: filters,
+            include: [
+                {
+                    model: currency_1.default,
+                    as: "currency",
+                    attributes: ['symbol']
+                },
+            ],
             limit: Number(limit),
             offset,
             order: [["createdAt", "DESC"]], // Sort by creation date in descending order
@@ -214,30 +263,31 @@ const getStoreProducts = (req, res) => __awaiter(void 0, void 0, void 0, functio
         }
         // Calculate pagination values
         const offset = (Number(page) - 1) * Number(limit);
-        // Fetch the store and its products
-        const store = yield store_1.default.findByPk(storeId, {
-            include: {
-                model: product_1.default,
-                as: "products",
-                where: productName
-                    ? {
-                        name: { [sequelize_1.Op.like]: `%${productName}%` }, // Partial match for product name
-                    }
-                    : undefined,
-            },
+        // Fetch products along with the associated currency
+        const products = yield product_1.default.findAll({
+            where: Object.assign({ storeId }, (productName ? { name: { [sequelize_1.Op.like]: `%${productName}%` } } : {})),
+            include: [
+                {
+                    model: store_1.default,
+                    as: "store",
+                    attributes: ['name'],
+                    include: [
+                        {
+                            model: currency_1.default,
+                            as: "currency",
+                            attributes: ['symbol']
+                        },
+                    ]
+                },
+            ],
             limit: Number(limit),
             offset,
         });
-        if (!store) {
-            res.status(404).json({ message: "Store not found" });
-            return;
-        }
-        let products = store.products || [];
         // Shuffle products
-        products = (0, helpers_1.shuffleArray)(products);
+        const shuffledProducts = (0, helpers_1.shuffleArray)(products);
         res.status(200).json({
             message: "Store products fetched successfully",
-            data: products,
+            data: shuffledProducts,
             pagination: {
                 total: products.length,
                 page: Number(page),
@@ -283,6 +333,30 @@ const getUpcomingAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 
         // Fetch upcoming auction products based on conditions
         const products = yield auctionproduct_1.default.findAll({
             where: whereConditions,
+            include: [
+                {
+                    model: user_1.default,
+                    as: "vendor",
+                    required: true, // Make sure the user is included in the result
+                },
+                {
+                    model: store_1.default,
+                    as: "store",
+                    attributes: ['name'],
+                    include: [
+                        {
+                            model: currency_1.default,
+                            as: "currency",
+                            attributes: ['symbol']
+                        },
+                    ]
+                },
+                {
+                    model: subcategory_1.default,
+                    as: "sub_category",
+                    attributes: ["id", "name"],
+                },
+            ],
             limit: Number(limit),
             offset: Number(offset),
             order: [["startDate", "ASC"]], // Sort by start date (ascending)
@@ -303,7 +377,7 @@ const getAuctionProductById = (req, res) => __awaiter(void 0, void 0, void 0, fu
         // Fetch the main product by ID or SKU
         const product = yield auctionproduct_1.default.findOne({
             where: {
-                status: "active",
+                auctionStatus: "upcoming",
                 [sequelize_1.Op.or]: [
                     { id: auctionproductId },
                     { SKU: auctionproductId }, // Replace 'SKU' with the actual SKU column name if different
@@ -318,6 +392,13 @@ const getAuctionProductById = (req, res) => __awaiter(void 0, void 0, void 0, fu
                 {
                     model: store_1.default,
                     as: "store",
+                    include: [
+                        {
+                            model: currency_1.default,
+                            as: "currency",
+                            attributes: ['symbol']
+                        },
+                    ]
                 },
                 {
                     model: subcategory_1.default,
