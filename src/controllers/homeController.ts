@@ -13,6 +13,7 @@ import Store from "../models/store";
 import KYC from "../models/kyc";
 import { shuffleArray } from "../utils/helpers";
 import AuctionProduct from "../models/auctionproduct";
+import Currency from "../models/currency";
 
 export const getCategoriesWithSubcategories = async (
     req: Request,
@@ -39,6 +40,7 @@ export const getCategoriesWithSubcategories = async (
 
 export const products = async (req: Request, res: Response): Promise<void> => {
     const {
+        country,
         storeId,
         minPrice,
         maxPrice,
@@ -85,6 +87,17 @@ export const products = async (req: Request, res: Response): Promise<void> => {
                         : undefined,
                 attributes: ["id", "name"],
             },
+            {
+                model: Store,
+                as: "store",
+                include: [
+                    {
+                        model: Currency,
+                        as: "currency",
+                        attributes: ['symbol']
+                    },
+                ]
+            }
         ];
 
         // Fetch active products with subcategory details
@@ -128,6 +141,13 @@ export const getProductById = async (
                 {
                     model: Store,
                     as: "store",
+                    include: [
+                        {
+                            model: Currency,
+                            as: "currency",
+                            attributes: ['symbol']
+                        },
+                    ]
                 },
                 {
                     model: SubCategory,
@@ -154,6 +174,29 @@ export const getProductById = async (
                 id: { [Op.ne]: product.id }, // Exclude the currently viewed product
                 status: "active",
             },
+            include: [
+                {
+                    model: User,
+                    as: "vendor",
+                    required: true, // Make sure the user is included in the result
+                },
+                {
+                    model: Store,
+                    as: "store",
+                    include: [
+                        {
+                            model: Currency,
+                            as: "currency",
+                            attributes: ['symbol']
+                        },
+                    ]
+                },
+                {
+                    model: SubCategory,
+                    as: "sub_category",
+                    attributes: ["id", "name"],
+                },
+            ],
             limit: 10,
             order: Sequelize.fn('RAND'), // Randomize the order
         });
@@ -194,6 +237,13 @@ export const getAllStores = async (req: Request, res: Response): Promise<void> =
         // Fetch stores with filters and pagination
         const { rows: stores, count: total } = await Store.findAndCountAll({
             where: filters,
+            include: [
+                {
+                    model: Currency,
+                    as: "currency",
+                    attributes: ['symbol']
+                },
+            ],
             limit: Number(limit),
             offset,
             order: [["createdAt", "DESC"]], // Sort by creation date in descending order
@@ -232,34 +282,36 @@ export const getStoreProducts = async (req: Request, res: Response): Promise<voi
         // Calculate pagination values
         const offset = (Number(page) - 1) * Number(limit);
 
-        // Fetch the store and its products
-        const store = await Store.findByPk(storeId, {
-            include: {
-                model: Product,
-                as: "products", // Assuming association alias is 'products'
-                where: productName
-                    ? {
-                        name: { [Op.like]: `%${productName}%` }, // Partial match for product name
-                    }
-                    : undefined,
+        // Fetch products along with the associated currency
+        const products = await Product.findAll({
+            where: {
+                storeId,
+                ...(productName ? { name: { [Op.like]: `%${productName}%` } } : {}),
             },
+            include: [
+                {
+                    model: Store,
+                    as: "store",
+                    attributes: ['name'],
+                    include: [
+                        {
+                            model: Currency,
+                            as: "currency",
+                            attributes: ['symbol']
+                        },
+                    ]
+                },
+            ],
             limit: Number(limit),
             offset,
         });
 
-        if (!store) {
-            res.status(404).json({ message: "Store not found" });
-            return;
-        }
-
-        let products = (store as Store & { products: Product[] }).products || [];
-
         // Shuffle products
-        products = shuffleArray(products);
+        const shuffledProducts = shuffleArray(products);
 
         res.status(200).json({
             message: "Store products fetched successfully",
-            data: products,
+            data: shuffledProducts,
             pagination: {
                 total: products.length,
                 page: Number(page),
@@ -309,6 +361,30 @@ export const getUpcomingAuctionProducts = async (req: Request, res: Response): P
         // Fetch upcoming auction products based on conditions
         const products = await AuctionProduct.findAll({
             where: whereConditions,
+            include: [
+                {
+                    model: User,
+                    as: "vendor",
+                    required: true, // Make sure the user is included in the result
+                },
+                {
+                    model: Store,
+                    as: "store",
+                    attributes: ['name'],
+                    include: [
+                        {
+                            model: Currency,
+                            as: "currency",
+                            attributes: ['symbol']
+                        },
+                    ]
+                },
+                {
+                    model: SubCategory,
+                    as: "sub_category",
+                    attributes: ["id", "name"],
+                },
+            ],
             limit: Number(limit),
             offset: Number(offset),
             order: [["startDate", "ASC"]], // Sort by start date (ascending)
@@ -333,7 +409,7 @@ export const getAuctionProductById = async (
         // Fetch the main product by ID or SKU
         const product = await AuctionProduct.findOne({
             where: {
-                status: "active",
+                auctionStatus: "upcoming",
                 [Op.or]: [
                     { id: auctionproductId },
                     { SKU: auctionproductId }, // Replace 'SKU' with the actual SKU column name if different
@@ -348,6 +424,13 @@ export const getAuctionProductById = async (
                 {
                     model: Store,
                     as: "store",
+                    include: [
+                        {
+                            model: Currency,
+                            as: "currency",
+                            attributes: ['symbol']
+                        },
+                    ]
                 },
                 {
                     model: SubCategory,

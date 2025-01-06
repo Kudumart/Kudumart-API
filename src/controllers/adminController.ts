@@ -18,6 +18,8 @@ import SubCategory from "../models/subcategory";
 import User from "../models/user";
 import KYC from "../models/kyc";
 import PaymentGateway from "../models/paymentgateway";
+import Currency from "../models/currency";
+import { log } from "console";
 
 // Extend the Express Request interface to include adminId and admin
 interface AuthenticatedRequest extends Request {
@@ -1459,5 +1461,127 @@ export const setPaymentGatewayActive = async (req: Request, res: Response): Prom
         res.status(500).json({
             message: error.message || 'An error occurred while updating the payment gateway.',
         });
+    }
+};
+
+// Currency
+export const addCurrency = async (req: Request, res: Response): Promise<void> => {
+    const { name, symbol } = req.body;
+
+    if (!name || typeof name !== 'string') {
+        res.status(400).json({ message: 'Name is required and must be a string.' });
+    }
+    if (!symbol || typeof symbol !== 'string') {
+        res.status(400).json({ message: 'Symbol is required and must be a string.' });
+    }
+
+    try {
+        // Check if the currency already exists (by name or symbol)
+        const existingCurrency = await Currency.findOne({
+            where: {
+                [Op.or]: [
+                    { name: { [Op.like]: name } }, // Case-insensitive comparison
+                    { symbol: { [Op.like]: symbol } }
+                ]
+            }
+        });
+
+        if (existingCurrency) {
+            res.status(400).json({ message: 'Currency with the same name or symbol already exists.' });
+            return;
+        }
+
+        const currency = await Currency.create({ name, symbol });
+        res.status(200).json({ message: 'Currency added successfully', currency });
+    } catch (error) {
+        logger.error('Error adding currency:', error);
+        res.status(500).json({ message: 'Failed to add currency' });
+    }
+};
+
+export const updateCurrency = async (req: Request, res: Response): Promise<void> => {
+    const { currencyId, name, symbol } = req.body;
+
+    // Validate inputs
+    if (!currencyId) {
+        res.status(400).json({ message: 'Currency ID is required.' });
+        return;
+    }
+    if (name && typeof name !== 'string') {
+        res.status(400).json({ message: 'Name must be a string.' });
+        return;
+    }
+    if (symbol && typeof symbol !== 'string') {
+        res.status(400).json({ message: 'Symbol must be a string.' });
+        return;
+    }
+
+    try {
+        // Find the currency by ID
+        const currency = await Currency.findByPk(currencyId);
+
+        if (!currency) {
+            res.status(404).json({ message: 'Currency not found' });
+            return;
+        }
+
+        // Check for uniqueness of name and symbol, excluding the current record
+        const existingCurrency = await Currency.findOne({
+            where: {
+                [Op.or]: [
+                    { name: { [Op.like]: name } },
+                    { symbol: { [Op.like]: symbol } }
+                ],
+                id: { [Op.ne]: currencyId } // Exclude the current currency
+            }
+        });
+
+        if (existingCurrency) {
+            res.status(400).json({ message: 'Currency with the same name or symbol already exists.' });
+            return;
+        }
+
+        // Update the currency fields
+        await currency.update({ name, symbol });
+        res.status(200).json({ message: 'Currency updated successfully', currency });
+    } catch (error) {
+        logger.error('Error updating currency:', error);
+        res.status(500).json({ message: 'Failed to update currency' });
+    }
+};
+
+export const getAllCurrencies = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const currencies = await Currency.findAll();
+        res.status(200).json({ data: currencies });
+    } catch (error) {
+        logger.error('Error fetching currencies:', error);
+        res.status(500).json({ message: 'Failed to fetch currencies' });
+    }
+};
+
+export const deleteCurrency = async (req: Request, res: Response): Promise<void> => {
+    const currencyId = req.query.currencyId as string;
+
+    try {
+        const currency = await Currency.findByPk(currencyId);
+
+        if (!currency) {
+            res.status(404).json({ message: 'Currency not found' });
+            return;
+        }
+
+        await currency.destroy();
+        res.status(200).json({ message: 'Currency deleted successfully' });
+    } catch (error) {
+        if (error instanceof ForeignKeyConstraintError) {
+            res.status(400).json({
+                message:
+                    "Cannot delete currency because it is currently assigned to one or more stores. Please reassign or delete these associations before proceeding.",
+            });
+        } else {
+            console.error('Error deleting currency:', error);
+            res.status(500).json({ message: 'Failed to delete currency' });
+        }
     }
 };

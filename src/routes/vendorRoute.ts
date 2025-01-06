@@ -48,5 +48,6 @@ vendorRoutes.post("/subscribe", authMiddleware, authorizeVendor, vendorControlle
 
 vendorRoutes.get("/verifyCAC", authMiddleware, authorizeVendor, vendorController.verifyCAC);
 
+vendorRoutes.get('/currencies', authMiddleware, authorizeVendor, vendorController.getAllCurrencies);
 
 export default vendorRoutes;

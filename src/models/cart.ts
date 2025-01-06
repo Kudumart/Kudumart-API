@@ -1,36 +1,36 @@
-// models/Bid.ts
+// models/Cart.ts
 import { Model, DataTypes, Sequelize } from 'sequelize';
 import User from './user';
+import Product from './product';
 
-class Bid extends Model {
+class Cart extends Model {
   public id!: string;
-  public auctionProductId!: string;
-  public bidderId!: string;
-  public bidAmount!: number;
-  public bidCount!: number;
-  public isWinningBid!: boolean;
+  public userId!: string;
+  public productId!: string;
+  public quantity!: number;
   public createdAt?: Date;
   public updatedAt?: Date;
 
+  public product?: Product
   public user?: User;
 
   static associate(models: any) {
     // Define associations here
     this.belongsTo(models.User, {
       as: 'user',
-      foreignKey: 'bidderId',
+      foreignKey: 'userId',
       onDelete: 'RESTRICT',
     });
-    this.belongsTo(models.AuctionProduct, {
-      as: 'auctionProduct',
-      foreignKey: 'auctionProductId',
+    this.belongsTo(models.Product, {
+      as: 'product',
+      foreignKey: 'productId',
       onDelete: 'CASCADE',
     });
   }
 }
 
 const initModel = (sequelize: Sequelize) => {
-  Bid.init(
+  Cart.init(
     {
       id: {
         type: DataTypes.UUID,
@@ -38,47 +38,39 @@ const initModel = (sequelize: Sequelize) => {
         primaryKey: true,
         allowNull: false,
       },
-      auctionProductId: {
+      userId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
-          model: 'auction_products',
+          model: "users",
+          key: "id",
+        },
+        onDelete: "RESTRICT",
+      },
+      productId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+          model: 'products', // Ensure this matches your AuctionProduct table name
           key: 'id',
         },
         onDelete: 'CASCADE',
       },
-      bidderId: {
-        type: DataTypes.UUID,
-        allowNull: false,
-        references: {
-          model: 'users',
-          key: 'id',
-        },
-        onDelete: 'RESTRICT',
-      },
-      bidAmount: {
-        type: DataTypes.DECIMAL(10, 2),
-        allowNull: false,
-      },
-      bidCount: {
+      quantity: {
         type: DataTypes.INTEGER,
         allowNull: false,
-      },
-      isWinningBid: { 
-        type: DataTypes.BOOLEAN, 
-        defaultValue: false, 
-        allowNull: false 
+        defaultValue: 1,
       },
     },
     {
       sequelize,
-      modelName: 'Bid',
+      modelName: 'Cart',
       timestamps: true,
       paranoid: false,
-      tableName: 'bids',
+      tableName: 'carts',
     }
   );
 };
 
-export default Bid;
+export default Cart;
 export { initModel };

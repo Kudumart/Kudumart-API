@@ -1,14 +1,13 @@
-// models/Bid.ts
+// models/ShowInterest.ts
 import { Model, DataTypes, Sequelize } from 'sequelize';
 import User from './user';
 
-class Bid extends Model {
+class ShowInterest extends Model {
   public id!: string;
+  public userId!: string;
   public auctionProductId!: string;
-  public bidderId!: string;
-  public bidAmount!: number;
-  public bidCount!: number;
-  public isWinningBid!: boolean;
+  public amountPaid!: number;
+  public status?: "pending" | "confirmed";
   public createdAt?: Date;
   public updatedAt?: Date;
 
@@ -18,7 +17,7 @@ class Bid extends Model {
     // Define associations here
     this.belongsTo(models.User, {
       as: 'user',
-      foreignKey: 'bidderId',
+      foreignKey: 'userId',
       onDelete: 'RESTRICT',
     });
     this.belongsTo(models.AuctionProduct, {
@@ -30,7 +29,7 @@ class Bid extends Model {
 }
 
 const initModel = (sequelize: Sequelize) => {
-  Bid.init(
+  ShowInterest.init(
     {
       id: {
         type: DataTypes.UUID,
@@ -38,47 +37,42 @@ const initModel = (sequelize: Sequelize) => {
         primaryKey: true,
         allowNull: false,
       },
+      userId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+          model: "users",
+          key: "id",
+        },
+        onDelete: "RESTRICT",
+      },
       auctionProductId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
-          model: 'auction_products',
+          model: 'auction_products', // Ensure this matches your AuctionProduct table name
           key: 'id',
         },
         onDelete: 'CASCADE',
       },
-      bidderId: {
-        type: DataTypes.UUID,
-        allowNull: false,
-        references: {
-          model: 'users',
-          key: 'id',
-        },
-        onDelete: 'RESTRICT',
-      },
-      bidAmount: {
+      amountPaid: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false,
       },
-      bidCount: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-      },
-      isWinningBid: { 
-        type: DataTypes.BOOLEAN, 
-        defaultValue: false, 
-        allowNull: false 
+      status: {
+        type: DataTypes.ENUM("pending", "confirmed"),
+        defaultValue: "pending",
       },
     },
     {
       sequelize,
-      modelName: 'Bid',
+      modelName: 'ShowInterest',
       timestamps: true,
       paranoid: false,
-      tableName: 'bids',
+      tableName: 'show_interests',
     }
   );
 };
 
-export default Bid;
+export default ShowInterest;
 export { initModel };

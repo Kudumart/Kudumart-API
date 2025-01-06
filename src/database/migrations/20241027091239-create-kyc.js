@@ -39,20 +39,16 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull: true,
       },
-      businessRegistrationNumber: {
+      businessAddress: {
         type: Sequelize.STRING,
         allowNull: true,
       },
-      taxIdentificationNumber: {
+      businessRegistrationNumber: {
         type: Sequelize.STRING,
         allowNull: true,
       },
       idVerification: {
         type: Sequelize.JSON, // This could be a URL to the uploaded document
-        allowNull: true,
-      },
-      certificateOfIncorporation: {
-        type: Sequelize.TEXT, // This could be a URL to the uploaded document
         allowNull: true,
       },
       adminNote: {

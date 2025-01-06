@@ -2,12 +2,21 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('bids', {
+    await queryInterface.createTable('show_interests', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         primaryKey: true,
         allowNull: false,
+      },
+      userId: {
+        type: Sequelize.UUID,
+        allowNull: false,
+        references: {
+          model: "users",
+          key: "id",
+        },
+        onDelete: "RESTRICT",
       },
       auctionProductId: {
         type: Sequelize.UUID,
@@ -18,27 +27,13 @@ module.exports = {
         },
         onDelete: 'CASCADE',
       },
-      bidderId: {
-        type: Sequelize.UUID,
-        allowNull: false,
-        references: {
-          model: 'users', // Ensure this matches your Users table name
-          key: 'id',
-        },
-        onDelete: 'RESTRICT',
-      },
-      bidAmount: {
+      amountPaid: {
         type: Sequelize.DECIMAL(10, 2),
         allowNull: false,
       },
-      bidCount: {
-        type: Sequelize.INTEGER,
-        allowNull: false,
-      },
-      isWinningBid: { 
-        type: Sequelize.BOOLEAN, 
-        defaultValue: false, 
-        allowNull: false 
+      status: {
+        type: Sequelize.ENUM("pending", "confirmed"),
+        defaultValue: "pending",
       },
       createdAt: {
         allowNull: false,
@@ -51,6 +46,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('bids');
+    await queryInterface.dropTable('show_interests');
   }
 };

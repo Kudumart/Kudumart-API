@@ -21,6 +21,7 @@ import Notification from "../models/notification";
 import Transaction from "../models/transaction";
 import PaymentGateway from "../models/paymentgateway";
 import { verifyPayment } from "../utils/helpers";
+import Currency from "../models/currency";
 
 export const submitOrUpdateKYC = async (
     req: Request,
@@ -48,7 +49,7 @@ export const submitOrUpdateKYC = async (
             return;
         } else {
             // Create a new KYC record
-            const newKYC = await KYC.create({ vendorId, ...kycData });
+            const newKYC = await KYC.create({ vendorId, ...kycData, isVerified: true });
             res
                 .status(200)
                 .json({ message: "KYC created successfully", data: newKYC });
@@ -77,11 +78,19 @@ export const getStore = async (req: Request, res: Response): Promise<void> => {
     const vendorId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID from middleware
 
     try {
-        const stores = await Store.findAll({ where: { vendorId } });
+        const stores = await Store.findAll({ 
+            where: { vendorId },
+            include: [
+                {
+                    model: Currency,
+                    as: "currency"
+                },
+            ], 
+        });
 
         // Check if any stores were found
         if (stores.length === 0) {
-            res.status(404).json({ message: "No stores found for this vendor." });
+            res.status(404).json({ message: "No stores found for this vendor.", data: [] });
             return;
         }
 
@@ -97,8 +106,13 @@ export const createStore = async (
 ): Promise<void> => {
     const vendorId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID from middleware
 
-    const { name, location, logo, businessHours, deliveryOptions, tipsOnFinding } =
+    const { currencyId, name, location, logo, businessHours, deliveryOptions, tipsOnFinding } =
         req.body;
+        
+    if (!currencyId) {
+        res.status(400).json({ message: 'Currency ID is required.' });
+        return;
+    }
 
     try {
         // Check if a store with the same name exists for this vendorId
@@ -113,9 +127,18 @@ export const createStore = async (
             return;
         }
 
+        // Find the currency by ID
+        const currency = await Currency.findByPk(currencyId);
+
+        if (!currency) {
+            res.status(404).json({ message: 'Currency not found' });
+            return;
+        }
+
         // Create the store
         const store = await Store.create({
             vendorId,
+            currencyId: currency.id,
             name,
             location,
             businessHours,
@@ -140,6 +163,7 @@ export const updateStore = async (
     const vendorId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID from middleware
     const {
         storeId,
+        currencyId,
         name,
         location,
         businessHours,
@@ -153,6 +177,14 @@ export const updateStore = async (
 
         if (!store) {
             res.status(404).json({ message: "Store not found" });
+            return;
+        }
+
+        // Find the currency by ID
+        const currency = await Currency.findByPk(currencyId);
+
+        if (!currency) {
+            res.status(404).json({ message: 'Currency not found' });
             return;
         }
 
@@ -171,6 +203,7 @@ export const updateStore = async (
 
         // Update store fields
         await store.update({
+            currencyId,
             name,
             location,
             businessHours,
@@ -374,6 +407,18 @@ export const fetchVendorProducts = async (
                     as: "sub_category",
                     where: categoryName ? { name: categoryName } : undefined,
                 },
+                {
+                    model: Store,
+                    as: "store",
+                    attributes: ['name'],
+                    include: [
+                        {
+                            model: Currency,
+                            as: "currency",
+                            attributes: ['symbol']
+                        },
+                    ]
+                },
             ],
             ...((name || sku || status || condition) && {
                 where: {
@@ -409,7 +454,17 @@ export const viewProduct = async (
                 vendorId,
             },
             include: [
-                { model: Store, as: "store" },
+                { 
+                    model: Store, 
+                    as: "store",
+                    include: [
+                        {
+                            model: Currency,
+                            as: "currency",
+                            attributes: ['symbol']
+                        },
+                    ]
+                },
                 { model: SubCategory, as: "sub_category" },
             ],
         });
@@ -870,6 +925,18 @@ export const fetchVendorAuctionProducts = async (
                     as: "sub_category",
                     where: categoryName ? { name: categoryName } : undefined,
                 },
+                {
+                    model: Store,
+                    as: "store",
+                    attributes: ['name'],
+                    include: [
+                        {
+                            model: Currency,
+                            as: "currency",
+                            attributes: ['symbol']
+                        },
+                    ]
+                },
             ],
             ...((name || sku || status || condition) && {
                 where: {
@@ -884,7 +951,7 @@ export const fetchVendorAuctionProducts = async (
         if (auctionProducts.length === 0) {
             res
                 .status(404)
-                .json({ message: "No auction products found for this vendor." });
+                .json({ message: "No auction products found for this vendor.", data: [] });
             return;
         }
 
@@ -916,7 +983,17 @@ export const viewAuctionProduct = async (
                 vendorId,
             },
             include: [
-                { model: Store, as: "store" },
+                { 
+                    model: Store, 
+                    as: "store",
+                    include: [
+                        {
+                            model: Currency,
+                            as: "currency",
+                            attributes: ['symbol']
+                        },
+                    ]
+                },
                 { model: SubCategory, as: "sub_category" },
             ],
         });
@@ -1232,5 +1309,15 @@ export const verifyCAC = async (req: Request, res: Response): Promise<void> => {
     } catch (error) {
         console.error('Unexpected error:', error);
         res.status(500).json({ message: 'Unexpected error', error: error });
+    }
+};
+
+export const getAllCurrencies = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const currencies = await Currency.findAll();
+        res.status(200).json({ data: currencies });
+    } catch (error) {
+        logger.error('Error fetching currencies:', error);
+        res.status(500).json({ message: 'Failed to fetch currencies' });
     }
 };

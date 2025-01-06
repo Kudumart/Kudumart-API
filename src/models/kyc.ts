@@ -14,8 +14,7 @@ class KYC extends Model {
   public taxIdentificationNumber!: string;
   public idVerification!: { // Specify the structure for idVerification
     name: string;
-    photoFront: string; // URL or path to the front photo
-    photoBack: string; // URL or path to the back photo
+    number: string; // URL or path to the front photo
   };
   public certificateOfIncorporation!: string;
   public adminNote!: string;
@@ -71,20 +70,16 @@ const initModel = (sequelize: Sequelize) => {
         type: DataTypes.STRING,
         allowNull: true,
       },
+      businessAddress: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
       businessRegistrationNumber: {
         type: DataTypes.STRING,
         allowNull: true,
       },
-      taxIdentificationNumber: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
       idVerification: {
-        type: DataTypes.JSON, // This will hold the structured data
-        allowNull: true,
-      },
-      certificateOfIncorporation: {
-        type: DataTypes.TEXT, // This could be a URL to the uploaded document
+        type: DataTypes.JSON, // This could be a URL to the uploaded document
         allowNull: true,
       },
       adminNote: {

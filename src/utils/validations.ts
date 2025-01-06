@@ -429,8 +429,25 @@ export const updateStoreValidation = () => {
       .withMessage("Business hours must be a valid object."),
     check("deliveryOptions")
       .optional()
-      .isObject()
-      .withMessage("Delivery options must be a valid object."),
+      .isArray()
+      .withMessage("Delivery options must be an array.")
+      .custom((value) => {
+        for (const option of value) {
+          if (typeof option !== "object" || option === null) {
+            throw new Error("Each delivery option must be a valid object.");
+          }
+          if (!option.city || typeof option.city !== "string") {
+            throw new Error("City must be a string.");
+          }
+          if (option.price === undefined || typeof option.price !== "number") {
+            throw new Error("Price must be a number.");
+          }
+          if (!option.arrival_day || typeof option.arrival_day !== "string") {
+            throw new Error("Arrival day must be a string.");
+          }
+        }
+        return true; // if all checks pass
+      }),
     check("tipsOnFinding")
       .optional()
       .isString()
@@ -751,7 +768,6 @@ export const updateAuctionProductValidation = () => {
   ];
 };
 
-
 export const validatePaymentGateway = () => {
   return [
     check("name")
@@ -811,6 +827,69 @@ export const validateSendMessage = () => {
         return true; // Everything is fine
       })
       .withMessage("Content or fileUrl is required"),
+  ];
+};
+
+export const validatePlaceBid = () => {
+  return [
+    // Validate auctionProductId
+    check("auctionProductId")
+      .isString()
+      .withMessage("Auction product ID is required and must be a string")
+      .isUUID()
+      .withMessage("Auction product ID must be a valid UUID"),
+
+    // Validate bidAmount
+    check("bidAmount")
+      .isNumeric()
+      .withMessage("BidAmount is required and must be a numerical value")
+  ];
+};
+
+export const validateAddItemToCart = () => {
+  return [
+    // Validate productId
+    check("productId")
+      .isString()
+      .withMessage("Product ID is required and must be a string")
+      .isUUID()
+      .withMessage("Product ID is required and must be a valid UUID"),
+
+    // Validate quantity
+    check("quantity")
+      .optional()
+      .isInt({ min: 1 })
+      .withMessage("Quantity must be a positive integer"),
+  ];
+};
+
+export const validateUpdateCartItem = () => {
+  return [
+    // Validate cartId
+    check("cartId")
+      .isString()
+      .withMessage("Cart ID is required and must be a string")
+      .isUUID()
+      .withMessage("Cart ID is required and must be a valid UUID"),
+
+    // Validate quantity
+    check("quantity")
+      .isInt({ min: 1 })
+      .withMessage("Quantity must be a positive integer"),
+  ];
+};
+
+export const validateShowInterest = () => {
+  return [
+    check("auctionProductId")
+      .isString()
+      .withMessage("Auction product ID is required and must be a string")
+      .isUUID()
+      .withMessage("Auction product ID must be a valid UUID"),
+
+    check("amountPaid")
+      .isNumeric()
+      .withMessage("Amount paid is required and must be a numeric value"),
   ];
 };
 

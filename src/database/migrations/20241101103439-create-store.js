@@ -18,6 +18,15 @@ module.exports = {
         },
         onDelete: 'RESTRICT',
       },
+      currencyId: {
+        type: Sequelize.UUID,
+        allowNull: false,
+        references: {
+          model: 'currencies',
+          key: 'id',
+        },
+        onDelete: 'RESTRICT',
+      },
       name: {
         type: Sequelize.STRING,
         allowNull: false

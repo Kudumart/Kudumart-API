@@ -2,7 +2,18 @@
 import { Router } from 'express';
 import * as userController from '../controllers/userController';
 import authMiddleware from '../middlewares/authMiddleware';
-import { updatePasswordValidationRules, updateProfileEmailValidationRules, confirmProfileEmailValidationRules, updateProfilePhoneNumberValidationRules, confirmProfilePhoneNumberValidationRules, validateSendMessage, validate } from '../utils/validations';
+import { updatePasswordValidationRules, 
+        updateProfileEmailValidationRules, 
+        confirmProfileEmailValidationRules, 
+        updateProfilePhoneNumberValidationRules, 
+        confirmProfilePhoneNumberValidationRules, 
+        validateSendMessage, 
+        validatePlaceBid, 
+        validateAddItemToCart,
+        validateUpdateCartItem,
+        validateShowInterest,
+        validate 
+} from '../utils/validations';
 
 const userRoutes = Router();
 
@@ -20,6 +31,12 @@ userRoutes.put('/profile/update/password', authMiddleware, updatePasswordValidat
 userRoutes.get('/notification/settings', authMiddleware, userController.getUserNotificationSettings);
 userRoutes.put('/update/notification/settings', authMiddleware, userController.updateUserNotificationSettings);
 
+// Cart
+userRoutes.post("/cart/add", authMiddleware, validateAddItemToCart(), validate, userController.addItemToCart);
+userRoutes.put("/cart/update", authMiddleware, validateUpdateCartItem(), validate, userController.updateCartItem);
+userRoutes.delete("/cart/remove", authMiddleware, userController.removeCartItem);
+userRoutes.get("/cart", authMiddleware, userController.getCartContents);
+userRoutes.delete("/cart/clear", authMiddleware, userController.clearCart);
 
 // Conversation and Message
 userRoutes.get('/conversations', authMiddleware, userController.getConversations);
@@ -29,5 +46,7 @@ userRoutes.delete('/messages', authMiddleware, userController.deleteMessageHandl
 userRoutes.patch('/mark/message/read', authMiddleware, userController.markAsReadHandler);
 
 // Bid
-userRoutes.post('/place/bid', authMiddleware, userController.placeBid)
+userRoutes.post('/auction/interest', authMiddleware, validateShowInterest(), validate, userController.showInterest)
+userRoutes.post('/place/bid', authMiddleware, validatePlaceBid(), validate, userController.placeBid)
+
 export default userRoutes;

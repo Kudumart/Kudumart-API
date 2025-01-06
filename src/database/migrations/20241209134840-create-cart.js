@@ -2,43 +2,35 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('bids', {
+    await queryInterface.createTable('carts', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         primaryKey: true,
         allowNull: false,
       },
-      auctionProductId: {
+      userId: {
         type: Sequelize.UUID,
         allowNull: false,
         references: {
-          model: 'auction_products', // Ensure this matches your AuctionProduct table name
+          model: "users",
+          key: "id",
+        },
+        onDelete: "RESTRICT",
+      },
+      productId: {
+        type: Sequelize.UUID,
+        allowNull: false,
+        references: {
+          model: 'products', // Ensure this matches your AuctionProduct table name
           key: 'id',
         },
         onDelete: 'CASCADE',
       },
-      bidderId: {
-        type: Sequelize.UUID,
-        allowNull: false,
-        references: {
-          model: 'users', // Ensure this matches your Users table name
-          key: 'id',
-        },
-        onDelete: 'RESTRICT',
-      },
-      bidAmount: {
-        type: Sequelize.DECIMAL(10, 2),
-        allowNull: false,
-      },
-      bidCount: {
+      quantity: {
         type: Sequelize.INTEGER,
         allowNull: false,
-      },
-      isWinningBid: { 
-        type: Sequelize.BOOLEAN, 
-        defaultValue: false, 
-        allowNull: false 
+        defaultValue: 1,
       },
       createdAt: {
         allowNull: false,
@@ -51,6 +43,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('bids');
+    await queryInterface.dropTable('carts');
   }
 };

@@ -17,6 +17,8 @@ import Conversation from "../models/conversation";
 import AuctionProduct from "../models/auctionproduct";
 import Bid from "../models/bid";
 import { io } from "../index";
+import Cart from "../models/cart";
+import ShowInterest from "../models/showinterest";
 
 export const logout = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -861,7 +863,226 @@ export const markAsReadHandler = async (
   }
 };
 
+// Cart
+export const addItemToCart = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const userId = (req as AuthenticatedRequest).user?.id; // Get the authenticated user's ID
+
+  // Ensure userId is defined
+  if (!userId) {
+    res.status(400).json({ message: "User must be authenticated" });
+    return;
+  }
+
+  const { productId, quantity } = req.body;
+
+  try {
+    const existingCartItem = await Cart.findOne({
+      where: { userId, productId },
+    });
+
+    if (existingCartItem) {
+      // If item already in cart, update quantity
+      existingCartItem.quantity += quantity;
+      await existingCartItem.save();
+    } else {
+      // Add new item to cart
+      await Cart.create({ userId, productId, quantity });
+    }
+
+    res.status(200).json({ message: "Item added to cart successfully." });
+  } catch (error: any) {
+    logger.error(error);
+    res.status(500).json({ message: error.message || "Error adding item to cart." });
+  }
+}
+
+export const updateCartItem = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const { cartId, quantity } = req.body;
+
+  try {
+    const cartItem = await Cart.findByPk(cartId);
+
+    if (!cartItem) {
+      res.status(404).json({ message: "Cart item not found." });
+      return;
+    }
+
+    cartItem.quantity = quantity;
+    await cartItem.save();
+
+    res.status(200).json({ message: "Cart item updated successfully." });
+  } catch (error: any) {
+    logger.error(error);
+    res.status(500).json({ message: error.message || "Error updating cart item." });
+  }
+}
+
+export const removeCartItem = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const userId = (req as AuthenticatedRequest).user?.id; // Get the authenticated user's ID
+
+  // Ensure userId is defined
+  if (!userId) {
+    res.status(400).json({ message: "User must be authenticated" });
+    return;
+  }
+
+  const { cartId } = req.query;
+
+  try {
+    const cartItem = await Cart.findOne({
+      where: { userId, id: cartId },
+    });
+
+    if (!cartItem) {
+      res.status(404).json({ message: "Cart item not found." });
+      return;
+    }
+
+    await cartItem.destroy();
+
+    res.status(200).json({ message: "Cart item removed successfully." });
+  } catch (error: any) {
+    logger.error(error);
+    res.status(500).json({ message: error.message || "Error removing cart item." });
+  }
+}
+
+export const getCartContents = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const userId = (req as AuthenticatedRequest).user?.id; // Get the authenticated user's ID
+
+  try {
+    const cartItems = await Cart.findAll({ 
+      where: { userId },
+      include: [
+        {
+          model: User,
+          as: "user",
+        },
+        {
+          model: Product,
+          as: "product",
+        },
+      ], 
+    });
+
+    res.status(200).json({ data: cartItems });
+  } catch (error: any) {
+    logger.error(error);
+    res.status(500).json({ message: error.message || "Error fetching cart contents." });
+  }
+}
+
+export const clearCart = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const userId = (req as AuthenticatedRequest).user?.id; // Get the authenticated user's ID
+
+  try {
+    await Cart.destroy({ where: { userId } });
+
+    res.status(200).json({ message: "Cart cleared successfully." });
+  } catch (error: any) {
+    logger.error(error);
+    res.status(500).json({ message: error.message || "Error clearing cart." });
+  }
+
+}
+
 // Bid
+export const showInterest = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { auctionProductId, amountPaid } = req.body;
+    const userId = (req as AuthenticatedRequest).user?.id; // Get the authenticated user's ID
+
+    // Fetch the auction product
+    const auctionProduct = await AuctionProduct.findOne({
+      where: {
+        id: auctionProductId,
+        auctionStatus: "upcoming", // Ensure auction status is "upcoming"
+      },
+    });
+
+    if (!auctionProduct) {
+      res.status(404).json({ message: "Auction product not found or is not upcoming." });
+      return;
+    }
+
+    // Validate auction date is not the start date
+    if (auctionProduct.startDate && new Date(auctionProduct.startDate).toDateString() === new Date().toDateString()) {
+      res.status(400).json({ message: "You cannot show interest on the day the auction starts." });
+      return;
+    }
+
+    // Check if user has already shown interest
+    const existingInterest = await ShowInterest.findOne({
+      where: { userId, auctionProductId },
+    });
+
+    if (existingInterest) {
+      res.status(400).json({ message: "You have already shown interest in this auction." });
+      return;
+    }
+
+    // Create a new interest record
+    const newInterest = await ShowInterest.create({
+      userId,
+      auctionProductId,
+      amountPaid,
+      status: "confirmed",
+    });
+
+    // Fetch the user based on userId
+    const user = await User.findOne({ where: { id: userId } });
+
+    if (!user) {
+      logger.warn(`User with ID ${userId} not found. Email notification skipped.`);
+      res.status(404).json({ message: "User not found." });
+      return;
+    }
+
+    // Notify user via email
+    if (user.email) {
+      const message = emailTemplates.interestNotification(
+        user,
+        amountPaid,
+        auctionProduct,
+      );
+      try {
+        await sendMail(
+          user.email,
+          `${process.env.APP_NAME} - Interest Confirmation`,
+          message
+        );
+      } catch (emailError) {
+        logger.error("Error sending email notification:", emailError);
+      }
+    } else {
+      logger.warn(`User with ID ${userId} has no email. Notification skipped.`);
+    }
+    
+    res.status(200).json({
+      message: "Interest recorded successfully. Please wait for confirmation.",
+      data: newInterest,
+    });
+  } catch (error: any) {
+    logger.error("Error showing interest:", error);
+    res.status(500).json({ message: error.message || "An error occurred while recording your interest." });
+  }
+};
+
 export const placeBid = async (req: Request, res: Response): Promise<void> => {
   try {
     const { auctionProductId, bidAmount } = req.body;
@@ -889,7 +1110,6 @@ export const placeBid = async (req: Request, res: Response): Promise<void> => {
       ],
       order: [[{ model: Bid, as: "bids" }, "bidAmount", "DESC"]], // Ordering the bids by amount descending
     });
-  
 
     if (!auctionProduct) {
       res
@@ -904,9 +1124,20 @@ export const placeBid = async (req: Request, res: Response): Promise<void> => {
     const highestBid = auctionProduct?.bids?.[0];
 
     // Determine minimum acceptable bid
+    const highestBidAmount = highestBid ? Number(highestBid.bidAmount) : 0;
+    const bidIncrement = auctionProduct.bidIncrement ? Number(auctionProduct.bidIncrement) : 0;
+    const startingPrice = auctionProduct.price ? Number(auctionProduct.price) : 0;
+
+    // Determine minimum acceptable bid
     const minAcceptableBid = highestBid
-      ? Number(highestBid.bidAmount) + (auctionProduct.bidIncrement || 0)
-      : auctionProduct.price;
+        ? highestBidAmount + bidIncrement
+        : startingPrice;
+
+    if (isNaN(minAcceptableBid)) {
+      logger.error("Invalid minimum acceptable bid calculation.");
+      res.status(500).json({ message: "An error occurred while calculating the bid amount." });
+      return;
+    }
 
     if (bidAmount < minAcceptableBid) {
       res.status(400).json({
@@ -915,35 +1146,61 @@ export const placeBid = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Check if the bidder has exceeded max number of bids
-    const userBidCount = await Bid.count({
+    // Notify all previous bidders (except the current highest bidder)
+    if (auctionProduct.bids && auctionProduct.bids.length > 0) {
+      const previousBidders = auctionProduct.bids.filter(
+        (bid) => bid.bidderId !== bidderId && bid.user // Exclude current bidder and ensure user exists
+      );
+    
+      for (const previousBid of previousBidders) {
+        if (previousBid.user) { // Ensure user is not undefined
+          try {
+            // Generate outbid notification message
+            const message = emailTemplates.outBidNotification(previousBid, auctionProduct);
+    
+            // Send notification email
+            await sendMail(
+              previousBid.user.email,
+              `${process.env.APP_NAME} - Outbid Notification`,
+              message
+            );
+          } catch (emailError) {
+            logger.error(`Error sending email to ${previousBid.user.email}:`, emailError);
+          }
+        }
+      }
+    }
+    
+    // Find an existing bid by the current bidder
+    const existingBid = await Bid.findOne({
       where: { auctionProductId, bidderId },
     });
 
-    if (
-      auctionProduct.maxBidsPerUser &&
-      userBidCount >= auctionProduct.maxBidsPerUser
-    ) {
-      res.status(400).json({
-        message:
-          "You have reached the maximum number of bids allowed for this auction.",
+    if (existingBid) {
+      // Update the existing bid amount and increment bidCount
+      existingBid.bidAmount = bidAmount;
+      existingBid.isWinningBid = true;
+      existingBid.bidCount = Number(existingBid.bidCount || 0) + 1; // Increment bid count
+      await existingBid.save();
+
+      // Update previous highest bid status
+      if (highestBid && highestBid.bidderId !== bidderId) {
+        highestBid.isWinningBid = false;
+        await highestBid.save();
+      }
+
+      // Real-time bid update via WebSocket
+      io.to(auctionProductId).emit("newBid", {
+        auctionProductId,
+        bidAmount: existingBid.bidAmount,
+        bidderId: existingBid.bidderId,
+      });
+
+      res.status(200).json({
+        message: "Bid updated successfully.",
+        data: existingBid,
       });
       return;
-    }
-
-    // Notify previous highest bidder
-    if (highestBid && highestBid.user) {
-      // Send mail
-      let message = emailTemplates.outBidNotification(highestBid, auctionProduct);
-      try {
-        await sendMail(
-          highestBid.user.email,
-          `${process.env.APP_NAME} - Outbid Notification`,
-          message
-        );
-      } catch (emailError) {
-        logger.error("Error sending email:", emailError); // Log error for internal use
-      }
     }
 
     // Create the new bid
@@ -951,6 +1208,7 @@ export const placeBid = async (req: Request, res: Response): Promise<void> => {
       auctionProductId,
       bidderId,
       bidAmount,
+      bidCount: 1, // Initialize bid count for new bids
     });
 
     // Update previous highest bid status
