@@ -285,10 +285,24 @@ export const createProduct = async (
         const storeExists = await Store.findByPk(storeId);
         const categoryExists = await SubCategory.findByPk(categoryId);
 
-        if (!vendorExists || !storeExists || !categoryExists) {
+        if (!vendorExists || !categoryExists) {
             res
                 .status(404)
-                .json({ message: "Vendor, Store, or Category not found." });
+                .json({ message: "Vendor not found." });
+            return;
+        }
+
+        if (!storeExists) {
+            res
+                .status(404)
+                .json({ message: "Store not found." });
+            return;
+        }
+
+        if (!categoryExists) {
+            res
+                .status(404)
+                .json({ message: "Category not found." });
             return;
         }
 
@@ -607,10 +621,24 @@ export const createAuctionProduct = async (
         const storeExists = await Store.findByPk(storeId);
         const categoryExists = await SubCategory.findByPk(categoryId);
 
-        if (!vendorExists || !storeExists || !categoryExists) {
+        if (!vendorExists || !categoryExists) {
             res
                 .status(404)
-                .json({ message: "Vendor, Store, or Category not found." });
+                .json({ message: "Vendor not found." });
+            return;
+        }
+
+        if (!storeExists) {
+            res
+                .status(404)
+                .json({ message: "Store not found." });
+            return;
+        }
+
+        if (!categoryExists) {
+            res
+                .status(404)
+                .json({ message: "Category not found." });
             return;
         }
 
@@ -1126,10 +1154,10 @@ export const subscribe = async (req: Request, res: Response): Promise<void> => {
         };
 
         if (activeSubscription) {
-            // Step 2: Handle active subscription
+            // Handle active subscription
             const activePlan = activeSubscription.subscriptionPlans;
 
-            // Step 2: Check if the active plan is defined and handle accordingly
+            // Check if the active plan is defined and handle accordingly
             if (!activePlan) {
                 res.status(400).json({ message: 'No subscription plan found for the vendor.' });
                 return;
@@ -1137,10 +1165,7 @@ export const subscribe = async (req: Request, res: Response): Promise<void> => {
 
             if (activePlan.name === 'Free Plan') {
                 // If the active plan is free, proceed with the subscription
-                // Step 3: Mark the current free plan as inactive
-                await activeSubscription.update({ isActive: false });
-
-                // Step 4: Create a new subscription for the vendor
+                // Create a new subscription for the vendor
                 const subscriptionPlan = await SubscriptionPlan.findByPk(subscriptionPlanId);
 
                 if (!subscriptionPlan) {
@@ -1152,6 +1177,9 @@ export const subscribe = async (req: Request, res: Response): Promise<void> => {
                 if (!transactionSuccess) return;
 
                 endDate.setMonth(startDate.getMonth() + subscriptionPlan.duration); // Set end date by adding months
+
+                // Mark the current free plan as inactive
+                await activeSubscription.update({ isActive: false });
 
                 const newSubscription = await VendorSubscription.create({
                     vendorId,

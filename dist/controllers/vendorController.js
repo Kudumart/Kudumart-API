@@ -262,10 +262,22 @@ const createProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         const vendorExists = yield user_1.default.findByPk(vendorId);
         const storeExists = yield store_1.default.findByPk(storeId);
         const categoryExists = yield subcategory_1.default.findByPk(categoryId);
-        if (!vendorExists || !storeExists || !categoryExists) {
+        if (!vendorExists || !categoryExists) {
             res
                 .status(404)
-                .json({ message: "Vendor, Store, or Category not found." });
+                .json({ message: "Vendor not found." });
+            return;
+        }
+        if (!storeExists) {
+            res
+                .status(404)
+                .json({ message: "Store not found." });
+            return;
+        }
+        if (!categoryExists) {
+            res
+                .status(404)
+                .json({ message: "Category not found." });
             return;
         }
         // Generate a unique SKU (could also implement a more complex logic if needed)
@@ -517,10 +529,22 @@ const createAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
         const vendorExists = yield user_1.default.findByPk(vendorId);
         const storeExists = yield store_1.default.findByPk(storeId);
         const categoryExists = yield subcategory_1.default.findByPk(categoryId);
-        if (!vendorExists || !storeExists || !categoryExists) {
+        if (!vendorExists || !categoryExists) {
             res
                 .status(404)
-                .json({ message: "Vendor, Store, or Category not found." });
+                .json({ message: "Vendor not found." });
+            return;
+        }
+        if (!storeExists) {
+            res
+                .status(404)
+                .json({ message: "Store not found." });
+            return;
+        }
+        if (!categoryExists) {
+            res
+                .status(404)
+                .json({ message: "Category not found." });
             return;
         }
         // Fetch the KYC relationship
@@ -950,18 +974,16 @@ const subscribe = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             return true;
         });
         if (activeSubscription) {
-            // Step 2: Handle active subscription
+            // Handle active subscription
             const activePlan = activeSubscription.subscriptionPlans;
-            // Step 2: Check if the active plan is defined and handle accordingly
+            // Check if the active plan is defined and handle accordingly
             if (!activePlan) {
                 res.status(400).json({ message: 'No subscription plan found for the vendor.' });
                 return;
             }
             if (activePlan.name === 'Free Plan') {
                 // If the active plan is free, proceed with the subscription
-                // Step 3: Mark the current free plan as inactive
-                yield activeSubscription.update({ isActive: false });
-                // Step 4: Create a new subscription for the vendor
+                // Create a new subscription for the vendor
                 const subscriptionPlan = yield subscriptionplan_1.default.findByPk(subscriptionPlanId);
                 if (!subscriptionPlan) {
                     res.status(404).json({ message: 'Subscription plan not found' });
@@ -971,6 +993,8 @@ const subscribe = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 if (!transactionSuccess)
                     return;
                 endDate.setMonth(startDate.getMonth() + subscriptionPlan.duration); // Set end date by adding months
+                // Mark the current free plan as inactive
+                yield activeSubscription.update({ isActive: false });
                 const newSubscription = yield vendorsubscription_1.default.create({
                     vendorId,
                     subscriptionPlanId,
