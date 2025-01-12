@@ -38,6 +38,9 @@ userRoutes.delete("/cart/remove", authMiddleware, userController.removeCartItem)
 userRoutes.get("/cart", authMiddleware, userController.getCartContents);
 userRoutes.delete("/cart/clear", authMiddleware, userController.clearCart);
 
+userRoutes.get("/payment/gateway", authMiddleware, userController.getActivePaymentGateway);
+userRoutes.post("/checkout", authMiddleware, userController.checkout);
+
 // Conversation and Message
 userRoutes.get('/conversations', authMiddleware, userController.getConversations);
 userRoutes.get('/messages', authMiddleware, userController.getAllConversationMessages);

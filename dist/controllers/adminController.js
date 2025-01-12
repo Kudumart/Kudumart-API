@@ -986,7 +986,7 @@ const getAllSubCategories = (req, res) => __awaiter(void 0, void 0, void 0, func
         // Query with name filter if provided
         const whereClause = name ? { name: { [sequelize_1.Op.like]: `%${name}%` } } : {};
         const subCategories = yield subcategory_1.default.findAll({ where: whereClause });
-        res.status(200).json({ subCategories });
+        res.status(200).json({ data: subCategories });
     }
     catch (error) {
         logger_1.default.error(error);
@@ -1224,12 +1224,12 @@ const addCurrency = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         res.status(400).json({ message: 'Symbol is required and must be a string.' });
     }
     try {
-        // Check if the currency already exists (by name or symbol)
+        // Check for existing currency with matching name or symbol (case-insensitive)
         const existingCurrency = yield currency_1.default.findOne({
             where: {
                 [sequelize_1.Op.or]: [
-                    { name: { [sequelize_1.Op.like]: name } },
-                    { symbol: { [sequelize_1.Op.like]: symbol } }
+                    sequelize_1.Sequelize.where(sequelize_1.Sequelize.fn('LOWER', sequelize_1.Sequelize.col('name')), name.toLowerCase()),
+                    sequelize_1.Sequelize.where(sequelize_1.Sequelize.fn('LOWER', sequelize_1.Sequelize.col('symbol')), symbol.toLowerCase())
                 ]
             }
         });
@@ -1272,8 +1272,8 @@ const updateCurrency = (req, res) => __awaiter(void 0, void 0, void 0, function*
         const existingCurrency = yield currency_1.default.findOne({
             where: {
                 [sequelize_1.Op.or]: [
-                    { name: { [sequelize_1.Op.like]: name } },
-                    { symbol: { [sequelize_1.Op.like]: symbol } }
+                    sequelize_1.Sequelize.where(sequelize_1.Sequelize.fn('LOWER', sequelize_1.Sequelize.col('name')), name.toLowerCase()),
+                    sequelize_1.Sequelize.where(sequelize_1.Sequelize.fn('LOWER', sequelize_1.Sequelize.col('symbol')), symbol.toLowerCase())
                 ],
                 id: { [sequelize_1.Op.ne]: currencyId } // Exclude the current currency
             }

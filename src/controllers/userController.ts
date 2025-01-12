@@ -2,7 +2,7 @@
 import { Request, Response, NextFunction } from "express";
 import User from "../models/user";
 import { Op, Sequelize } from "sequelize";
-import { generateOTP, sendSMS } from "../utils/helpers";
+import { generateOTP, verifyPayment, sendSMS } from "../utils/helpers";
 import { sendMail } from "../services/mail.service";
 import { emailTemplates } from "../utils/messages";
 import JwtService from "../services/jwt.service";
@@ -19,6 +19,13 @@ import Bid from "../models/bid";
 import { io } from "../index";
 import Cart from "../models/cart";
 import ShowInterest from "../models/showinterest";
+import PaymentGateway from "../models/paymentgateway";
+import sequelizeService from "../services/sequelize.service";
+import Order from "../models/order";
+import OrderItem from "../models/orderitem";
+import Payment from "../models/payment";
+import Store from "../models/store";
+import Currency from "../models/currency";
 
 export const logout = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -870,7 +877,6 @@ export const addItemToCart = async (
 ): Promise<void> => {
   const userId = (req as AuthenticatedRequest).user?.id; // Get the authenticated user's ID
 
-  // Ensure userId is defined
   if (!userId) {
     res.status(400).json({ message: "User must be authenticated" });
     return;
@@ -879,16 +885,103 @@ export const addItemToCart = async (
   const { productId, quantity } = req.body;
 
   try {
+    // Find the product by productId and include vendor and currency details
+    const product = await Product.findByPk(productId, {
+      attributes: ["vendorId"],
+      include: [
+        {
+          model: Store,
+          as: "store",
+          include: [
+            {
+              model: Currency,
+              as: "currency",
+              attributes: ["name", "symbol"],
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!product || !product.store || !product.store.currency) {
+      res.status(404).json({ message: "Product not found or invalid currency data" });
+      return;
+    }
+
+    const { vendorId } = product;
+    const productCurrency = product.store.currency;
+
+    // Find the vendor by vendorId and check if isVerified is true
+    const vendor = await User.findByPk(vendorId);
+
+    if (!vendor) {
+      res.status(404).json({ message: "Vendor not found" });
+      return;
+    }
+
+    if (!vendor.isVerified) {
+      res.status(400).json({
+        message: "Cannot add item to cart. Vendor is not verified.",
+      });
+      return;
+    }
+
+    // Check if the user has an existing cart
+    const existingCartItems = await Cart.findAll({
+      where: { userId },
+      include: [
+        {
+          model: Product,
+          as: "product",
+          include: [
+            {
+              model: Store,
+              as: "store",
+              include: [
+                {
+                  model: Currency,
+                  as: "currency",
+                  attributes: ["name", "symbol"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    if (existingCartItems.length > 0) {
+      // Extract the currency of the first item in the cart
+      const existingCartItem = existingCartItems[0];
+      const existingProduct = existingCartItem.product;
+    
+      if (!existingProduct || !existingProduct.store || !existingProduct.store.currency) {
+        throw new Error("Cart contains invalid product or currency information.");
+      }
+    
+      const existingCurrency = existingProduct.store.currency;
+    
+      // Check if the currency matches
+      if (
+        existingCurrency.name !== productCurrency.name ||
+        existingCurrency.symbol !== productCurrency.symbol
+      ) {
+        // Clear the cart if the currency doesn't match
+        await Cart.destroy({ where: { userId } });
+      }
+    }
+    
+    // Check if the product is already in the user's cart
     const existingCartItem = await Cart.findOne({
       where: { userId, productId },
     });
 
     if (existingCartItem) {
-      // If item already in cart, update quantity
+      // If the item is already in the cart, update its quantity
       existingCartItem.quantity += quantity;
       await existingCartItem.save();
     } else {
-      // Add new item to cart
+      // Add a new item to the cart
       await Cart.create({ userId, productId, quantity });
     }
 
@@ -897,7 +990,7 @@ export const addItemToCart = async (
     logger.error(error);
     res.status(500).json({ message: error.message || "Error adding item to cart." });
   }
-}
+};
 
 export const updateCartItem = async (
   req: Request,
@@ -973,6 +1066,20 @@ export const getCartContents = async (
         {
           model: Product,
           as: "product",
+          include: [
+            {
+              model: Store,
+              as: "store",
+              attributes: ["name"],
+              include: [
+                {
+                  model: Currency,
+                  as: "currency",
+                  attributes: ["name", "symbol"],
+                },
+              ],
+            },
+          ],
         },
       ], 
     });
@@ -1000,6 +1107,193 @@ export const clearCart = async (
   }
 
 }
+
+export const getActivePaymentGateway = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Query for an active payment gateway
+    const paymentGateway = await PaymentGateway.findOne({
+      where: { isActive: true }, // Assumes 'status' is a field in your model
+    });
+
+    if (!paymentGateway) {
+      res.status(404).json({ message: "No active payment gateway found" });
+      return;
+    }
+
+    res.status(200).json({
+      message: "Active payment gateway fetched successfully",
+      data: paymentGateway,
+    });
+  } catch (error: any) {
+    logger.error("Error fetching active payment gateway:", error);
+    res.status(500).json({
+      message: "An error occurred while fetching the active payment gateway",
+    });
+  }
+};
+
+export const checkout = async (req: Request, res: Response): Promise<void> => {
+  const userId = (req as AuthenticatedRequest).user?.id; // Get authenticated user ID
+  const { refId, shippingAddress } = req.body;
+
+  if (!userId) {
+    res.status(400).json({ message: "User must be authenticated" });
+    return;
+  }
+
+  if (!refId) {
+    res.status(400).json({ message: "Payment reference ID is required" });
+    return;
+  }
+
+  if (!shippingAddress) {
+    res.status(400).json({ message: "Shipping address is required" });
+    return;
+  }
+
+  const transaction = await sequelizeService.connection!.transaction();
+
+  try {
+    // Fetch active Paystack secret key from PaymentGateway model
+    const paymentGateway = await PaymentGateway.findOne({
+      where: {
+        name: "Paystack",
+        isActive: true,
+      },
+    });
+
+    if (!paymentGateway || !paymentGateway.secretKey) {
+      throw new Error("Active Paystack gateway not configured");
+    }
+
+    const PAYSTACK_SECRET_KEY = paymentGateway.secretKey;
+
+    // Verify payment reference with Paystack
+    const verificationResponse = await verifyPayment(refId, PAYSTACK_SECRET_KEY);
+
+    if (verificationResponse.status !== "success") {
+      res.status(400).json({ message: "Payment verification failed." });
+      return;
+    }
+
+    const paymentData = verificationResponse;
+
+    // Fetch user
+    const user = await User.findByPk(userId);
+    if (!user) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
+
+    // Fetch cart items
+    const cartItems = await Cart.findAll({
+      where: { userId },
+      include: [
+        {
+          model: Product,
+          as: "product",
+          attributes: ["id", "name", "price", "vendorId"],
+        },
+      ],
+    });
+
+    if (!cartItems || cartItems.length === 0) {
+      res.status(400).json({ message: "Cart is empty" });
+      return;
+    }
+
+    // Calculate total price and validate inventory
+    let totalAmount = 0;
+    for (const cartItem of cartItems) {
+      const product = cartItem.product;
+      if (!product) {
+        throw new Error(`Product with ID ${cartItem.productId} not found`);
+      }
+
+      // if (product.quantity < cartItem.quantity) {
+      //   throw new Error(`Insufficient stock for product: ${product.name}`);
+      // }
+
+      totalAmount += product.price * cartItem.quantity;
+    }
+
+    // Validate that the total amount matches the Paystack transaction amount
+    if (paymentData.amount / 100 !== totalAmount) {
+      throw new Error("Payment amount does not match cart total");
+    }
+
+    // Create order
+    const order = await Order.create(
+      {
+        userId,
+        totalAmount,
+        refId,
+        shippingAddress,
+        status: "pending",
+      },
+      { transaction }
+    );
+
+    // Create order items and update product inventory
+    for (const cartItem of cartItems) {
+      // Ensure cartItem.product is defined
+      if (!cartItem.product) {
+        throw new Error(`Product information is missing for cart item with ID ${cartItem.id}`);
+      }
+
+      const product = await Product.findByPk(cartItem.product.id);
+
+      if (!product) {
+        throw new Error(`Product with ID ${cartItem.product.id} not found.`);
+      }
+
+      await OrderItem.create(
+        {
+          orderId: order.id,
+          product: cartItem.product, // Store the product as a JSON object
+          quantity: cartItem.quantity,
+          price: product.price,
+        },
+        { transaction }
+      );
+
+      // Update product inventory
+      // await product.update(
+      //   { quantity: product.quantity - cartItem.quantity },
+      //   { transaction }
+      // );
+    }
+
+     // Create payment record
+     const payment = await Payment.create(
+      {
+        orderId: order.id,
+        refId,
+        amount: paymentData.amount / 100,
+        currency: paymentData.currency,
+        status: paymentData.status,
+        channel: paymentData.channel,
+        paymentDate: paymentData.transaction_date,
+      },
+      { transaction }
+    );
+
+
+    // Clear user's cart
+    await Cart.destroy({ where: { userId }, transaction });
+
+    // Commit the transaction
+    await transaction.commit();
+
+    res.status(200).json({
+      message: "Checkout successful"
+    });
+  } catch (error: any) {
+    await transaction.rollback();
+    logger.error("Error during checkout:", error);
+    res.status(500).json({ message: error.message || "Checkout failed" });
+  }
+};
 
 // Bid
 export const showInterest = async (req: Request, res: Response): Promise<void> => {

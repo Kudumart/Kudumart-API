@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.placeBid = exports.showInterest = exports.clearCart = exports.getCartContents = exports.removeCartItem = exports.updateCartItem = exports.addItemToCart = exports.markAsReadHandler = exports.deleteMessageHandler = exports.saveMessage = exports.sendMessageHandler = exports.getAllConversationMessages = exports.getConversations = exports.updateUserNotificationSettings = exports.getUserNotificationSettings = exports.confirmPhoneNumberUpdate = exports.updateProfilePhoneNumber = exports.confirmEmailUpdate = exports.updateProfileEmail = exports.updatePassword = exports.updateProfilePhoto = exports.updateProfile = exports.profile = exports.logout = void 0;
+exports.placeBid = exports.showInterest = exports.checkout = exports.getActivePaymentGateway = exports.clearCart = exports.getCartContents = exports.removeCartItem = exports.updateCartItem = exports.addItemToCart = exports.markAsReadHandler = exports.deleteMessageHandler = exports.saveMessage = exports.sendMessageHandler = exports.getAllConversationMessages = exports.getConversations = exports.updateUserNotificationSettings = exports.getUserNotificationSettings = exports.confirmPhoneNumberUpdate = exports.updateProfilePhoneNumber = exports.confirmEmailUpdate = exports.updateProfileEmail = exports.updatePassword = exports.updateProfilePhoto = exports.updateProfile = exports.profile = exports.logout = void 0;
 const user_1 = __importDefault(require("../models/user"));
 const sequelize_1 = require("sequelize");
 const helpers_1 = require("../utils/helpers");
@@ -31,6 +31,13 @@ const bid_1 = __importDefault(require("../models/bid"));
 const index_1 = require("../index");
 const cart_1 = __importDefault(require("../models/cart"));
 const showinterest_1 = __importDefault(require("../models/showinterest"));
+const paymentgateway_1 = __importDefault(require("../models/paymentgateway"));
+const sequelize_service_1 = __importDefault(require("../services/sequelize.service"));
+const order_1 = __importDefault(require("../models/order"));
+const orderitem_1 = __importDefault(require("../models/orderitem"));
+const payment_1 = __importDefault(require("../models/payment"));
+const store_1 = __importDefault(require("../models/store"));
+const currency_1 = __importDefault(require("../models/currency"));
 const logout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Get the token from the request
@@ -749,23 +756,96 @@ exports.markAsReadHandler = markAsReadHandler;
 const addItemToCart = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _r;
     const userId = (_r = req.user) === null || _r === void 0 ? void 0 : _r.id; // Get the authenticated user's ID
-    // Ensure userId is defined
     if (!userId) {
         res.status(400).json({ message: "User must be authenticated" });
         return;
     }
     const { productId, quantity } = req.body;
     try {
+        // Find the product by productId and include vendor and currency details
+        const product = yield product_1.default.findByPk(productId, {
+            attributes: ["vendorId"],
+            include: [
+                {
+                    model: store_1.default,
+                    as: "store",
+                    include: [
+                        {
+                            model: currency_1.default,
+                            as: "currency",
+                            attributes: ["name", "symbol"],
+                        },
+                    ],
+                },
+            ],
+        });
+        if (!product || !product.store || !product.store.currency) {
+            res.status(404).json({ message: "Product not found or invalid currency data" });
+            return;
+        }
+        const { vendorId } = product;
+        const productCurrency = product.store.currency;
+        // Find the vendor by vendorId and check if isVerified is true
+        const vendor = yield user_1.default.findByPk(vendorId);
+        if (!vendor) {
+            res.status(404).json({ message: "Vendor not found" });
+            return;
+        }
+        if (!vendor.isVerified) {
+            res.status(400).json({
+                message: "Cannot add item to cart. Vendor is not verified.",
+            });
+            return;
+        }
+        // Check if the user has an existing cart
+        const existingCartItems = yield cart_1.default.findAll({
+            where: { userId },
+            include: [
+                {
+                    model: product_1.default,
+                    as: "product",
+                    include: [
+                        {
+                            model: store_1.default,
+                            as: "store",
+                            include: [
+                                {
+                                    model: currency_1.default,
+                                    as: "currency",
+                                    attributes: ["name", "symbol"],
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        });
+        if (existingCartItems.length > 0) {
+            // Extract the currency of the first item in the cart
+            const existingCartItem = existingCartItems[0];
+            const existingProduct = existingCartItem.product;
+            if (!existingProduct || !existingProduct.store || !existingProduct.store.currency) {
+                throw new Error("Cart contains invalid product or currency information.");
+            }
+            const existingCurrency = existingProduct.store.currency;
+            // Check if the currency matches
+            if (existingCurrency.name !== productCurrency.name ||
+                existingCurrency.symbol !== productCurrency.symbol) {
+                // Clear the cart if the currency doesn't match
+                yield cart_1.default.destroy({ where: { userId } });
+            }
+        }
+        // Check if the product is already in the user's cart
         const existingCartItem = yield cart_1.default.findOne({
             where: { userId, productId },
         });
         if (existingCartItem) {
-            // If item already in cart, update quantity
+            // If the item is already in the cart, update its quantity
             existingCartItem.quantity += quantity;
             yield existingCartItem.save();
         }
         else {
-            // Add new item to cart
+            // Add a new item to the cart
             yield cart_1.default.create({ userId, productId, quantity });
         }
         res.status(200).json({ message: "Item added to cart successfully." });
@@ -834,6 +914,20 @@ const getCartContents = (req, res) => __awaiter(void 0, void 0, void 0, function
                 {
                     model: product_1.default,
                     as: "product",
+                    include: [
+                        {
+                            model: store_1.default,
+                            as: "store",
+                            attributes: ["name"],
+                            include: [
+                                {
+                                    model: currency_1.default,
+                                    as: "currency",
+                                    attributes: ["name", "symbol"],
+                                },
+                            ],
+                        },
+                    ],
                 },
             ],
         });
@@ -858,12 +952,163 @@ const clearCart = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
 });
 exports.clearCart = clearCart;
+const getActivePaymentGateway = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        // Query for an active payment gateway
+        const paymentGateway = yield paymentgateway_1.default.findOne({
+            where: { isActive: true }, // Assumes 'status' is a field in your model
+        });
+        if (!paymentGateway) {
+            res.status(404).json({ message: "No active payment gateway found" });
+            return;
+        }
+        res.status(200).json({
+            message: "Active payment gateway fetched successfully",
+            data: paymentGateway,
+        });
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching active payment gateway:", error);
+        res.status(500).json({
+            message: "An error occurred while fetching the active payment gateway",
+        });
+    }
+});
+exports.getActivePaymentGateway = getActivePaymentGateway;
+const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _v;
+    const userId = (_v = req.user) === null || _v === void 0 ? void 0 : _v.id; // Get authenticated user ID
+    const { refId, shippingAddress } = req.body;
+    if (!userId) {
+        res.status(400).json({ message: "User must be authenticated" });
+        return;
+    }
+    if (!refId) {
+        res.status(400).json({ message: "Payment reference ID is required" });
+        return;
+    }
+    if (!shippingAddress) {
+        res.status(400).json({ message: "Shipping address is required" });
+        return;
+    }
+    const transaction = yield sequelize_service_1.default.connection.transaction();
+    try {
+        // Fetch active Paystack secret key from PaymentGateway model
+        const paymentGateway = yield paymentgateway_1.default.findOne({
+            where: {
+                name: "Paystack",
+                isActive: true,
+            },
+        });
+        if (!paymentGateway || !paymentGateway.secretKey) {
+            throw new Error("Active Paystack gateway not configured");
+        }
+        const PAYSTACK_SECRET_KEY = paymentGateway.secretKey;
+        // Verify payment reference with Paystack
+        const verificationResponse = yield (0, helpers_1.verifyPayment)(refId, PAYSTACK_SECRET_KEY);
+        if (verificationResponse.status !== "success") {
+            res.status(400).json({ message: "Payment verification failed." });
+            return;
+        }
+        const paymentData = verificationResponse;
+        // Fetch user
+        const user = yield user_1.default.findByPk(userId);
+        if (!user) {
+            res.status(404).json({ message: "User not found" });
+            return;
+        }
+        // Fetch cart items
+        const cartItems = yield cart_1.default.findAll({
+            where: { userId },
+            include: [
+                {
+                    model: product_1.default,
+                    as: "product",
+                    attributes: ["id", "name", "price", "vendorId"],
+                },
+            ],
+        });
+        if (!cartItems || cartItems.length === 0) {
+            res.status(400).json({ message: "Cart is empty" });
+            return;
+        }
+        // Calculate total price and validate inventory
+        let totalAmount = 0;
+        for (const cartItem of cartItems) {
+            const product = cartItem.product;
+            if (!product) {
+                throw new Error(`Product with ID ${cartItem.productId} not found`);
+            }
+            // if (product.quantity < cartItem.quantity) {
+            //   throw new Error(`Insufficient stock for product: ${product.name}`);
+            // }
+            totalAmount += product.price * cartItem.quantity;
+        }
+        // Validate that the total amount matches the Paystack transaction amount
+        if (paymentData.amount / 100 !== totalAmount) {
+            throw new Error("Payment amount does not match cart total");
+        }
+        // Create order
+        const order = yield order_1.default.create({
+            userId,
+            totalAmount,
+            refId,
+            shippingAddress,
+            status: "pending",
+        }, { transaction });
+        // Create order items and update product inventory
+        for (const cartItem of cartItems) {
+            // Ensure cartItem.product is defined
+            if (!cartItem.product) {
+                throw new Error(`Product information is missing for cart item with ID ${cartItem.id}`);
+            }
+            const product = yield product_1.default.findByPk(cartItem.product.id);
+            if (!product) {
+                throw new Error(`Product with ID ${cartItem.product.id} not found.`);
+            }
+            yield orderitem_1.default.create({
+                orderId: order.id,
+                product: cartItem.product,
+                quantity: cartItem.quantity,
+                price: product.price,
+            }, { transaction });
+            // Update product inventory
+            // await product.update(
+            //   { quantity: product.quantity - cartItem.quantity },
+            //   { transaction }
+            // );
+        }
+        // Create payment record
+        const payment = yield payment_1.default.create({
+            orderId: order.id,
+            refId,
+            amount: paymentData.amount / 100,
+            currency: paymentData.currency,
+            status: paymentData.status,
+            channel: paymentData.channel,
+            paymentDate: paymentData.transaction_date,
+        }, { transaction });
+        // Clear user's cart
+        yield cart_1.default.destroy({ where: { userId }, transaction });
+        // Commit the transaction
+        yield transaction.commit();
+        res.status(200).json({
+            message: "Checkout successful"
+        });
+    }
+    catch (error) {
+        yield transaction.rollback();
+        logger_1.default.error("Error during checkout:", error);
+        res.status(500).json({ message: error.message || "Checkout failed" });
+    }
+});
+exports.checkout = checkout;
 // Bid
 const showInterest = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _v;
+    var _w;
     try {
         const { auctionProductId, amountPaid } = req.body;
-        const userId = (_v = req.user) === null || _v === void 0 ? void 0 : _v.id; // Get the authenticated user's ID
+        const userId = (_w = req.user) === null || _w === void 0 ? void 0 : _w.id; // Get the authenticated user's ID
         // Fetch the auction product
         const auctionProduct = yield auctionproduct_1.default.findOne({
             where: {
@@ -927,10 +1172,10 @@ const showInterest = (req, res) => __awaiter(void 0, void 0, void 0, function* (
 });
 exports.showInterest = showInterest;
 const placeBid = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _w, _x;
+    var _x, _y;
     try {
         const { auctionProductId, bidAmount } = req.body;
-        const bidderId = (_w = req.user) === null || _w === void 0 ? void 0 : _w.id; // Authenticated user ID from middleware
+        const bidderId = (_x = req.user) === null || _x === void 0 ? void 0 : _x.id; // Authenticated user ID from middleware
         // Fetch the auction product
         const auctionProduct = yield auctionproduct_1.default.findOne({
             where: {
@@ -962,7 +1207,7 @@ const placeBid = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             return;
         }
         // Get the current highest bid
-        const highestBid = (_x = auctionProduct === null || auctionProduct === void 0 ? void 0 : auctionProduct.bids) === null || _x === void 0 ? void 0 : _x[0];
+        const highestBid = (_y = auctionProduct === null || auctionProduct === void 0 ? void 0 : auctionProduct.bids) === null || _y === void 0 ? void 0 : _y[0];
         // Determine minimum acceptable bid
         const highestBidAmount = highestBid ? Number(highestBid.bidAmount) : 0;
         const bidIncrement = auctionProduct.bidIncrement ? Number(auctionProduct.bidIncrement) : 0;

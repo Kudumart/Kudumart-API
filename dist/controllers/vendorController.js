@@ -23,7 +23,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAllCurrencies = exports.verifyCAC = exports.subscribe = exports.subscriptionPlans = exports.viewAuctionProduct = exports.fetchVendorAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchVendorProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.getStore = exports.getKYC = exports.submitOrUpdateKYC = void 0;
+exports.getAllSubCategories = exports.getAllCurrencies = exports.verifyCAC = exports.subscribe = exports.subscriptionPlans = exports.viewAuctionProduct = exports.fetchVendorAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchVendorProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.getStore = exports.getKYC = exports.submitOrUpdateKYC = void 0;
 const user_1 = __importDefault(require("../models/user"));
 const uuid_1 = require("uuid");
 const sequelize_1 = require("sequelize");
@@ -1131,4 +1131,18 @@ const getAllCurrencies = (req, res) => __awaiter(void 0, void 0, void 0, functio
     }
 });
 exports.getAllCurrencies = getAllCurrencies;
+const getAllSubCategories = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { name } = req.query;
+    try {
+        // Query with name filter if provided
+        const whereClause = name ? { name: { [sequelize_1.Op.like]: `%${name}%` } } : {};
+        const subCategories = yield subcategory_1.default.findAll({ where: whereClause });
+        res.status(200).json({ data: subCategories });
+    }
+    catch (error) {
+        logger_1.default.error(error);
+        res.status(500).json({ message: "Error fetching sub-categories" });
+    }
+});
+exports.getAllSubCategories = getAllSubCategories;
 //# sourceMappingURL=vendorController.js.map

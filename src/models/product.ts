@@ -1,6 +1,7 @@
 // models/product.ts
 import { Model, DataTypes, Sequelize } from 'sequelize';
 import User from './user';
+import Store from './store';
 
 class Product extends Model {
   public id!: string;
@@ -25,6 +26,8 @@ class Product extends Model {
   public vendor?: User;  // Declare the relationship to User (vendor)
   public createdAt!: Date;
   public updatedAt!: Date;
+
+  public store!: Store;
 
   static associate(models: any) {
     // Define associations here

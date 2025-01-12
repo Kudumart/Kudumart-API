@@ -1206,7 +1206,7 @@ export const getAllSubCategories = async (
         const whereClause = name ? { name: { [Op.like]: `%${name}%` } } : {};
 
         const subCategories = await SubCategory.findAll({ where: whereClause });
-        res.status(200).json({ subCategories });
+        res.status(200).json({ data: subCategories });
     } catch (error) {
         logger.error(error);
         res.status(500).json({ message: "Error fetching sub-categories" });
@@ -1476,12 +1476,12 @@ export const addCurrency = async (req: Request, res: Response): Promise<void> =>
     }
 
     try {
-        // Check if the currency already exists (by name or symbol)
+        // Check for existing currency with matching name or symbol (case-insensitive)
         const existingCurrency = await Currency.findOne({
             where: {
                 [Op.or]: [
-                    { name: { [Op.like]: name } }, // Case-insensitive comparison
-                    { symbol: { [Op.like]: symbol } }
+                    Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('name')), name.toLowerCase()),
+                    Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('symbol')), symbol.toLowerCase())
                 ]
             }
         });
@@ -1529,8 +1529,8 @@ export const updateCurrency = async (req: Request, res: Response): Promise<void>
         const existingCurrency = await Currency.findOne({
             where: {
                 [Op.or]: [
-                    { name: { [Op.like]: name } },
-                    { symbol: { [Op.like]: symbol } }
+                    Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('name')), name.toLowerCase()),
+                    Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('symbol')), symbol.toLowerCase())
                 ],
                 id: { [Op.ne]: currencyId } // Exclude the current currency
             }

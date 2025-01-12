@@ -1,17 +1,17 @@
-// models/Cart.ts
+// models/Order.ts
 import { Model, DataTypes, Sequelize } from 'sequelize';
 import User from './user';
-import Product from './product';
 
-class Cart extends Model {
+class Order extends Model {
   public id!: string;
   public userId!: string;
-  public productId!: string;
-  public quantity!: number;
+  public totalAmount!: number;
+  public shippingAddress!: string;
+  public status!: string;
+  public refId!: string; // Reference ID from payment
   public createdAt?: Date;
   public updatedAt?: Date;
 
-  public product?: Product;
   public user?: User;
 
   static associate(models: any) {
@@ -21,16 +21,11 @@ class Cart extends Model {
       foreignKey: 'userId',
       onDelete: 'RESTRICT',
     });
-    this.belongsTo(models.Product, {
-      as: 'product',
-      foreignKey: 'productId',
-      onDelete: 'CASCADE',
-    });
   }
 }
 
 const initModel = (sequelize: Sequelize) => {
-  Cart.init(
+  Order.init(
     {
       id: {
         type: DataTypes.UUID,
@@ -47,30 +42,33 @@ const initModel = (sequelize: Sequelize) => {
         },
         onDelete: "RESTRICT",
       },
-      productId: {
-        type: DataTypes.UUID,
+      totalAmount: {
+        type: DataTypes.DECIMAL(10, 2),
         allowNull: false,
-        references: {
-          model: 'products', // Ensure this matches your AuctionProduct table name
-          key: 'id',
-        },
-        onDelete: 'CASCADE',
       },
-      quantity: {
-        type: DataTypes.INTEGER,
+      shippingAddress: {
+        type: DataTypes.STRING,
         allowNull: false,
-        defaultValue: 1,
+      },
+      status: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: "pending",
+      },
+      refId: {
+        type: DataTypes.STRING,
+        allowNull: false,
       },
     },
     {
       sequelize,
-      modelName: 'Cart',
+      modelName: 'Order',
       timestamps: true,
       paranoid: false,
-      tableName: 'carts',
+      tableName: 'orders',
     }
   );
 };
 
-export default Cart;
+export default Order;
 export { initModel };

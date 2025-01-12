@@ -61,5 +61,6 @@ vendorRoutes.get("/subscription/plans", authMiddleware_1.default, authorizeVendo
 vendorRoutes.post("/subscribe", authMiddleware_1.default, authorizeVendor_1.default, vendorController.subscribe);
 vendorRoutes.get("/verifyCAC", authMiddleware_1.default, authorizeVendor_1.default, vendorController.verifyCAC);
 vendorRoutes.get('/currencies', authMiddleware_1.default, authorizeVendor_1.default, vendorController.getAllCurrencies);
+vendorRoutes.get('/categories', authMiddleware_1.default, authorizeVendor_1.default, vendorController.getAllSubCategories);
 exports.default = vendorRoutes;
 //# sourceMappingURL=vendorRoute.js.map

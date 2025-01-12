@@ -1,36 +1,30 @@
-// models/Cart.ts
+// models/OrderItem.ts
 import { Model, DataTypes, Sequelize } from 'sequelize';
-import User from './user';
-import Product from './product';
+import Order from './order';
 
-class Cart extends Model {
+class OrderItem extends Model {
   public id!: string;
-  public userId!: string;
-  public productId!: string;
+  public orderId!: string;
+  public product!: object; // JSON to accept product object
   public quantity!: number;
+  public price!: number;
   public createdAt?: Date;
   public updatedAt?: Date;
 
-  public product?: Product;
-  public user?: User;
+  public order?: Order;
 
   static associate(models: any) {
     // Define associations here
-    this.belongsTo(models.User, {
-      as: 'user',
-      foreignKey: 'userId',
+    this.belongsTo(models.Order, {
+      as: 'order',
+      foreignKey: 'orderId',
       onDelete: 'RESTRICT',
-    });
-    this.belongsTo(models.Product, {
-      as: 'product',
-      foreignKey: 'productId',
-      onDelete: 'CASCADE',
     });
   }
 }
 
 const initModel = (sequelize: Sequelize) => {
-  Cart.init(
+  OrderItem.init(
     {
       id: {
         type: DataTypes.UUID,
@@ -38,39 +32,37 @@ const initModel = (sequelize: Sequelize) => {
         primaryKey: true,
         allowNull: false,
       },
-      userId: {
+      orderId: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
-          model: "users",
+          model: "orders",
           key: "id",
         },
         onDelete: "RESTRICT",
       },
-      productId: {
-        type: DataTypes.UUID,
+      product: {
+        type: DataTypes.JSON,
         allowNull: false,
-        references: {
-          model: 'products', // Ensure this matches your AuctionProduct table name
-          key: 'id',
-        },
-        onDelete: 'CASCADE',
       },
       quantity: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        defaultValue: 1,
+      },
+      price: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
       },
     },
     {
       sequelize,
-      modelName: 'Cart',
+      modelName: 'OrderItem',
       timestamps: true,
       paranoid: false,
-      tableName: 'carts',
+      tableName: 'order_items',
     }
   );
 };
 
-export default Cart;
+export default OrderItem;
 export { initModel };

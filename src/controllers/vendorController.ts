@@ -1321,3 +1321,21 @@ export const getAllCurrencies = async (req: Request, res: Response): Promise<voi
         res.status(500).json({ message: 'Failed to fetch currencies' });
     }
 };
+
+export const getAllSubCategories = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
+    const { name } = req.query;
+
+    try {
+        // Query with name filter if provided
+        const whereClause = name ? { name: { [Op.like]: `%${name}%` } } : {};
+
+        const subCategories = await SubCategory.findAll({ where: whereClause });
+        res.status(200).json({ data: subCategories });
+    } catch (error) {
+        logger.error(error);
+        res.status(500).json({ message: "Error fetching sub-categories" });
+    }
+};
