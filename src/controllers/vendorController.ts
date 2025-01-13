@@ -2,7 +2,7 @@
 import { Request, Response, NextFunction } from "express";
 import User from "../models/user";
 import { v4 as uuidv4 } from "uuid";
-import { Op, ForeignKeyConstraintError } from "sequelize";
+import { Op, ForeignKeyConstraintError, Sequelize } from "sequelize";
 import { sendMail } from "../services/mail.service";
 import { emailTemplates } from "../utils/messages";
 import logger from "../middlewares/logger"; // Adjust the path to your logger.js
@@ -78,14 +78,46 @@ export const getStore = async (req: Request, res: Response): Promise<void> => {
     const vendorId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID from middleware
 
     try {
-        const stores = await Store.findAll({ 
+        const stores = await Store.findAll({
             where: { vendorId },
             include: [
                 {
                     model: Currency,
-                    as: "currency"
+                    as: "currency",
                 },
-            ], 
+                {
+                    model: Product,
+                    as: "products",
+                    attributes: [], // Don't include individual product details
+                },
+                {
+                    model: AuctionProduct,
+                    as: "auctionproducts",
+                    attributes: [], // Don't include individual product details
+                },
+            ],
+            attributes: {
+                include: [
+                    // Include total product count for each store
+                    [
+                        Sequelize.literal(`(
+                            SELECT COUNT(*)
+                            FROM Products AS product
+                            WHERE product.storeId = Store.id
+                        )`),
+                        "totalProducts",
+                    ],
+                    // Include total auction product count for each store
+                    [
+                        Sequelize.literal(`(
+                            SELECT COUNT(*)
+                            FROM Auction_Products AS auctionproduct
+                            WHERE auctionproduct.storeId = Store.id
+                        )`),
+                        "totalAuctionProducts",
+                    ],
+                ],
+            },
         });
 
         // Check if any stores were found
@@ -96,6 +128,7 @@ export const getStore = async (req: Request, res: Response): Promise<void> => {
 
         res.status(200).json({ data: stores });
     } catch (error) {
+        console.error("Error retrieving stores:", error);
         res.status(500).json({ message: "Failed to retrieve stores", error });
     }
 };

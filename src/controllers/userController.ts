@@ -1533,3 +1533,43 @@ export const placeBid = async (req: Request, res: Response): Promise<void> => {
     });
   }
 };
+
+export const becomeVendor = async (req: Request, res: Response): Promise<void> => {
+  const userId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID from middleware
+
+  if (!userId) {
+      res.status(400).json({ message: "User must be authenticated" });
+      return;
+  }
+
+  try {
+      // Fetch the user
+      const user = await User.findByPk(userId);
+
+      if (!user) {
+          res.status(404).json({ message: "User not found" });
+          return;
+      }
+
+      // Check if the user is already a vendor
+      if (user.accountType === "vendor") {
+          res.status(400).json({ message: "User is already a vendor" });
+          return;
+      }
+
+      // Check if the user is eligible to become a vendor
+      if (user.accountType !== "user") {
+          res.status(400).json({ message: "Account type cannot be changed to vendor" });
+          return;
+      }
+
+      // Update the accountType to vendor
+      user.accountType = "vendor";
+      await user.save();
+
+      res.status(200).json({ message: "Account successfully upgraded to vendor" });
+  } catch (error) {
+      logger.error("Error upgrading account to vendor:", error);
+      res.status(500).json({ message: "Failed to update account type" });
+  }
+};
