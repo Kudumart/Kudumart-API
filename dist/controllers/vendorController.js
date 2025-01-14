@@ -102,9 +102,41 @@ const getStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             include: [
                 {
                     model: currency_1.default,
-                    as: "currency"
+                    as: "currency",
+                },
+                {
+                    model: product_1.default,
+                    as: "products",
+                    attributes: [], // Don't include individual product details
+                },
+                {
+                    model: auctionproduct_1.default,
+                    as: "auctionproducts",
+                    attributes: [], // Don't include individual product details
                 },
             ],
+            attributes: {
+                include: [
+                    // Include total product count for each store
+                    [
+                        sequelize_1.Sequelize.literal(`(
+                            SELECT COUNT(*)
+                            FROM Products AS product
+                            WHERE product.storeId = Store.id
+                        )`),
+                        "totalProducts",
+                    ],
+                    // Include total auction product count for each store
+                    [
+                        sequelize_1.Sequelize.literal(`(
+                            SELECT COUNT(*)
+                            FROM Auction_Products AS auctionproduct
+                            WHERE auctionproduct.storeId = Store.id
+                        )`),
+                        "totalAuctionProducts",
+                    ],
+                ],
+            },
         });
         // Check if any stores were found
         if (stores.length === 0) {
@@ -114,6 +146,7 @@ const getStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         res.status(200).json({ data: stores });
     }
     catch (error) {
+        console.error("Error retrieving stores:", error);
         res.status(500).json({ message: "Failed to retrieve stores", error });
     }
 });

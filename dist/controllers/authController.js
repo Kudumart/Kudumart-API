@@ -27,6 +27,7 @@ const role_1 = __importDefault(require("../models/role"));
 const subscriptionplan_1 = __importDefault(require("../models/subscriptionplan"));
 const vendorsubscription_1 = __importDefault(require("../models/vendorsubscription"));
 const usernotificationsetting_1 = __importDefault(require("../models/usernotificationsetting"));
+const notification_1 = __importDefault(require("../models/notification"));
 const index = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     res.status(200).json({
         code: 200,
@@ -209,6 +210,18 @@ const verifyEmail = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             yield user.save();
             // Optionally delete the OTP record after successful verification
             yield otp_1.default.destroy({ where: { userId: user.id } });
+            const isVendor = user.accountType === "Vendor";
+            const title = "Welcome to Our Platform!";
+            const message = isVendor
+                ? "Thank you for joining as a vendor! Start adding your products and managing your store."
+                : "Welcome to our platform! Start exploring our amazing products and features.";
+            // Create the notification in the database
+            const notification = yield notification_1.default.create({
+                userId: user.id,
+                title,
+                message,
+                type: "welcome",
+            });
             // Return a success response
             res.status(200).json({
                 message: "Email verified successfully.",
@@ -425,6 +438,17 @@ const resetPassword = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         catch (emailError) {
             logger_1.default.error("Error sending email:", emailError); // Log error for internal use
         }
+        // Send reset password notification
+        const title = "Password Reset Request";
+        const messageContent = "A password reset request was initiated for your account. If this wasn't you, please contact support.";
+        const type = "reset_password";
+        // Create the notification in the database
+        const notification = yield notification_1.default.create({
+            userId: otpRecord.user.id,
+            title,
+            message: messageContent,
+            type,
+        });
         res.status(200).json({
             message: "Password has been reset successfully",
         });

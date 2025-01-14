@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.placeBid = exports.showInterest = exports.checkout = exports.getActivePaymentGateway = exports.clearCart = exports.getCartContents = exports.removeCartItem = exports.updateCartItem = exports.addItemToCart = exports.markAsReadHandler = exports.deleteMessageHandler = exports.saveMessage = exports.sendMessageHandler = exports.getAllConversationMessages = exports.getConversations = exports.updateUserNotificationSettings = exports.getUserNotificationSettings = exports.confirmPhoneNumberUpdate = exports.updateProfilePhoneNumber = exports.confirmEmailUpdate = exports.updateProfileEmail = exports.updatePassword = exports.updateProfilePhoto = exports.updateProfile = exports.profile = exports.logout = void 0;
+exports.userMarkNotificationAsRead = exports.getUserNotifications = exports.becomeVendor = exports.placeBid = exports.showInterest = exports.checkout = exports.getActivePaymentGateway = exports.clearCart = exports.getCartContents = exports.removeCartItem = exports.updateCartItem = exports.addItemToCart = exports.markAsReadHandler = exports.deleteMessageHandler = exports.saveMessage = exports.sendMessageHandler = exports.getAllConversationMessages = exports.getConversations = exports.updateUserNotificationSettings = exports.getUserNotificationSettings = exports.confirmPhoneNumberUpdate = exports.updateProfilePhoneNumber = exports.confirmEmailUpdate = exports.updateProfileEmail = exports.updatePassword = exports.updateProfilePhoto = exports.updateProfile = exports.profile = exports.logout = void 0;
 const user_1 = __importDefault(require("../models/user"));
 const sequelize_1 = require("sequelize");
 const helpers_1 = require("../utils/helpers");
@@ -38,6 +38,9 @@ const orderitem_1 = __importDefault(require("../models/orderitem"));
 const payment_1 = __importDefault(require("../models/payment"));
 const store_1 = __importDefault(require("../models/store"));
 const currency_1 = __importDefault(require("../models/currency"));
+const notification_1 = __importDefault(require("../models/notification"));
+const subscriptionplan_1 = __importDefault(require("../models/subscriptionplan"));
+const vendorsubscription_1 = __importDefault(require("../models/vendorsubscription"));
 const logout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Get the token from the request
@@ -170,6 +173,17 @@ const updatePassword = (req, res) => __awaiter(void 0, void 0, void 0, function*
         catch (emailError) {
             logger_1.default.error("Error sending email:", emailError); // Log error for internal use
         }
+        // Send reset password notification
+        const title = "Password Reset Request";
+        const messageContent = "A password reset request was initiated for your account. If this wasn't you, please contact support.";
+        const type = "reset_password";
+        // Create the notification in the database
+        const notification = yield notification_1.default.create({
+            userId: user.id,
+            title,
+            message: messageContent,
+            type,
+        });
         res.status(200).json({
             message: "Password updated successfully.",
         });
@@ -275,6 +289,17 @@ const confirmEmailUpdate = (req, res) => __awaiter(void 0, void 0, void 0, funct
         catch (emailError) {
             logger_1.default.error("Error sending email:", emailError); // Log error for internal use
         }
+        // Send a notification for becoming a vendor
+        const title = "Email Address Updated";
+        const messageContent = `Your email address has been successfully updated to ${newEmail}.`;
+        const type = "update_email";
+        // Create the notification in the database
+        const notification = yield notification_1.default.create({
+            userId: user.id,
+            title,
+            message: messageContent,
+            type,
+        });
         // Send response
         res.status(200).json({ message: "Email updated successfully" });
     }
@@ -386,6 +411,17 @@ const confirmPhoneNumberUpdate = (req, res) => __awaiter(void 0, void 0, void 0,
         catch (emailError) {
             logger_1.default.error("Error sending email:", emailError); // Log error for internal use
         }
+        // Send a notification for becoming a vendor
+        const title = "Phone Number Updated";
+        const messageContent = `Your phone number has been successfully updated to ${newPhoneNumber}.`;
+        const type = "update_phone";
+        // Create the notification in the database
+        const notification = yield notification_1.default.create({
+            userId: user.id,
+            title,
+            message: messageContent,
+            type,
+        });
         // Send response
         res.status(200).json({ message: "Phone number updated successfully" });
     }
@@ -845,6 +881,16 @@ const addItemToCart = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             yield existingCartItem.save();
         }
         else {
+            const title = "Product Added to Cart";
+            const message = `You have successfully added "${product.name}" to your cart.`;
+            const type = "add_to_cart";
+            // Create the notification in the database
+            const notification = yield notification_1.default.create({
+                userId,
+                title,
+                message,
+                type,
+            });
             // Add a new item to the cart
             yield cart_1.default.create({ userId, productId, quantity });
         }
@@ -1306,4 +1352,140 @@ const placeBid = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
 });
 exports.placeBid = placeBid;
+const becomeVendor = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _z;
+    const userId = (_z = req.user) === null || _z === void 0 ? void 0 : _z.id; // Authenticated user ID from middleware
+    if (!userId) {
+        res.status(400).json({ message: "User must be authenticated" });
+        return;
+    }
+    try {
+        // Fetch the user
+        const user = yield user_1.default.findByPk(userId);
+        if (!user) {
+            res.status(404).json({ message: "User not found" });
+            return;
+        }
+        // Check if the user is already a vendor
+        if (user.accountType === "Vendor") {
+            res.status(400).json({ message: "User is already a vendor" });
+            return;
+        }
+        // Check if the user is eligible to become a vendor
+        if (user.accountType !== "Customer") {
+            res.status(400).json({ message: "Account type cannot be changed to vendor" });
+            return;
+        }
+        // Update the accountType to vendor
+        user.accountType = "Vendor";
+        yield user.save();
+        // Find the free subscription plan
+        const freePlan = yield subscriptionplan_1.default.findOne({ where: { name: "Free Plan" } });
+        if (!freePlan) {
+            res.status(400).json({ message: "Free plan not found. Please contact support." });
+            return;
+        }
+        // Assign the free plan to the new user
+        const startDate = new Date();
+        const endDate = new Date();
+        endDate.setMonth(startDate.getMonth() + freePlan.duration);
+        yield vendorsubscription_1.default.create({
+            vendorId: user.id,
+            subscriptionPlanId: freePlan.id,
+            startDate,
+            endDate,
+            isActive: true,
+        });
+        // Send a notification for becoming a vendor
+        const title = "Welcome, Vendor!";
+        const message = "Congratulations! You are now a vendor. Start setting up your store and manage your products.";
+        const type = "vendor";
+        // Create the notification in the database
+        const notification = yield notification_1.default.create({
+            userId: user.id,
+            title,
+            message,
+            type,
+        });
+        res.status(200).json({ message: "Account successfully upgraded to vendor" });
+    }
+    catch (error) {
+        logger_1.default.error("Error upgrading account to vendor:", error);
+        res.status(500).json({ message: "Failed to update account type" });
+    }
+});
+exports.becomeVendor = becomeVendor;
+const getUserNotifications = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _0;
+    const userId = (_0 = req.user) === null || _0 === void 0 ? void 0 : _0.id; // Authenticated user ID from middleware
+    if (!userId) {
+        res.status(400).json({ message: "User must be authenticated" });
+        return;
+    }
+    const { isRead, limit = 10, page = 1 } = req.query; // Query params
+    try {
+        // Build the query conditions
+        const where = { userId };
+        if (isRead !== undefined) {
+            where.isRead = isRead === 'true';
+        }
+        // Calculate offset for pagination
+        const paginationLimit = parseInt(limit, 10);
+        const paginationPage = parseInt(page, 10);
+        const offset = (paginationPage - 1) * paginationLimit;
+        // Fetch notifications with filters, pagination, and sorting
+        const { rows: notifications, count: total } = yield notification_1.default.findAndCountAll({
+            where,
+            order: [['createdAt', 'DESC']],
+            limit: paginationLimit,
+            offset,
+        });
+        res.status(200).json({
+            data: notifications,
+            meta: {
+                total,
+                page: paginationPage,
+                limit: paginationLimit,
+                totalPages: Math.ceil(total / paginationLimit),
+            },
+        });
+    }
+    catch (error) {
+        console.error("Error fetching notifications:", error);
+        res.status(500).json({ message: "Failed to fetch notifications", error });
+    }
+});
+exports.getUserNotifications = getUserNotifications;
+const userMarkNotificationAsRead = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _1;
+    const userId = (_1 = req.user) === null || _1 === void 0 ? void 0 : _1.id; // Authenticated user ID from middleware
+    const notificationId = req.query.notificationId; // Notification ID passed in the request body
+    if (!userId) {
+        res.status(400).json({ message: "User must be authenticated" });
+        return;
+    }
+    if (!notificationId) {
+        res.status(400).json({ message: "Notification ID is required" });
+        return;
+    }
+    try {
+        // Fetch the notification to ensure it belongs to the user
+        const notification = yield notification_1.default.findOne({
+            where: { id: notificationId, userId },
+        });
+        if (!notification) {
+            res.status(404).json({ message: "Notification not found or does not belong to the user" });
+            return;
+        }
+        // Update the `readAt` field to mark it as read
+        notification.isRead = true;
+        yield notification.save();
+        res.status(200).json({ message: "Notification marked as read" });
+    }
+    catch (error) {
+        logger_1.default.error("Error marking notification as read:", error);
+        res.status(500).json({ message: "Failed to mark notification as read" });
+    }
+});
+exports.userMarkNotificationAsRead = userMarkNotificationAsRead;
 //# sourceMappingURL=userController.js.map

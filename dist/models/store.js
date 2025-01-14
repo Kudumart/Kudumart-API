@@ -10,9 +10,12 @@ class Store extends sequelize_1.Model {
             as: 'vendor',
             foreignKey: 'vendorId'
         });
-        // Associate with User model
         this.hasMany(models.Product, {
             as: 'products',
+            foreignKey: 'storeId'
+        });
+        this.hasMany(models.AuctionProduct, {
+            as: 'auctionproducts',
             foreignKey: 'storeId'
         });
         this.belongsTo(models.Currency, {

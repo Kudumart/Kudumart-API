@@ -23,6 +23,15 @@ const initModel = (sequelize) => {
         userId: {
             type: sequelize_1.DataTypes.UUID,
             allowNull: false,
+            references: {
+                model: "users",
+                key: "id",
+            },
+            onDelete: "RESTRICT",
+        },
+        title: {
+            type: sequelize_1.DataTypes.STRING,
+            allowNull: false,
         },
         message: {
             type: sequelize_1.DataTypes.STRING,
