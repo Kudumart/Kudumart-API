@@ -1592,72 +1592,89 @@ export const becomeVendor = async (req: Request, res: Response): Promise<void> =
   const userId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID from middleware
 
   if (!userId) {
-      res.status(400).json({ message: "User must be authenticated" });
-      return;
+    res.status(400).json({ message: "User must be authenticated" });
+    return;
   }
 
+  const transaction = await sequelizeService.connection!.transaction();
+
   try {
-      // Fetch the user
-      const user = await User.findByPk(userId);
+    // Fetch the user
+    const user = await User.findByPk(userId, { transaction });
 
-      if (!user) {
-          res.status(404).json({ message: "User not found" });
-          return;
-      }
+    if (!user) {
+      res.status(404).json({ message: "User not found" });
+      await transaction.rollback();
+      return;
+    }
 
-      // Check if the user is already a vendor
-      if (user.accountType === "Vendor") {
-          res.status(400).json({ message: "User is already a vendor" });
-          return;
-      }
+    // Check if the user is already a vendor
+    if (user.accountType === "Vendor") {
+      res.status(400).json({ message: "User is already a vendor" });
+      await transaction.rollback();
+      return;
+    }
 
-      // Check if the user is eligible to become a vendor
-      if (user.accountType !== "Customer") {
-          res.status(400).json({ message: "Account type cannot be changed to vendor" });
-          return;
-      }
+    // Check if the user is eligible to become a vendor
+    if (user.accountType !== "Customer") {
+      res.status(400).json({ message: "Account type cannot be changed to vendor" });
+      await transaction.rollback();
+      return;
+    }
 
-      // Update the accountType to vendor
-      user.accountType = "Vendor";
-      await user.save();
+    // Update the accountType to vendor
+    user.accountType = "Vendor";
+    await user.save({ transaction });
 
-      // Find the free subscription plan
-      const freePlan = await SubscriptionPlan.findOne({ where: { name: "Free Plan" } });
-      if (!freePlan) {
-        res.status(400).json({ message: "Free plan not found. Please contact support." });
-        return;
-      }
+    // Find the free subscription plan
+    const freePlan = await SubscriptionPlan.findOne({
+      where: { name: "Free Plan" },
+      transaction,
+    });
 
-      // Assign the free plan to the new user
-      const startDate = new Date();
-      const endDate = new Date();
-      endDate.setMonth(startDate.getMonth() + freePlan.duration);
+    if (!freePlan) {
+      res.status(400).json({ message: "Free plan not found. Please contact support." });
+      await transaction.rollback();
+      return;
+    }
 
-      await VendorSubscription.create({
+    // Assign the free plan to the new user
+    const startDate = new Date();
+    const endDate = new Date();
+    endDate.setMonth(startDate.getMonth() + freePlan.duration);
+
+    await VendorSubscription.create(
+      {
         vendorId: user.id,
         subscriptionPlanId: freePlan.id,
         startDate,
         endDate,
         isActive: true,
-      });
+      },
+      { transaction }
+    );
 
-      // Send a notification for becoming a vendor
-      const title = "Welcome, Vendor!";
-      const message = "Congratulations! You are now a vendor. Start setting up your store and manage your products.";
-      const type = "vendor";
+    // Send a notification for becoming a vendor
+    const title = "Welcome, Vendor!";
+    const message = "Congratulations! You are now a vendor. Start setting up your store and manage your products.";
+    const type = "vendor";
 
-      // Create the notification in the database
-      const notification = await Notification.create({
+    await Notification.create(
+      {
         userId: user.id,
         title,
         message,
         type,
-      });
+      },
+      { transaction }
+    );
 
-      res.status(200).json({ message: "Account successfully upgraded to vendor" });
+    await transaction.commit(); // Commit transaction
+    res.status(200).json({ message: "Account successfully upgraded to vendor" });
   } catch (error) {
-      logger.error("Error upgrading account to vendor:", error);
-      res.status(500).json({ message: "Failed to update account type" });
+    await transaction.rollback(); // Rollback transaction on error
+    logger.error("Error upgrading account to vendor:", error);
+    res.status(500).json({ message: "Failed to update account type" });
   }
 };
 

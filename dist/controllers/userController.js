@@ -1359,30 +1359,38 @@ const becomeVendor = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         res.status(400).json({ message: "User must be authenticated" });
         return;
     }
+    const transaction = yield sequelize_service_1.default.connection.transaction();
     try {
         // Fetch the user
-        const user = yield user_1.default.findByPk(userId);
+        const user = yield user_1.default.findByPk(userId, { transaction });
         if (!user) {
             res.status(404).json({ message: "User not found" });
+            yield transaction.rollback();
             return;
         }
         // Check if the user is already a vendor
         if (user.accountType === "Vendor") {
             res.status(400).json({ message: "User is already a vendor" });
+            yield transaction.rollback();
             return;
         }
         // Check if the user is eligible to become a vendor
         if (user.accountType !== "Customer") {
             res.status(400).json({ message: "Account type cannot be changed to vendor" });
+            yield transaction.rollback();
             return;
         }
         // Update the accountType to vendor
         user.accountType = "Vendor";
-        yield user.save();
+        yield user.save({ transaction });
         // Find the free subscription plan
-        const freePlan = yield subscriptionplan_1.default.findOne({ where: { name: "Free Plan" } });
+        const freePlan = yield subscriptionplan_1.default.findOne({
+            where: { name: "Free Plan" },
+            transaction,
+        });
         if (!freePlan) {
             res.status(400).json({ message: "Free plan not found. Please contact support." });
+            yield transaction.rollback();
             return;
         }
         // Assign the free plan to the new user
@@ -1395,21 +1403,22 @@ const becomeVendor = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             startDate,
             endDate,
             isActive: true,
-        });
+        }, { transaction });
         // Send a notification for becoming a vendor
         const title = "Welcome, Vendor!";
         const message = "Congratulations! You are now a vendor. Start setting up your store and manage your products.";
         const type = "vendor";
-        // Create the notification in the database
-        const notification = yield notification_1.default.create({
+        yield notification_1.default.create({
             userId: user.id,
             title,
             message,
             type,
-        });
+        }, { transaction });
+        yield transaction.commit(); // Commit transaction
         res.status(200).json({ message: "Account successfully upgraded to vendor" });
     }
     catch (error) {
+        yield transaction.rollback(); // Rollback transaction on error
         logger_1.default.error("Error upgrading account to vendor:", error);
         res.status(500).json({ message: "Failed to update account type" });
     }
