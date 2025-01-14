@@ -12,6 +12,15 @@ module.exports = {
       userId: {
         type: Sequelize.UUID,
         allowNull: false,
+        references: {
+          model: "users",
+          key: "id",
+        },
+        onDelete: "RESTRICT",
+      },
+      title: {
+        type: Sequelize.STRING,
+        allowNull: false,
       },
       message: {
         type: Sequelize.STRING,

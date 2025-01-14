@@ -4,6 +4,7 @@ import { Model, DataTypes, Sequelize } from "sequelize";
 class Notification extends Model {
   public id!: string;
   public userId!: string;
+  public title!: string;
   public message!: string;
   public type!: string; // e.g., 'transaction', 'subscription', etc.
   public isRead!: boolean;
@@ -30,6 +31,15 @@ const initModel = (sequelize: Sequelize) => {
       },
       userId: {
         type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+          model: "users",
+          key: "id",
+        },
+        onDelete: "RESTRICT",
+      },
+      title: {
+        type: DataTypes.STRING,
         allowNull: false,
       },
       message: {

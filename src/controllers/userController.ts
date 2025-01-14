@@ -26,6 +26,7 @@ import OrderItem from "../models/orderitem";
 import Payment from "../models/payment";
 import Store from "../models/store";
 import Currency from "../models/currency";
+import Notification from "../models/notification";
 
 export const logout = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -177,6 +178,19 @@ export const updatePassword = async (
     } catch (emailError) {
       logger.error("Error sending email:", emailError); // Log error for internal use
     }
+
+    // Send reset password notification
+    const title = "Password Reset Request";
+    const messageContent = "A password reset request was initiated for your account. If this wasn't you, please contact support.";
+    const type = "reset_password";
+
+    // Create the notification in the database
+    const notification = await Notification.create({
+      userId: user.id,
+      title,
+      message: messageContent,
+      type,
+    });
 
     res.status(200).json({
       message: "Password updated successfully.",
@@ -981,6 +995,18 @@ export const addItemToCart = async (
       existingCartItem.quantity += quantity;
       await existingCartItem.save();
     } else {
+      const title = "Product Added to Cart";
+      const message = `You have successfully added "${product.name}" to your cart.`;
+      const type = "add_to_cart";
+
+      // Create the notification in the database
+      const notification = await Notification.create({
+        userId,
+        title,
+        message,
+        type,
+      });
+
       // Add a new item to the cart
       await Cart.create({ userId, productId, quantity });
     }
@@ -1552,24 +1578,119 @@ export const becomeVendor = async (req: Request, res: Response): Promise<void> =
       }
 
       // Check if the user is already a vendor
-      if (user.accountType === "vendor") {
+      if (user.accountType === "Vendor") {
           res.status(400).json({ message: "User is already a vendor" });
           return;
       }
 
       // Check if the user is eligible to become a vendor
-      if (user.accountType !== "user") {
+      if (user.accountType !== "Customer") {
           res.status(400).json({ message: "Account type cannot be changed to vendor" });
           return;
       }
 
       // Update the accountType to vendor
-      user.accountType = "vendor";
+      user.accountType = "Vendor";
       await user.save();
+
+      // Send a notification for becoming a vendor
+      const title = "Welcome, Vendor!";
+      const message = "Congratulations! You are now a vendor. Start setting up your store and manage your products.";
+      const type = "vendor";
+
+      // Create the notification in the database
+      const notification = await Notification.create({
+        userId: user.id,
+        title,
+        message,
+        type,
+      });
 
       res.status(200).json({ message: "Account successfully upgraded to vendor" });
   } catch (error) {
       logger.error("Error upgrading account to vendor:", error);
       res.status(500).json({ message: "Failed to update account type" });
+  }
+};
+
+export const getUserNotifications = async (req: Request, res: Response): Promise<void> => {
+  const userId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID from middleware
+
+  if (!userId) {
+      res.status(400).json({ message: "User must be authenticated" });
+      return;
+  }
+
+  const { isRead, limit = 10, page = 1 } = req.query; // Query params
+
+  try {
+      // Build the query conditions
+      const where: any = { userId };
+
+      if (isRead !== undefined) {
+          where.isRead = isRead === 'true';
+      }
+
+      // Calculate offset for pagination
+      const paginationLimit = parseInt(limit as string, 10);
+      const paginationPage = parseInt(page as string, 10);
+      const offset = (paginationPage - 1) * paginationLimit;
+
+      // Fetch notifications with filters, pagination, and sorting
+      const { rows: notifications, count: total } = await Notification.findAndCountAll({
+          where,
+          order: [['createdAt', 'DESC']],
+          limit: paginationLimit,
+          offset,
+      });
+
+      res.status(200).json({
+          data: notifications,
+          meta: {
+              total,
+              page: paginationPage,
+              limit: paginationLimit,
+              totalPages: Math.ceil(total / paginationLimit),
+          },
+      });
+  } catch (error) {
+      console.error("Error fetching notifications:", error);
+      res.status(500).json({ message: "Failed to fetch notifications", error });
+  }
+};
+
+export const userMarkNotificationAsRead = async (req: Request, res: Response): Promise<void> => {
+  const userId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID from middleware
+  const notificationId = req.query.notificationId as string; // Notification ID passed in the request body
+
+  if (!userId) {
+      res.status(400).json({ message: "User must be authenticated" });
+      return;
+  }
+
+  if (!notificationId) {
+      res.status(400).json({ message: "Notification ID is required" });
+      return;
+  }
+
+  try {
+      // Fetch the notification to ensure it belongs to the user
+      const notification = await Notification.findOne({
+          where: { id: notificationId, userId },
+      });
+
+      if (!notification) {
+          res.status(404).json({ message: "Notification not found or does not belong to the user" });
+          return;
+      }
+
+      // Update the `readAt` field to mark it as read
+      notification.isRead = true;
+      await notification.save();
+
+      res.status(200).json({ message: "Notification marked as read" });
+  } catch (error) {
+      logger.error("Error marking notification as read:", error);
+      res.status(500).json({ message: "Failed to mark notification as read" });
   }
 };
