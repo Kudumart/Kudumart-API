@@ -27,6 +27,8 @@ import Payment from "../models/payment";
 import Store from "../models/store";
 import Currency from "../models/currency";
 import Notification from "../models/notification";
+import SubscriptionPlan from "../models/subscriptionplan";
+import VendorSubscription from "../models/vendorsubscription";
 
 export const logout = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -323,6 +325,19 @@ export const confirmEmailUpdate = async (
       logger.error("Error sending email:", emailError); // Log error for internal use
     }
 
+    // Send a notification for becoming a vendor
+    const title = "Email Address Updated";
+    const messageContent = `Your email address has been successfully updated to ${newEmail}.`;
+    const type = "update_email";
+
+    // Create the notification in the database
+    const notification = await Notification.create({
+      userId: user.id,
+      title,
+      message: messageContent,
+      type,
+    });
+
     // Send response
     res.status(200).json({ message: "Email updated successfully" });
   } catch (error) {
@@ -453,6 +468,19 @@ export const confirmPhoneNumberUpdate = async (
     } catch (emailError) {
       logger.error("Error sending email:", emailError); // Log error for internal use
     }
+
+    // Send a notification for becoming a vendor
+    const title = "Phone Number Updated";
+    const messageContent = `Your phone number has been successfully updated to ${newPhoneNumber}.`;
+    const type = "update_phone";
+
+    // Create the notification in the database
+    const notification = await Notification.create({
+      userId: user.id,
+      title,
+      message: messageContent,
+      type,
+    });
 
     // Send response
     res.status(200).json({ message: "Phone number updated successfully" });
@@ -1592,6 +1620,26 @@ export const becomeVendor = async (req: Request, res: Response): Promise<void> =
       // Update the accountType to vendor
       user.accountType = "Vendor";
       await user.save();
+
+      // Find the free subscription plan
+      const freePlan = await SubscriptionPlan.findOne({ where: { name: "Free Plan" } });
+      if (!freePlan) {
+        res.status(400).json({ message: "Free plan not found. Please contact support." });
+        return;
+      }
+
+      // Assign the free plan to the new user
+      const startDate = new Date();
+      const endDate = new Date();
+      endDate.setMonth(startDate.getMonth() + freePlan.duration);
+
+      await VendorSubscription.create({
+        vendorId: user.id,
+        subscriptionPlanId: freePlan.id,
+        startDate,
+        endDate,
+        isActive: true,
+      });
 
       // Send a notification for becoming a vendor
       const title = "Welcome, Vendor!";
