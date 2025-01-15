@@ -1585,3 +1585,84 @@ export const deleteCurrency = async (req: Request, res: Response): Promise<void>
         }
     }
 };
+
+
+export const getAllCustomers = async (req: Request, res: Response): Promise<void> => {
+    const { page = 1, limit = 10, search = "" } = req.query;
+
+    try {
+        const offset = (Number(page) - 1) * Number(limit);
+
+        const searchCondition = {
+            [Op.or]: [
+                { name: { [Op.like]: `%${search}%` } },
+                { email: { [Op.like]: `%${search}%` } },
+                { phoneNumber: { [Op.like]: `%${search}%` } },
+            ],
+        };
+
+        const { rows: customers, count: totalCustomers } = await User.findAndCountAll({
+            where: {
+                accountType: "Customer",
+                ...searchCondition,
+            },
+            limit: Number(limit),
+            offset,
+            order: [["createdAt", "DESC"]],
+        });
+
+        res.status(200).json({
+            message: "Customers fetched successfully",
+            data: customers,
+            meta: {
+                totalCustomers,
+                currentPage: Number(page),
+                totalPages: Math.ceil(totalCustomers / Number(limit)),
+                limit: Number(limit),
+            },
+        });
+    } catch (error) {
+        console.error("Error fetching customers:", error);
+        res.status(500).json({ message: "Failed to fetch customers", error });
+    }
+};
+
+export const getAllVendors = async (req: Request, res: Response): Promise<void> => {
+    const { page = 1, limit = 10, search = "" } = req.query;
+
+    try {
+        const offset = (Number(page) - 1) * Number(limit);
+
+        const searchCondition = {
+            [Op.or]: [
+                { name: { [Op.like]: `%${search}%` } },
+                { email: { [Op.like]: `%${search}%` } },
+                { phoneNumber: { [Op.like]: `%${search}%` } },
+            ],
+        };
+
+        const { rows: vendors, count: totalVendors } = await User.findAndCountAll({
+            where: {
+                accountType: "Vendor",
+                ...searchCondition,
+            },
+            limit: Number(limit),
+            offset,
+            order: [["createdAt", "DESC"]],
+        });
+
+        res.status(200).json({
+            message: "Vendors fetched successfully",
+            data: vendors,
+            meta: {
+                totalVendors,
+                currentPage: Number(page),
+                totalPages: Math.ceil(totalVendors / Number(limit)),
+                limit: Number(limit),
+            },
+        });
+    } catch (error) {
+        logger.error("Error fetching vendors:", error);
+        res.status(500).json({ message: "Failed to fetch vendors" });
+    }
+};
