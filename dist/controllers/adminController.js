@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteCurrency = exports.getAllCurrencies = exports.updateCurrency = exports.addCurrency = exports.setPaymentGatewayActive = exports.getAllPaymentGateways = exports.deletePaymentGateway = exports.updatePaymentGateway = exports.createPaymentGateway = exports.approveOrRejectKYC = exports.getAllKYC = exports.getAllSubCategories = exports.deleteSubCategory = exports.updateSubCategory = exports.createSubCategory = exports.getCategoriesWithSubCategories = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getAllCategories = exports.deleteSubscriptionPlan = exports.updateSubscriptionPlan = exports.createSubscriptionPlan = exports.getAllSubscriptionPlans = exports.deletePermission = exports.updatePermission = exports.getPermissions = exports.createPermission = exports.deletePermissionFromRole = exports.assignPermissionToRole = exports.viewRolePermissions = exports.updateRole = exports.getRoles = exports.createRole = exports.resendLoginDetailsSubAdmin = exports.deleteSubAdmin = exports.deactivateOrActivateSubAdmin = exports.updateSubAdmin = exports.createSubAdmin = exports.subAdmins = exports.updatePassword = exports.updateProfile = exports.logout = void 0;
+exports.viewUser = exports.toggleUserStatus = exports.getAllVendors = exports.getAllCustomers = exports.deleteCurrency = exports.getAllCurrencies = exports.updateCurrency = exports.addCurrency = exports.setPaymentGatewayActive = exports.getAllPaymentGateways = exports.deletePaymentGateway = exports.updatePaymentGateway = exports.createPaymentGateway = exports.approveOrRejectKYC = exports.getAllKYC = exports.getAllSubCategories = exports.deleteSubCategory = exports.updateSubCategory = exports.createSubCategory = exports.getCategoriesWithSubCategories = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getAllCategories = exports.deleteSubscriptionPlan = exports.updateSubscriptionPlan = exports.createSubscriptionPlan = exports.getAllSubscriptionPlans = exports.deletePermission = exports.updatePermission = exports.getPermissions = exports.createPermission = exports.deletePermissionFromRole = exports.assignPermissionToRole = exports.viewRolePermissions = exports.updateRole = exports.getRoles = exports.createRole = exports.resendLoginDetailsSubAdmin = exports.deleteSubAdmin = exports.deactivateOrActivateSubAdmin = exports.updateSubAdmin = exports.createSubAdmin = exports.subAdmins = exports.updatePassword = exports.updateProfile = exports.logout = void 0;
 const sequelize_1 = require("sequelize");
 const mail_service_1 = require("../services/mail.service");
 const messages_1 = require("../utils/messages");
@@ -1083,7 +1083,9 @@ const createPaymentGateway = (req, res) => __awaiter(void 0, void 0, void 0, fun
     const { name, publicKey, secretKey } = req.body;
     try {
         // Check if any payment gateway is active
-        const activeGateway = yield paymentgateway_1.default.findOne({ where: { isActive: true } });
+        const activeGateway = yield paymentgateway_1.default.findOne({
+            where: { isActive: true },
+        });
         // If there's no active gateway, set the new one as active, else set it as inactive
         const newIsActive = activeGateway ? false : true;
         const paymentGateway = yield paymentgateway_1.default.create({
@@ -1093,13 +1095,14 @@ const createPaymentGateway = (req, res) => __awaiter(void 0, void 0, void 0, fun
             isActive: newIsActive,
         });
         res.status(200).json({
-            message: 'Payment Gateway created successfully',
+            message: "Payment Gateway created successfully",
             data: paymentGateway,
         });
     }
     catch (error) {
         res.status(500).json({
-            message: error.message || 'An error occurred while creating the payment gateway.',
+            message: error.message ||
+                "An error occurred while creating the payment gateway.",
         });
     }
 });
@@ -1109,22 +1112,23 @@ const updatePaymentGateway = (req, res) => __awaiter(void 0, void 0, void 0, fun
     try {
         const paymentGateway = yield paymentgateway_1.default.findByPk(id);
         if (!paymentGateway) {
-            res.status(404).json({ message: 'Payment Gateway not found' });
+            res.status(404).json({ message: "Payment Gateway not found" });
             return;
         }
         yield paymentGateway.update({
             name,
             publicKey,
-            secretKey
+            secretKey,
         });
         res.status(200).json({
-            message: 'Payment Gateway updated successfully',
+            message: "Payment Gateway updated successfully",
             data: paymentGateway,
         });
     }
     catch (error) {
         res.status(500).json({
-            message: error.message || 'An error occurred while updating the payment gateway.',
+            message: error.message ||
+                "An error occurred while updating the payment gateway.",
         });
     }
 });
@@ -1134,25 +1138,27 @@ const deletePaymentGateway = (req, res) => __awaiter(void 0, void 0, void 0, fun
     try {
         const paymentGateway = yield paymentgateway_1.default.findByPk(id);
         if (!paymentGateway) {
-            res.status(404).json({ message: 'Payment Gateway not found' });
+            res.status(404).json({ message: "Payment Gateway not found" });
             return;
         }
         if (paymentGateway.isActive) {
             // If the gateway to be deleted is active, check for another active one
-            const anotherActiveGateway = yield paymentgateway_1.default.findOne({ where: { id: { [sequelize_1.Op.ne]: id } } });
+            const anotherActiveGateway = yield paymentgateway_1.default.findOne({
+                where: { id: { [sequelize_1.Op.ne]: id } },
+            });
             if (anotherActiveGateway) {
                 // If another active gateway exists, set it to active and delete this one
                 yield anotherActiveGateway.update({ isActive: true });
                 yield paymentGateway.destroy();
                 res.status(200).json({
-                    message: 'Payment Gateway deleted successfully and another one activated.',
+                    message: "Payment Gateway deleted successfully and another one activated.",
                 });
             }
             else {
                 // If no other active gateway, delete this one
                 yield paymentGateway.destroy();
                 res.status(200).json({
-                    message: 'Last active payment gateway deleted.',
+                    message: "Last active payment gateway deleted.",
                 });
             }
         }
@@ -1160,13 +1166,14 @@ const deletePaymentGateway = (req, res) => __awaiter(void 0, void 0, void 0, fun
             // If the gateway is not active, just delete it
             yield paymentGateway.destroy();
             res.status(200).json({
-                message: 'Payment Gateway deleted successfully.',
+                message: "Payment Gateway deleted successfully.",
             });
         }
     }
     catch (error) {
         res.status(500).json({
-            message: error.message || 'An error occurred while deleting the payment gateway.',
+            message: error.message ||
+                "An error occurred while deleting the payment gateway.",
         });
     }
 });
@@ -1175,13 +1182,13 @@ const getAllPaymentGateways = (req, res) => __awaiter(void 0, void 0, void 0, fu
     try {
         const gateways = yield paymentgateway_1.default.findAll();
         res.status(200).json({
-            message: 'Payment Gateways retrieved successfully',
+            message: "Payment Gateways retrieved successfully",
             data: gateways,
         });
     }
     catch (error) {
         res.status(500).json({
-            message: error.message || 'An error occurred while fetching payment gateways.',
+            message: error.message || "An error occurred while fetching payment gateways.",
         });
     }
 });
@@ -1191,12 +1198,12 @@ const setPaymentGatewayActive = (req, res) => __awaiter(void 0, void 0, void 0, 
     try {
         const paymentGateway = yield paymentgateway_1.default.findByPk(id);
         if (!paymentGateway) {
-            res.status(404).json({ message: 'Payment Gateway not found' });
+            res.status(404).json({ message: "Payment Gateway not found" });
             return;
         }
         // Check if the payment gateway is already active
         if (paymentGateway.isActive) {
-            res.status(200).json({ message: 'Payment Gateway is already active.' });
+            res.status(200).json({ message: "Payment Gateway is already active." });
             return;
         }
         // Set all other active gateways to false
@@ -1204,12 +1211,13 @@ const setPaymentGatewayActive = (req, res) => __awaiter(void 0, void 0, void 0, 
         // Set the specified gateway as active
         yield paymentGateway.update({ isActive: true });
         res.status(200).json({
-            message: 'Payment Gateway successfully set to active.',
+            message: "Payment Gateway successfully set to active.",
         });
     }
     catch (error) {
         res.status(500).json({
-            message: error.message || 'An error occurred while updating the payment gateway.',
+            message: error.message ||
+                "An error occurred while updating the payment gateway.",
         });
     }
 });
@@ -1217,32 +1225,38 @@ exports.setPaymentGatewayActive = setPaymentGatewayActive;
 // Currency
 const addCurrency = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { name, symbol } = req.body;
-    if (!name || typeof name !== 'string') {
-        res.status(400).json({ message: 'Name is required and must be a string.' });
+    if (!name || typeof name !== "string") {
+        res.status(400).json({ message: "Name is required and must be a string." });
     }
-    if (!symbol || typeof symbol !== 'string') {
-        res.status(400).json({ message: 'Symbol is required and must be a string.' });
+    if (!symbol || typeof symbol !== "string") {
+        res
+            .status(400)
+            .json({ message: "Symbol is required and must be a string." });
     }
     try {
         // Check for existing currency with matching name or symbol (case-insensitive)
         const existingCurrency = yield currency_1.default.findOne({
             where: {
                 [sequelize_1.Op.or]: [
-                    sequelize_1.Sequelize.where(sequelize_1.Sequelize.fn('LOWER', sequelize_1.Sequelize.col('name')), name.toLowerCase()),
-                    sequelize_1.Sequelize.where(sequelize_1.Sequelize.fn('LOWER', sequelize_1.Sequelize.col('symbol')), symbol.toLowerCase())
-                ]
-            }
+                    sequelize_1.Sequelize.where(sequelize_1.Sequelize.fn("LOWER", sequelize_1.Sequelize.col("name")), name.toLowerCase()),
+                    sequelize_1.Sequelize.where(sequelize_1.Sequelize.fn("LOWER", sequelize_1.Sequelize.col("symbol")), symbol.toLowerCase()),
+                ],
+            },
         });
         if (existingCurrency) {
-            res.status(400).json({ message: 'Currency with the same name or symbol already exists.' });
+            res
+                .status(400)
+                .json({
+                message: "Currency with the same name or symbol already exists.",
+            });
             return;
         }
         const currency = yield currency_1.default.create({ name, symbol });
-        res.status(200).json({ message: 'Currency added successfully', currency });
+        res.status(200).json({ message: "Currency added successfully", currency });
     }
     catch (error) {
-        logger_1.default.error('Error adding currency:', error);
-        res.status(500).json({ message: 'Failed to add currency' });
+        logger_1.default.error("Error adding currency:", error);
+        res.status(500).json({ message: "Failed to add currency" });
     }
 });
 exports.addCurrency = addCurrency;
@@ -1250,45 +1264,51 @@ const updateCurrency = (req, res) => __awaiter(void 0, void 0, void 0, function*
     const { currencyId, name, symbol } = req.body;
     // Validate inputs
     if (!currencyId) {
-        res.status(400).json({ message: 'Currency ID is required.' });
+        res.status(400).json({ message: "Currency ID is required." });
         return;
     }
-    if (name && typeof name !== 'string') {
-        res.status(400).json({ message: 'Name must be a string.' });
+    if (name && typeof name !== "string") {
+        res.status(400).json({ message: "Name must be a string." });
         return;
     }
-    if (symbol && typeof symbol !== 'string') {
-        res.status(400).json({ message: 'Symbol must be a string.' });
+    if (symbol && typeof symbol !== "string") {
+        res.status(400).json({ message: "Symbol must be a string." });
         return;
     }
     try {
         // Find the currency by ID
         const currency = yield currency_1.default.findByPk(currencyId);
         if (!currency) {
-            res.status(404).json({ message: 'Currency not found' });
+            res.status(404).json({ message: "Currency not found" });
             return;
         }
         // Check for uniqueness of name and symbol, excluding the current record
         const existingCurrency = yield currency_1.default.findOne({
             where: {
                 [sequelize_1.Op.or]: [
-                    sequelize_1.Sequelize.where(sequelize_1.Sequelize.fn('LOWER', sequelize_1.Sequelize.col('name')), name.toLowerCase()),
-                    sequelize_1.Sequelize.where(sequelize_1.Sequelize.fn('LOWER', sequelize_1.Sequelize.col('symbol')), symbol.toLowerCase())
+                    sequelize_1.Sequelize.where(sequelize_1.Sequelize.fn("LOWER", sequelize_1.Sequelize.col("name")), name.toLowerCase()),
+                    sequelize_1.Sequelize.where(sequelize_1.Sequelize.fn("LOWER", sequelize_1.Sequelize.col("symbol")), symbol.toLowerCase()),
                 ],
-                id: { [sequelize_1.Op.ne]: currencyId } // Exclude the current currency
-            }
+                id: { [sequelize_1.Op.ne]: currencyId }, // Exclude the current currency
+            },
         });
         if (existingCurrency) {
-            res.status(400).json({ message: 'Currency with the same name or symbol already exists.' });
+            res
+                .status(400)
+                .json({
+                message: "Currency with the same name or symbol already exists.",
+            });
             return;
         }
         // Update the currency fields
         yield currency.update({ name, symbol });
-        res.status(200).json({ message: 'Currency updated successfully', currency });
+        res
+            .status(200)
+            .json({ message: "Currency updated successfully", currency });
     }
     catch (error) {
-        logger_1.default.error('Error updating currency:', error);
-        res.status(500).json({ message: 'Failed to update currency' });
+        logger_1.default.error("Error updating currency:", error);
+        res.status(500).json({ message: "Failed to update currency" });
     }
 });
 exports.updateCurrency = updateCurrency;
@@ -1298,8 +1318,8 @@ const getAllCurrencies = (req, res) => __awaiter(void 0, void 0, void 0, functio
         res.status(200).json({ data: currencies });
     }
     catch (error) {
-        logger_1.default.error('Error fetching currencies:', error);
-        res.status(500).json({ message: 'Failed to fetch currencies' });
+        logger_1.default.error("Error fetching currencies:", error);
+        res.status(500).json({ message: "Failed to fetch currencies" });
     }
 });
 exports.getAllCurrencies = getAllCurrencies;
@@ -1308,11 +1328,11 @@ const deleteCurrency = (req, res) => __awaiter(void 0, void 0, void 0, function*
     try {
         const currency = yield currency_1.default.findByPk(currencyId);
         if (!currency) {
-            res.status(404).json({ message: 'Currency not found' });
+            res.status(404).json({ message: "Currency not found" });
             return;
         }
         yield currency.destroy();
-        res.status(200).json({ message: 'Currency deleted successfully' });
+        res.status(200).json({ message: "Currency deleted successfully" });
     }
     catch (error) {
         if (error instanceof sequelize_1.ForeignKeyConstraintError) {
@@ -1321,10 +1341,130 @@ const deleteCurrency = (req, res) => __awaiter(void 0, void 0, void 0, function*
             });
         }
         else {
-            console.error('Error deleting currency:', error);
-            res.status(500).json({ message: 'Failed to delete currency' });
+            logger_1.default.error("Error deleting currency:", error);
+            res.status(500).json({ message: "Failed to delete currency" });
         }
     }
 });
 exports.deleteCurrency = deleteCurrency;
+const getAllCustomers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { page = 1, limit = 10, search = "" } = req.query;
+    try {
+        const offset = (Number(page) - 1) * Number(limit);
+        const searchCondition = {
+            [sequelize_1.Op.or]: [
+                { firstName: { [sequelize_1.Op.like]: `%${search}%` } },
+                { lastName: { [sequelize_1.Op.like]: `%${search}%` } },
+                { email: { [sequelize_1.Op.like]: `%${search}%` } },
+                { phoneNumber: { [sequelize_1.Op.like]: `%${search}%` } },
+            ],
+        };
+        const { rows: customers, count: totalCustomers } = yield user_1.default.findAndCountAll({
+            where: Object.assign({ accountType: "Customer" }, searchCondition),
+            limit: Number(limit),
+            offset,
+            order: [["createdAt", "DESC"]],
+        });
+        res.status(200).json({
+            message: "Customers fetched successfully",
+            data: customers,
+            meta: {
+                totalCustomers,
+                currentPage: Number(page),
+                totalPages: Math.ceil(totalCustomers / Number(limit)),
+                limit: Number(limit),
+            },
+        });
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching customers:", error);
+        res.status(500).json({ message: "Failed to fetch customers", error });
+    }
+});
+exports.getAllCustomers = getAllCustomers;
+const getAllVendors = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { page = 1, limit = 10, search = "" } = req.query;
+    try {
+        const offset = (Number(page) - 1) * Number(limit);
+        const searchCondition = {
+            [sequelize_1.Op.or]: [
+                { firstName: { [sequelize_1.Op.like]: `%${search}%` } },
+                { lastName: { [sequelize_1.Op.like]: `%${search}%` } },
+                { email: { [sequelize_1.Op.like]: `%${search}%` } },
+                { phoneNumber: { [sequelize_1.Op.like]: `%${search}%` } },
+            ],
+        };
+        const { rows: vendors, count: totalVendors } = yield user_1.default.findAndCountAll({
+            where: Object.assign({ accountType: "Vendor" }, searchCondition),
+            limit: Number(limit),
+            offset,
+            order: [["createdAt", "DESC"]],
+        });
+        res.status(200).json({
+            message: "Vendors fetched successfully",
+            data: vendors,
+            meta: {
+                totalVendors,
+                currentPage: Number(page),
+                totalPages: Math.ceil(totalVendors / Number(limit)),
+                limit: Number(limit),
+            },
+        });
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching vendors:", error);
+        res.status(500).json({ message: "Failed to fetch vendors" });
+    }
+});
+exports.getAllVendors = getAllVendors;
+const toggleUserStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.query.userId;
+    try {
+        // Fetch the user
+        const user = yield user_1.default.findByPk(userId);
+        if (!user) {
+            res.status(404).json({ message: "User not found." });
+            return;
+        }
+        // Toggle the status
+        user.status = user.status === "active" ? "inactive" : "active";
+        yield user.save();
+        const statusMessage = user.status === "active" ? "activated" : "deactivated";
+        res
+            .status(200)
+            .json({
+            message: `User successfully ${statusMessage}.`,
+        });
+    }
+    catch (error) {
+        logger_1.default.error("Error toggling user status:", error);
+        res.status(500).json({ message: "Failed to toggle user status." });
+    }
+});
+exports.toggleUserStatus = toggleUserStatus;
+const viewUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.query.userId;
+    try {
+        // Fetch the user
+        const user = yield user_1.default.findByPk(userId, {
+            include: [
+                {
+                    model: kyc_1.default,
+                    as: "kyc",
+                },
+            ],
+            attributes: { exclude: ["password"] }, // Exclude sensitive fields like password
+        });
+        if (!user) {
+            res.status(404).json({ message: "User not found." });
+            return;
+        }
+        res.status(200).json({ message: "User retrieved successfully.", data: user });
+    }
+    catch (error) {
+        console.error("Error retrieving user:", error);
+        res.status(500).json({ message: "Failed to retrieve user.", error });
+    }
+});
+exports.viewUser = viewUser;
 //# sourceMappingURL=adminController.js.map

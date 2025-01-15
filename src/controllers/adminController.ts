@@ -1315,12 +1315,17 @@ export const approveOrRejectKYC = async (
 };
 
 // Payment Gateway
-export const createPaymentGateway = async (req: Request, res: Response): Promise<void> => {
+export const createPaymentGateway = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
     const { name, publicKey, secretKey } = req.body;
 
     try {
         // Check if any payment gateway is active
-        const activeGateway = await PaymentGateway.findOne({ where: { isActive: true } });
+        const activeGateway = await PaymentGateway.findOne({
+            where: { isActive: true },
+        });
 
         // If there's no active gateway, set the new one as active, else set it as inactive
         const newIsActive = activeGateway ? false : true;
@@ -1333,115 +1338,137 @@ export const createPaymentGateway = async (req: Request, res: Response): Promise
         });
 
         res.status(200).json({
-            message: 'Payment Gateway created successfully',
+            message: "Payment Gateway created successfully",
             data: paymentGateway,
         });
     } catch (error: any) {
         res.status(500).json({
-            message: error.message || 'An error occurred while creating the payment gateway.',
+            message:
+                error.message ||
+                "An error occurred while creating the payment gateway.",
         });
     }
 };
 
-export const updatePaymentGateway = async (req: Request, res: Response): Promise<void> => {
+export const updatePaymentGateway = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
     const { id, name, publicKey, secretKey } = req.body;
 
     try {
         const paymentGateway = await PaymentGateway.findByPk(id);
 
         if (!paymentGateway) {
-            res.status(404).json({ message: 'Payment Gateway not found' });
+            res.status(404).json({ message: "Payment Gateway not found" });
             return;
         }
 
         await paymentGateway.update({
             name,
             publicKey,
-            secretKey
+            secretKey,
         });
 
         res.status(200).json({
-            message: 'Payment Gateway updated successfully',
+            message: "Payment Gateway updated successfully",
             data: paymentGateway,
         });
     } catch (error: any) {
         res.status(500).json({
-            message: error.message || 'An error occurred while updating the payment gateway.',
+            message:
+                error.message ||
+                "An error occurred while updating the payment gateway.",
         });
     }
 };
 
-export const deletePaymentGateway = async (req: Request, res: Response): Promise<void> => {
+export const deletePaymentGateway = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
     const id = req.query.id as string;
 
     try {
         const paymentGateway = await PaymentGateway.findByPk(id);
 
         if (!paymentGateway) {
-            res.status(404).json({ message: 'Payment Gateway not found' });
+            res.status(404).json({ message: "Payment Gateway not found" });
             return;
         }
 
         if (paymentGateway.isActive) {
             // If the gateway to be deleted is active, check for another active one
-            const anotherActiveGateway = await PaymentGateway.findOne({ where: { id: { [Op.ne]: id } } });
+            const anotherActiveGateway = await PaymentGateway.findOne({
+                where: { id: { [Op.ne]: id } },
+            });
 
             if (anotherActiveGateway) {
                 // If another active gateway exists, set it to active and delete this one
                 await anotherActiveGateway.update({ isActive: true });
                 await paymentGateway.destroy();
                 res.status(200).json({
-                    message: 'Payment Gateway deleted successfully and another one activated.',
+                    message:
+                        "Payment Gateway deleted successfully and another one activated.",
                 });
             } else {
                 // If no other active gateway, delete this one
                 await paymentGateway.destroy();
                 res.status(200).json({
-                    message: 'Last active payment gateway deleted.',
+                    message: "Last active payment gateway deleted.",
                 });
             }
         } else {
             // If the gateway is not active, just delete it
             await paymentGateway.destroy();
             res.status(200).json({
-                message: 'Payment Gateway deleted successfully.',
+                message: "Payment Gateway deleted successfully.",
             });
         }
     } catch (error: any) {
         res.status(500).json({
-            message: error.message || 'An error occurred while deleting the payment gateway.',
+            message:
+                error.message ||
+                "An error occurred while deleting the payment gateway.",
         });
     }
 };
 
-export const getAllPaymentGateways = async (req: Request, res: Response): Promise<void> => {
+export const getAllPaymentGateways = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
     try {
         const gateways = await PaymentGateway.findAll();
         res.status(200).json({
-            message: 'Payment Gateways retrieved successfully',
+            message: "Payment Gateways retrieved successfully",
             data: gateways,
         });
     } catch (error: any) {
         res.status(500).json({
-            message: error.message || 'An error occurred while fetching payment gateways.',
+            message:
+                error.message || "An error occurred while fetching payment gateways.",
         });
     }
 };
 
-export const setPaymentGatewayActive = async (req: Request, res: Response): Promise<void> => {
+export const setPaymentGatewayActive = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
     const id = req.query.id as string;
 
     try {
         const paymentGateway = await PaymentGateway.findByPk(id);
 
         if (!paymentGateway) {
-            res.status(404).json({ message: 'Payment Gateway not found' });
+            res.status(404).json({ message: "Payment Gateway not found" });
             return;
         }
 
         // Check if the payment gateway is already active
         if (paymentGateway.isActive) {
-            res.status(200).json({ message: 'Payment Gateway is already active.' });
+            res.status(200).json({ message: "Payment Gateway is already active." });
             return;
         }
 
@@ -1455,24 +1482,31 @@ export const setPaymentGatewayActive = async (req: Request, res: Response): Prom
         await paymentGateway.update({ isActive: true });
 
         res.status(200).json({
-            message: 'Payment Gateway successfully set to active.',
+            message: "Payment Gateway successfully set to active.",
         });
     } catch (error: any) {
         res.status(500).json({
-            message: error.message || 'An error occurred while updating the payment gateway.',
+            message:
+                error.message ||
+                "An error occurred while updating the payment gateway.",
         });
     }
 };
 
 // Currency
-export const addCurrency = async (req: Request, res: Response): Promise<void> => {
+export const addCurrency = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
     const { name, symbol } = req.body;
 
-    if (!name || typeof name !== 'string') {
-        res.status(400).json({ message: 'Name is required and must be a string.' });
+    if (!name || typeof name !== "string") {
+        res.status(400).json({ message: "Name is required and must be a string." });
     }
-    if (!symbol || typeof symbol !== 'string') {
-        res.status(400).json({ message: 'Symbol is required and must be a string.' });
+    if (!symbol || typeof symbol !== "string") {
+        res
+            .status(400)
+            .json({ message: "Symbol is required and must be a string." });
     }
 
     try {
@@ -1480,39 +1514,52 @@ export const addCurrency = async (req: Request, res: Response): Promise<void> =>
         const existingCurrency = await Currency.findOne({
             where: {
                 [Op.or]: [
-                    Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('name')), name.toLowerCase()),
-                    Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('symbol')), symbol.toLowerCase())
-                ]
-            }
+                    Sequelize.where(
+                        Sequelize.fn("LOWER", Sequelize.col("name")),
+                        name.toLowerCase()
+                    ),
+                    Sequelize.where(
+                        Sequelize.fn("LOWER", Sequelize.col("symbol")),
+                        symbol.toLowerCase()
+                    ),
+                ],
+            },
         });
 
         if (existingCurrency) {
-            res.status(400).json({ message: 'Currency with the same name or symbol already exists.' });
+            res
+                .status(400)
+                .json({
+                    message: "Currency with the same name or symbol already exists.",
+                });
             return;
         }
 
         const currency = await Currency.create({ name, symbol });
-        res.status(200).json({ message: 'Currency added successfully', currency });
+        res.status(200).json({ message: "Currency added successfully", currency });
     } catch (error) {
-        logger.error('Error adding currency:', error);
-        res.status(500).json({ message: 'Failed to add currency' });
+        logger.error("Error adding currency:", error);
+        res.status(500).json({ message: "Failed to add currency" });
     }
 };
 
-export const updateCurrency = async (req: Request, res: Response): Promise<void> => {
+export const updateCurrency = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
     const { currencyId, name, symbol } = req.body;
 
     // Validate inputs
     if (!currencyId) {
-        res.status(400).json({ message: 'Currency ID is required.' });
+        res.status(400).json({ message: "Currency ID is required." });
         return;
     }
-    if (name && typeof name !== 'string') {
-        res.status(400).json({ message: 'Name must be a string.' });
+    if (name && typeof name !== "string") {
+        res.status(400).json({ message: "Name must be a string." });
         return;
     }
-    if (symbol && typeof symbol !== 'string') {
-        res.status(400).json({ message: 'Symbol must be a string.' });
+    if (symbol && typeof symbol !== "string") {
+        res.status(400).json({ message: "Symbol must be a string." });
         return;
     }
 
@@ -1521,7 +1568,7 @@ export const updateCurrency = async (req: Request, res: Response): Promise<void>
         const currency = await Currency.findByPk(currencyId);
 
         if (!currency) {
-            res.status(404).json({ message: 'Currency not found' });
+            res.status(404).json({ message: "Currency not found" });
             return;
         }
 
@@ -1529,50 +1576,68 @@ export const updateCurrency = async (req: Request, res: Response): Promise<void>
         const existingCurrency = await Currency.findOne({
             where: {
                 [Op.or]: [
-                    Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('name')), name.toLowerCase()),
-                    Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('symbol')), symbol.toLowerCase())
+                    Sequelize.where(
+                        Sequelize.fn("LOWER", Sequelize.col("name")),
+                        name.toLowerCase()
+                    ),
+                    Sequelize.where(
+                        Sequelize.fn("LOWER", Sequelize.col("symbol")),
+                        symbol.toLowerCase()
+                    ),
                 ],
-                id: { [Op.ne]: currencyId } // Exclude the current currency
-            }
+                id: { [Op.ne]: currencyId }, // Exclude the current currency
+            },
         });
 
         if (existingCurrency) {
-            res.status(400).json({ message: 'Currency with the same name or symbol already exists.' });
+            res
+                .status(400)
+                .json({
+                    message: "Currency with the same name or symbol already exists.",
+                });
             return;
         }
 
         // Update the currency fields
         await currency.update({ name, symbol });
-        res.status(200).json({ message: 'Currency updated successfully', currency });
+        res
+            .status(200)
+            .json({ message: "Currency updated successfully", currency });
     } catch (error) {
-        logger.error('Error updating currency:', error);
-        res.status(500).json({ message: 'Failed to update currency' });
+        logger.error("Error updating currency:", error);
+        res.status(500).json({ message: "Failed to update currency" });
     }
 };
 
-export const getAllCurrencies = async (req: Request, res: Response): Promise<void> => {
+export const getAllCurrencies = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
     try {
         const currencies = await Currency.findAll();
         res.status(200).json({ data: currencies });
     } catch (error) {
-        logger.error('Error fetching currencies:', error);
-        res.status(500).json({ message: 'Failed to fetch currencies' });
+        logger.error("Error fetching currencies:", error);
+        res.status(500).json({ message: "Failed to fetch currencies" });
     }
 };
 
-export const deleteCurrency = async (req: Request, res: Response): Promise<void> => {
+export const deleteCurrency = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
     const currencyId = req.query.currencyId as string;
 
     try {
         const currency = await Currency.findByPk(currencyId);
 
         if (!currency) {
-            res.status(404).json({ message: 'Currency not found' });
+            res.status(404).json({ message: "Currency not found" });
             return;
         }
 
         await currency.destroy();
-        res.status(200).json({ message: 'Currency deleted successfully' });
+        res.status(200).json({ message: "Currency deleted successfully" });
     } catch (error) {
         if (error instanceof ForeignKeyConstraintError) {
             res.status(400).json({
@@ -1580,14 +1645,16 @@ export const deleteCurrency = async (req: Request, res: Response): Promise<void>
                     "Cannot delete currency because it is currently assigned to one or more stores. Please reassign or delete these associations before proceeding.",
             });
         } else {
-            console.error('Error deleting currency:', error);
-            res.status(500).json({ message: 'Failed to delete currency' });
+            logger.error("Error deleting currency:", error);
+            res.status(500).json({ message: "Failed to delete currency" });
         }
     }
 };
 
-
-export const getAllCustomers = async (req: Request, res: Response): Promise<void> => {
+export const getAllCustomers = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
     const { page = 1, limit = 10, search = "" } = req.query;
 
     try {
@@ -1595,21 +1662,23 @@ export const getAllCustomers = async (req: Request, res: Response): Promise<void
 
         const searchCondition = {
             [Op.or]: [
-                { name: { [Op.like]: `%${search}%` } },
+                { firstName: { [Op.like]: `%${search}%` } },
+                { lastName: { [Op.like]: `%${search}%` } },
                 { email: { [Op.like]: `%${search}%` } },
                 { phoneNumber: { [Op.like]: `%${search}%` } },
             ],
         };
 
-        const { rows: customers, count: totalCustomers } = await User.findAndCountAll({
-            where: {
-                accountType: "Customer",
-                ...searchCondition,
-            },
-            limit: Number(limit),
-            offset,
-            order: [["createdAt", "DESC"]],
-        });
+        const { rows: customers, count: totalCustomers } =
+            await User.findAndCountAll({
+                where: {
+                    accountType: "Customer",
+                    ...searchCondition,
+                },
+                limit: Number(limit),
+                offset,
+                order: [["createdAt", "DESC"]],
+            });
 
         res.status(200).json({
             message: "Customers fetched successfully",
@@ -1622,12 +1691,15 @@ export const getAllCustomers = async (req: Request, res: Response): Promise<void
             },
         });
     } catch (error) {
-        console.error("Error fetching customers:", error);
+        logger.error("Error fetching customers:", error);
         res.status(500).json({ message: "Failed to fetch customers", error });
     }
 };
 
-export const getAllVendors = async (req: Request, res: Response): Promise<void> => {
+export const getAllVendors = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
     const { page = 1, limit = 10, search = "" } = req.query;
 
     try {
@@ -1635,7 +1707,8 @@ export const getAllVendors = async (req: Request, res: Response): Promise<void> 
 
         const searchCondition = {
             [Op.or]: [
-                { name: { [Op.like]: `%${search}%` } },
+                { firstName: { [Op.like]: `%${search}%` } },
+                { lastName: { [Op.like]: `%${search}%` } },
                 { email: { [Op.like]: `%${search}%` } },
                 { phoneNumber: { [Op.like]: `%${search}%` } },
             ],
@@ -1666,3 +1739,63 @@ export const getAllVendors = async (req: Request, res: Response): Promise<void> 
         res.status(500).json({ message: "Failed to fetch vendors" });
     }
 };
+
+export const toggleUserStatus = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
+    const userId = req.query.userId as string;
+
+    try {
+        // Fetch the user
+        const user = await User.findByPk(userId);
+
+        if (!user) {
+            res.status(404).json({ message: "User not found." });
+            return;
+        }
+
+        // Toggle the status
+        user.status = user.status === "active" ? "inactive" : "active";
+        await user.save();
+
+        const statusMessage =
+            user.status === "active" ? "activated" : "deactivated";
+        res
+            .status(200)
+            .json({
+                message: `User successfully ${statusMessage}.`,
+            });
+    } catch (error) {
+        logger.error("Error toggling user status:", error);
+        res.status(500).json({ message: "Failed to toggle user status." });
+    }
+};
+
+
+export const viewUser = async (req: Request, res: Response): Promise<void> => {
+    const userId = req.query.userId as string;
+  
+    try {
+      // Fetch the user
+      const user = await User.findByPk(userId, {
+        include: [
+            {
+                model: KYC,
+                as: "kyc",
+            },
+        ],
+        attributes: { exclude: ["password"] }, // Exclude sensitive fields like password
+      });
+  
+      if (!user) {
+        res.status(404).json({ message: "User not found." });
+        return;
+      }
+  
+      res.status(200).json({ message: "User retrieved successfully.", data: user });
+    } catch (error) {
+      console.error("Error retrieving user:", error);
+      res.status(500).json({ message: "Failed to retrieve user.", error });
+    }
+  };

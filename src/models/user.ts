@@ -59,6 +59,11 @@ class User extends Model {
       foreignKey: 'bidderId',
       as: 'bids',
     });
+    this.hasOne(models.KYC, {
+      as: 'kyc',
+      foreignKey: 'vendorId',
+      onDelete: 'RESTRICT'
+    });
   }
 
   // Add method to fetch KYC record

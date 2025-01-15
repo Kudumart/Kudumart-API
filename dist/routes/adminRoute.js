@@ -88,5 +88,10 @@ adminRoutes.post('/currency', adminAuthMiddleware_1.default, adminController.add
 adminRoutes.put('/currency', adminAuthMiddleware_1.default, adminController.updateCurrency);
 adminRoutes.delete('/currency', adminAuthMiddleware_1.default, adminController.deleteCurrency);
 adminRoutes.get('/currencies', adminAuthMiddleware_1.default, adminController.getAllCurrencies);
+// users
+adminRoutes.get('/customers', adminAuthMiddleware_1.default, adminController.getAllCustomers);
+adminRoutes.get('/vendors', adminAuthMiddleware_1.default, adminController.getAllVendors);
+adminRoutes.get('/user/details', adminAuthMiddleware_1.default, adminController.viewUser);
+adminRoutes.patch('/toggle/user/status', adminAuthMiddleware_1.default, adminController.toggleUserStatus);
 exports.default = adminRoutes; // Export the router
 //# sourceMappingURL=adminRoute.js.map
