@@ -606,12 +606,12 @@ export const getConversations = async (
         {
           model: User,
           as: "senderUser", // Assuming senderId references the User model
-          attributes: ["id", "firstName", "lastName", "email", "phoneNumber"], // Modify attributes as needed
+          attributes: ["id", "firstName", "lastName", "email", "phoneNumber", "photo"], // Modify attributes as needed
         },
         {
           model: User,
           as: "receiverUser", // Assuming receiverId references the User model
-          attributes: ["id", "firstName", "lastName", "email", "phoneNumber"], // Modify attributes as needed
+          attributes: ["id", "firstName", "lastName", "email", "phoneNumber", "photo"], // Modify attributes as needed
         },
         {
           model: Product,
@@ -768,6 +768,7 @@ export const sendMessageHandler = async (
           { senderId: userId, receiverId: receiverId },
           { senderId: receiverId, receiverId: userId },
         ],
+        productId,
       },
     });
 
