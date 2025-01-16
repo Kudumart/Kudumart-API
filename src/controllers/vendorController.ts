@@ -128,7 +128,7 @@ export const getStore = async (req: Request, res: Response): Promise<void> => {
 
         res.status(200).json({ data: stores });
     } catch (error) {
-        console.error("Error retrieving stores:", error);
+        logger.error("Error retrieving stores:", error);
         res.status(500).json({ message: "Failed to retrieve stores", error });
     }
 };
@@ -1328,7 +1328,7 @@ export const verifyCAC = async (req: Request, res: Response): Promise<void> => {
             // Process complete response
             response.on('end', () => {
                 if (!responseData) {
-                    console.error('No response data received.');
+                    logger.error('No response data received.');
                     res.status(500).json({ message: 'No response data received from API.' });
                     return;
                 }
@@ -1336,20 +1336,20 @@ export const verifyCAC = async (req: Request, res: Response): Promise<void> => {
                 try {
                     const parsedData = JSON.parse(responseData);
                     if (parsedData.status === true) {
-                        console.log('Vendor verified successfully!', parsedData);
+                        logger.log('Vendor verified successfully!', parsedData);
                         res.status(200).json({
                             message: 'Vendor verified successfully!',
                             data: parsedData,
                         });
                     } else {
-                        console.log('Verification failed:', parsedData.message);
+                        logger.log('Verification failed:', parsedData.message);
                         res.status(400).json({
                             message: 'Verification failed',
                             error: parsedData.message,
                         });
                     }
                 } catch (parseError: any) {
-                    console.error('Error parsing response:', parseError);
+                    logger.error('Error parsing response:', parseError);
                     res.status(500).json({
                         message: 'Error parsing API response',
                         error: parseError.message,
@@ -1360,7 +1360,7 @@ export const verifyCAC = async (req: Request, res: Response): Promise<void> => {
 
         // Handle request errors
         request.on('error', (error) => {
-            console.error('Error verifying CAC:', error);
+            logger.error('Error verifying CAC:', error);
             res.status(500).json({ message: 'Request error', error: error.message });
         });
 
@@ -1368,7 +1368,7 @@ export const verifyCAC = async (req: Request, res: Response): Promise<void> => {
         request.write(data);
         request.end();
     } catch (error) {
-        console.error('Unexpected error:', error);
+        logger.error('Unexpected error:', error);
         res.status(500).json({ message: 'Unexpected error', error: error });
     }
 };

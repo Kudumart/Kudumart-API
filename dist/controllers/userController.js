@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.userMarkNotificationAsRead = exports.getUserNotifications = exports.becomeVendor = exports.placeBid = exports.showInterest = exports.checkout = exports.getActivePaymentGateway = exports.clearCart = exports.getCartContents = exports.removeCartItem = exports.updateCartItem = exports.addItemToCart = exports.markAsReadHandler = exports.deleteMessageHandler = exports.saveMessage = exports.sendMessageHandler = exports.getAllConversationMessages = exports.getConversations = exports.updateUserNotificationSettings = exports.getUserNotificationSettings = exports.confirmPhoneNumberUpdate = exports.updateProfilePhoneNumber = exports.confirmEmailUpdate = exports.updateProfileEmail = exports.updatePassword = exports.updateProfilePhoto = exports.updateProfile = exports.profile = exports.logout = void 0;
+exports.getPaymentDetails = exports.getAllOrderItems = exports.getAllOrders = exports.userMarkNotificationAsRead = exports.getUserNotifications = exports.becomeVendor = exports.placeBid = exports.showInterest = exports.checkout = exports.getActivePaymentGateway = exports.clearCart = exports.getCartContents = exports.removeCartItem = exports.updateCartItem = exports.addItemToCart = exports.markAsReadHandler = exports.deleteMessageHandler = exports.saveMessage = exports.sendMessageHandler = exports.getAllConversationMessages = exports.getConversations = exports.updateUserNotificationSettings = exports.getUserNotificationSettings = exports.confirmPhoneNumberUpdate = exports.updateProfilePhoneNumber = exports.confirmEmailUpdate = exports.updateProfileEmail = exports.updatePassword = exports.updateProfilePhoto = exports.updateProfile = exports.profile = exports.logout = void 0;
 const user_1 = __importDefault(require("../models/user"));
 const sequelize_1 = require("sequelize");
 const helpers_1 = require("../utils/helpers");
@@ -41,6 +41,7 @@ const currency_1 = __importDefault(require("../models/currency"));
 const notification_1 = __importDefault(require("../models/notification"));
 const subscriptionplan_1 = __importDefault(require("../models/subscriptionplan"));
 const vendorsubscription_1 = __importDefault(require("../models/vendorsubscription"));
+const subcategory_1 = __importDefault(require("../models/subcategory"));
 const logout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Get the token from the request
@@ -531,12 +532,12 @@ const getConversations = (req, res) => __awaiter(void 0, void 0, void 0, functio
                 {
                     model: user_1.default,
                     as: "senderUser",
-                    attributes: ["id", "firstName", "lastName", "email", "phoneNumber"], // Modify attributes as needed
+                    attributes: ["id", "firstName", "lastName", "email", "phoneNumber", "photo"], // Modify attributes as needed
                 },
                 {
                     model: user_1.default,
                     as: "receiverUser",
-                    attributes: ["id", "firstName", "lastName", "email", "phoneNumber"], // Modify attributes as needed
+                    attributes: ["id", "firstName", "lastName", "email", "phoneNumber", "photo"], // Modify attributes as needed
                 },
                 {
                     model: product_1.default,
@@ -673,6 +674,7 @@ const sendMessageHandler = (req, res) => __awaiter(void 0, void 0, void 0, funct
                     { senderId: userId, receiverId: receiverId },
                     { senderId: receiverId, receiverId: userId },
                 ],
+                productId,
             },
         });
         // If no conversation exists, create a new one
@@ -1108,13 +1110,34 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             if (!cartItem.product) {
                 throw new Error(`Product information is missing for cart item with ID ${cartItem.id}`);
             }
-            const product = yield product_1.default.findByPk(cartItem.product.id);
+            const product = yield product_1.default.findByPk(cartItem.product.id, {
+                include: [
+                    {
+                        model: store_1.default,
+                        as: 'store',
+                        attributes: ["name"],
+                        include: [
+                            {
+                                model: currency_1.default,
+                                as: 'currency',
+                                attributes: ["name", "symbol"]
+                            },
+                        ],
+                    },
+                    {
+                        model: subcategory_1.default,
+                        as: "sub_category",
+                        attributes: ["id", "name"],
+                    },
+                ],
+            });
             if (!product) {
                 throw new Error(`Product with ID ${cartItem.product.id} not found.`);
             }
+            // Create the order item
             yield orderitem_1.default.create({
                 orderId: order.id,
-                product: cartItem.product,
+                product: product,
                 quantity: cartItem.quantity,
                 price: product.price,
             }, { transaction });
@@ -1136,6 +1159,7 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         }, { transaction });
         // Clear user's cart
         yield cart_1.default.destroy({ where: { userId }, transaction });
+        yield user.update({ wallet: user.wallet + totalAmount }, { transaction });
         // Commit the transaction
         yield transaction.commit();
         res.status(200).json({
@@ -1460,7 +1484,7 @@ const getUserNotifications = (req, res) => __awaiter(void 0, void 0, void 0, fun
         });
     }
     catch (error) {
-        console.error("Error fetching notifications:", error);
+        logger_1.default.error("Error fetching notifications:", error);
         res.status(500).json({ message: "Failed to fetch notifications", error });
     }
 });
@@ -1497,4 +1521,130 @@ const userMarkNotificationAsRead = (req, res) => __awaiter(void 0, void 0, void 
     }
 });
 exports.userMarkNotificationAsRead = userMarkNotificationAsRead;
+const getAllOrders = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _2;
+    const userId = (_2 = req.user) === null || _2 === void 0 ? void 0 : _2.id; // Authenticated user ID from middleware
+    if (!userId) {
+        res.status(400).json({ message: "User must be authenticated" });
+        return;
+    }
+    const { trackingNumber } = req.query; // Only track by tracking number, no pagination
+    try {
+        // Fetch orders with the count of order items, and apply search by tracking number
+        const orders = yield order_1.default.findAll({
+            where: Object.assign({ userId }, (trackingNumber && {
+                trackingNumber: { [sequelize_1.Op.like]: `%${trackingNumber}%` }, // Search by tracking number
+            })),
+            attributes: {
+                include: [
+                    [
+                        sequelize_1.Sequelize.fn("COUNT", sequelize_1.Sequelize.col("orderItems.id")),
+                        "orderItemsCount", // Alias for the count of order items
+                    ],
+                ],
+            },
+            include: [
+                {
+                    model: orderitem_1.default,
+                    as: "orderItems",
+                    attributes: [], // Do not include actual order items
+                },
+            ],
+            group: ["Order.id"],
+            order: [["createdAt", "DESC"]], // Order by createdAt
+        });
+        if (!orders || orders.length === 0) {
+            res.status(404).json({ message: "No orders found for this user" });
+            return;
+        }
+        // Return the response with orders data
+        res.status(200).json({
+            message: "Orders retrieved successfully",
+            data: orders,
+        });
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching orders:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+exports.getAllOrders = getAllOrders;
+const getAllOrderItems = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { orderId, page = 1, limit = 10 } = req.query;
+    // Convert `page` and `limit` to numbers and ensure they are valid
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+    const offset = (pageNumber - 1) * limitNumber;
+    try {
+        // Ensure `orderId` is provided
+        if (!orderId) {
+            res.status(400).json({ message: "Order ID is required" });
+            return;
+        }
+        // Query for order items with pagination and required associations
+        const { rows: orderItems, count } = yield orderitem_1.default.findAndCountAll({
+            where: { orderId },
+            limit: limitNumber,
+            offset,
+            order: [["createdAt", "DESC"]],
+        });
+        if (!orderItems || orderItems.length === 0) {
+            res.status(404).json({ message: "No items found for this order" });
+            return;
+        }
+        // Prepare metadata for pagination
+        const totalPages = Math.ceil(count / limitNumber);
+        res.status(200).json({
+            message: "Order items retrieved successfully",
+            data: orderItems,
+            meta: {
+                total: count,
+                page: pageNumber,
+                limit: limitNumber,
+                totalPages,
+            },
+        });
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching order items:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+exports.getAllOrderItems = getAllOrderItems;
+const getPaymentDetails = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { orderId, page = 1, limit = 10 } = req.query;
+    // Convert `page` and `limit` to numbers
+    const pageNumber = parseInt(page, 10);
+    const limitNumber = parseInt(limit, 10);
+    // Calculate the offset for pagination
+    const offset = (pageNumber - 1) * limitNumber;
+    try {
+        // Fetch payments for the given orderId with pagination
+        const { count, rows: payments } = yield payment_1.default.findAndCountAll({
+            where: { orderId },
+            limit: limitNumber,
+            offset: offset,
+            order: [["createdAt", "DESC"]], // Order by latest payments
+        });
+        if (!payments || payments.length === 0) {
+            res.status(404).json({ message: "No payments found for this order" });
+            return;
+        }
+        res.status(200).json({
+            message: "Payments retrieved successfully",
+            data: payments,
+            meta: {
+                total: count,
+                page: pageNumber,
+                limit: limitNumber,
+                totalPages: Math.ceil(count / limitNumber), // Calculate total pages
+            },
+        });
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching payment details:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+exports.getPaymentDetails = getPaymentDetails;
 //# sourceMappingURL=userController.js.map

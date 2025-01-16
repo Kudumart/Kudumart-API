@@ -58,4 +58,9 @@ userRoutes.patch("/become/vendor", authMiddleware, userController.becomeVendor);
 userRoutes.get("/notifications", authMiddleware, userController.getUserNotifications);
 userRoutes.patch("/mark/notification/as/read", authMiddleware, userController.userMarkNotificationAsRead);
 
+// Order, OrderItem and Payment
+userRoutes.get("/orders", authMiddleware, userController.getAllOrders);
+userRoutes.get("/order/items", authMiddleware, userController.getAllOrderItems);
+userRoutes.get("/order/payment", authMiddleware, userController.getPaymentDetails);
+
 export default userRoutes;

@@ -1,10 +1,12 @@
 // models/Order.ts
-import { Model, DataTypes, Sequelize } from 'sequelize';
+import { Model, DataTypes, Sequelize, CreateOptions } from 'sequelize';
 import User from './user';
+import { randomBytes } from "crypto"; 
 
 class Order extends Model {
   public id!: string;
   public userId!: string;
+  public trackingNumber!: string;
   public totalAmount!: number;
   public shippingAddress!: string;
   public status!: string;
@@ -20,6 +22,14 @@ class Order extends Model {
       as: 'user',
       foreignKey: 'userId',
       onDelete: 'RESTRICT',
+    });
+    this.hasMany(models.OrderItem, {
+      as: 'orderItems',
+      foreignKey: 'orderId'
+    });
+    this.hasOne(models.Payment, {
+      as: 'payment',
+      foreignKey: 'orderId'
     });
   }
 }
@@ -41,6 +51,10 @@ const initModel = (sequelize: Sequelize) => {
           key: "id",
         },
         onDelete: "RESTRICT",
+      },
+      trackingNumber: {
+        type: DataTypes.STRING,
+        allowNull: true,
       },
       totalAmount: {
         type: DataTypes.DECIMAL(10, 2),
@@ -68,6 +82,16 @@ const initModel = (sequelize: Sequelize) => {
       tableName: 'orders',
     }
   );
+
+  // Add hooks
+  Order.addHook('beforeCreate', (order: Order) => {
+    const appName = process.env.APP_NAME || "APP"; // Use app name from environment variable or fallback
+    const datePrefix = new Date().toISOString().split('T')[0].replace(/-/g, ''); // Format: yyyyMMdd
+    const randomSuffix = randomBytes(3).toString('hex'); // Generate random string
+
+    // Generate tracking number
+    order.trackingNumber = `${appName.toUpperCase()}-${datePrefix}-${randomSuffix}`;
+  });
 };
 
 export default Order;

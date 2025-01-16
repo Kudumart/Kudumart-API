@@ -2,6 +2,7 @@
 import { Model, DataTypes, Sequelize } from 'sequelize';
 import User from './user';
 import Store from './store';
+import SubCategory from './subcategory';
 
 class Product extends Model {
   public id!: string;
@@ -28,6 +29,7 @@ class Product extends Model {
   public updatedAt!: Date;
 
   public store!: Store;
+  public sub_category!: SubCategory;
 
   static associate(models: any) {
     // Define associations here

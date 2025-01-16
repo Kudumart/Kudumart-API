@@ -146,7 +146,7 @@ const getStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         res.status(200).json({ data: stores });
     }
     catch (error) {
-        console.error("Error retrieving stores:", error);
+        logger_1.default.error("Error retrieving stores:", error);
         res.status(500).json({ message: "Failed to retrieve stores", error });
     }
 });
@@ -1132,21 +1132,21 @@ const verifyCAC = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             // Process complete response
             response.on('end', () => {
                 if (!responseData) {
-                    console.error('No response data received.');
+                    logger_1.default.error('No response data received.');
                     res.status(500).json({ message: 'No response data received from API.' });
                     return;
                 }
                 try {
                     const parsedData = JSON.parse(responseData);
                     if (parsedData.status === true) {
-                        console.log('Vendor verified successfully!', parsedData);
+                        logger_1.default.log('Vendor verified successfully!', parsedData);
                         res.status(200).json({
                             message: 'Vendor verified successfully!',
                             data: parsedData,
                         });
                     }
                     else {
-                        console.log('Verification failed:', parsedData.message);
+                        logger_1.default.log('Verification failed:', parsedData.message);
                         res.status(400).json({
                             message: 'Verification failed',
                             error: parsedData.message,
@@ -1154,7 +1154,7 @@ const verifyCAC = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                     }
                 }
                 catch (parseError) {
-                    console.error('Error parsing response:', parseError);
+                    logger_1.default.error('Error parsing response:', parseError);
                     res.status(500).json({
                         message: 'Error parsing API response',
                         error: parseError.message,
@@ -1164,7 +1164,7 @@ const verifyCAC = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         });
         // Handle request errors
         request.on('error', (error) => {
-            console.error('Error verifying CAC:', error);
+            logger_1.default.error('Error verifying CAC:', error);
             res.status(500).json({ message: 'Request error', error: error.message });
         });
         // Write the data to the request body and send it
@@ -1172,7 +1172,7 @@ const verifyCAC = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         request.end();
     }
     catch (error) {
-        console.error('Unexpected error:', error);
+        logger_1.default.error('Unexpected error:', error);
         res.status(500).json({ message: 'Unexpected error', error: error });
     }
 });

@@ -29,6 +29,7 @@ import Currency from "../models/currency";
 import Notification from "../models/notification";
 import SubscriptionPlan from "../models/subscriptionplan";
 import VendorSubscription from "../models/vendorsubscription";
+import SubCategory from "../models/subcategory";
 
 export const logout = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -997,13 +998,13 @@ export const addItemToCart = async (
       // Extract the currency of the first item in the cart
       const existingCartItem = existingCartItems[0];
       const existingProduct = existingCartItem.product;
-    
+
       if (!existingProduct || !existingProduct.store || !existingProduct.store.currency) {
         throw new Error("Cart contains invalid product or currency information.");
       }
-    
+
       const existingCurrency = existingProduct.store.currency;
-    
+
       // Check if the currency matches
       if (
         existingCurrency.name !== productCurrency.name ||
@@ -1013,7 +1014,7 @@ export const addItemToCart = async (
         await Cart.destroy({ where: { userId } });
       }
     }
-    
+
     // Check if the product is already in the user's cart
     const existingCartItem = await Cart.findOne({
       where: { userId, productId },
@@ -1111,7 +1112,7 @@ export const getCartContents = async (
   const userId = (req as AuthenticatedRequest).user?.id; // Get the authenticated user's ID
 
   try {
-    const cartItems = await Cart.findAll({ 
+    const cartItems = await Cart.findAll({
       where: { userId },
       include: [
         {
@@ -1136,7 +1137,7 @@ export const getCartContents = async (
             },
           ],
         },
-      ], 
+      ],
     });
 
     res.status(200).json({ data: cartItems });
@@ -1296,21 +1297,42 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
         throw new Error(`Product information is missing for cart item with ID ${cartItem.id}`);
       }
 
-      const product = await Product.findByPk(cartItem.product.id);
-
+      const product = await Product.findByPk(cartItem.product.id, {
+        include: [
+          {
+            model: Store,
+            as: 'store',
+            attributes: [ "name" ],
+            include: [
+              {
+                model: Currency,
+                as: 'currency',
+                attributes: [ "name", "symbol" ]
+              },
+            ],
+          },
+          {
+            model: SubCategory,
+            as: "sub_category",
+            attributes: ["id", "name"],
+          },
+        ],
+      });
+      
       if (!product) {
         throw new Error(`Product with ID ${cartItem.product.id} not found.`);
       }
-
+      
+      // Create the order item
       await OrderItem.create(
         {
           orderId: order.id,
-          product: cartItem.product, // Store the product as a JSON object
+          product: product,
           quantity: cartItem.quantity,
           price: product.price,
         },
         { transaction }
-      );
+      );      
 
       // Update product inventory
       // await product.update(
@@ -1319,8 +1341,8 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
       // );
     }
 
-     // Create payment record
-     const payment = await Payment.create(
+    // Create payment record
+    const payment = await Payment.create(
       {
         orderId: order.id,
         refId,
@@ -1336,7 +1358,10 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 
     // Clear user's cart
     await Cart.destroy({ where: { userId }, transaction });
-
+    await user.update(
+      { wallet: (user.wallet as number) + totalAmount },
+      { transaction }
+    );    
     // Commit the transaction
     await transaction.commit();
 
@@ -1421,7 +1446,7 @@ export const showInterest = async (req: Request, res: Response): Promise<void> =
     } else {
       logger.warn(`User with ID ${userId} has no email. Notification skipped.`);
     }
-    
+
     res.status(200).json({
       message: "Interest recorded successfully. Please wait for confirmation.",
       data: newInterest,
@@ -1479,8 +1504,8 @@ export const placeBid = async (req: Request, res: Response): Promise<void> => {
 
     // Determine minimum acceptable bid
     const minAcceptableBid = highestBid
-        ? highestBidAmount + bidIncrement
-        : startingPrice;
+      ? highestBidAmount + bidIncrement
+      : startingPrice;
 
     if (isNaN(minAcceptableBid)) {
       logger.error("Invalid minimum acceptable bid calculation.");
@@ -1500,13 +1525,13 @@ export const placeBid = async (req: Request, res: Response): Promise<void> => {
       const previousBidders = auctionProduct.bids.filter(
         (bid) => bid.bidderId !== bidderId && bid.user // Exclude current bidder and ensure user exists
       );
-    
+
       for (const previousBid of previousBidders) {
         if (previousBid.user) { // Ensure user is not undefined
           try {
             // Generate outbid notification message
             const message = emailTemplates.outBidNotification(previousBid, auctionProduct);
-    
+
             // Send notification email
             await sendMail(
               previousBid.user.email,
@@ -1519,7 +1544,7 @@ export const placeBid = async (req: Request, res: Response): Promise<void> => {
         }
       }
     }
-    
+
     // Find an existing bid by the current bidder
     const existingBid = await Bid.findOne({
       where: { auctionProductId, bidderId },
@@ -1683,45 +1708,45 @@ export const getUserNotifications = async (req: Request, res: Response): Promise
   const userId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID from middleware
 
   if (!userId) {
-      res.status(400).json({ message: "User must be authenticated" });
-      return;
+    res.status(400).json({ message: "User must be authenticated" });
+    return;
   }
 
   const { isRead, limit = 10, page = 1 } = req.query; // Query params
 
   try {
-      // Build the query conditions
-      const where: any = { userId };
+    // Build the query conditions
+    const where: any = { userId };
 
-      if (isRead !== undefined) {
-          where.isRead = isRead === 'true';
-      }
+    if (isRead !== undefined) {
+      where.isRead = isRead === 'true';
+    }
 
-      // Calculate offset for pagination
-      const paginationLimit = parseInt(limit as string, 10);
-      const paginationPage = parseInt(page as string, 10);
-      const offset = (paginationPage - 1) * paginationLimit;
+    // Calculate offset for pagination
+    const paginationLimit = parseInt(limit as string, 10);
+    const paginationPage = parseInt(page as string, 10);
+    const offset = (paginationPage - 1) * paginationLimit;
 
-      // Fetch notifications with filters, pagination, and sorting
-      const { rows: notifications, count: total } = await Notification.findAndCountAll({
-          where,
-          order: [['createdAt', 'DESC']],
-          limit: paginationLimit,
-          offset,
-      });
+    // Fetch notifications with filters, pagination, and sorting
+    const { rows: notifications, count: total } = await Notification.findAndCountAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      limit: paginationLimit,
+      offset,
+    });
 
-      res.status(200).json({
-          data: notifications,
-          meta: {
-              total,
-              page: paginationPage,
-              limit: paginationLimit,
-              totalPages: Math.ceil(total / paginationLimit),
-          },
-      });
+    res.status(200).json({
+      data: notifications,
+      meta: {
+        total,
+        page: paginationPage,
+        limit: paginationLimit,
+        totalPages: Math.ceil(total / paginationLimit),
+      },
+    });
   } catch (error) {
-      console.error("Error fetching notifications:", error);
-      res.status(500).json({ message: "Failed to fetch notifications", error });
+    logger.error("Error fetching notifications:", error);
+    res.status(500).json({ message: "Failed to fetch notifications", error });
   }
 };
 
@@ -1730,33 +1755,174 @@ export const userMarkNotificationAsRead = async (req: Request, res: Response): P
   const notificationId = req.query.notificationId as string; // Notification ID passed in the request body
 
   if (!userId) {
-      res.status(400).json({ message: "User must be authenticated" });
-      return;
+    res.status(400).json({ message: "User must be authenticated" });
+    return;
   }
 
   if (!notificationId) {
-      res.status(400).json({ message: "Notification ID is required" });
-      return;
+    res.status(400).json({ message: "Notification ID is required" });
+    return;
   }
 
   try {
-      // Fetch the notification to ensure it belongs to the user
-      const notification = await Notification.findOne({
-          where: { id: notificationId, userId },
-      });
+    // Fetch the notification to ensure it belongs to the user
+    const notification = await Notification.findOne({
+      where: { id: notificationId, userId },
+    });
 
-      if (!notification) {
-          res.status(404).json({ message: "Notification not found or does not belong to the user" });
-          return;
-      }
+    if (!notification) {
+      res.status(404).json({ message: "Notification not found or does not belong to the user" });
+      return;
+    }
 
-      // Update the `readAt` field to mark it as read
-      notification.isRead = true;
-      await notification.save();
+    // Update the `readAt` field to mark it as read
+    notification.isRead = true;
+    await notification.save();
 
-      res.status(200).json({ message: "Notification marked as read" });
+    res.status(200).json({ message: "Notification marked as read" });
   } catch (error) {
-      logger.error("Error marking notification as read:", error);
-      res.status(500).json({ message: "Failed to mark notification as read" });
+    logger.error("Error marking notification as read:", error);
+    res.status(500).json({ message: "Failed to mark notification as read" });
+  }
+};
+
+export const getAllOrders = async (req: Request, res: Response): Promise<void> => {
+  const userId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID from middleware
+
+  if (!userId) {
+    res.status(400).json({ message: "User must be authenticated" });
+    return;
+  }
+
+  const { trackingNumber } = req.query; // Only track by tracking number, no pagination
+
+  try {
+    // Fetch orders with the count of order items, and apply search by tracking number
+    const orders = await Order.findAll({
+      where: {
+        userId,
+        ...(trackingNumber && {
+          trackingNumber: { [Op.like]: `%${trackingNumber}%` }, // Search by tracking number
+        }),
+      },
+      attributes: {
+        include: [
+          [
+            Sequelize.fn("COUNT", Sequelize.col("orderItems.id")),
+            "orderItemsCount", // Alias for the count of order items
+          ],
+        ],
+      },
+      include: [
+        {
+          model: OrderItem,
+          as: "orderItems",
+          attributes: [], // Do not include actual order items
+        },
+      ],
+      group: ["Order.id"], // Group by order to ensure correct counting
+      order: [["createdAt", "DESC"]], // Order by createdAt
+    });
+
+    if (!orders || orders.length === 0) {
+      res.status(404).json({ message: "No orders found for this user" });
+      return;
+    }
+
+    // Return the response with orders data
+    res.status(200).json({
+      message: "Orders retrieved successfully",
+      data: orders,
+    });
+  } catch (error) {
+    logger.error("Error fetching orders:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const getAllOrderItems = async (req: Request, res: Response): Promise<void> => {
+  const { orderId, page = 1, limit = 10 } = req.query;
+
+  // Convert `page` and `limit` to numbers and ensure they are valid
+  const pageNumber = parseInt(page as string, 10);
+  const limitNumber = parseInt(limit as string, 10);
+  const offset = (pageNumber - 1) * limitNumber;
+
+  try {
+    // Ensure `orderId` is provided
+    if (!orderId) {
+      res.status(400).json({ message: "Order ID is required" });
+      return;
+    }
+
+    // Query for order items with pagination and required associations
+    const { rows: orderItems, count } = await OrderItem.findAndCountAll({
+      where: { orderId },
+      limit: limitNumber,
+      offset,
+      order: [["createdAt", "DESC"]],
+    });
+
+    if (!orderItems || orderItems.length === 0) {
+      res.status(404).json({ message: "No items found for this order" });
+      return;
+    }
+
+    // Prepare metadata for pagination
+    const totalPages = Math.ceil(count / limitNumber);
+
+    res.status(200).json({
+      message: "Order items retrieved successfully",
+      data: orderItems,
+      meta: {
+        total: count, // Total number of order items
+        page: pageNumber,
+        limit: limitNumber,
+        totalPages,
+      },
+    });
+  } catch (error) {
+    logger.error("Error fetching order items:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const getPaymentDetails = async (req: Request, res: Response): Promise<void> => {
+  const { orderId, page = 1, limit = 10 } = req.query;
+
+  // Convert `page` and `limit` to numbers
+  const pageNumber = parseInt(page as string, 10);
+  const limitNumber = parseInt(limit as string, 10);
+
+  // Calculate the offset for pagination
+  const offset = (pageNumber - 1) * limitNumber;
+
+  try {
+    // Fetch payments for the given orderId with pagination
+    const { count, rows: payments } = await Payment.findAndCountAll({
+      where: { orderId },
+      limit: limitNumber,
+      offset: offset,
+      order: [["createdAt", "DESC"]], // Order by latest payments
+    });
+
+    if (!payments || payments.length === 0) {
+      res.status(404).json({ message: "No payments found for this order" });
+      return;
+    }
+
+    res.status(200).json({
+      message: "Payments retrieved successfully",
+      data: payments,
+      meta: {
+        total: count, // Total number of payments for the order
+        page: pageNumber,
+        limit: limitNumber,
+        totalPages: Math.ceil(count / limitNumber), // Calculate total pages
+      },
+    });
+  } catch (error) {
+    logger.error("Error fetching payment details:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };

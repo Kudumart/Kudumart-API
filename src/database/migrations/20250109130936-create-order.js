@@ -18,6 +18,10 @@ module.exports = {
         },
         onDelete: "RESTRICT",
       },
+      trackingNumber: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
       totalAmount: {
         type: Sequelize.DECIMAL(10, 2),
         allowNull: false,

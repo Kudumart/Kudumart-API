@@ -65,5 +65,9 @@ userRoutes.patch("/become/vendor", authMiddleware_1.default, userController.beco
 // Notification
 userRoutes.get("/notifications", authMiddleware_1.default, userController.getUserNotifications);
 userRoutes.patch("/mark/notification/as/read", authMiddleware_1.default, userController.userMarkNotificationAsRead);
+// Order, OrderItem and Payment
+userRoutes.get("/orders", authMiddleware_1.default, userController.getAllOrders);
+userRoutes.get("/order/items", authMiddleware_1.default, userController.getAllOrderItems);
+userRoutes.get("/order/payment", authMiddleware_1.default, userController.getPaymentDetails);
 exports.default = userRoutes;
 //# sourceMappingURL=userRoute.js.map

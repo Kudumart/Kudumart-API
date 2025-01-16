@@ -1462,7 +1462,7 @@ const viewUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         res.status(200).json({ message: "User retrieved successfully.", data: user });
     }
     catch (error) {
-        console.error("Error retrieving user:", error);
+        logger_1.default.error("Error retrieving user:", error);
         res.status(500).json({ message: "Failed to retrieve user.", error });
     }
 });
