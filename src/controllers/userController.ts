@@ -1322,10 +1322,11 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
       if (!product) {
         throw new Error(`Product with ID ${cartItem.product.id} not found.`);
       }
-      
+
       // Create the order item
       await OrderItem.create(
         {
+          vendorId: product.vendorId,
           orderId: order.id,
           product: product,
           quantity: cartItem.quantity,

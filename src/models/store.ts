@@ -1,6 +1,7 @@
 // models/store.ts
 import { Model, DataTypes, Sequelize } from 'sequelize';
 import Currency from './currency';
+import User from './user';
 
 // Define the structure for deliveryOptions
 interface DeliveryOption {
@@ -30,6 +31,7 @@ class Store extends Model {
   public isVerified!: boolean;
   public createdAt!: Date;
   public updatedAt!: Date;
+  public vendor!: User;
 
   public currency!: Currency;
 

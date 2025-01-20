@@ -9,6 +9,15 @@ module.exports = {
         primaryKey: true,
         allowNull: false,
       },
+      vendorId: {
+        type: Sequelize.UUID,
+        allowNull: false,
+        references: {
+          model: "users",
+          key: "id",
+        },
+        onDelete: "RESTRICT",
+      },
       orderId: {
         type: Sequelize.UUID,
         allowNull: false,

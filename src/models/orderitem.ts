@@ -4,6 +4,7 @@ import Order from './order';
 
 class OrderItem extends Model {
   public id!: string;
+  public vendorId!: string;
   public orderId!: string;
   public product!: object; // JSON to accept product object
   public quantity!: number;
@@ -31,6 +32,15 @@ const initModel = (sequelize: Sequelize) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
         allowNull: false,
+      },
+      vendorId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+          model: "users",
+          key: "id",
+        },
+        onDelete: "RESTRICT",
       },
       orderId: {
         type: DataTypes.UUID,

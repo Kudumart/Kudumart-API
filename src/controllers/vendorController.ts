@@ -102,7 +102,7 @@ export const getStore = async (req: Request, res: Response): Promise<void> => {
                     [
                         Sequelize.literal(`(
                             SELECT COUNT(*)
-                            FROM Products AS product
+                            FROM products AS product
                             WHERE product.storeId = Store.id
                         )`),
                         "totalProducts",
@@ -111,7 +111,7 @@ export const getStore = async (req: Request, res: Response): Promise<void> => {
                     [
                         Sequelize.literal(`(
                             SELECT COUNT(*)
-                            FROM Auction_Products AS auctionproduct
+                            FROM auction_products AS auctionproduct
                             WHERE auctionproduct.storeId = Store.id
                         )`),
                         "totalAuctionProducts",
