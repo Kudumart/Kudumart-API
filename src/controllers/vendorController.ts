@@ -22,6 +22,8 @@ import Transaction from "../models/transaction";
 import PaymentGateway from "../models/paymentgateway";
 import { verifyPayment } from "../utils/helpers";
 import Currency from "../models/currency";
+import OrderItem from "../models/orderitem";
+import Order from "../models/order";
 
 export const submitOrUpdateKYC = async (
     req: Request,
@@ -141,7 +143,7 @@ export const createStore = async (
 
     const { currencyId, name, location, logo, businessHours, deliveryOptions, tipsOnFinding } =
         req.body;
-        
+
     if (!currencyId) {
         res.status(400).json({ message: 'Currency ID is required.' });
         return;
@@ -501,8 +503,8 @@ export const viewProduct = async (
                 vendorId,
             },
             include: [
-                { 
-                    model: Store, 
+                {
+                    model: Store,
                     as: "store",
                     include: [
                         {
@@ -1044,8 +1046,8 @@ export const viewAuctionProduct = async (
                 vendorId,
             },
             include: [
-                { 
-                    model: Store, 
+                {
+                    model: Store,
                     as: "store",
                     include: [
                         {
@@ -1143,8 +1145,8 @@ export const subscribe = async (req: Request, res: Response): Promise<void> => {
         const handleTransaction = async (amount: number) => {
             // If isWallet is true, deduct from wallet balance
             if (isWallet) {
-                const vendor = await User.findByPk( vendorId );
-                
+                const vendor = await User.findByPk(vendorId);
+
                 if (!vendor || vendor.wallet === undefined || vendor.wallet < amount) {
                     res.status(400).json({ message: "Insufficient wallet balance." });
                     return false;
@@ -1398,5 +1400,60 @@ export const getAllSubCategories = async (
     } catch (error) {
         logger.error(error);
         res.status(500).json({ message: "Error fetching sub-categories" });
+    }
+};
+
+export const getVendorOrderItems = async (req: Request, res: Response): Promise<void> => {
+    const vendorId = (req as AuthenticatedRequest).user?.id as string; // Authenticated user ID from middleware
+
+    if (!vendorId) {
+        res.status(403).json({ message: "Unauthorized. Vendor ID is required." });
+        return;
+    }
+
+    try {
+        // Fetch OrderItems related to the vendor
+        const orderItems = await OrderItem.findAll({
+            where: { vendorId },
+            order: [["createdAt", "DESC"]], // Sort by most recent
+        });
+
+        if (!orderItems || orderItems.length === 0) {
+            res.status(404).json({ message: "No order items found for this vendor." });
+            return;
+        }
+
+        res.status(200).json({
+            message: "Order items retrieved successfully",
+            data: orderItems,
+        });
+    } catch (error: any) {
+        res.status(500).json({ message: error.message || "Failed to retrieve order items." });
+    }
+};
+
+export const getOrderItemsInfo = async (req: Request, res: Response): Promise<void> => {
+    const orderId = req.query.orderId as string;
+
+    try {
+        // Fetch Order related to the vendor
+        const order = await Order.findOne({
+            where: { id: orderId },
+            include: [
+                {
+                    model: User,
+                    as: "user",
+                    attributes: ["id", "firstName", "lastName", "email", "phoneNumber"], // Include user details
+                },
+            ],
+            order: [["createdAt", "DESC"]], // Sort by most recent
+        });
+
+        res.status(200).json({
+            message: "Order details retrieved successfully",
+            data: order,
+        });
+    } catch (error: any) {
+        res.status(500).json({ message: error.message || "Failed to retrieve order details." });
     }
 };

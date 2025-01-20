@@ -20,6 +20,9 @@ import KYC from "../models/kyc";
 import PaymentGateway from "../models/paymentgateway";
 import Currency from "../models/currency";
 import { log } from "console";
+import Product from "../models/product";
+import Store from "../models/store";
+import AuctionProduct from "../models/auctionproduct";
 
 // Extend the Express Request interface to include adminId and admin
 interface AuthenticatedRequest extends Request {
@@ -1775,27 +1778,272 @@ export const toggleUserStatus = async (
 
 export const viewUser = async (req: Request, res: Response): Promise<void> => {
     const userId = req.query.userId as string;
-  
+
     try {
-      // Fetch the user
-      const user = await User.findByPk(userId, {
-        include: [
-            {
-                model: KYC,
-                as: "kyc",
-            },
-        ],
-        attributes: { exclude: ["password"] }, // Exclude sensitive fields like password
-      });
-  
-      if (!user) {
-        res.status(404).json({ message: "User not found." });
-        return;
-      }
-  
-      res.status(200).json({ message: "User retrieved successfully.", data: user });
+        // Fetch the user
+        const user = await User.findByPk(userId, {
+            include: [
+                {
+                    model: KYC,
+                    as: "kyc",
+                },
+            ],
+            attributes: { exclude: ["password"] }, // Exclude sensitive fields like password
+        });
+
+        if (!user) {
+            res.status(404).json({ message: "User not found." });
+            return;
+        }
+
+        res.status(200).json({ message: "User retrieved successfully.", data: user });
     } catch (error) {
-      logger.error("Error retrieving user:", error);
-      res.status(500).json({ message: "Failed to retrieve user.", error });
+        logger.error("Error retrieving user:", error);
+        res.status(500).json({ message: "Failed to retrieve user.", error });
     }
-  };
+};
+
+export const getStores = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // Get pagination parameters
+        const page = parseInt(req.query.page as string, 10) || 1; // Default to page 1 if not provided
+        const limit = parseInt(req.query.limit as string, 10) || 10; // Default to 10 items per page
+        const offset = (page - 1) * limit; // Calculate offset
+
+        // Fetch stores with pagination and associated data
+        const { rows: stores, count: totalStores } = await Store.findAndCountAll({
+            include: [
+                {
+                    model: User,
+                    as: "vendor",
+                    attributes: ["id", "firstName", "lastName", "email"],
+                },
+                {
+                    model: Currency,
+                    as: "currency",
+                },
+                {
+                    model: Product,
+                    as: "products",
+                    attributes: [], // Exclude detailed product attributes
+                },
+                {
+                    model: AuctionProduct,
+                    as: "auctionproducts",
+                    attributes: [], // Exclude detailed auction product attributes
+                },
+            ],
+            attributes: {
+                include: [
+                    // Include total product count for each store
+                    [
+                        Sequelize.literal(`(
+                            SELECT COUNT(*)
+                            FROM products AS product
+                            WHERE product.storeId = Store.id
+                        )`),
+                        "totalProducts",
+                    ],
+                    // Include total auction product count for each store
+                    [
+                        Sequelize.literal(`(
+                            SELECT COUNT(*)
+                            FROM auction_products AS auctionproduct
+                            WHERE auctionproduct.storeId = Store.id
+                        )`),
+                        "totalAuctionProducts",
+                    ],
+                ],
+            },
+            offset, // Apply offset for pagination
+            limit,  // Apply limit for pagination
+            order: [["createdAt", "DESC"]], // Order stores by creation date, newest first
+        });
+
+        // Check if any stores were found
+        if (!stores || stores.length === 0) {
+            res.status(404).json({
+                message: "No stores found.",
+                data: [],
+                pagination: {
+                    total: totalStores,
+                    page,
+                    pages: Math.ceil(totalStores / limit),
+                },
+            });
+            return;
+        }
+
+        // Return stores with pagination metadata
+        res.status(200).json({
+            message: "Stores retrieved successfully.",
+            data: stores,
+            pagination: {
+                total: totalStores,
+                page,
+                pages: Math.ceil(totalStores / limit),
+            },
+        });
+    } catch (error: any) {
+        logger.error("Error retrieving stores:", error);
+        res.status(500).json({ message: "Failed to retrieve stores", error: error.message });
+    }
+};
+
+export const getProducts = async (req: Request, res: Response): Promise<void> => {
+    const { name, sku, status, condition, categoryName, page, limit } = req.query;
+
+    try {
+        // Get pagination parameters
+        const pageNumber = parseInt(page as string, 10) || 1; // Default to page 1 if not provided
+        const limitNumber = parseInt(limit as string, 10) || 10; // Default to 10 items per page
+        const offset = (pageNumber - 1) * limitNumber;
+
+        // Fetch products with filters, pagination, and associated data
+        const { rows: products, count: totalProducts } = await Product.findAndCountAll({
+            include: [
+                {
+                    model: User,
+                    as: "vendor",
+                    attributes: ["id", "firstName", "lastName", "email"],
+                },
+                {
+                    model: SubCategory,
+                    as: "sub_category",
+                    where: categoryName ? { name: categoryName } : undefined,
+                },
+                {
+                    model: Store,
+                    as: "store",
+                    attributes: ["name"],
+                    include: [
+                        {
+                            model: Currency,
+                            as: "currency",
+                            attributes: ["symbol"],
+                        },
+                    ],
+                },
+            ],
+            ...((name || sku || status || condition) && {
+                where: {
+                    ...(name && { name: { [Op.like]: `%${name}%` } }),
+                    ...(sku && { sku }),
+                    ...(status && { status }),
+                    ...(condition && { condition }),
+                },
+            }),
+            offset, // Apply offset for pagination
+            limit: limitNumber, // Apply limit for pagination
+            order: [["createdAt", "DESC"]], // Order by creation date (newest first)
+        });
+
+        // Check if products were found
+        if (!products || products.length === 0) {
+            res.status(404).json({
+                message: "No products found.",
+                data: [],
+                pagination: {
+                    total: totalProducts,
+                    page: pageNumber,
+                    pages: Math.ceil(totalProducts / limitNumber),
+                },
+            });
+            return;
+        }
+
+        // Return products with pagination metadata
+        res.status(200).json({
+            message: "Products retrieved successfully.",
+            data: products,
+            pagination: {
+                total: totalProducts,
+                page: pageNumber,
+                pages: Math.ceil(totalProducts / limitNumber),
+            },
+        });
+    } catch (error: any) {
+        logger.error(error);
+        res.status(500).json({ message: "Failed to fetch products", error: error.message });
+    }
+};
+
+export const getAuctionProducts = async (req: Request, res: Response): Promise<void> => {
+    const { name, sku, status, condition, categoryName, page, limit } = req.query;
+
+    try {
+        // Get pagination parameters
+        const pageNumber = parseInt(page as string, 10) || 1; // Default to page 1 if not provided
+        const limitNumber = parseInt(limit as string, 10) || 10; // Default to 10 items per page
+        const offset = (pageNumber - 1) * limitNumber;
+
+        // Fetch auction products with filters, pagination, and associated data
+        const { rows: auctionProducts, count: totalAuctionProducts } = await AuctionProduct.findAndCountAll({
+            include: [
+                {
+                    model: User,
+                    as: "vendor",
+                    attributes: ["id", "firstName", "lastName", "email"],
+                },
+                {
+                    model: SubCategory,
+                    as: "sub_category",
+                    where: categoryName ? { name: categoryName } : undefined,
+                },
+                {
+                    model: Store,
+                    as: "store",
+                    attributes: ["name"],
+                    include: [
+                        {
+                            model: Currency,
+                            as: "currency",
+                            attributes: ["symbol"],
+                        },
+                    ],
+                },
+            ],
+            ...((name || sku || status || condition) && {
+                where: {
+                    ...(name && { name: { [Op.like]: `%${name}%` } }),
+                    ...(sku && { sku }),
+                    ...(status && { status }),
+                    ...(condition && { condition }),
+                },
+            }),
+            offset, // Apply offset for pagination
+            limit: limitNumber, // Apply limit for pagination
+            order: [["createdAt", "DESC"]], // Order by creation date (newest first)
+        });
+
+        // Check if auction products were found
+        if (!auctionProducts || auctionProducts.length === 0) {
+            res.status(404).json({
+                message: "No auction products found for this vendor.",
+                data: [],
+                pagination: {
+                    total: totalAuctionProducts,
+                    page: pageNumber,
+                    pages: Math.ceil(totalAuctionProducts / limitNumber),
+                },
+            });
+            return;
+        }
+
+        // Return auction products with pagination metadata
+        res.status(200).json({
+            message: "Auction products fetched successfully.",
+            data: auctionProducts,
+            pagination: {
+                total: totalAuctionProducts,
+                page: pageNumber,
+                pages: Math.ceil(totalAuctionProducts / limitNumber),
+            },
+        });
+    } catch (error: any) {
+        logger.error(error);
+        res.status(500).json({
+            message: error.message || "An error occurred while fetching auction products.",
+        });
+    }
+};

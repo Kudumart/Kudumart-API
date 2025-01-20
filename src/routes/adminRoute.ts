@@ -87,4 +87,10 @@ adminRoutes.get('/vendors', adminAuthMiddleware, adminController.getAllVendors);
 adminRoutes.get('/user/details', adminAuthMiddleware, adminController.viewUser);
 adminRoutes.patch('/toggle/user/status', adminAuthMiddleware, adminController.toggleUserStatus);
 
+
+// Store | Product | Auction Products
+adminRoutes.get("/stores", adminAuthMiddleware, adminController.getStores);
+adminRoutes.get("/products", adminAuthMiddleware, adminController.getProducts);
+adminRoutes.get("/auction/products", adminAuthMiddleware, adminController.getAuctionProducts);
+
 export default adminRoutes; // Export the router

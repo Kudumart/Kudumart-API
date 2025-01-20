@@ -51,4 +51,7 @@ vendorRoutes.get("/verifyCAC", authMiddleware, authorizeVendor, vendorController
 vendorRoutes.get('/currencies', authMiddleware, authorizeVendor, vendorController.getAllCurrencies);
 vendorRoutes.get('/categories', authMiddleware, authorizeVendor, vendorController.getAllSubCategories);
 
+vendorRoutes.get("/order/items", authMiddleware, vendorController.getVendorOrderItems);
+vendorRoutes.get("/order/item/details", authMiddleware, vendorController.getOrderItemsInfo);
+
 export default vendorRoutes;
