@@ -21,6 +21,15 @@ const initModel = (sequelize) => {
             primaryKey: true,
             allowNull: false,
         },
+        vendorId: {
+            type: sequelize_1.DataTypes.UUID,
+            allowNull: false,
+            references: {
+                model: "users",
+                key: "id",
+            },
+            onDelete: "RESTRICT",
+        },
         orderId: {
             type: sequelize_1.DataTypes.UUID,
             allowNull: false,

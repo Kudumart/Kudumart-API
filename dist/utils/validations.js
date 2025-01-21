@@ -75,12 +75,12 @@ exports.resetPasswordValidationRules = resetPasswordValidationRules;
 // Password update validation rules
 const updatePasswordValidationRules = () => {
     return [
-        (0, express_validator_1.check)("oldPassword").notEmpty().withMessage("Old password is required."),
+        (0, express_validator_1.check)("oldPassword").notEmpty().withMessage("Old password is required."), // Check for old password
         (0, express_validator_1.check)("newPassword")
             .notEmpty()
             .withMessage("New password is required.") // Check for new password
             .isLength({ min: 6 })
-            .withMessage("New password must be at least 6 characters long."),
+            .withMessage("New password must be at least 6 characters long."), // Ensure minimum length
         (0, express_validator_1.check)("confirmNewPassword")
             .notEmpty()
             .withMessage("Confirmation password is required.") // Check for confirmation password

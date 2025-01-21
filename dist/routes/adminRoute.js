@@ -15,13 +15,23 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -93,5 +103,9 @@ adminRoutes.get('/customers', adminAuthMiddleware_1.default, adminController.get
 adminRoutes.get('/vendors', adminAuthMiddleware_1.default, adminController.getAllVendors);
 adminRoutes.get('/user/details', adminAuthMiddleware_1.default, adminController.viewUser);
 adminRoutes.patch('/toggle/user/status', adminAuthMiddleware_1.default, adminController.toggleUserStatus);
+// Store | Product | Auction Products
+adminRoutes.get("/stores", adminAuthMiddleware_1.default, adminController.getStores);
+adminRoutes.get("/products", adminAuthMiddleware_1.default, adminController.getProducts);
+adminRoutes.get("/auction/products", adminAuthMiddleware_1.default, adminController.getAuctionProducts);
 exports.default = adminRoutes; // Export the router
 //# sourceMappingURL=adminRoute.js.map

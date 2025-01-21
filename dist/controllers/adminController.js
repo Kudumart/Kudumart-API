@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.viewUser = exports.toggleUserStatus = exports.getAllVendors = exports.getAllCustomers = exports.deleteCurrency = exports.getAllCurrencies = exports.updateCurrency = exports.addCurrency = exports.setPaymentGatewayActive = exports.getAllPaymentGateways = exports.deletePaymentGateway = exports.updatePaymentGateway = exports.createPaymentGateway = exports.approveOrRejectKYC = exports.getAllKYC = exports.getAllSubCategories = exports.deleteSubCategory = exports.updateSubCategory = exports.createSubCategory = exports.getCategoriesWithSubCategories = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getAllCategories = exports.deleteSubscriptionPlan = exports.updateSubscriptionPlan = exports.createSubscriptionPlan = exports.getAllSubscriptionPlans = exports.deletePermission = exports.updatePermission = exports.getPermissions = exports.createPermission = exports.deletePermissionFromRole = exports.assignPermissionToRole = exports.viewRolePermissions = exports.updateRole = exports.getRoles = exports.createRole = exports.resendLoginDetailsSubAdmin = exports.deleteSubAdmin = exports.deactivateOrActivateSubAdmin = exports.updateSubAdmin = exports.createSubAdmin = exports.subAdmins = exports.updatePassword = exports.updateProfile = exports.logout = void 0;
+exports.getAuctionProducts = exports.getProducts = exports.getStores = exports.viewUser = exports.toggleUserStatus = exports.getAllVendors = exports.getAllCustomers = exports.deleteCurrency = exports.getAllCurrencies = exports.updateCurrency = exports.addCurrency = exports.setPaymentGatewayActive = exports.getAllPaymentGateways = exports.deletePaymentGateway = exports.updatePaymentGateway = exports.createPaymentGateway = exports.approveOrRejectKYC = exports.getAllKYC = exports.getAllSubCategories = exports.deleteSubCategory = exports.updateSubCategory = exports.createSubCategory = exports.getCategoriesWithSubCategories = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getAllCategories = exports.deleteSubscriptionPlan = exports.updateSubscriptionPlan = exports.createSubscriptionPlan = exports.getAllSubscriptionPlans = exports.deletePermission = exports.updatePermission = exports.getPermissions = exports.createPermission = exports.deletePermissionFromRole = exports.assignPermissionToRole = exports.viewRolePermissions = exports.updateRole = exports.getRoles = exports.createRole = exports.resendLoginDetailsSubAdmin = exports.deleteSubAdmin = exports.deactivateOrActivateSubAdmin = exports.updateSubAdmin = exports.createSubAdmin = exports.subAdmins = exports.updatePassword = exports.updateProfile = exports.logout = void 0;
 const sequelize_1 = require("sequelize");
 const mail_service_1 = require("../services/mail.service");
 const messages_1 = require("../utils/messages");
@@ -30,6 +30,9 @@ const user_1 = __importDefault(require("../models/user"));
 const kyc_1 = __importDefault(require("../models/kyc"));
 const paymentgateway_1 = __importDefault(require("../models/paymentgateway"));
 const currency_1 = __importDefault(require("../models/currency"));
+const product_1 = __importDefault(require("../models/product"));
+const store_1 = __importDefault(require("../models/store"));
+const auctionproduct_1 = __importDefault(require("../models/auctionproduct"));
 const logout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Get the token from the request
@@ -95,9 +98,9 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.updateProfile = updateProfile;
 const updatePassword = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _b;
+    var _a;
     const { oldPassword, newPassword, confirmNewPassword } = req.body;
-    const adminId = (_b = req.admin) === null || _b === void 0 ? void 0 : _b.id; // Using optional chaining to access adminId
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id; // Using optional chaining to access adminId
     try {
         // Find the admin
         const admin = yield admin_1.default.scope("auth").findByPk(adminId);
@@ -154,7 +157,7 @@ const subAdmins = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             where: whereCondition,
             include: [
                 {
-                    model: role_1.default,
+                    model: role_1.default, // Include the Role model in the query
                     as: "role", // Use the alias defined in the association (if any)
                 },
             ],
@@ -709,7 +712,7 @@ const getAllCategories = (req, res) => __awaiter(void 0, void 0, void 0, functio
     const { name } = req.query;
     try {
         const categories = yield category_1.default.findAll({
-            where: name ? { name: { [sequelize_1.Op.like]: `%${name}%` } } : {},
+            where: name ? { name: { [sequelize_1.Op.like]: `%${name}%` } } : {}, // Search by name if provided
             attributes: {
                 include: [
                     [
@@ -844,7 +847,7 @@ const getCategoriesWithSubCategories = (req, res) => __awaiter(void 0, void 0, v
                     as: "subCategories", // alias used in the association
                 },
             ],
-            attributes: ["id", "name", "image"],
+            attributes: ["id", "name", "image"], // select specific fields in Category
             order: [["name", "ASC"]], // sort categories alphabetically, for example
         });
         res.status(200).json({ data: categories });
@@ -1467,4 +1470,219 @@ const viewUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
 });
 exports.viewUser = viewUser;
+const getStores = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        // Get pagination parameters
+        const page = parseInt(req.query.page, 10) || 1; // Default to page 1 if not provided
+        const limit = parseInt(req.query.limit, 10) || 10; // Default to 10 items per page
+        const offset = (page - 1) * limit; // Calculate offset
+        // Fetch stores with pagination and associated data
+        const { rows: stores, count: totalStores } = yield store_1.default.findAndCountAll({
+            include: [
+                {
+                    model: user_1.default,
+                    as: "vendor",
+                    attributes: ["id", "firstName", "lastName", "email"],
+                },
+                {
+                    model: currency_1.default,
+                    as: "currency",
+                },
+                {
+                    model: product_1.default,
+                    as: "products",
+                    attributes: [], // Exclude detailed product attributes
+                },
+                {
+                    model: auctionproduct_1.default,
+                    as: "auctionproducts",
+                    attributes: [], // Exclude detailed auction product attributes
+                },
+            ],
+            attributes: {
+                include: [
+                    // Include total product count for each store
+                    [
+                        sequelize_1.Sequelize.literal(`(
+                            SELECT COUNT(*)
+                            FROM products AS product
+                            WHERE product.storeId = Store.id
+                        )`),
+                        "totalProducts",
+                    ],
+                    // Include total auction product count for each store
+                    [
+                        sequelize_1.Sequelize.literal(`(
+                            SELECT COUNT(*)
+                            FROM auction_products AS auctionproduct
+                            WHERE auctionproduct.storeId = Store.id
+                        )`),
+                        "totalAuctionProducts",
+                    ],
+                ],
+            },
+            offset, // Apply offset for pagination
+            limit, // Apply limit for pagination
+            order: [["createdAt", "DESC"]], // Order stores by creation date, newest first
+        });
+        // Check if any stores were found
+        if (!stores || stores.length === 0) {
+            res.status(404).json({
+                message: "No stores found.",
+                data: [],
+                pagination: {
+                    total: totalStores,
+                    page,
+                    pages: Math.ceil(totalStores / limit),
+                },
+            });
+            return;
+        }
+        // Return stores with pagination metadata
+        res.status(200).json({
+            message: "Stores retrieved successfully.",
+            data: stores,
+            pagination: {
+                total: totalStores,
+                page,
+                pages: Math.ceil(totalStores / limit),
+            },
+        });
+    }
+    catch (error) {
+        logger_1.default.error("Error retrieving stores:", error);
+        res.status(500).json({ message: "Failed to retrieve stores", error: error.message });
+    }
+});
+exports.getStores = getStores;
+const getProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { name, sku, status, condition, categoryName, page, limit } = req.query;
+    try {
+        // Get pagination parameters
+        const pageNumber = parseInt(page, 10) || 1; // Default to page 1 if not provided
+        const limitNumber = parseInt(limit, 10) || 10; // Default to 10 items per page
+        const offset = (pageNumber - 1) * limitNumber;
+        // Fetch products with filters, pagination, and associated data
+        const { rows: products, count: totalProducts } = yield product_1.default.findAndCountAll(Object.assign(Object.assign({ include: [
+                {
+                    model: user_1.default,
+                    as: "vendor",
+                    attributes: ["id", "firstName", "lastName", "email"],
+                },
+                {
+                    model: subcategory_1.default,
+                    as: "sub_category",
+                    where: categoryName ? { name: categoryName } : undefined,
+                },
+                {
+                    model: store_1.default,
+                    as: "store",
+                    attributes: ["name"],
+                    include: [
+                        {
+                            model: currency_1.default,
+                            as: "currency",
+                            attributes: ["symbol"],
+                        },
+                    ],
+                },
+            ] }, ((name || sku || status || condition) && {
+            where: Object.assign(Object.assign(Object.assign(Object.assign({}, (name && { name: { [sequelize_1.Op.like]: `%${name}%` } })), (sku && { sku })), (status && { status })), (condition && { condition })),
+        })), { offset, limit: limitNumber, order: [["createdAt", "DESC"]] }));
+        // Check if products were found
+        if (!products || products.length === 0) {
+            res.status(404).json({
+                message: "No products found.",
+                data: [],
+                pagination: {
+                    total: totalProducts,
+                    page: pageNumber,
+                    pages: Math.ceil(totalProducts / limitNumber),
+                },
+            });
+            return;
+        }
+        // Return products with pagination metadata
+        res.status(200).json({
+            message: "Products retrieved successfully.",
+            data: products,
+            pagination: {
+                total: totalProducts,
+                page: pageNumber,
+                pages: Math.ceil(totalProducts / limitNumber),
+            },
+        });
+    }
+    catch (error) {
+        logger_1.default.error(error);
+        res.status(500).json({ message: "Failed to fetch products", error: error.message });
+    }
+});
+exports.getProducts = getProducts;
+const getAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { name, sku, status, condition, categoryName, page, limit } = req.query;
+    try {
+        // Get pagination parameters
+        const pageNumber = parseInt(page, 10) || 1; // Default to page 1 if not provided
+        const limitNumber = parseInt(limit, 10) || 10; // Default to 10 items per page
+        const offset = (pageNumber - 1) * limitNumber;
+        // Fetch auction products with filters, pagination, and associated data
+        const { rows: auctionProducts, count: totalAuctionProducts } = yield auctionproduct_1.default.findAndCountAll(Object.assign(Object.assign({ include: [
+                {
+                    model: user_1.default,
+                    as: "vendor",
+                    attributes: ["id", "firstName", "lastName", "email"],
+                },
+                {
+                    model: subcategory_1.default,
+                    as: "sub_category",
+                    where: categoryName ? { name: categoryName } : undefined,
+                },
+                {
+                    model: store_1.default,
+                    as: "store",
+                    attributes: ["name"],
+                    include: [
+                        {
+                            model: currency_1.default,
+                            as: "currency",
+                            attributes: ["symbol"],
+                        },
+                    ],
+                },
+            ] }, ((name || sku || status || condition) && {
+            where: Object.assign(Object.assign(Object.assign(Object.assign({}, (name && { name: { [sequelize_1.Op.like]: `%${name}%` } })), (sku && { sku })), (status && { status })), (condition && { condition })),
+        })), { offset, limit: limitNumber, order: [["createdAt", "DESC"]] }));
+        // Check if auction products were found
+        if (!auctionProducts || auctionProducts.length === 0) {
+            res.status(404).json({
+                message: "No auction products found for this vendor.",
+                data: [],
+                pagination: {
+                    total: totalAuctionProducts,
+                    page: pageNumber,
+                    pages: Math.ceil(totalAuctionProducts / limitNumber),
+                },
+            });
+            return;
+        }
+        // Return auction products with pagination metadata
+        res.status(200).json({
+            message: "Auction products fetched successfully.",
+            data: auctionProducts,
+            pagination: {
+                total: totalAuctionProducts,
+                page: pageNumber,
+                pages: Math.ceil(totalAuctionProducts / limitNumber),
+            },
+        });
+    }
+    catch (error) {
+        logger_1.default.error(error);
+        res.status(500).json({
+            message: error.message || "An error occurred while fetching auction products.",
+        });
+    }
+});
+exports.getAuctionProducts = getAuctionProducts;
 //# sourceMappingURL=adminController.js.map
