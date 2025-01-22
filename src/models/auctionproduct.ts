@@ -65,12 +65,7 @@ const initModel = (sequelize: Sequelize) => {
       },
       vendorId: {
         type: DataTypes.UUID,
-        allowNull: false,
-        references: {
-          model: 'users',
-          key: 'id',
-        },
-        onDelete: 'RESTRICT',
+        allowNull: false
       },
       storeId: {
         type: DataTypes.UUID,

@@ -2,6 +2,7 @@
 import { Request, Response, NextFunction } from "express";
 import bcrypt from "bcrypt";
 import { Op, Sequelize, ForeignKeyConstraintError } from "sequelize";
+import { v4 as uuidv4 } from "uuid";
 import { generateOTP } from "../utils/helpers";
 import { sendMail } from "../services/mail.service";
 import { emailTemplates } from "../utils/messages";
@@ -23,6 +24,12 @@ import { log } from "console";
 import Product from "../models/product";
 import Store from "../models/store";
 import AuctionProduct from "../models/auctionproduct";
+import Order from "../models/order";
+import OrderItem from "../models/orderitem";
+import Payment from "../models/payment";
+import Bid from "../models/bid";
+import VendorSubscription from "../models/vendorsubscription";
+import sequelizeService from "../services/sequelize.service";
 
 // Extend the Express Request interface to include adminId and admin
 interface AuthenticatedRequest extends Request {
@@ -1775,7 +1782,6 @@ export const toggleUserStatus = async (
     }
 };
 
-
 export const viewUser = async (req: Request, res: Response): Promise<void> => {
     const userId = req.query.userId as string;
 
@@ -1803,7 +1809,7 @@ export const viewUser = async (req: Request, res: Response): Promise<void> => {
     }
 };
 
-export const getStores = async (req: Request, res: Response): Promise<void> => {
+export const getGeneralStores = async (req: Request, res: Response): Promise<void> => {
     try {
         // Get pagination parameters
         const page = parseInt(req.query.page as string, 10) || 1; // Default to page 1 if not provided
@@ -1890,7 +1896,80 @@ export const getStores = async (req: Request, res: Response): Promise<void> => {
     }
 };
 
-export const getProducts = async (req: Request, res: Response): Promise<void> => {
+export const viewGeneralStore = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
+    // Get productId from route params instead of query
+    const { storeId } = req.query;
+
+    try {
+        const store = await Store.findOne({
+            where: {
+                [Op.or]: [{ id: storeId }, { name: storeId }],
+            },
+            include: [
+                {
+                    model: User,
+                    as: "vendor",
+                    attributes: ["id", "firstName", "lastName", "email"],
+                },
+                {
+                    model: Currency,
+                    as: "currency",
+                    attributes: ['symbol']
+                },
+                {
+                    model: Product,
+                    as: "products",
+                    attributes: [], // Exclude detailed product attributes
+                },
+                {
+                    model: AuctionProduct,
+                    as: "auctionproducts",
+                    attributes: [], // Exclude detailed auction product attributes
+                },
+            ],
+            attributes: {
+                include: [
+                    // Include total product count for each store
+                    [
+                        Sequelize.literal(`(
+                            SELECT COUNT(*)
+                            FROM products AS product
+                            WHERE product.storeId = Store.id
+                        )`),
+                        "totalProducts",
+                    ],
+                    // Include total auction product count for each store
+                    [
+                        Sequelize.literal(`(
+                            SELECT COUNT(*)
+                            FROM auction_products AS auctionproduct
+                            WHERE auctionproduct.storeId = Store.id
+                        )`),
+                        "totalAuctionProducts",
+                    ],
+                ],
+            },
+        });
+
+        if (!store) {
+            res.status(404).json({ message: "Store not found." });
+            return;
+        }
+
+        // Respond with the found store
+        res.status(200).json({
+            data: store,
+        });
+    } catch (error) {
+        logger.error(error);
+        res.status(500).json({ message: "Failed to fetch store" });
+    }
+};
+
+export const getGeneralProducts = async (req: Request, res: Response): Promise<void> => {
     const { name, sku, status, condition, categoryName, page, limit } = req.query;
 
     try {
@@ -1968,7 +2047,83 @@ export const getProducts = async (req: Request, res: Response): Promise<void> =>
     }
 };
 
-export const getAuctionProducts = async (req: Request, res: Response): Promise<void> => {
+export const viewGeneralProduct = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
+    // Get productId from route params instead of query
+    const { productId } = req.query;
+
+    try {
+        const product = await Product.findOne({
+            where: {
+                [Op.or]: [{ id: productId }, { sku: productId }],
+            },
+            include: [
+                {
+                    model: User,
+                    as: "vendor",
+                    attributes: ["id", "firstName", "lastName", "email"],
+                },
+                {
+                    model: Store,
+                    as: "store",
+                    include: [
+                        {
+                            model: Currency,
+                            as: "currency",
+                            attributes: ['symbol']
+                        },
+                    ]
+                },
+                { model: SubCategory, as: "sub_category" },
+            ],
+        });
+
+        if (!product) {
+            res.status(404).json({ message: "Product not found." });
+            return;
+        }
+
+        // Respond with the found product
+        res.status(200).json({
+            data: product,
+        });
+    } catch (error) {
+        logger.error(error);
+        res.status(500).json({ message: "Failed to fetch product" });
+    }
+};
+
+export const deleteGeneralProduct = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
+    const { productId } = req.query;
+
+    try {
+        const product = await Product.findOne({
+            where: {
+                [Op.or]: [{ id: productId }, { sku: productId }],
+            },
+        });
+
+        if (!product) {
+            res.status(404).json({ message: "Product not found." });
+            return;
+        }
+
+        await product.destroy();
+        res.status(200).json({
+            message: "Product deleted successfully",
+        });
+    } catch (error) {
+        logger.error(error);
+        res.status(500).json({ message: "Failed to delete product" });
+    }
+};
+
+export const getGeneralAuctionProducts = async (req: Request, res: Response): Promise<void> => {
     const { name, sku, status, condition, categoryName, page, limit } = req.query;
 
     try {
@@ -2045,5 +2200,1293 @@ export const getAuctionProducts = async (req: Request, res: Response): Promise<v
         res.status(500).json({
             message: error.message || "An error occurred while fetching auction products.",
         });
+    }
+};
+
+export const viewGeneralAuctionProduct = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
+    // Get auctionProductId from route params instead of query
+    const { auctionProductId } = req.query;
+
+    try {
+        const product = await AuctionProduct.findOne({
+            where: {
+                [Op.or]: [{ id: auctionProductId }, { sku: auctionProductId }],
+            },
+            include: [
+                {
+                    model: User,
+                    as: "vendor",
+                    attributes: ["id", "firstName", "lastName", "email"],
+                },
+                {
+                    model: Store,
+                    as: "store",
+                    include: [
+                        {
+                            model: Currency,
+                            as: "currency",
+                            attributes: ['symbol']
+                        },
+                    ]
+                },
+                { model: SubCategory, as: "sub_category" },
+            ],
+        });
+
+        if (!product) {
+            res.status(404).json({ message: "Auction Product not found." });
+            return;
+        }
+
+        // Respond with the found product
+        res.status(200).json({
+            data: product,
+        });
+    } catch (error) {
+        logger.error(error);
+        res.status(500).json({ message: "Failed to fetch product" });
+    }
+};
+
+export const deleteGeneralAuctionProduct = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
+    const { auctionProductId } = req.query;
+
+    try {
+        // Find the auction product by ID
+        const auctionProduct = await AuctionProduct.findOne({
+            where: {
+                [Op.or]: [{ id: auctionProductId }, { sku: auctionProductId }],
+            },
+        });
+
+        if (!auctionProduct) {
+            res.status(404).json({ message: "Auction product not found." });
+            return;
+        }
+
+        // Check if the auctionStatus is 'upcoming' and no bids exist
+        if (auctionProduct.auctionStatus !== "upcoming") {
+            res
+                .status(400)
+                .json({ message: "Only upcoming auction products can be deleted." });
+            return;
+        }
+
+        const bidCount = await Bid.count({
+            where: { auctionProductId },
+        });
+
+        if (bidCount > 0) {
+            res.status(400).json({
+                message: "Auction product already has bids, cannot be deleted.",
+            });
+            return;
+        }
+
+        // Delete the auction product
+        await auctionProduct.destroy();
+
+        res.status(200).json({ message: "Auction product deleted successfully." });
+    } catch (error: any) {
+        if (error instanceof ForeignKeyConstraintError) {
+            res.status(400).json({
+                message:
+                    "Cannot delete store because it has associated products. Delete or reassign products before deleting this store.",
+            });
+        } else {
+            logger.error(error);
+            res.status(500).json({
+                message:
+                    error.message ||
+                    "An error occurred while deleting the auction product.",
+            });
+        }
+    }
+};
+
+export const getAllGeneralOrders = async (req: Request, res: Response): Promise<void> => {
+    const { trackingNumber, page, limit } = req.query; // Only track by tracking number, no pagination
+
+    try {
+        // Fetch orders with the count of order items, and apply search by tracking number
+        const orders = await Order.findAll({
+            where: {
+                ...(trackingNumber && {
+                    trackingNumber: { [Op.like]: `%${trackingNumber}%` }, // Search by tracking number
+                }),
+            },
+            attributes: {
+                include: [
+                    [
+                        Sequelize.fn("COUNT", Sequelize.col("orderItems.id")),
+                        "orderItemsCount", // Alias for the count of order items
+                    ],
+                ],
+            },
+            include: [
+                {
+                    model: OrderItem,
+                    as: "orderItems",
+                    attributes: [], // Do not include actual order items
+                },
+            ],
+            group: ["Order.id"], // Group by order to ensure correct counting
+            order: [["createdAt", "DESC"]], // Order by createdAt
+        });
+
+        if (!orders || orders.length === 0) {
+            res.status(404).json({ message: "No orders found for this user" });
+            return;
+        }
+
+        // Return the response with orders data
+        res.status(200).json({
+            message: "Orders retrieved successfully",
+            data: orders,
+        });
+    } catch (error) {
+        logger.error("Error fetching orders:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const getAllGeneralOrderItems = async (req: Request, res: Response): Promise<void> => {
+    const { orderId, page = 1, limit = 10 } = req.query;
+
+    // Convert `page` and `limit` to numbers and ensure they are valid
+    const pageNumber = parseInt(page as string, 10) || 1;
+    const limitNumber = parseInt(limit as string, 10) || 10;
+    const offset = (pageNumber - 1) * limitNumber;
+
+    try {
+        // Ensure `orderId` is provided
+        if (!orderId) {
+            res.status(400).json({ message: "Order ID is required" });
+            return;
+        }
+
+        // Query for order items with pagination
+        const { rows: orderItems, count } = await OrderItem.findAndCountAll({
+            where: { orderId },
+            limit: limitNumber,
+            offset,
+            order: [["createdAt", "DESC"]],
+        });
+
+        // Handle the case where no order items are found
+        if (!orderItems || orderItems.length === 0) {
+            res.status(404).json({
+                message: "No items found for this order",
+                data: [],
+                pagination: {
+                    total: 0,
+                    page: pageNumber,
+                    pages: 0,
+                },
+            });
+            return;
+        }
+
+        // Calculate total pages
+        const totalPages = Math.ceil(count / limitNumber);
+
+        // Return paginated results
+        res.status(200).json({
+            message: "Order items retrieved successfully",
+            data: orderItems,
+            pagination: {
+                total: count, // Total number of order items
+                page: pageNumber,
+                pages: totalPages,
+                limit: limitNumber,
+            },
+        });
+    } catch (error) {
+        logger.error("Error fetching order items:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const getGeneralPaymentDetails = async (req: Request, res: Response): Promise<void> => {
+    const { orderId, page = 1, limit = 10 } = req.query;
+
+    // Convert `page` and `limit` to numbers and ensure they are valid
+    const pageNumber = parseInt(page as string, 10) || 1;
+    const limitNumber = parseInt(limit as string, 10) || 10;
+    const offset = (pageNumber - 1) * limitNumber;
+
+    try {
+        // Ensure `orderId` is provided
+        if (!orderId) {
+            res.status(400).json({ message: "Order ID is required" });
+            return;
+        }
+
+        // Fetch payments for the given orderId with pagination
+        const { count, rows: payments } = await Payment.findAndCountAll({
+            where: { orderId },
+            limit: limitNumber,
+            offset,
+            order: [["createdAt", "DESC"]], // Order by latest payments
+        });
+
+        // Handle case where no payments are found
+        if (!payments || payments.length === 0) {
+            res.status(404).json({
+                message: "No payments found for this order",
+                data: [],
+                pagination: {
+                    total: 0,
+                    page: pageNumber,
+                    pages: 0,
+                },
+            });
+            return;
+        }
+
+        // Calculate total pages
+        const totalPages = Math.ceil(count / limitNumber);
+
+        // Return paginated results
+        res.status(200).json({
+            message: "Payments retrieved successfully",
+            data: payments,
+            pagination: {
+                total: count, // Total number of payments
+                page: pageNumber,
+                pages: totalPages,
+                limit: limitNumber,
+            },
+        });
+    } catch (error) {
+        logger.error("Error fetching payment details:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const getAllSubscribers = async (req: Request, res: Response): Promise<void> => {
+    const { page = 1, limit = 10, subscriptionPlanId, isActive } = req.query; // Destructure query params for page, limit, etc.
+
+    try {
+        // Pagination and filtering
+        const offset = (Number(page) - 1) * Number(limit);
+
+        // Construct filter criteria
+        const filters: any = {};
+        if (subscriptionPlanId) {
+            filters.subscriptionPlanId = subscriptionPlanId;
+        }
+        if (isActive !== undefined) {
+            filters.isActive = isActive === 'true';
+        }
+
+        // Fetch vendor subscriptions with pagination and filters
+        const subscribers = await VendorSubscription.findAndCountAll({
+            where: filters, // Apply filters (if any)
+            limit: Number(limit), // Limit results per page
+            offset, // Offset for pagination
+            include: [
+                {
+                    model: SubscriptionPlan,
+                    as: "subscriptionPlans",
+                    attributes: ["id", "name", "price", "duration"], // Specify which subscription plan fields to include
+                }
+            ],
+            order: [["createdAt", "DESC"]], // Optional: Order by creation date
+        });
+
+        // If no subscribers found
+        if (!subscribers || subscribers.count === 0) {
+            res.status(404).json({ message: "No subscribers found" });
+            return;
+        }
+
+        // Return the paginated subscribers with subscription plan details
+        res.status(200).json({
+            message: "Subscribers retrieved successfully",
+            data: subscribers.rows,
+            pagination: {
+                total: subscribers.count, // Total number of order items
+                page: Number(page),
+                pages: Math.ceil(subscribers.count / Number(limit)),
+                limit: Number(limit),
+            },
+        });
+    } catch (error) {
+        // Handle any unexpected errors
+        logger.error("Error retrieving subscribers:", error);
+        res.status(500).json({ message: "Failed to retrieve subscribers" });
+    }
+};
+
+export const getStore = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const adminId = req.admin?.id;
+
+    try {
+        const stores = await Store.findAll({
+            where: { vendorId: adminId },
+            include: [
+                {
+                    model: Currency,
+                    as: "currency",
+                },
+                {
+                    model: Product,
+                    as: "products",
+                    attributes: [], // Don't include individual product details
+                },
+                {
+                    model: AuctionProduct,
+                    as: "auctionproducts",
+                    attributes: [], // Don't include individual product details
+                },
+            ],
+            attributes: {
+                include: [
+                    // Include total product count for each store
+                    [
+                        Sequelize.literal(`(
+                            SELECT COUNT(*)
+                            FROM products AS product
+                            WHERE product.storeId = Store.id
+                        )`),
+                        "totalProducts",
+                    ],
+                    // Include total auction product count for each store
+                    [
+                        Sequelize.literal(`(
+                            SELECT COUNT(*)
+                            FROM auction_products AS auctionproduct
+                            WHERE auctionproduct.storeId = Store.id
+                        )`),
+                        "totalAuctionProducts",
+                    ],
+                ],
+            },
+        });
+
+        // Check if any stores were found
+        if (stores.length === 0) {
+            res.status(404).json({ message: "No stores found for this admin.", data: [] });
+            return;
+        }
+
+        res.status(200).json({ data: stores });
+    } catch (error) {
+        logger.error("Error retrieving stores:", error);
+        res.status(500).json({ message: "Failed to retrieve stores", error });
+    }
+};
+
+export const createStore = async (
+    req: AuthenticatedRequest,
+    res: Response
+): Promise<void> => {
+    const adminId = req.admin?.id;
+
+    const { currencyId, name, location, logo, businessHours, deliveryOptions, tipsOnFinding } =
+        req.body;
+
+    if (!currencyId) {
+        res.status(400).json({ message: 'Currency ID is required.' });
+        return;
+    }
+
+    try {
+        // Check if a store with the same name exists for this vendorId
+        const existingStore = await Store.findOne({
+            where: { vendorId: adminId, name },
+        });
+
+        if (existingStore) {
+            res.status(400).json({
+                message: "A store with this name already exists for the vendor.",
+            });
+            return;
+        }
+
+        // Find the currency by ID
+        const currency = await Currency.findByPk(currencyId);
+
+        if (!currency) {
+            res.status(404).json({ message: 'Currency not found' });
+            return;
+        }
+
+        // Create the store
+        const store = await Store.create({
+            vendorId: adminId,
+            currencyId: currency.id,
+            name,
+            location,
+            businessHours,
+            deliveryOptions,
+            logo,
+            tipsOnFinding,
+        });
+
+        res
+            .status(200)
+            .json({ message: "Store created successfully", data: store });
+    } catch (error) {
+        logger.error(error);
+        res.status(500).json({ message: "Failed to create store", error });
+    }
+};
+
+export const updateStore = async (
+    req: AuthenticatedRequest,
+    res: Response
+): Promise<void> => {
+    const adminId = req.admin?.id;
+
+    const {
+        storeId,
+        currencyId,
+        name,
+        location,
+        businessHours,
+        deliveryOptions,
+        tipsOnFinding,
+        logo
+    } = req.body;
+
+    try {
+        const store = await Store.findOne({ where: { id: storeId } });
+
+        if (!store) {
+            res.status(404).json({ message: "Store not found" });
+            return;
+        }
+
+        // Find the currency by ID
+        const currency = await Currency.findByPk(currencyId);
+
+        if (!currency) {
+            res.status(404).json({ message: 'Currency not found' });
+            return;
+        }
+
+        // Check for unique name for this vendorId if name is being updated
+        if (name && store.name !== name) {
+            const existingStore = await Store.findOne({
+                where: { vendorId: adminId, name, id: { [Op.ne]: storeId } },
+            });
+            if (existingStore) {
+                res.status(400).json({
+                    message: "A store with this name already exists for the vendor.",
+                });
+                return;
+            }
+        }
+
+        // Update store fields
+        await store.update({
+            currencyId,
+            name,
+            location,
+            businessHours,
+            deliveryOptions,
+            tipsOnFinding,
+            logo
+        });
+
+        res
+            .status(200)
+            .json({ message: "Store updated successfully", data: store });
+    } catch (error) {
+        logger.error(error);
+        res.status(500).json({ message: "Failed to update store", error });
+    }
+};
+
+export const deleteStore = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
+    const storeId = req.query.storeId as string;
+
+    const transaction = await sequelizeService.connection!.transaction();
+
+    try {
+        const store = await Store.findOne({ where: { id: storeId }, transaction });
+
+        if (!store) {
+            res.status(404).json({ message: "Store not found" });
+            return;
+        }
+
+        await AuctionProduct.destroy({ where: { storeId }, transaction });
+        await Product.destroy({ where: { storeId }, transaction });
+        await store.destroy({ transaction });
+
+        await transaction.commit();
+
+        res.status(200).json({ message: "Store and all associations deleted successfully" });
+    } catch (error) {
+        await transaction.rollback();
+
+        if (error instanceof ForeignKeyConstraintError) {
+            res.status(400).json({
+                message:
+                    "Cannot delete store because it has associated records. Ensure all dependencies are handled before deleting the store.",
+            });
+        } else {
+            logger.error(error);
+            res.status(500).json({ message: "Failed to delete store", error });
+        }
+    }
+};
+
+// Product
+export const createProduct = async (
+    req: AuthenticatedRequest,
+    res: Response
+): Promise<void> => {
+    const adminId = req.admin?.id;
+
+    const { storeId, categoryId, name, ...otherData } = req.body;
+
+    try {
+        // Check for duplicates
+        const existingProduct = await Product.findOne({
+            where: { vendorId: adminId, name },
+        });
+
+        if (existingProduct) {
+            res.status(400).json({
+                message: "Product with this vendorId and name already exists.",
+            });
+            return;
+        }
+
+        // Check if vendorId, storeId, and categoryId exist
+        const vendorExists = await User.findByPk(adminId);
+        const storeExists = await Store.findByPk(storeId);
+        const categoryExists = await SubCategory.findByPk(categoryId);
+
+        if (!vendorExists || !categoryExists) {
+            res
+                .status(404)
+                .json({ message: "Vendor not found." });
+            return;
+        }
+
+        if (!storeExists) {
+            res
+                .status(404)
+                .json({ message: "Store not found." });
+            return;
+        }
+
+        if (!categoryExists) {
+            res
+                .status(404)
+                .json({ message: "Category not found." });
+            return;
+        }
+
+        // Generate a unique SKU (could also implement a more complex logic if needed)
+        let sku;
+        let isUnique = false;
+
+        while (!isUnique) {
+            sku = `KDM-${uuidv4()}`; // Generate a unique SKU
+            const skuExists = await Product.findOne({ where: { sku } }); // Check if the SKU already exists
+            isUnique = !skuExists; // Set to true if SKU is unique
+        }
+
+        // Create the product
+        const product = await Product.create({
+            vendorId: adminId,
+            storeId,
+            categoryId,
+            name,
+            sku, // Use the generated SKU
+            ...otherData,
+        });
+
+        res
+            .status(200)
+            .json({ message: "Product created successfully", data: product });
+    } catch (error) {
+        logger.error(error);
+        res.status(500).json({ message: "Failed to create product" });
+    }
+};
+
+export const updateProduct = async (
+    req: AuthenticatedRequest,
+    res: Response
+): Promise<void> => {
+    const { productId, ...updateData } = req.body;
+    const adminId = req.admin?.id;
+
+    try {
+        const product = await Product.findOne({
+            where: {
+                [Op.or]: [{ id: productId }, { sku: productId }],
+                vendorId: adminId,
+            },
+        });
+
+        if (!product) {
+            res.status(404).json({ message: "Product not found." });
+            return;
+        }
+
+        await product.update(updateData);
+
+        res.status(200).json({
+            message: "Product updated successfully",
+            data: product,
+        });
+    } catch (error) {
+        logger.error(error);
+        res.status(500).json({ message: "Failed to update product" });
+    }
+};
+
+export const deleteProduct = async (
+    req: AuthenticatedRequest,
+    res: Response
+): Promise<void> => {
+    const { productId } = req.query;
+    const adminId = req.admin?.id;
+
+    try {
+        const product = await Product.findOne({
+            where: {
+                [Op.or]: [{ id: productId }, { sku: productId }],
+                vendorId: adminId,
+            },
+        });
+
+        if (!product) {
+            res.status(404).json({ message: "Product not found." });
+            return;
+        }
+
+        await product.destroy();
+        res.status(200).json({
+            message: "Product deleted successfully",
+        });
+    } catch (error) {
+        logger.error(error);
+        res.status(500).json({ message: "Failed to delete product" });
+    }
+};
+
+export const fetchVendorProducts = async (
+    req: AuthenticatedRequest,
+    res: Response
+): Promise<void> => {
+    const adminId = req.admin?.id;
+    
+    const { name, sku, status, condition, categoryName } = req.query;
+
+    try {
+        const products = await Product.findAll({
+            where: { vendorId: adminId },
+            include: [
+                {
+                    model: SubCategory,
+                    as: "sub_category",
+                    where: categoryName ? { name: categoryName } : undefined,
+                },
+                {
+                    model: Store,
+                    as: "store",
+                    attributes: ['name'],
+                    include: [
+                        {
+                            model: Currency,
+                            as: "currency",
+                            attributes: ['symbol']
+                        },
+                    ]
+                },
+            ],
+            ...((name || sku || status || condition) && {
+                where: {
+                    ...(name && { name: { [Op.like]: `%${name}%` } }),
+                    ...(sku && { sku }),
+                    ...(status && { status }),
+                    ...(condition && { condition }),
+                },
+            }),
+        });
+
+        res.status(200).json({
+            data: products,
+        });
+    } catch (error) {
+        logger.error(error);
+        res.status(500).json({ message: "Failed to fetch products" });
+    }
+};
+
+export const viewProduct = async (
+    req: AuthenticatedRequest,
+    res: Response
+): Promise<void> => {
+    // Get productId from route params instead of query
+    const { productId } = req.query;
+    const adminId = req.admin?.id;
+
+    try {
+        const product = await Product.findOne({
+            where: {
+                [Op.or]: [{ id: productId }, { sku: productId }],
+                vendorId: adminId,
+            },
+            include: [
+                {
+                    model: Store,
+                    as: "store",
+                    include: [
+                        {
+                            model: Currency,
+                            as: "currency",
+                            attributes: ['symbol']
+                        },
+                    ]
+                },
+                { model: SubCategory, as: "sub_category" },
+            ],
+        });
+
+        if (!product) {
+            res.status(404).json({ message: "Product not found." });
+            return;
+        }
+
+        // Respond with the found product
+        res.status(200).json({
+            data: product,
+        });
+    } catch (error) {
+        logger.error(error);
+        res.status(500).json({ message: "Failed to fetch product" });
+    }
+};
+
+export const moveToDraft = async (
+    req: AuthenticatedRequest,
+    res: Response
+): Promise<void> => {
+    const { productId } = req.query; // Get productId from request query
+    const adminId = req.admin?.id;
+
+    try {
+        // Validate productId type
+        if (typeof productId !== "string") {
+            res.status(400).json({ message: "Invalid productId." });
+            return;
+        }
+
+        // Find the product by either ID or SKU, ensuring it belongs to the authenticated vendor
+        const product = await Product.findOne({
+            where: {
+                [Op.or]: [{ id: productId }, { sku: productId }],
+                vendorId: adminId,
+            },
+        });
+
+        // If no product is found, return a 404 response
+        if (!product) {
+            res.status(404).json({ message: "Product not found." });
+            return;
+        }
+
+        // Update the product's status to 'draft'
+        product.status = "draft";
+        await product.save();
+
+        // Respond with the updated product
+        res.status(200).json({
+            message: "Product moved to draft.",
+            data: product,
+        });
+    } catch (error) {
+        logger.error(error); // Log the error for debugging
+        res.status(500).json({ message: "Failed to move product to draft." });
+    }
+};
+
+export const changeProductStatus = async (
+    req: AuthenticatedRequest,
+    res: Response
+): Promise<void> => {
+    const { productId, status } = req.body; // Get productId and status from request body
+    const adminId = req.admin?.id;
+
+    // Validate status
+    if (!["active", "inactive", "draft"].includes(status)) {
+        res.status(400).json({ message: "Invalid status." });
+        return;
+    }
+
+    try {
+        // Find the product by ID or SKU
+        const product = await Product.findOne({
+            where: {
+                [Op.or]: [{ id: productId }, { sku: productId }],
+                vendorId: adminId,
+            },
+        });
+
+        // Check if the product exists
+        if (!product) {
+            res.status(404).json({ message: "Product not found." });
+            return;
+        }
+
+        // Update the product status
+        product.status = status;
+        await product.save();
+
+        // Respond with the updated product details
+        res.status(200).json({
+            message: "Product status updated successfully.",
+        });
+    } catch (error) {
+        logger.error(error); // Log the error for debugging
+        res.status(500).json({ message: "Failed to update product status." });
+    }
+};
+
+// Auction Product
+export const createAuctionProduct = async (
+    req: AuthenticatedRequest,
+    res: Response
+): Promise<void> => {
+    const adminId = req.admin?.id;
+
+    const {
+        storeId,
+        categoryId,
+        name,
+        condition,
+        description,
+        specification,
+        price,
+        bidIncrement,
+        maxBidsPerUser,
+        participantsInterestFee,
+        startDate,
+        endDate,
+        image,
+        additionalImages,
+    } = req.body;
+
+    try {
+        // Check if adminId, storeId, and categoryId exist
+        const vendorExists = await User.findByPk(adminId);
+        const storeExists = await Store.findByPk(storeId);
+        const categoryExists = await SubCategory.findByPk(categoryId);
+
+        if (!vendorExists || !categoryExists) {
+            res
+                .status(404)
+                .json({ message: "Vendor not found." });
+            return;
+        }
+
+        if (!storeExists) {
+            res
+                .status(404)
+                .json({ message: "Store not found." });
+            return;
+        }
+
+        if (!categoryExists) {
+            res
+                .status(404)
+                .json({ message: "Category not found." });
+            return;
+        }
+
+        // Generate a unique SKU
+        let sku;
+        let isUnique = false;
+
+        while (!isUnique) {
+            sku = `KDM-${uuidv4()}`; // Generate a unique SKU
+            const skuExists = await Product.findOne({ where: { sku } }); // Check if the SKU already exists
+            isUnique = !skuExists; // Set to true if SKU is unique
+        }
+
+        // Create the auction product
+        const auctionProduct = await AuctionProduct.create({
+            vendorId: adminId,
+            storeId,
+            categoryId,
+            name,
+            sku,
+            condition,
+            description,
+            specification,
+            price,
+            bidIncrement,
+            maxBidsPerUser,
+            participantsInterestFee,
+            startDate,
+            endDate,
+            image,
+            additionalImages,
+        });
+
+        res.status(201).json({
+            message: "Auction product created successfully.",
+            data: auctionProduct,
+        });
+    } catch (error: any) {
+        logger.error(error); // Log the error for debugging
+        res.status(500).json({
+            message:
+                error.message ||
+                "An error occurred while creating the auction product.",
+        });
+    }
+};
+
+export const updateAuctionProduct = async (
+    req: AuthenticatedRequest,
+    res: Response
+): Promise<void> => {
+    const adminId = req.admin?.id;
+
+    const {
+        auctionProductId,
+        storeId,
+        categoryId,
+        name,
+        condition,
+        description,
+        specification,
+        price,
+        bidIncrement,
+        maxBidsPerUser,
+        participantsInterestFee,
+        startDate,
+        endDate,
+        image,
+        additionalImages,
+    } = req.body;
+
+    try {
+
+        // Find the auction product by ID
+        const auctionProduct = await AuctionProduct.findOne({
+            where: {
+                [Op.or]: [{ id: auctionProductId }, { sku: auctionProductId }],
+                vendorId: adminId,
+            },
+        });
+        if (!auctionProduct) {
+            res.status(404).json({ message: "Auction product not found." });
+            return;
+        }
+
+        // Check if the auction product is "upcoming" and has no bids
+        if (auctionProduct.auctionStatus !== "upcoming") {
+            res.status(400).json({
+                message: "Auction product status must be 'upcoming' to update.",
+            });
+            return;
+        }
+
+        // Check if there are any bids placed for the auction product
+        const bidExists = await Bid.findOne({ where: { auctionProductId } });
+        if (bidExists) {
+            res.status(400).json({
+                message: "Auction product already has bids and cannot be updated.",
+            });
+            return;
+        }
+
+        // Check if vendorId matches the auction product's vendorId
+        if (auctionProduct.vendorId !== adminId) {
+            res
+                .status(403)
+                .json({ message: "You can only update your own auction products." });
+            return;
+        }
+
+        // Check if vendor, store, and category exist
+        const vendorExists = await User.findByPk(adminId);
+        const storeExists = await Store.findByPk(storeId);
+        const categoryExists = await SubCategory.findByPk(categoryId);
+
+        if (!vendorExists || !storeExists || !categoryExists) {
+            res
+                .status(404)
+                .json({ message: "Vendor, Store, or Category not found." });
+            return;
+        }
+
+        // Update the auction product
+        auctionProduct.storeId = storeId || auctionProduct.storeId;
+        auctionProduct.categoryId = categoryId || auctionProduct.categoryId;
+        auctionProduct.name = name || auctionProduct.name;
+        auctionProduct.condition = condition || auctionProduct.condition;
+        auctionProduct.description = description || auctionProduct.description;
+        auctionProduct.specification =
+            specification || auctionProduct.specification;
+        auctionProduct.price = price || auctionProduct.price;
+        auctionProduct.bidIncrement = bidIncrement || auctionProduct.bidIncrement;
+        auctionProduct.maxBidsPerUser =
+            maxBidsPerUser || auctionProduct.maxBidsPerUser;
+        auctionProduct.participantsInterestFee =
+            participantsInterestFee || auctionProduct.participantsInterestFee;
+        auctionProduct.startDate = startDate || auctionProduct.startDate;
+        auctionProduct.endDate = endDate || auctionProduct.endDate;
+        auctionProduct.image = image || auctionProduct.image;
+        auctionProduct.additionalImages =
+            additionalImages || auctionProduct.additionalImages;
+
+        // Save the updated auction product
+        await auctionProduct.save();
+
+        res.status(200).json({
+            message: "Auction product updated successfully.",
+            auctionProduct,
+        });
+    } catch (error: any) {
+        logger.error(error); // Log the error for debugging
+        res.status(500).json({
+            message:
+                error.message ||
+                "An error occurred while updating the auction product.",
+        });
+    }
+};
+
+export const deleteAuctionProduct = async (
+    req: AuthenticatedRequest,
+    res: Response
+): Promise<void> => {
+    const { auctionProductId } = req.query;
+    const adminId = req.admin?.id;
+
+    try {
+        // Find the auction product by ID
+        const auctionProduct = await AuctionProduct.findOne({
+            where: {
+                [Op.or]: [{ id: auctionProductId }, { sku: auctionProductId }],
+                vendorId: adminId,
+            },
+        });
+
+        if (!auctionProduct) {
+            res.status(404).json({ message: "Auction product not found." });
+            return;
+        }
+
+        // Check if the auctionStatus is 'upcoming' and no bids exist
+        if (auctionProduct.auctionStatus !== "upcoming") {
+            res
+                .status(400)
+                .json({ message: "Only upcoming auction products can be deleted." });
+            return;
+        }
+
+        const bidCount = await Bid.count({
+            where: { auctionProductId },
+        });
+
+        if (bidCount > 0) {
+            res.status(400).json({
+                message: "Auction product already has bids, cannot be deleted.",
+            });
+            return;
+        }
+
+        // Delete the auction product
+        await auctionProduct.destroy();
+
+        res.status(200).json({ message: "Auction product deleted successfully." });
+    } catch (error: any) {
+        if (error instanceof ForeignKeyConstraintError) {
+            res.status(400).json({
+                message:
+                    "Cannot delete store because it has associated products. Delete or reassign products before deleting this store.",
+            });
+        } else {
+            logger.error(error);
+            res.status(500).json({
+                message:
+                    error.message ||
+                    "An error occurred while deleting the auction product.",
+            });
+        }
+    }
+};
+
+export const cancelAuctionProduct = async (
+    req: AuthenticatedRequest,
+    res: Response
+): Promise<void> => {
+    const { auctionProductId } = req.query;
+    const adminId = req.admin?.id;
+
+    try {
+        // Find the auction product by ID
+        const auctionProduct = await AuctionProduct.findOne({
+            where: {
+                [Op.or]: [{ id: auctionProductId }, { sku: auctionProductId }],
+                vendorId: adminId,
+            },
+        });
+
+        if (!auctionProduct) {
+            res.status(404).json({ message: "Auction product not found." });
+            return;
+        }
+
+        // Check if the auctionStatus is 'upcoming' and no bids exist
+        if (auctionProduct.auctionStatus !== "upcoming") {
+            res
+                .status(400)
+                .json({ message: "Only upcoming auction products can be cancelled." });
+            return;
+        }
+
+        // Check if vendorId matches the auction product's vendorId
+        if (auctionProduct.vendorId !== adminId) {
+            res
+                .status(403)
+                .json({ message: "You can only cancel your own auction products." });
+            return;
+        }
+
+        // Change the auction product auctionStatus to 'cancelled'
+        auctionProduct.auctionStatus = "cancelled";
+        await auctionProduct.save();
+
+        res.status(200).json({
+            message: "Auction product has been cancelled successfully.",
+        });
+    } catch (error: any) {
+        logger.error(error); // Log the error for debugging
+        res.status(500).json({
+            message:
+                error.message ||
+                "An error occurred while cancelling the auction product.",
+        });
+    }
+};
+
+export const fetchVendorAuctionProducts = async (
+    req: AuthenticatedRequest,
+    res: Response
+): Promise<void> => {
+    const adminId = req.admin?.id;
+    const { name, sku, status, condition, categoryName } = req.query;
+
+    try {
+        // Fetch all auction products for the vendor
+        const auctionProducts = await AuctionProduct.findAll({
+            where: {
+                vendorId: adminId,
+            },
+            include: [
+                {
+                    model: SubCategory,
+                    as: "sub_category",
+                    where: categoryName ? { name: categoryName } : undefined,
+                },
+                {
+                    model: Store,
+                    as: "store",
+                    attributes: ['name'],
+                    include: [
+                        {
+                            model: Currency,
+                            as: "currency",
+                            attributes: ['symbol']
+                        },
+                    ]
+                },
+            ],
+            ...((name || sku || status || condition) && {
+                where: {
+                    ...(name && { name: { [Op.like]: `%${name}%` } }),
+                    ...(sku && { sku }),
+                    ...(status && { status }),
+                    ...(condition && { condition }),
+                },
+            }),
+        });
+
+        if (auctionProducts.length === 0) {
+            res
+                .status(404)
+                .json({ message: "No auction products found for this vendor.", data: [] });
+            return;
+        }
+
+        res.status(200).json({
+            message: "Auction products fetched successfully.",
+            data: auctionProducts,
+        });
+    } catch (error: any) {
+        logger.error(error); // Log the error for debugging
+        res.status(500).json({
+            message:
+                error.message || "An error occurred while fetching auction products.",
+        });
+    }
+};
+
+export const viewAuctionProduct = async (
+    req: AuthenticatedRequest,
+    res: Response
+): Promise<void> => {
+    // Get auctionProductId from route params instead of query
+    const { auctionProductId } = req.query;
+    const adminId = req.admin?.id;
+
+    try {
+        const product = await AuctionProduct.findOne({
+            where: {
+                [Op.or]: [{ id: auctionProductId }, { sku: auctionProductId }],
+                vendorId: adminId,
+            },
+            include: [
+                {
+                    model: Store,
+                    as: "store",
+                    include: [
+                        {
+                            model: Currency,
+                            as: "currency",
+                            attributes: ['symbol']
+                        },
+                    ]
+                },
+                { model: SubCategory, as: "sub_category" },
+            ],
+        });
+
+        if (!product) {
+            res.status(404).json({ message: "Auction Product not found." });
+            return;
+        }
+
+        // Respond with the found product
+        res.status(200).json({
+            data: product,
+        });
+    } catch (error) {
+        logger.error(error);
+        res.status(500).json({ message: "Failed to fetch product" });
     }
 };

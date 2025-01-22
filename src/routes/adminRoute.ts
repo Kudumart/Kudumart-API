@@ -11,8 +11,15 @@ import {
     updateSubscriptionPlanValidationRules,
     validateKYCNotification,
     validatePaymentGateway,
-    validate } from '../utils/validations'; // Import the service
+    createStoreValidation,
+    updateStoreValidation,
+    addProductValidation,
+    updateProductValidation,
+    auctionProductValidation,
+    validate,
+    updateAuctionProductValidation } from '../utils/validations'; // Import the service
 import checkPermission from '../middlewares/checkPermissionMiddleware';
+import { updateAuctionProduct } from '../controllers/vendorController';
 
 const adminRoutes = Router();
 
@@ -87,10 +94,44 @@ adminRoutes.get('/vendors', adminAuthMiddleware, adminController.getAllVendors);
 adminRoutes.get('/user/details', adminAuthMiddleware, adminController.viewUser);
 adminRoutes.patch('/toggle/user/status', adminAuthMiddleware, adminController.toggleUserStatus);
 
+// Store
+adminRoutes.get("/store", adminAuthMiddleware, adminController.getStore);
+adminRoutes.post("/store", adminAuthMiddleware, createStoreValidation(), validate, adminController.createStore);
+adminRoutes.put("/store", adminAuthMiddleware, updateStoreValidation(), validate, adminController.updateStore);
+adminRoutes.delete("/store", adminAuthMiddleware, adminController.deleteStore);
 
-// Store | Product | Auction Products
-adminRoutes.get("/stores", adminAuthMiddleware, adminController.getStores);
-adminRoutes.get("/products", adminAuthMiddleware, adminController.getProducts);
-adminRoutes.get("/auction/products", adminAuthMiddleware, adminController.getAuctionProducts);
+// Product
+adminRoutes.get("/vendors/products", adminAuthMiddleware, adminController.fetchVendorProducts);
+adminRoutes.post("/products", adminAuthMiddleware, addProductValidation(), validate, adminController.createProduct);
+adminRoutes.put("/products", adminAuthMiddleware, updateProductValidation(), validate, adminController.updateProduct);
+adminRoutes.delete("/products", adminAuthMiddleware, adminController.deleteProduct);
+adminRoutes.get("/product", adminAuthMiddleware, adminController.viewProduct);
+adminRoutes.patch("/products/move-to-draft", adminAuthMiddleware, adminController.moveToDraft);
+adminRoutes.patch("/products/change-status", adminAuthMiddleware, adminController.changeProductStatus);
+
+// Auction Product
+adminRoutes.get("/auction/products", adminAuthMiddleware, adminController.fetchVendorAuctionProducts);
+adminRoutes.post("/auction/products", adminAuthMiddleware, auctionProductValidation(), validate, adminController.createAuctionProduct);
+adminRoutes.put("/auction/products", adminAuthMiddleware, updateAuctionProductValidation(), validate, adminController.updateAuctionProduct);
+adminRoutes.delete("/auction/products", adminAuthMiddleware, adminController.deleteAuctionProduct);
+adminRoutes.patch("/auction/products", adminAuthMiddleware, adminController.cancelAuctionProduct);
+adminRoutes.get("/auction/product", adminAuthMiddleware, adminController.viewAuctionProduct);
+
+
+//General Store | Product | Auction Products
+adminRoutes.get("/general/stores", adminAuthMiddleware, adminController.getGeneralStores);
+adminRoutes.get("/general/store/view", adminAuthMiddleware, adminController.viewGeneralStore);
+adminRoutes.get("/general/products", adminAuthMiddleware, adminController.getGeneralProducts);
+adminRoutes.get("/general/product/view", adminAuthMiddleware, adminController.viewGeneralProduct);
+adminRoutes.delete("/general/product/delete", adminAuthMiddleware, adminController.deleteGeneralProduct);
+adminRoutes.get("/general/auction/products", adminAuthMiddleware, adminController.getGeneralAuctionProducts);
+adminRoutes.get("/general/auction/product/view", adminAuthMiddleware, adminController.viewGeneralAuctionProduct);
+adminRoutes.delete("/general/auction/product/delete", adminAuthMiddleware, adminController.deleteGeneralAuctionProduct);
+adminRoutes.get("/general/orders", adminAuthMiddleware, adminController.getAllGeneralOrders);
+adminRoutes.get("/general/order/items", adminAuthMiddleware, adminController.getAllGeneralOrderItems);
+adminRoutes.get("/general/order/payment", adminAuthMiddleware, adminController.getGeneralPaymentDetails);
+
+// Subscribers
+adminRoutes.get("/subscribers", adminAuthMiddleware, adminController.getAllSubscribers);
 
 export default adminRoutes; // Export the router

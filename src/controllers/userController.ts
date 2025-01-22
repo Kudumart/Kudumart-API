@@ -1682,16 +1682,12 @@ export const becomeVendor = async (req: Request, res: Response): Promise<void> =
     );
 
     // Send a notification for becoming a vendor
-    const title = "Welcome, Vendor!";
-    const message = "Congratulations! You are now a vendor. Start setting up your store and manage your products.";
-    const type = "vendor";
-
     await Notification.create(
       {
         userId: user.id,
-        title,
-        message,
-        type,
+        title: "Welcome, Vendor!",
+        message: "Congratulations! You are now a vendor. Start setting up your store and manage your products.",
+        type: "vendor",
       },
       { transaction }
     );

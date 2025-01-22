@@ -11,6 +11,7 @@ import apiRouter from '../routes/authRoute';
 import userRouter from '../routes/userRoute';
 import adminRouter from '../routes/adminRoute';
 import vendorRouter from '../routes/vendorRoute';
+import logger from '../middlewares/logger';
 
 dotenv.config();
 
@@ -43,8 +44,8 @@ const createExpressApp = () => {
 
     // 404 handler (this should come after routes)
     app.use((req, res) => {
-        console.log(`404 error for path: ${req.path}`);
-        res.status(404).json({ message: 'Not Found' });
+        logger.error(`404 error for path: ${req.path}`);
+        res.status(404).json({ message: 'Route Not Found' });
     });
 
     // Global error handler
