@@ -41,6 +41,10 @@ class Store extends Model {
       as: 'vendor',
       foreignKey: 'vendorId' 
     });
+    this.belongsTo(models.Admin, { 
+      as: 'admin',
+      foreignKey: 'vendorId' 
+    });
     this.hasMany(models.Product, { 
       as: 'products',
       foreignKey: 'storeId' 

@@ -33,6 +33,11 @@ class Admin extends Model {
       as: 'role',
       foreignKey: 'roleId',
     });
+    this.hasMany(models.Store, { 
+      as: 'stores', 
+      foreignKey: 'vendorId',
+      onDelete: 'RESTRICT', 
+    });
   }
 
 }

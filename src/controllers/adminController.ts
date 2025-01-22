@@ -1825,6 +1825,11 @@ export const getGeneralStores = async (req: Request, res: Response): Promise<voi
                     attributes: ["id", "firstName", "lastName", "email"],
                 },
                 {
+                    model: Admin,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
+                },
+                {
                     model: Currency,
                     as: "currency",
                 },
@@ -1915,6 +1920,11 @@ export const viewGeneralStore = async (
                     attributes: ["id", "firstName", "lastName", "email"],
                 },
                 {
+                    model: Admin,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
+                },
+                {
                     model: Currency,
                     as: "currency",
                     attributes: ['symbol']
@@ -1985,6 +1995,11 @@ export const getGeneralProducts = async (req: Request, res: Response): Promise<v
                     model: User,
                     as: "vendor",
                     attributes: ["id", "firstName", "lastName", "email"],
+                },
+                {
+                    model: Admin,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
                 },
                 {
                     model: SubCategory,
@@ -2066,6 +2081,11 @@ export const viewGeneralProduct = async (
                     attributes: ["id", "firstName", "lastName", "email"],
                 },
                 {
+                    model: Admin,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
+                },
+                {
                     model: Store,
                     as: "store",
                     include: [
@@ -2139,6 +2159,16 @@ export const getGeneralAuctionProducts = async (req: Request, res: Response): Pr
                     model: User,
                     as: "vendor",
                     attributes: ["id", "firstName", "lastName", "email"],
+                },
+                {
+                    model: Admin,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
+                },
+                {
+                    model: Admin,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
                 },
                 {
                     model: SubCategory,
@@ -2220,6 +2250,11 @@ export const viewGeneralAuctionProduct = async (
                     model: User,
                     as: "vendor",
                     attributes: ["id", "firstName", "lastName", "email"],
+                },
+                {
+                    model: Admin,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
                 },
                 {
                     model: Store,

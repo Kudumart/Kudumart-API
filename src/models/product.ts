@@ -38,6 +38,11 @@ class Product extends Model {
       foreignKey: 'vendorId',
       onDelete: 'RESTRICT'
     });
+    this.belongsTo(models.Admin, {
+      as: 'admin',
+      foreignKey: 'vendorId',
+      onDelete: 'RESTRICT'
+    });
     this.belongsTo(models.Store, {
       as: 'store',
       foreignKey: 'storeId',
