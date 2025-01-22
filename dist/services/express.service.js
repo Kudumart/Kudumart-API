@@ -16,6 +16,7 @@ const authRoute_1 = __importDefault(require("../routes/authRoute"));
 const userRoute_1 = __importDefault(require("../routes/userRoute"));
 const adminRoute_1 = __importDefault(require("../routes/adminRoute"));
 const vendorRoute_1 = __importDefault(require("../routes/vendorRoute"));
+const logger_1 = __importDefault(require("../middlewares/logger"));
 dotenv_1.default.config();
 const createExpressApp = () => {
     const app = (0, express_1.default)();
@@ -40,8 +41,8 @@ const createExpressApp = () => {
     app.use("/api/admin", adminRoute_1.default);
     // 404 handler (this should come after routes)
     app.use((req, res) => {
-        console.log(`404 error for path: ${req.path}`);
-        res.status(404).json({ message: 'Not Found' });
+        logger_1.default.error(`404 error for path: ${req.path}`);
+        res.status(404).json({ message: 'Route Not Found' });
     });
     // Global error handler
     app.use(errorMiddleware_1.default);

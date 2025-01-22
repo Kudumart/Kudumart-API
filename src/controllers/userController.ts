@@ -377,29 +377,37 @@ export const updateProfilePhoneNumber = async (
       return;
     }
 
-    // Generate OTP for phone verification
-    const otpCode = generateOTP();
-    await OTP.upsert({
-      userId: userId,
-      otpCode: otpCode,
-      expiresAt: new Date(Date.now() + 60 * 60 * 1000), // OTP expires in 1 hour
+    // Update the user's phone number
+    user.phoneNumber = newPhoneNumber;
+    await user.save();
+
+    // Send mail
+    let message = emailTemplates.phoneNumberUpdated(user);
+    try {
+      await sendMail(
+        user.email,
+        `${process.env.APP_NAME} - Phone Number Updated`,
+        message
+      );
+    } catch (emailError) {
+      logger.error("Error sending email:", emailError); // Log error for internal use
+    }
+
+    // Send a notification for becoming a vendor
+    const title = "Phone Number Updated";
+    const messageContent = `Your phone number has been successfully updated to ${newPhoneNumber}.`;
+    const type = "update_phone";
+
+    // Create the notification in the database
+    const notification = await Notification.create({
+      userId: user.id,
+      title,
+      message: messageContent,
+      type,
     });
 
-    // Send SMS with OTP
-    const smsMessage = `Your ${process.env.APP_NAME} OTP code to verify your new phone number is: ${otpCode}`;
-    try {
-      await sendSMS(newPhoneNumber, smsMessage);
-      res.status(200).json({
-        message: "OTP sent to your new phone number for verification",
-        data: newPhoneNumber,
-      });
-    } catch (smsError) {
-      logger.error("Error sending SMS:", smsError);
-      res
-        .status(500)
-        .json({ message: "Failed to send OTP. Please try again later." });
-      return;
-    }
+    // Send response
+    res.status(200).json({ message: "Phone number updated successfully" });
   } catch (error) {
     logger.error("Error updating phone number:", error);
     res

@@ -23,7 +23,7 @@ const initModel = (sequelize) => {
             allowNull: false,
         },
         duration: {
-            type: sequelize_1.DataTypes.INTEGER, // Duration in days
+            type: sequelize_1.DataTypes.INTEGER,
             allowNull: false,
         },
         price: {
