@@ -2528,6 +2528,11 @@ export const getAllSubscribers = async (req: Request, res: Response): Promise<vo
             offset, // Offset for pagination
             include: [
                 {
+                    model: User,
+                    as: "vendor",
+                    attributes: ["id", "firstName", "lastName", "email", "phoneNumber"], // Specify which subscription plan fields to include
+                },
+                {
                     model: SubscriptionPlan,
                     as: "subscriptionPlans",
                     attributes: ["id", "name", "price", "duration"], // Specify which subscription plan fields to include

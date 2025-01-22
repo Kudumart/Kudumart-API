@@ -11,6 +11,11 @@ class Product extends sequelize_1.Model {
             foreignKey: 'vendorId',
             onDelete: 'RESTRICT'
         });
+        this.belongsTo(models.Admin, {
+            as: 'admin',
+            foreignKey: 'vendorId',
+            onDelete: 'RESTRICT'
+        });
         this.belongsTo(models.Store, {
             as: 'store',
             foreignKey: 'storeId',

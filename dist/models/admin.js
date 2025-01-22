@@ -36,6 +36,11 @@ class Admin extends sequelize_1.Model {
             as: 'role',
             foreignKey: 'roleId',
         });
+        this.hasMany(models.Store, {
+            as: 'stores',
+            foreignKey: 'vendorId',
+            onDelete: 'RESTRICT',
+        });
     }
 }
 const initModel = (sequelize) => {

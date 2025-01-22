@@ -1504,6 +1504,11 @@ const getGeneralStores = (req, res) => __awaiter(void 0, void 0, void 0, functio
                     attributes: ["id", "firstName", "lastName", "email"],
                 },
                 {
+                    model: admin_1.default,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
+                },
+                {
                     model: currency_1.default,
                     as: "currency",
                 },
@@ -1589,6 +1594,11 @@ const viewGeneralStore = (req, res) => __awaiter(void 0, void 0, void 0, functio
                     attributes: ["id", "firstName", "lastName", "email"],
                 },
                 {
+                    model: admin_1.default,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
+                },
+                {
                     model: currency_1.default,
                     as: "currency",
                     attributes: ['symbol']
@@ -1657,6 +1667,11 @@ const getGeneralProducts = (req, res) => __awaiter(void 0, void 0, void 0, funct
                     attributes: ["id", "firstName", "lastName", "email"],
                 },
                 {
+                    model: admin_1.default,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
+                },
+                {
                     model: subcategory_1.default,
                     as: "sub_category",
                     where: categoryName ? { name: categoryName } : undefined,
@@ -1719,6 +1734,11 @@ const viewGeneralProduct = (req, res) => __awaiter(void 0, void 0, void 0, funct
                     model: user_1.default,
                     as: "vendor",
                     attributes: ["id", "firstName", "lastName", "email"],
+                },
+                {
+                    model: admin_1.default,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
                 },
                 {
                     model: store_1.default,
@@ -1787,6 +1807,16 @@ const getGeneralAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 0
                     attributes: ["id", "firstName", "lastName", "email"],
                 },
                 {
+                    model: admin_1.default,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
+                },
+                {
+                    model: admin_1.default,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
+                },
+                {
                     model: subcategory_1.default,
                     as: "sub_category",
                     where: categoryName ? { name: categoryName } : undefined,
@@ -1851,6 +1881,11 @@ const viewGeneralAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0
                     model: user_1.default,
                     as: "vendor",
                     attributes: ["id", "firstName", "lastName", "email"],
+                },
+                {
+                    model: admin_1.default,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
                 },
                 {
                     model: store_1.default,
@@ -2095,6 +2130,11 @@ const getAllSubscribers = (req, res) => __awaiter(void 0, void 0, void 0, functi
             limit: Number(limit),
             offset,
             include: [
+                {
+                    model: user_1.default,
+                    as: "vendor",
+                    attributes: ["id", "firstName", "lastName", "email", "phoneNumber"], // Specify which subscription plan fields to include
+                },
                 {
                     model: subscriptionplan_1.default,
                     as: "subscriptionPlans",
