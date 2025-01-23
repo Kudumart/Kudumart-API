@@ -2807,14 +2807,14 @@ export const createProduct = async (
         }
 
         // Check if vendorId, storeId, and categoryId exist
-        const vendorExists = await User.findByPk(adminId);
+        const vendorExists = await Admin.findByPk(adminId);
         const storeExists = await Store.findByPk(storeId);
         const categoryExists = await SubCategory.findByPk(categoryId);
 
-        if (!vendorExists || !categoryExists) {
+        if (!vendorExists) {
             res
                 .status(404)
-                .json({ message: "Vendor not found." });
+                .json({ message: "Admin not found." });
             return;
         }
 
@@ -2923,7 +2923,7 @@ export const deleteProduct = async (
     }
 };
 
-export const fetchVendorProducts = async (
+export const fetchProducts = async (
     req: AuthenticatedRequest,
     res: Response
 ): Promise<void> => {
@@ -3128,14 +3128,14 @@ export const createAuctionProduct = async (
 
     try {
         // Check if adminId, storeId, and categoryId exist
-        const vendorExists = await User.findByPk(adminId);
+        const vendorExists = await Admin.findByPk(adminId);
         const storeExists = await Store.findByPk(storeId);
         const categoryExists = await SubCategory.findByPk(categoryId);
 
-        if (!vendorExists || !categoryExists) {
+        if (!vendorExists) {
             res
                 .status(404)
-                .json({ message: "Vendor not found." });
+                .json({ message: "Admin not found." });
             return;
         }
 
@@ -3261,14 +3261,28 @@ export const updateAuctionProduct = async (
         }
 
         // Check if vendor, store, and category exist
-        const vendorExists = await User.findByPk(adminId);
+        const vendorExists = await Admin.findByPk(adminId);
         const storeExists = await Store.findByPk(storeId);
         const categoryExists = await SubCategory.findByPk(categoryId);
 
-        if (!vendorExists || !storeExists || !categoryExists) {
+        if (!vendorExists) {
             res
                 .status(404)
-                .json({ message: "Vendor, Store, or Category not found." });
+                .json({ message: "Admin not found." });
+            return;
+        }
+
+        if (!storeExists) {
+            res
+                .status(404)
+                .json({ message: "Store not found." });
+            return;
+        }
+
+        if (!categoryExists) {
+            res
+                .status(404)
+                .json({ message: "Category not found." });
             return;
         }
 

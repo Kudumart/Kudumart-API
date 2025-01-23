@@ -14,6 +14,7 @@ import KYC from "../models/kyc";
 import { shuffleArray } from "../utils/helpers";
 import AuctionProduct from "../models/auctionproduct";
 import Currency from "../models/currency";
+import Admin from "../models/admin";
 
 export const getCategoriesWithSubcategories = async (
     req: Request,
@@ -136,7 +137,11 @@ export const getProductById = async (
                 {
                     model: User,
                     as: "vendor",
-                    required: true, // Make sure the user is included in the result
+                },
+                {
+                    model: Admin,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
                 },
                 {
                     model: Store,
@@ -156,6 +161,8 @@ export const getProductById = async (
                 },
             ],
         });
+
+        console.log(product);
 
         if (!product) {
             res.status(404).json({ message: "Product not found" });
@@ -179,6 +186,10 @@ export const getProductById = async (
                     model: User,
                     as: "vendor",
                     required: true, // Make sure the user is included in the result
+                },
+                {
+                    model: Admin,
+                    as: "admin"
                 },
                 {
                     model: Store,
@@ -290,6 +301,15 @@ export const getStoreProducts = async (req: Request, res: Response): Promise<voi
             },
             include: [
                 {
+                    model: User,
+                    as: "vendor"
+                },
+                {
+                    model: Admin,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
+                },
+                {
                     model: Store,
                     as: "store",
                     attributes: ['name'],
@@ -364,8 +384,12 @@ export const getUpcomingAuctionProducts = async (req: Request, res: Response): P
             include: [
                 {
                     model: User,
-                    as: "vendor",
-                    required: true, // Make sure the user is included in the result
+                    as: "vendor"
+                },
+                {
+                    model: Admin,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
                 },
                 {
                     model: Store,
@@ -419,7 +443,11 @@ export const getAuctionProductById = async (
                 {
                     model: User,
                     as: "vendor",
-                    required: true, // Make sure the user is included in the result
+                },
+                {
+                    model: Admin,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
                 },
                 {
                     model: Store,

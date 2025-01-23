@@ -101,7 +101,7 @@ adminRoutes.put("/store", adminAuthMiddleware, updateStoreValidation(), validate
 adminRoutes.delete("/store", adminAuthMiddleware, adminController.deleteStore);
 
 // Product
-adminRoutes.get("/vendors/products", adminAuthMiddleware, adminController.fetchVendorProducts);
+adminRoutes.get("/products", adminAuthMiddleware, adminController.fetchProducts);
 adminRoutes.post("/products", adminAuthMiddleware, addProductValidation(), validate, adminController.createProduct);
 adminRoutes.put("/products", adminAuthMiddleware, updateProductValidation(), validate, adminController.updateProduct);
 adminRoutes.delete("/products", adminAuthMiddleware, adminController.deleteProduct);

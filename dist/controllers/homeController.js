@@ -24,6 +24,7 @@ const kyc_1 = __importDefault(require("../models/kyc"));
 const helpers_1 = require("../utils/helpers");
 const auctionproduct_1 = __importDefault(require("../models/auctionproduct"));
 const currency_1 = __importDefault(require("../models/currency"));
+const admin_1 = __importDefault(require("../models/admin"));
 const getCategoriesWithSubcategories = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const categories = yield category_1.default.findAll({
@@ -127,7 +128,11 @@ const getProductById = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 {
                     model: user_1.default,
                     as: "vendor",
-                    required: true, // Make sure the user is included in the result
+                },
+                {
+                    model: admin_1.default,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
                 },
                 {
                     model: store_1.default,
@@ -147,6 +152,7 @@ const getProductById = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 },
             ],
         });
+        console.log(product);
         if (!product) {
             res.status(404).json({ message: "Product not found" });
             return;
@@ -159,7 +165,7 @@ const getProductById = (req, res) => __awaiter(void 0, void 0, void 0, function*
         const recommendedProducts = yield product_1.default.findAll({
             where: {
                 categoryId: product.categoryId,
-                id: { [sequelize_1.Op.ne]: product.id },
+                id: { [sequelize_1.Op.ne]: product.id }, // Exclude the currently viewed product
                 status: "active",
             },
             include: [
@@ -167,6 +173,10 @@ const getProductById = (req, res) => __awaiter(void 0, void 0, void 0, function*
                     model: user_1.default,
                     as: "vendor",
                     required: true, // Make sure the user is included in the result
+                },
+                {
+                    model: admin_1.default,
+                    as: "admin"
                 },
                 {
                     model: store_1.default,
@@ -237,8 +247,8 @@ const getAllStores = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             message: "Stores fetched successfully",
             data: stores,
             pagination: {
-                total,
-                page: Number(page),
+                total, // Total number of matching records
+                page: Number(page), // Current page number
                 limit: Number(limit) // Number of items per page
             }
         });
@@ -267,6 +277,15 @@ const getStoreProducts = (req, res) => __awaiter(void 0, void 0, void 0, functio
         const products = yield product_1.default.findAll({
             where: Object.assign({ storeId }, (productName ? { name: { [sequelize_1.Op.like]: `%${productName}%` } } : {})),
             include: [
+                {
+                    model: user_1.default,
+                    as: "vendor"
+                },
+                {
+                    model: admin_1.default,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
+                },
                 {
                     model: store_1.default,
                     as: "store",
@@ -336,8 +355,12 @@ const getUpcomingAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 
             include: [
                 {
                     model: user_1.default,
-                    as: "vendor",
-                    required: true, // Make sure the user is included in the result
+                    as: "vendor"
+                },
+                {
+                    model: admin_1.default,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
                 },
                 {
                     model: store_1.default,
@@ -387,7 +410,11 @@ const getAuctionProductById = (req, res) => __awaiter(void 0, void 0, void 0, fu
                 {
                     model: user_1.default,
                     as: "vendor",
-                    required: true, // Make sure the user is included in the result
+                },
+                {
+                    model: admin_1.default,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
                 },
                 {
                     model: store_1.default,

@@ -320,7 +320,7 @@ export const createProduct = async (
         const storeExists = await Store.findByPk(storeId);
         const categoryExists = await SubCategory.findByPk(categoryId);
 
-        if (!vendorExists || !categoryExists) {
+        if (!vendorExists) {
             res
                 .status(404)
                 .json({ message: "Vendor not found." });
@@ -656,7 +656,7 @@ export const createAuctionProduct = async (
         const storeExists = await Store.findByPk(storeId);
         const categoryExists = await SubCategory.findByPk(categoryId);
 
-        if (!vendorExists || !categoryExists) {
+        if (!vendorExists) {
             res
                 .status(404)
                 .json({ message: "Vendor not found." });
