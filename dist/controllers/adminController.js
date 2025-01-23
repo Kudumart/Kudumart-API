@@ -117,9 +117,9 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.updateProfile = updateProfile;
 const updatePassword = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _b;
     const { oldPassword, newPassword, confirmNewPassword } = req.body;
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id; // Using optional chaining to access adminId
+    const adminId = (_b = req.admin) === null || _b === void 0 ? void 0 : _b.id; // Using optional chaining to access adminId
     try {
         // Find the admin
         const admin = yield admin_1.default.scope("auth").findByPk(adminId);
@@ -176,7 +176,7 @@ const subAdmins = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             where: whereCondition,
             include: [
                 {
-                    model: role_1.default, // Include the Role model in the query
+                    model: role_1.default,
                     as: "role", // Use the alias defined in the association (if any)
                 },
             ],
@@ -731,7 +731,7 @@ const getAllCategories = (req, res) => __awaiter(void 0, void 0, void 0, functio
     const { name } = req.query;
     try {
         const categories = yield category_1.default.findAll({
-            where: name ? { name: { [sequelize_1.Op.like]: `%${name}%` } } : {}, // Search by name if provided
+            where: name ? { name: { [sequelize_1.Op.like]: `%${name}%` } } : {},
             attributes: {
                 include: [
                     [
@@ -866,7 +866,7 @@ const getCategoriesWithSubCategories = (req, res) => __awaiter(void 0, void 0, v
                     as: "subCategories", // alias used in the association
                 },
             ],
-            attributes: ["id", "name", "image"], // select specific fields in Category
+            attributes: ["id", "name", "image"],
             order: [["name", "ASC"]], // sort categories alphabetically, for example
         });
         res.status(200).json({ data: categories });
@@ -1545,8 +1545,8 @@ const getGeneralStores = (req, res) => __awaiter(void 0, void 0, void 0, functio
                     ],
                 ],
             },
-            offset, // Apply offset for pagination
-            limit, // Apply limit for pagination
+            offset,
+            limit,
             order: [["createdAt", "DESC"]], // Order stores by creation date, newest first
         });
         // Check if any stores were found
@@ -1988,7 +1988,7 @@ const getAllGeneralOrders = (req, res) => __awaiter(void 0, void 0, void 0, func
                     attributes: [], // Do not include actual order items
                 },
             ],
-            group: ["Order.id"], // Group by order to ensure correct counting
+            group: ["Order.id"],
             order: [["createdAt", "DESC"]], // Order by createdAt
         });
         if (!orders || orders.length === 0) {
@@ -2046,7 +2046,7 @@ const getAllGeneralOrderItems = (req, res) => __awaiter(void 0, void 0, void 0, 
             message: "Order items retrieved successfully",
             data: orderItems,
             pagination: {
-                total: count, // Total number of order items
+                total: count,
                 page: pageNumber,
                 pages: totalPages,
                 limit: limitNumber,
@@ -2098,7 +2098,7 @@ const getGeneralPaymentDetails = (req, res) => __awaiter(void 0, void 0, void 0,
             message: "Payments retrieved successfully",
             data: payments,
             pagination: {
-                total: count, // Total number of payments
+                total: count,
                 page: pageNumber,
                 pages: totalPages,
                 limit: limitNumber,
@@ -2126,9 +2126,9 @@ const getAllSubscribers = (req, res) => __awaiter(void 0, void 0, void 0, functi
         }
         // Fetch vendor subscriptions with pagination and filters
         const subscribers = yield vendorsubscription_1.default.findAndCountAll({
-            where: filters, // Apply filters (if any)
-            limit: Number(limit), // Limit results per page
-            offset, // Offset for pagination
+            where: filters,
+            limit: Number(limit),
+            offset,
             include: [
                 {
                     model: user_1.default,
@@ -2153,7 +2153,7 @@ const getAllSubscribers = (req, res) => __awaiter(void 0, void 0, void 0, functi
             message: "Subscribers retrieved successfully",
             data: subscribers.rows,
             pagination: {
-                total: subscribers.count, // Total number of order items
+                total: subscribers.count,
                 page: Number(page),
                 pages: Math.ceil(subscribers.count / Number(limit)),
                 limit: Number(limit),
@@ -2168,8 +2168,8 @@ const getAllSubscribers = (req, res) => __awaiter(void 0, void 0, void 0, functi
 });
 exports.getAllSubscribers = getAllSubscribers;
 const getStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    var _c;
+    const adminId = (_c = req.admin) === null || _c === void 0 ? void 0 : _c.id;
     try {
         const stores = yield store_1.default.findAll({
             where: { vendorId: adminId },
@@ -2226,8 +2226,8 @@ const getStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.getStore = getStore;
 const createStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    var _d;
+    const adminId = (_d = req.admin) === null || _d === void 0 ? void 0 : _d.id;
     const { currencyId, name, location, logo, businessHours, deliveryOptions, tipsOnFinding } = req.body;
     if (!currencyId) {
         res.status(400).json({ message: 'Currency ID is required.' });
@@ -2272,8 +2272,8 @@ const createStore = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 });
 exports.createStore = createStore;
 const updateStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    var _e;
+    const adminId = (_e = req.admin) === null || _e === void 0 ? void 0 : _e.id;
     const { storeId, currencyId, name, location, businessHours, deliveryOptions, tipsOnFinding, logo } = req.body;
     try {
         const store = yield store_1.default.findOne({ where: { id: storeId } });
@@ -2350,9 +2350,9 @@ const deleteStore = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 exports.deleteStore = deleteStore;
 // Product
 const createProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
-    const _b = req.body, { storeId, categoryId, name } = _b, otherData = __rest(_b, ["storeId", "categoryId", "name"]);
+    var _f;
+    const adminId = (_f = req.admin) === null || _f === void 0 ? void 0 : _f.id;
+    const _g = req.body, { storeId, categoryId, name } = _g, otherData = __rest(_g, ["storeId", "categoryId", "name"]);
     try {
         // Check for duplicates
         const existingProduct = yield product_1.default.findOne({
@@ -2410,9 +2410,9 @@ const createProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.createProduct = createProduct;
 const updateProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const _b = req.body, { productId } = _b, updateData = __rest(_b, ["productId"]);
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    var _h;
+    const _j = req.body, { productId } = _j, updateData = __rest(_j, ["productId"]);
+    const adminId = (_h = req.admin) === null || _h === void 0 ? void 0 : _h.id;
     try {
         const product = yield product_1.default.findOne({
             where: {
@@ -2437,9 +2437,9 @@ const updateProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.updateProduct = updateProduct;
 const deleteProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _k;
     const { productId } = req.query;
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    const adminId = (_k = req.admin) === null || _k === void 0 ? void 0 : _k.id;
     try {
         const product = yield product_1.default.findOne({
             where: {
@@ -2463,8 +2463,8 @@ const deleteProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.deleteProduct = deleteProduct;
 const fetchProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    var _l;
+    const adminId = (_l = req.admin) === null || _l === void 0 ? void 0 : _l.id;
     const { name, sku, status, condition, categoryName } = req.query;
     try {
         const products = yield product_1.default.findAll(Object.assign({ where: { vendorId: adminId }, include: [
@@ -2499,10 +2499,10 @@ const fetchProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.fetchProducts = fetchProducts;
 const viewProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _m;
     // Get productId from route params instead of query
     const { productId } = req.query;
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    const adminId = (_m = req.admin) === null || _m === void 0 ? void 0 : _m.id;
     try {
         const product = yield product_1.default.findOne({
             where: {
@@ -2540,9 +2540,9 @@ const viewProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 });
 exports.viewProduct = viewProduct;
 const moveToDraft = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _o;
     const { productId } = req.query; // Get productId from request query
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    const adminId = (_o = req.admin) === null || _o === void 0 ? void 0 : _o.id;
     try {
         // Validate productId type
         if (typeof productId !== "string") {
@@ -2577,9 +2577,9 @@ const moveToDraft = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 });
 exports.moveToDraft = moveToDraft;
 const changeProductStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _p;
     const { productId, status } = req.body; // Get productId and status from request body
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    const adminId = (_p = req.admin) === null || _p === void 0 ? void 0 : _p.id;
     // Validate status
     if (!["active", "inactive", "draft"].includes(status)) {
         res.status(400).json({ message: "Invalid status." });
@@ -2614,8 +2614,8 @@ const changeProductStatus = (req, res) => __awaiter(void 0, void 0, void 0, func
 exports.changeProductStatus = changeProductStatus;
 // Auction Product
 const createAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    var _q;
+    const adminId = (_q = req.admin) === null || _q === void 0 ? void 0 : _q.id;
     const { storeId, categoryId, name, condition, description, specification, price, bidIncrement, maxBidsPerUser, participantsInterestFee, startDate, endDate, image, additionalImages, } = req.body;
     try {
         // Check if adminId, storeId, and categoryId exist
@@ -2682,8 +2682,8 @@ const createAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.createAuctionProduct = createAuctionProduct;
 const updateAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    var _r;
+    const adminId = (_r = req.admin) === null || _r === void 0 ? void 0 : _r.id;
     const { auctionProductId, storeId, categoryId, name, condition, description, specification, price, bidIncrement, maxBidsPerUser, participantsInterestFee, startDate, endDate, image, additionalImages, } = req.body;
     try {
         // Find the auction product by ID
@@ -2777,9 +2777,9 @@ const updateAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.updateAuctionProduct = updateAuctionProduct;
 const deleteAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _s;
     const { auctionProductId } = req.query;
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    const adminId = (_s = req.admin) === null || _s === void 0 ? void 0 : _s.id;
     try {
         // Find the auction product by ID
         const auctionProduct = yield auctionproduct_1.default.findOne({
@@ -2829,9 +2829,9 @@ const deleteAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.deleteAuctionProduct = deleteAuctionProduct;
 const cancelAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _t;
     const { auctionProductId } = req.query;
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    const adminId = (_t = req.admin) === null || _t === void 0 ? void 0 : _t.id;
     try {
         // Find the auction product by ID
         const auctionProduct = yield auctionproduct_1.default.findOne({
@@ -2875,8 +2875,8 @@ const cancelAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.cancelAuctionProduct = cancelAuctionProduct;
 const fetchVendorAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    var _u;
+    const adminId = (_u = req.admin) === null || _u === void 0 ? void 0 : _u.id;
     const { name, sku, status, condition, categoryName } = req.query;
     try {
         // Fetch all auction products for the vendor
@@ -2923,10 +2923,10 @@ const fetchVendorAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 
 });
 exports.fetchVendorAuctionProducts = fetchVendorAuctionProducts;
 const viewAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _v;
     // Get auctionProductId from route params instead of query
     const { auctionProductId } = req.query;
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    const adminId = (_v = req.admin) === null || _v === void 0 ? void 0 : _v.id;
     try {
         const product = yield auctionproduct_1.default.findOne({
             where: {

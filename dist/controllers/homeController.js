@@ -165,7 +165,7 @@ const getProductById = (req, res) => __awaiter(void 0, void 0, void 0, function*
         const recommendedProducts = yield product_1.default.findAll({
             where: {
                 categoryId: product.categoryId,
-                id: { [sequelize_1.Op.ne]: product.id }, // Exclude the currently viewed product
+                id: { [sequelize_1.Op.ne]: product.id },
                 status: "active",
             },
             include: [
@@ -247,8 +247,8 @@ const getAllStores = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             message: "Stores fetched successfully",
             data: stores,
             pagination: {
-                total, // Total number of matching records
-                page: Number(page), // Current page number
+                total,
+                page: Number(page),
                 limit: Number(limit) // Number of items per page
             }
         });
