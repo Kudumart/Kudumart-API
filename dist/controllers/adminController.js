@@ -24,7 +24,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getGeneralProducts = exports.viewGeneralStore = exports.getGeneralStores = exports.viewUser = exports.toggleUserStatus = exports.getAllVendors = exports.getAllCustomers = exports.deleteCurrency = exports.getAllCurrencies = exports.updateCurrency = exports.addCurrency = exports.setPaymentGatewayActive = exports.getAllPaymentGateways = exports.deletePaymentGateway = exports.updatePaymentGateway = exports.createPaymentGateway = exports.approveOrRejectKYC = exports.getAllKYC = exports.getAllSubCategories = exports.deleteSubCategory = exports.updateSubCategory = exports.createSubCategory = exports.getCategoriesWithSubCategories = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getAllCategories = exports.deleteSubscriptionPlan = exports.updateSubscriptionPlan = exports.createSubscriptionPlan = exports.getAllSubscriptionPlans = exports.deletePermission = exports.updatePermission = exports.getPermissions = exports.createPermission = exports.deletePermissionFromRole = exports.assignPermissionToRole = exports.viewRolePermissions = exports.updateRole = exports.getRoles = exports.createRole = exports.resendLoginDetailsSubAdmin = exports.deleteSubAdmin = exports.deactivateOrActivateSubAdmin = exports.updateSubAdmin = exports.createSubAdmin = exports.subAdmins = exports.updatePassword = exports.updateProfile = exports.logout = void 0;
-exports.viewAuctionProduct = exports.fetchVendorAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.getStore = exports.getAllSubscribers = exports.getGeneralPaymentDetails = exports.getAllGeneralOrderItems = exports.getAllGeneralOrders = exports.deleteGeneralAuctionProduct = exports.viewGeneralAuctionProduct = exports.getGeneralAuctionProducts = exports.deleteGeneralProduct = exports.viewGeneralProduct = void 0;
+exports.getTransactionsForAdmin = exports.viewAuctionProduct = exports.fetchVendorAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.getStore = exports.getAllSubscribers = exports.getGeneralPaymentDetails = exports.getAllGeneralOrderItems = exports.getAllGeneralOrders = exports.deleteGeneralAuctionProduct = exports.viewGeneralAuctionProduct = exports.getGeneralAuctionProducts = exports.deleteGeneralProduct = exports.viewGeneralProduct = void 0;
 const sequelize_1 = require("sequelize");
 const uuid_1 = require("uuid");
 const mail_service_1 = require("../services/mail.service");
@@ -52,6 +52,7 @@ const payment_1 = __importDefault(require("../models/payment"));
 const bid_1 = __importDefault(require("../models/bid"));
 const vendorsubscription_1 = __importDefault(require("../models/vendorsubscription"));
 const sequelize_service_1 = __importDefault(require("../services/sequelize.service"));
+const transaction_1 = __importDefault(require("../models/transaction"));
 const logout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Get the token from the request
@@ -2963,4 +2964,59 @@ const viewAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, funct
     }
 });
 exports.viewAuctionProduct = viewAuctionProduct;
+const getTransactionsForAdmin = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { transactionType, refId, status, userName, page, limit } = req.query;
+    try {
+        // Get pagination parameters
+        const pageNumber = parseInt(page, 10) || 1; // Default to page 1 if not provided
+        const limitNumber = parseInt(limit, 10) || 10; // Default to 10 items per page
+        const offset = (pageNumber - 1) * limitNumber;
+        // Fetch transactions with filters, pagination, and associated data
+        const { rows: transactions, count: totalTransactions } = yield transaction_1.default.findAndCountAll({
+            include: [
+                Object.assign({ model: user_1.default, as: "user", attributes: ["id", "firstName", "lastName", "email"] }, (userName && {
+                    where: {
+                        [sequelize_1.Op.or]: [
+                            { firstName: { [sequelize_1.Op.like]: `%${userName}%` } },
+                            { lastName: { [sequelize_1.Op.like]: `%${userName}%` } },
+                            { email: { [sequelize_1.Op.like]: `%${userName}%` } },
+                        ],
+                    },
+                })),
+            ],
+            where: Object.assign(Object.assign(Object.assign({}, (transactionType && { transactionType: { [sequelize_1.Op.like]: `%${transactionType}%` } })), (refId && { refId: { [sequelize_1.Op.like]: `%${refId}%` } })), (status && { status })),
+            offset,
+            limit: limitNumber,
+            order: [["createdAt", "DESC"]], // Order by creation date (newest first)
+        });
+        // Check if transactions were found
+        if (!transactions || transactions.length === 0) {
+            res.status(404).json({
+                message: "No transactions found.",
+                data: [],
+                pagination: {
+                    total: totalTransactions,
+                    page: pageNumber,
+                    pages: Math.ceil(totalTransactions / limitNumber),
+                },
+            });
+            return;
+        }
+        // Return transactions with pagination metadata
+        res.status(200).json({
+            message: "Transactions retrieved successfully.",
+            data: transactions,
+            pagination: {
+                total: totalTransactions,
+                page: pageNumber,
+                pages: Math.ceil(totalTransactions / limitNumber),
+            },
+        });
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Failed to fetch transactions", error: error.message });
+    }
+});
+exports.getTransactionsForAdmin = getTransactionsForAdmin;
 //# sourceMappingURL=adminController.js.map

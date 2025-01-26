@@ -134,4 +134,7 @@ adminRoutes.get("/general/order/payment", adminAuthMiddleware, adminController.g
 // Subscribers
 adminRoutes.get("/subscribers", adminAuthMiddleware, adminController.getAllSubscribers);
 
+// Transactions
+adminRoutes.get("/transactions", adminAuthMiddleware, adminController.getTransactionsForAdmin);
+
 export default adminRoutes; // Export the router

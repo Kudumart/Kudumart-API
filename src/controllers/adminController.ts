@@ -30,6 +30,7 @@ import Payment from "../models/payment";
 import Bid from "../models/bid";
 import VendorSubscription from "../models/vendorsubscription";
 import sequelizeService from "../services/sequelize.service";
+import Transaction from "../models/transaction";
 
 // Extend the Express Request interface to include adminId and admin
 interface AuthenticatedRequest extends Request {
@@ -3542,5 +3543,75 @@ export const viewAuctionProduct = async (
     } catch (error) {
         logger.error(error);
         res.status(500).json({ message: "Failed to fetch product" });
+    }
+};
+
+export const getTransactionsForAdmin = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
+    const { transactionType, refId, status, userName, page, limit } = req.query;
+
+    try {
+        // Get pagination parameters
+        const pageNumber = parseInt(page as string, 10) || 1; // Default to page 1 if not provided
+        const limitNumber = parseInt(limit as string, 10) || 10; // Default to 10 items per page
+        const offset = (pageNumber - 1) * limitNumber;
+
+        // Fetch transactions with filters, pagination, and associated data
+        const { rows: transactions, count: totalTransactions } = await Transaction.findAndCountAll({
+            include: [
+                {
+                    model: User,
+                    as: "user",
+                    attributes: ["id", "firstName", "lastName", "email"],
+                    ...(userName && {
+                        where: {
+                            [Op.or]: [
+                                { firstName: { [Op.like]: `%${userName}%` } },
+                                { lastName: { [Op.like]: `%${userName}%` } },
+                                { email: { [Op.like]: `%${userName}%` } },
+                            ],
+                        },
+                    }),
+                },
+            ],
+            where: {
+                ...(transactionType && { transactionType: { [Op.like]: `%${transactionType}%` } }),
+                ...(refId && { refId: { [Op.like]: `%${refId}%` } }),
+                ...(status && { status }),
+            },
+            offset, // Apply offset for pagination
+            limit: limitNumber, // Apply limit for pagination
+            order: [["createdAt", "DESC"]], // Order by creation date (newest first)
+        });
+
+        // Check if transactions were found
+        if (!transactions || transactions.length === 0) {
+            res.status(404).json({
+                message: "No transactions found.",
+                data: [],
+                pagination: {
+                    total: totalTransactions,
+                    page: pageNumber,
+                    pages: Math.ceil(totalTransactions / limitNumber),
+                },
+            });
+            return;
+        }
+
+        // Return transactions with pagination metadata
+        res.status(200).json({
+            message: "Transactions retrieved successfully.",
+            data: transactions,
+            pagination: {
+                total: totalTransactions,
+                page: pageNumber,
+                pages: Math.ceil(totalTransactions / limitNumber),
+            },
+        });
+    } catch (error: any) {
+        console.error(error);
+        res.status(500).json({ message: "Failed to fetch transactions", error: error.message });
     }
 };

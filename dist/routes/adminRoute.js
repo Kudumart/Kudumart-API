@@ -127,5 +127,7 @@ adminRoutes.get("/general/order/items", adminAuthMiddleware_1.default, adminCont
 adminRoutes.get("/general/order/payment", adminAuthMiddleware_1.default, adminController.getGeneralPaymentDetails);
 // Subscribers
 adminRoutes.get("/subscribers", adminAuthMiddleware_1.default, adminController.getAllSubscribers);
+// Transactions
+adminRoutes.get("/transactions", adminAuthMiddleware_1.default, adminController.getTransactionsForAdmin);
 exports.default = adminRoutes; // Export the router
 //# sourceMappingURL=adminRoute.js.map
