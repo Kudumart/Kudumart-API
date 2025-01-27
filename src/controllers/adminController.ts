@@ -751,6 +751,8 @@ export const createSubscriptionPlan = async (
         productLimit,
         allowsAuction,
         auctionProductLimit,
+        maxAds,
+        adsDurationDays,
     } = req.body;
 
     try {
@@ -772,6 +774,8 @@ export const createSubscriptionPlan = async (
             productLimit,
             allowsAuction,
             auctionProductLimit,
+            maxAds,
+            adsDurationDays,
         });
 
         res.status(200).json({
@@ -795,6 +799,8 @@ export const updateSubscriptionPlan = async (
         productLimit,
         allowsAuction,
         auctionProductLimit,
+        maxAds,
+        adsDurationDays,
     } = req.body;
 
     try {
@@ -832,6 +838,8 @@ export const updateSubscriptionPlan = async (
         plan.productLimit = productLimit;
         plan.allowsAuction = allowsAuction;
         plan.auctionProductLimit = auctionProductLimit;
+        plan.maxAds = maxAds;
+        plan.adsDurationDays =adsDurationDays; 
         await plan.save();
 
         res.status(200).json({ message: "Subscription plan updated successfully" });

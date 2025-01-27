@@ -9,6 +9,8 @@ class SubscriptionPlan extends Model {
   public productLimit!: number;
   public allowsAuction!: boolean;
   public auctionProductLimit!: number | null; // Null if auctions are not allowed
+  public maxAds!: number | null;
+  public adsDurationDays!: number;
   public createdAt!: Date;
   public updatedAt!: Date;
 
@@ -53,6 +55,16 @@ const initModel = (sequelize: Sequelize) => {
       auctionProductLimit: {
         type: DataTypes.INTEGER,
         allowNull: true, // Null if auctions are not allowed
+      },
+      maxAds: {
+        type: DataTypes.INTEGER,
+        allowNull: true, // Null if auctions are not allowed
+        defaultValue: 0
+      },
+      adsDurationDays: {
+        type: DataTypes.INTEGER,
+        allowNull: true, // Null if auctions are not allowed
+        defaultValue: 0
       },
     },
     {

@@ -35,6 +35,16 @@ module.exports = {
         type: Sequelize.INTEGER,
         allowNull: true, // Null if auctions are not allowed
       },
+      maxAds: {
+        type: Sequelize.INTEGER,
+        allowNull: true, // Null if auctions are not allowed
+        defaultValue: 0
+      },
+      adsDurationDays: {
+        type: Sequelize.INTEGER,
+        allowNull: true, // Null if auctions are not allowed
+        defaultValue: 0
+      },
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE
