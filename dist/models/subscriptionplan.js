@@ -44,6 +44,16 @@ const initModel = (sequelize) => {
             type: sequelize_1.DataTypes.INTEGER,
             allowNull: true, // Null if auctions are not allowed
         },
+        maxAds: {
+            type: sequelize_1.DataTypes.INTEGER,
+            allowNull: true,
+            defaultValue: 0
+        },
+        adsDurationDays: {
+            type: sequelize_1.DataTypes.INTEGER,
+            allowNull: true,
+            defaultValue: 0
+        },
     }, {
         sequelize,
         modelName: "SubscriptionPlan",

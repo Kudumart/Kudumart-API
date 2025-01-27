@@ -624,7 +624,7 @@ const getAllSubscriptionPlans = (req, res) => __awaiter(void 0, void 0, void 0, 
 });
 exports.getAllSubscriptionPlans = getAllSubscriptionPlans;
 const createSubscriptionPlan = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { name, duration, price, productLimit, allowsAuction, auctionProductLimit, } = req.body;
+    const { name, duration, price, productLimit, allowsAuction, auctionProductLimit, maxAds, adsDurationDays, } = req.body;
     try {
         // Check if the subscription plan name already exists
         const existingPlan = yield subscriptionplan_1.default.findOne({ where: { name } });
@@ -642,6 +642,8 @@ const createSubscriptionPlan = (req, res) => __awaiter(void 0, void 0, void 0, f
             productLimit,
             allowsAuction,
             auctionProductLimit,
+            maxAds,
+            adsDurationDays,
         });
         res.status(200).json({
             message: "Subscription plan created successfully.",
@@ -654,7 +656,7 @@ const createSubscriptionPlan = (req, res) => __awaiter(void 0, void 0, void 0, f
 });
 exports.createSubscriptionPlan = createSubscriptionPlan;
 const updateSubscriptionPlan = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { planId, name, duration, price, productLimit, allowsAuction, auctionProductLimit, } = req.body;
+    const { planId, name, duration, price, productLimit, allowsAuction, auctionProductLimit, maxAds, adsDurationDays, } = req.body;
     try {
         // Fetch the subscription plan to update
         const plan = yield subscriptionplan_1.default.findByPk(planId);
@@ -686,6 +688,8 @@ const updateSubscriptionPlan = (req, res) => __awaiter(void 0, void 0, void 0, f
         plan.productLimit = productLimit;
         plan.allowsAuction = allowsAuction;
         plan.auctionProductLimit = auctionProductLimit;
+        plan.maxAds = maxAds;
+        plan.adsDurationDays = adsDurationDays;
         yield plan.save();
         res.status(200).json({ message: "Subscription plan updated successfully" });
     }
