@@ -164,7 +164,7 @@ const updatePassword = (req, res) => __awaiter(void 0, void 0, void 0, function*
             return;
         }
         // Update the password
-        user.password = yield user_1.default.hashPassword(newPassword); // Hash the new password before saving
+        user.password = newPassword; // Hash the new password before saving
         yield user.save();
         // Send password reset notification email
         const message = messages_1.emailTemplates.passwordResetNotification(user);

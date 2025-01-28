@@ -120,12 +120,22 @@ exports.updateProfile = updateProfile;
 const updatePassword = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _b;
     const { oldPassword, newPassword, confirmNewPassword } = req.body;
-    const adminId = (_b = req.admin) === null || _b === void 0 ? void 0 : _b.id; // Using optional chaining to access adminId
+    const adminId = (_b = req.admin) === null || _b === void 0 ? void 0 : _b.id;
+    // Validate that new passwords match
+    if (newPassword !== confirmNewPassword) {
+        res.status(400).json({ message: "New passwords do not match." });
+        return;
+    }
+    // Validate new password strength (example: length and complexity)
+    if (newPassword.length < 8) {
+        res.status(400).json({ message: "New password must be at least 8 characters long." });
+        return;
+    }
     try {
         // Find the admin
         const admin = yield admin_1.default.scope("auth").findByPk(adminId);
         if (!admin) {
-            res.status(404).json({ message: "admin not found." });
+            res.status(404).json({ message: "Admin not found." });
             return;
         }
         // Check if the old password is correct
@@ -134,8 +144,8 @@ const updatePassword = (req, res) => __awaiter(void 0, void 0, void 0, function*
             res.status(400).json({ message: "Old password is incorrect." });
             return;
         }
-        // Update the password
-        admin.password = yield admin_1.default.hashPassword(newPassword); // Hash the new password before saving
+        // Update the password in the database
+        admin.password = newPassword;
         yield admin.save();
         // Send password reset notification email
         const message = messages_1.emailTemplates.adminPasswordResetNotification(admin);
@@ -144,13 +154,14 @@ const updatePassword = (req, res) => __awaiter(void 0, void 0, void 0, function*
         }
         catch (emailError) {
             logger_1.default.error("Error sending email:", emailError); // Log error for internal use
+            // Continue with password update even if email fails
         }
         res.status(200).json({
             message: "Password updated successfully.",
         });
     }
     catch (error) {
-        logger_1.default.error(error);
+        logger_1.default.error("Error updating password:", error);
         res.status(500).json({
             message: "Server error during password update.",
         });

@@ -167,7 +167,7 @@ export const updatePassword = async (
     }
 
     // Update the password
-    user.password = await User.hashPassword(newPassword); // Hash the new password before saving
+    user.password = newPassword; // Hash the new password before saving
     await user.save();
 
     // Send password reset notification email
