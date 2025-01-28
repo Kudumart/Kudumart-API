@@ -11,6 +11,8 @@ import {
     updateProductValidation,
     auctionProductValidation,
     updateAuctionProductValidation,
+    createAdvertValidation,
+    updateAdvertValidation,
     validate } from '../utils/validations';
 
 const vendorRoutes = Router();
@@ -53,5 +55,13 @@ vendorRoutes.get('/categories', authMiddleware, authorizeVendor, vendorControlle
 
 vendorRoutes.get("/order/items", authMiddleware, vendorController.getVendorOrderItems);
 vendorRoutes.get("/order/item/details", authMiddleware, vendorController.getOrderItemsInfo);
+
+// Adverts
+vendorRoutes.get("/active/products", authMiddleware, vendorController.activeProducts); // Create a new advert
+vendorRoutes.post("/adverts", createAdvertValidation(), validate, authMiddleware, vendorController.createAdvert); // Create a new advert
+vendorRoutes.put("/adverts", updateAdvertValidation(), validate, authMiddleware, vendorController.updateAdvert); // Update an existing advert
+vendorRoutes.get("/adverts", authMiddleware, vendorController.getAdverts); // Get adverts
+vendorRoutes.get("/advert", authMiddleware, vendorController.viewAdvert); // View a specific advert
+vendorRoutes.delete("/adverts", authMiddleware, vendorController.deleteAdvert); // Delete an advert
 
 export default vendorRoutes;

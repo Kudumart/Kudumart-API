@@ -22,6 +22,10 @@ module.exports = {
         },
         onDelete: 'RESTRICT',
       },
+      productId: {
+        type: Sequelize.UUID,
+        allowNull: true,
+      },
       title: {
         type: Sequelize.STRING,
         allowNull: true
@@ -34,9 +38,18 @@ module.exports = {
         type: Sequelize.TEXT,
         allowNull: true
       },
+      clicks: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+        defaultValue: 0
+      },
       status: {
         allowNull: false,
         type: Sequelize.ENUM('pending', 'approved', 'rejected'),
+      },
+      adminNote: {
+        allowNull: true,
+        type: Sequelize.TEXT
       },
       createdAt: {
         allowNull: false,

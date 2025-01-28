@@ -64,5 +64,12 @@ vendorRoutes.get('/currencies', authMiddleware_1.default, authorizeVendor_1.defa
 vendorRoutes.get('/categories', authMiddleware_1.default, authorizeVendor_1.default, vendorController.getAllSubCategories);
 vendorRoutes.get("/order/items", authMiddleware_1.default, vendorController.getVendorOrderItems);
 vendorRoutes.get("/order/item/details", authMiddleware_1.default, vendorController.getOrderItemsInfo);
+// Adverts
+vendorRoutes.get("/active/products", authMiddleware_1.default, vendorController.activeProducts); // Create a new advert
+vendorRoutes.post("/adverts", (0, validations_1.createAdvertValidation)(), validations_1.validate, authMiddleware_1.default, vendorController.createAdvert); // Create a new advert
+vendorRoutes.put("/adverts", (0, validations_1.updateAdvertValidation)(), validations_1.validate, authMiddleware_1.default, vendorController.updateAdvert); // Update an existing advert
+vendorRoutes.get("/adverts", authMiddleware_1.default, vendorController.getAdverts); // Get adverts
+vendorRoutes.get("/advert", authMiddleware_1.default, vendorController.viewAdvert); // View a specific advert
+vendorRoutes.delete("/adverts", authMiddleware_1.default, vendorController.deleteAdvert); // Delete an advert
 exports.default = vendorRoutes;
 //# sourceMappingURL=vendorRoute.js.map

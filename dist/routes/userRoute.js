@@ -61,7 +61,7 @@ userRoutes.patch('/mark/message/read', authMiddleware_1.default, userController.
 // Bid
 userRoutes.post('/auction/interest', authMiddleware_1.default, (0, validations_1.validateShowInterest)(), validations_1.validate, userController.showInterest);
 userRoutes.post('/place/bid', authMiddleware_1.default, (0, validations_1.validatePlaceBid)(), validations_1.validate, userController.placeBid);
-userRoutes.patch("/become/vendor", authMiddleware_1.default, userController.becomeVendor);
+userRoutes.post("/become/vendor", authMiddleware_1.default, userController.becomeVendor);
 // Notification
 userRoutes.get("/notifications", authMiddleware_1.default, userController.getUserNotifications);
 userRoutes.patch("/mark/notification/as/read", authMiddleware_1.default, userController.userMarkNotificationAsRead);

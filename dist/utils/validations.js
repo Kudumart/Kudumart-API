@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validate = exports.validateShowInterest = exports.validateUpdateCartItem = exports.validateAddItemToCart = exports.validatePlaceBid = exports.validateSendMessage = exports.validatePaymentGateway = exports.updateAuctionProductValidation = exports.auctionProductValidation = exports.updateProductValidation = exports.addProductValidation = exports.updateStoreValidation = exports.createStoreValidation = exports.validateKYCNotification = exports.kycValidationRules = exports.updateSubscriptionPlanValidationRules = exports.createSubscriptionPlanValidationRules = exports.updateSubAdminValidationRules = exports.createSubAdminValidationRules = exports.adminUpdateProfileValidationRules = exports.confirmProfilePhoneNumberValidationRules = exports.updateProfilePhoneNumberValidationRules = exports.confirmProfileEmailValidationRules = exports.updateProfileEmailValidationRules = exports.updatePasswordValidationRules = exports.resetPasswordValidationRules = exports.forgotPasswordValidationRules = exports.resendVerificationValidationRules = exports.loginValidationRules = exports.verificationValidationRules = exports.registrationValidationRules = void 0;
+exports.validate = exports.updateAdvertValidation = exports.createAdvertValidation = exports.validateShowInterest = exports.validateUpdateCartItem = exports.validateAddItemToCart = exports.validatePlaceBid = exports.validateSendMessage = exports.validatePaymentGateway = exports.updateAuctionProductValidation = exports.auctionProductValidation = exports.updateProductValidation = exports.addProductValidation = exports.updateStoreValidation = exports.createStoreValidation = exports.validateKYCNotification = exports.kycValidationRules = exports.updateSubscriptionPlanValidationRules = exports.createSubscriptionPlanValidationRules = exports.updateSubAdminValidationRules = exports.createSubAdminValidationRules = exports.adminUpdateProfileValidationRules = exports.confirmProfilePhoneNumberValidationRules = exports.updateProfilePhoneNumberValidationRules = exports.confirmProfileEmailValidationRules = exports.updateProfileEmailValidationRules = exports.updatePasswordValidationRules = exports.resetPasswordValidationRules = exports.forgotPasswordValidationRules = exports.resendVerificationValidationRules = exports.loginValidationRules = exports.verificationValidationRules = exports.registrationValidationRules = void 0;
 const express_validator_1 = require("express-validator");
 // Validation rules for different functionalities
 // Registration validation rules
@@ -810,6 +810,59 @@ const validateShowInterest = () => {
     ];
 };
 exports.validateShowInterest = validateShowInterest;
+const createAdvertValidation = () => {
+    return [
+        (0, express_validator_1.check)("categoryId")
+            .isUUID()
+            .withMessage("Category ID must be a valid UUID."),
+        (0, express_validator_1.check)("title")
+            .isString()
+            .isLength({ min: 1 })
+            .withMessage("Advert title is required."),
+        (0, express_validator_1.check)("description")
+            .isString()
+            .isLength({ min: 1 })
+            .withMessage("Advert description is required."),
+        (0, express_validator_1.check)("media_url")
+            .optional()
+            .isString()
+            .withMessage("Media URL must be a valid string."),
+        (0, express_validator_1.check)("status")
+            .optional()
+            .isIn(['pending', 'approved', 'rejected'])
+            .withMessage("Status must be one of 'pending', 'approved', or 'rejected'."),
+        (0, express_validator_1.check)("productId")
+            .optional()
+            .isUUID()
+            .withMessage("Product ID must be a valid UUID."),
+    ];
+};
+exports.createAdvertValidation = createAdvertValidation;
+const updateAdvertValidation = () => {
+    return [
+        (0, express_validator_1.check)("title")
+            .optional()
+            .isString()
+            .withMessage("Advert title must be a valid string."),
+        (0, express_validator_1.check)("description")
+            .optional()
+            .isString()
+            .withMessage("Advert description must be a valid string."),
+        (0, express_validator_1.check)("media_url")
+            .optional()
+            .isString()
+            .withMessage("Media URL must be a valid string."),
+        (0, express_validator_1.check)("status")
+            .optional()
+            .isIn(['pending', 'approved', 'rejected'])
+            .withMessage("Status must be one of 'pending', 'approved', or 'rejected'."),
+        (0, express_validator_1.check)("productId")
+            .optional()
+            .isUUID()
+            .withMessage("Product ID must be a valid UUID."),
+    ];
+};
+exports.updateAdvertValidation = updateAdvertValidation;
 // Middleware to handle validation errors, sending only the first error
 const validate = (req, res, next) => {
     const errors = (0, express_validator_1.validationResult)(req);

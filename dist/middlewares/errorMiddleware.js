@@ -25,7 +25,7 @@ const errorHandler = (err, _req, res, next) => {
     }
     // Handle other errors
     if (currentEnv === 'development') {
-        console.error(err.stack);
+        logger_1.default.error(err.stack);
         res.status(500).json({
             code: 500,
             message: 'Internal Server Error',

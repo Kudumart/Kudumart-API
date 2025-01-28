@@ -24,6 +24,7 @@ import { verifyPayment } from "../utils/helpers";
 import Currency from "../models/currency";
 import OrderItem from "../models/orderitem";
 import Order from "../models/order";
+import Advert from "../models/advert";
 
 export const submitOrUpdateKYC = async (
     req: Request,
@@ -1455,5 +1456,235 @@ export const getOrderItemsInfo = async (req: Request, res: Response): Promise<vo
         });
     } catch (error: any) {
         res.status(500).json({ message: error.message || "Failed to retrieve order details." });
+    }
+};
+
+// Adverts
+export const activeProducts = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
+    const vendorId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID from middleware
+    const { name } = req.query;
+
+    try {
+        const products = await Product.findAll({
+            where: { vendorId, status: "active" },
+            ...((name) && {
+                where: {
+                    ...(name && { name: { [Op.like]: `%${name}%` } }),
+                },
+            }),
+        });
+
+        res.status(200).json({
+            data: products,
+        });
+    } catch (error) {
+        logger.error(error);
+        res.status(500).json({ message: "Failed to fetch active products" });
+    }
+};
+
+export const createAdvert = async (req: Request, res: Response): Promise<void> => {
+    const vendorId = (req as AuthenticatedRequest).user?.id as string; // Authenticated user ID from middleware
+
+    const { userId, categoryId, productId, title, description, media_url } = req.body;
+
+    try {
+        // Check if categoryId and productId exist
+        const categoryExists = await SubCategory.findByPk(categoryId);
+        const productExists = await Product.findByPk(productId);
+
+        if (!categoryExists) {
+            res
+                .status(404)
+                .json({ message: "Category not found." });
+            return;
+        }
+
+        if (!productExists) {
+            res
+                .status(404)
+                .json({ message: "Product not found." });
+            return;
+        }
+
+        const newAdvert = await Advert.create({
+            userId: vendorId,
+            categoryId,
+            productId,
+            title,
+            description,
+            media_url,
+        });
+
+        res.status(201).json({
+            message: "Advert created successfully",
+            data: newAdvert,
+        });
+    } catch (error: any) {
+        logger.error(error);
+        res.status(500).json({ message: "Failed to create advert" });
+    }
+};
+
+export const updateAdvert = async (req: Request, res: Response): Promise<void> => {
+    const { advertId, categoryId, productId, title, description, media_url } = req.body;
+
+    try {
+        // Check if categoryId and productId exist
+        const categoryExists = await SubCategory.findByPk(categoryId);
+        const productExists = await Product.findByPk(productId);
+
+        if (!categoryExists) {
+            res
+                .status(404)
+                .json({ message: "Category not found." });
+            return;
+        }
+
+        if (!productExists) {
+            res
+                .status(404)
+                .json({ message: "Product not found." });
+            return;
+        }
+
+        const advert = await Advert.findByPk(advertId);
+
+        if (!advert) {
+            res.status(404).json({ message: "Advert not found" });
+            return;
+        }
+
+        advert.categoryId = categoryId || advert.categoryId;
+        advert.productId = productId || advert.productId;
+        advert.title = title || advert.title;
+        advert.description = description || advert.description;
+        advert.media_url = media_url || advert.media_url;
+
+        await advert.save();
+
+        res.status(200).json({
+            message: "Advert updated successfully",
+            data: advert,
+        });
+    } catch (error) {
+        logger.error(error);
+        res.status(500).json({ message: "Failed to update advert" });
+    }
+};
+
+export const getAdverts = async (req: Request, res: Response): Promise<void> => {
+    const { search, page = 1, limit = 10 } = req.query;
+
+    // Convert `page` and `limit` to numbers and ensure they are valid
+    const pageNumber = parseInt(page as string, 10) || 1;
+    const limitNumber = parseInt(limit as string, 10) || 10;
+    const offset = (pageNumber - 1) * limitNumber;
+
+    try {
+        // Build the where condition for the search query (using Op.or for title and status)
+        const whereConditions: any = {};
+
+        if (search) {
+            whereConditions[Op.or] = [
+                { title: { [Op.like]: `%${search}%` } },
+                { status: { [Op.like]: `%${search}%` } },
+            ];
+        }
+
+        // Fetch adverts with pagination, filters, and associated data
+        const { count, rows: adverts } = await Advert.findAndCountAll({
+            where: whereConditions,
+            include: [
+                { model: Product, as: "product", attributes: ['id', 'name'] },
+                { model: SubCategory, as: "sub_category" },
+            ],
+            limit: limitNumber,
+            offset,
+            order: [["createdAt", "DESC"]], // Order by latest adverts
+        });
+
+        // Handle case where no adverts are found
+        if (!adverts || adverts.length === 0) {
+            res.status(404).json({
+                message: "No adverts found",
+                data: [],
+                pagination: {
+                    total: 0,
+                    page: pageNumber,
+                    pages: 0,
+                },
+            });
+            return;
+        }
+
+        // Calculate total pages
+        const totalPages = Math.ceil(count / limitNumber);
+
+        // Return paginated results
+        res.status(200).json({
+            message: "Adverts fetched successfully",
+            data: adverts,
+            pagination: {
+                total: count, // Total number of adverts
+                page: pageNumber,
+                pages: totalPages,
+                limit: limitNumber,
+            },
+        });
+    } catch (error) {
+        logger.error("Error fetching adverts:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const viewAdvert = async (req: Request, res: Response): Promise<void> => {
+    const advertId = req.query.advertId as string;
+
+    try {
+        const advert = await Advert.findByPk(advertId, {
+            include: [
+                { model: Product, as: "product"},
+                { model: SubCategory, as: "sub_category" },
+            ],
+        });
+
+        if (!advert) {
+            res.status(404).json({ message: "Advert not found" });
+            return;
+        }
+
+        res.status(200).json({
+            message: "Advert fetched successfully",
+            data: advert,
+        });
+    } catch (error) {
+        logger.error(error);
+        res.status(500).json({ message: "Failed to fetch advert" });
+    }
+};
+
+export const deleteAdvert = async (req: Request, res: Response): Promise<void> => {
+    const advertId = req.query.advertId as string;
+
+    try {
+        const advert = await Advert.findByPk(advertId);
+
+        if (!advert) {
+            res.status(404).json({ message: "Advert not found" });
+            return;
+        }
+
+        await advert.destroy();
+
+        res.status(200).json({
+            message: "Advert deleted successfully",
+        });
+    } catch (error) {
+        logger.error(error);
+        res.status(500).json({ message: "Failed to delete advert" });
     }
 };
