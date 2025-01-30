@@ -52,7 +52,7 @@ userRoutes.patch('/mark/message/read', authMiddleware, userController.markAsRead
 userRoutes.post('/auction/interest', authMiddleware, validateShowInterest(), validate, userController.showInterest)
 userRoutes.post('/place/bid', authMiddleware, validatePlaceBid(), validate, userController.placeBid)
 
-userRoutes.patch("/become/vendor", authMiddleware, userController.becomeVendor);
+userRoutes.post("/become/vendor", authMiddleware, userController.becomeVendor);
 
 // Notification
 userRoutes.get("/notifications", authMiddleware, userController.getUserNotifications);

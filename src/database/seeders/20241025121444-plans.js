@@ -21,6 +21,8 @@ module.exports = {
           productLimit: 5, // Number of products allowed on the free plan
           allowsAuction: false, // Free plan does not allow auction by default
           auctionProductLimit: null,
+          maxAds: null,
+          adsDurationDays: null,
           createdAt: new Date(),
           updatedAt: new Date(),
         },

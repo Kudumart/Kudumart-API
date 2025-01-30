@@ -116,13 +116,25 @@ export const updatePassword = async (
     res: Response
 ): Promise<void> => {
     const { oldPassword, newPassword, confirmNewPassword } = req.body;
-    const adminId = req.admin?.id; // Using optional chaining to access adminId
+    const adminId = req.admin?.id;
+
+    // Validate that new passwords match
+    if (newPassword !== confirmNewPassword) {
+        res.status(400).json({ message: "New passwords do not match." });
+        return;
+    }
+
+    // Validate new password strength (example: length and complexity)
+    if (newPassword.length < 8) {
+        res.status(400).json({ message: "New password must be at least 8 characters long." });
+        return;
+    }
 
     try {
         // Find the admin
         const admin = await Admin.scope("auth").findByPk(adminId);
         if (!admin) {
-            res.status(404).json({ message: "admin not found." });
+            res.status(404).json({ message: "Admin not found." });
             return;
         }
 
@@ -133,8 +145,8 @@ export const updatePassword = async (
             return;
         }
 
-        // Update the password
-        admin.password = await Admin.hashPassword(newPassword); // Hash the new password before saving
+        // Update the password in the database
+        admin.password = newPassword;
         await admin.save();
 
         // Send password reset notification email
@@ -147,19 +159,21 @@ export const updatePassword = async (
             );
         } catch (emailError) {
             logger.error("Error sending email:", emailError); // Log error for internal use
+            // Continue with password update even if email fails
         }
 
         res.status(200).json({
             message: "Password updated successfully.",
         });
     } catch (error) {
-        logger.error(error);
+        logger.error("Error updating password:", error);
 
         res.status(500).json({
             message: "Server error during password update.",
         });
     }
 };
+
 
 export const subAdmins = async (
     req: AuthenticatedRequest,
@@ -751,6 +765,8 @@ export const createSubscriptionPlan = async (
         productLimit,
         allowsAuction,
         auctionProductLimit,
+        maxAds,
+        adsDurationDays,
     } = req.body;
 
     try {
@@ -772,6 +788,8 @@ export const createSubscriptionPlan = async (
             productLimit,
             allowsAuction,
             auctionProductLimit,
+            maxAds,
+            adsDurationDays,
         });
 
         res.status(200).json({
@@ -795,6 +813,8 @@ export const updateSubscriptionPlan = async (
         productLimit,
         allowsAuction,
         auctionProductLimit,
+        maxAds,
+        adsDurationDays,
     } = req.body;
 
     try {
@@ -832,6 +852,8 @@ export const updateSubscriptionPlan = async (
         plan.productLimit = productLimit;
         plan.allowsAuction = allowsAuction;
         plan.auctionProductLimit = auctionProductLimit;
+        plan.maxAds = maxAds;
+        plan.adsDurationDays =adsDurationDays; 
         await plan.save();
 
         res.status(200).json({ message: "Subscription plan updated successfully" });

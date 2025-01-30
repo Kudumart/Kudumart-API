@@ -28,7 +28,7 @@ export const errorHandler = (err: Error | ApiError, _req: Request, res: Response
 
   // Handle other errors
   if (currentEnv === 'development') {
-    console.error(err.stack);
+    logger.error(err.stack);
     res.status(500).json({
       code: 500,
       message: 'Internal Server Error',

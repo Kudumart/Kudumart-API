@@ -893,6 +893,59 @@ export const validateShowInterest = () => {
   ];
 };
 
+export const createAdvertValidation = () => {
+  return [
+    check("categoryId")
+      .isUUID()
+      .withMessage("Category ID must be a valid UUID."),
+    check("title")
+      .isString()
+      .isLength({ min: 1 })
+      .withMessage("Advert title is required."),
+    check("description")
+      .isString()
+      .isLength({ min: 1 })
+      .withMessage("Advert description is required."),
+    check("media_url")
+      .optional()
+      .isString()
+      .withMessage("Media URL must be a valid string."),
+    check("status")
+      .optional()
+      .isIn(['pending', 'approved', 'rejected'])
+      .withMessage("Status must be one of 'pending', 'approved', or 'rejected'."),
+    check("productId")
+      .optional()
+      .isUUID()
+      .withMessage("Product ID must be a valid UUID."),
+  ];
+};
+
+export const updateAdvertValidation = () => {
+  return [
+    check("title")
+      .optional()
+      .isString()
+      .withMessage("Advert title must be a valid string."),
+    check("description")
+      .optional()
+      .isString()
+      .withMessage("Advert description must be a valid string."),
+    check("media_url")
+      .optional()
+      .isString()
+      .withMessage("Media URL must be a valid string."),
+    check("status")
+      .optional()
+      .isIn(['pending', 'approved', 'rejected'])
+      .withMessage("Status must be one of 'pending', 'approved', or 'rejected'."),
+    check("productId")
+      .optional()
+      .isUUID()
+      .withMessage("Product ID must be a valid UUID."),
+  ];
+};
+
 // Middleware to handle validation errors, sending only the first error
 export const validate = (
   req: Request,
