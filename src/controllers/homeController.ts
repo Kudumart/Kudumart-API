@@ -15,6 +15,7 @@ import { shuffleArray } from "../utils/helpers";
 import AuctionProduct from "../models/auctionproduct";
 import Currency from "../models/currency";
 import Admin from "../models/admin";
+import Advert from "../models/advert";
 
 export const getCategoriesWithSubcategories = async (
     req: Request,
@@ -485,5 +486,75 @@ export const getAuctionProductById = async (
         res.status(500).json({
             message: error.message || "An error occurred while fetching the product.",
         });
+    }
+};
+
+export const getAdverts = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { search = "", page = 1, limit = 10 } = req.query;
+
+        // Convert pagination params
+        const pageNumber = parseInt(page as string) || 1;
+        const pageSize = parseInt(limit as string) || 10;
+        const offset = (pageNumber - 1) * pageSize;
+
+        // Define search condition along with the approved status
+        const searchCondition = {
+            status: "approved", // Only approved adverts
+            ...(search
+                ? {
+                      [Op.or]: [
+                          { title: { [Op.iLike]: `%${search}%` } }, // Search in advert title
+                          { categoryId: { [Op.iLike]: `%${search}%` } },
+                          { productId: { [Op.iLike]: `%${search}%` } },
+                          { "$sub_category.name$": { [Op.iLike]: `%${search}%` } }, // Search in category name
+                          { "$product.name$": { [Op.iLike]: `%${search}%` } }, // Search in product name
+                      ],
+                  }
+                : {}),
+        };
+
+        // Query adverts
+        const { rows: adverts, count } = await Advert.findAndCountAll({
+            where: searchCondition,
+            include: [
+                {
+                    model: User,
+                    as: "vendor",
+                    attributes: ["id", "firstName", "lastName", "email"],
+                },
+                {
+                    model: Admin,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
+                },
+                {
+                    model: SubCategory,
+                    as: "sub_category",
+                    attributes: ["id", "name"], // Include only necessary fields
+                },
+                {
+                    model: Product,
+                    as: "product",
+                    attributes: ["id", "name"], // Include only necessary fields
+                },
+            ],
+            limit: pageSize,
+            offset: offset,
+            order: [["createdAt", "DESC"]],
+        });
+
+        res.status(200).json({
+            message: "Adverts retrieved successfully.",
+            data: adverts,
+            pagination: {
+                total: count,
+                page: pageNumber,
+                limit: pageSize,
+            },
+        });
+    } catch (error) {
+        logger.error("Error fetching adverts:", error);
+        res.status(500).json({ message: "Failed to retrieve adverts." });
     }
 };

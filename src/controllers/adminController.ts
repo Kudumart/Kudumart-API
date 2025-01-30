@@ -32,6 +32,7 @@ import VendorSubscription from "../models/vendorsubscription";
 import sequelizeService from "../services/sequelize.service";
 import Transaction from "../models/transaction";
 import Advert from "../models/advert";
+import Notification from "../models/notification";
 
 // Extend the Express Request interface to include adminId and admin
 interface AuthenticatedRequest extends Request {
@@ -3977,5 +3978,64 @@ export const viewGeneralAdvert = async (req: Request, res: Response): Promise<vo
     } catch (error) {
         logger.error(error);
         res.status(500).json({ message: "Failed to fetch advert" });
+    }
+};
+
+export const approveOrRejectAdvert = async (req: Request, res: Response): Promise<void> => {
+    const { advertId, status, adminNote } = req.body;
+
+    // Validate required fields
+    if (!advertId || !status) {
+        res.status(400).json({ message: "Advert ID and status are required." });
+        return;
+    }
+
+    // Validate status value
+    if (!["approved", "rejected"].includes(status)) {
+        res.status(400).json({ message: "Invalid status. Only 'approved' or 'rejected' allowed." });
+        return;
+    }
+
+    // If rejected, ensure adminNote is provided
+    if (status === "rejected" && !adminNote) {
+        res.status(400).json({ message: "Admin note is required when rejecting an advert." });
+        return;
+    }
+
+    try {
+        // Find the advert
+        const advert = await Advert.findByPk(advertId);
+        if (!advert) {
+            res.status(404).json({ message: "Advert not found." });
+            return;
+        }
+
+        // Update the advert status
+        advert.status = status;
+        if (status === "rejected") {
+            advert.adminNote = adminNote;
+        }
+
+        // Save the changes
+        await advert.save();
+
+        // Send notification
+        await Notification.create({
+            userId: advert.userId, // Notify the advert owner
+            title: `Your advert has been ${status}`,
+            message: status === "approved" 
+                ? "Your advert has been approved and is now live."
+                : `Your advert was rejected. Reason: ${adminNote}`,
+            type: "advert_status",
+            isRead: false,
+        });
+
+        res.status(200).json({
+            message: `Advert ${status} successfully.`,
+            data: advert,
+        });
+    } catch (error) {
+        logger.error("Error updating advert status:", error);
+        res.status(500).json({ message: "Failed to update advert status." });
     }
 };

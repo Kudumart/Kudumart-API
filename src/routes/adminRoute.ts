@@ -146,5 +146,6 @@ adminRoutes.put("/adverts", updateAdvertValidation(), validate, adminAuthMiddlew
 adminRoutes.get("/adverts", adminAuthMiddleware, adminController.getAdverts); // Get adverts
 adminRoutes.get("/advert", adminAuthMiddleware, adminController.viewAdvert); // View a specific advert
 adminRoutes.delete("/adverts", adminAuthMiddleware, adminController.deleteAdvert); // Delete an advert
+adminRoutes.post("/approved-reject/advert", adminAuthMiddleware, adminController.approveOrRejectAdvert);
 
 export default adminRoutes; // Export the router

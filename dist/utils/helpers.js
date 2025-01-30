@@ -12,8 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.shuffleArray = exports.verifyPayment = exports.checkVendorAuctionProductLimit = exports.checkVendorProductLimit = exports.fetchAdminWithPermissions = exports.sendSMS = exports.generateOTP = void 0;
-exports.capitalizeFirstLetter = capitalizeFirstLetter;
+exports.shuffleArray = exports.verifyPayment = exports.checkAdvertLimit = exports.checkVendorAuctionProductLimit = exports.checkVendorProductLimit = exports.fetchAdminWithPermissions = exports.sendSMS = exports.capitalizeFirstLetter = exports.generateOTP = void 0;
 // utils/helpers.ts
 const http_1 = __importDefault(require("http"));
 const https_1 = __importDefault(require("https"));
@@ -25,6 +24,7 @@ const vendorsubscription_1 = __importDefault(require("../models/vendorsubscripti
 const subscriptionplan_1 = __importDefault(require("../models/subscriptionplan"));
 const product_1 = __importDefault(require("../models/product"));
 const auctionproduct_1 = __importDefault(require("../models/auctionproduct"));
+const advert_1 = __importDefault(require("../models/advert"));
 // Function to generate a 6-digit OTP
 const generateOTP = () => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
@@ -35,12 +35,13 @@ exports.generateOTP = generateOTP;
 function capitalizeFirstLetter(string) {
     return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
 }
+exports.capitalizeFirstLetter = capitalizeFirstLetter;
 const sendSMS = (mobile, messageContent) => __awaiter(void 0, void 0, void 0, function* () {
     const apiUrl = 'portal.nigeriabulksms.com';
     const data = querystring_1.default.stringify({
-        username: process.env.SMS_USERNAME, // Your SMS API username
-        password: process.env.SMS_PASSWORD, // Your SMS API password
-        sender: process.env.APP_NAME, // Sender ID
+        username: process.env.SMS_USERNAME,
+        password: process.env.SMS_PASSWORD,
+        sender: process.env.APP_NAME,
         message: messageContent,
         mobiles: mobile,
     });
@@ -153,14 +154,14 @@ const checkVendorAuctionProductLimit = (vendorId) => __awaiter(void 0, void 0, v
         const auctionProductLimit = subscriptionPlan.auctionProductLimit;
         // Handle the case where auctionProductLimit is null
         if (auctionProductLimit === null) {
-            return { status: false, message: 'Subscription plan does not define a limit for auction products.' };
+            return { status: false, message: 'Your subscription plan does not define a limit for auction products.' };
         }
         // Count the number of products already created by the vendor
         const auctionProductCount = yield auctionproduct_1.default.count({
             where: { vendorId },
         });
         if (auctionProductCount >= auctionProductLimit) {
-            return { status: false, message: 'You have reached the maximum number of products allowed for your current subscription plan. Please upgrade your plan to add more products.' };
+            return { status: false, message: 'You have reached the maximum number of auction products allowed for your current subscription plan. Please upgrade your plan to add more auction products.' };
         }
         return { status: true, message: 'Vendor can create more auction products.' };
     }
@@ -170,6 +171,43 @@ const checkVendorAuctionProductLimit = (vendorId) => __awaiter(void 0, void 0, v
     }
 });
 exports.checkVendorAuctionProductLimit = checkVendorAuctionProductLimit;
+const checkAdvertLimit = (vendorId) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        // Find the active subscription for the vendor
+        const activeSubscription = yield vendorsubscription_1.default.findOne({
+            where: {
+                vendorId,
+                isActive: true,
+            },
+        });
+        if (!activeSubscription) {
+            return { status: false, message: 'Vendor does not have an active subscription.' };
+        }
+        // Fetch the subscription plan details
+        const subscriptionPlan = yield subscriptionplan_1.default.findByPk(activeSubscription.subscriptionPlanId);
+        if (!subscriptionPlan) {
+            return { status: false, message: 'Subscription plan not found.' };
+        }
+        const maxAds = subscriptionPlan.maxAds;
+        // Handle the case where maxAds is null
+        if (maxAds === null) {
+            return { status: false, message: 'Your subscription plan does not define a limit for adverts.' };
+        }
+        // Count the number of adverts already created by the vendor
+        const maxAdsCount = yield advert_1.default.count({
+            where: { userId: vendorId },
+        });
+        if (maxAdsCount >= maxAds) {
+            return { status: false, message: 'You have reached the maximum number of adverts allowed for your current subscription plan. Please upgrade your plan to add more adverts.' };
+        }
+        return { status: true, message: 'Vendor can create more adverts.' };
+    }
+    catch (error) {
+        // Error type should be handled more gracefully if you have custom error types
+        throw new Error(error.message || 'An error occurred while checking the advert limit.');
+    }
+});
+exports.checkAdvertLimit = checkAdvertLimit;
 const verifyPayment = (refId, paystackSecretKey) => {
     return new Promise((resolve, reject) => {
         const options = {

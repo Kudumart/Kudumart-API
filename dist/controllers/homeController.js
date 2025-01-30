@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAuctionProductById = exports.getUpcomingAuctionProducts = exports.getStoreProducts = exports.getAllStores = exports.getProductById = exports.products = exports.getCategoriesWithSubcategories = void 0;
+exports.getAdverts = exports.getAuctionProductById = exports.getUpcomingAuctionProducts = exports.getStoreProducts = exports.getAllStores = exports.getProductById = exports.products = exports.getCategoriesWithSubcategories = void 0;
 const logger_1 = __importDefault(require("../middlewares/logger")); // Adjust the path to your logger.js
 const product_1 = __importDefault(require("../models/product"));
 const sequelize_1 = require("sequelize");
@@ -25,6 +25,7 @@ const helpers_1 = require("../utils/helpers");
 const auctionproduct_1 = __importDefault(require("../models/auctionproduct"));
 const currency_1 = __importDefault(require("../models/currency"));
 const admin_1 = __importDefault(require("../models/admin"));
+const advert_1 = __importDefault(require("../models/advert"));
 const getCategoriesWithSubcategories = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const categories = yield category_1.default.findAll({
@@ -165,7 +166,7 @@ const getProductById = (req, res) => __awaiter(void 0, void 0, void 0, function*
         const recommendedProducts = yield product_1.default.findAll({
             where: {
                 categoryId: product.categoryId,
-                id: { [sequelize_1.Op.ne]: product.id }, // Exclude the currently viewed product
+                id: { [sequelize_1.Op.ne]: product.id },
                 status: "active",
             },
             include: [
@@ -247,8 +248,8 @@ const getAllStores = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             message: "Stores fetched successfully",
             data: stores,
             pagination: {
-                total, // Total number of matching records
-                page: Number(page), // Current page number
+                total,
+                page: Number(page),
                 limit: Number(limit) // Number of items per page
             }
         });
@@ -453,4 +454,68 @@ const getAuctionProductById = (req, res) => __awaiter(void 0, void 0, void 0, fu
     }
 });
 exports.getAuctionProductById = getAuctionProductById;
+const getAdverts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { search = "", page = 1, limit = 10 } = req.query;
+        // Convert pagination params
+        const pageNumber = parseInt(page) || 1;
+        const pageSize = parseInt(limit) || 10;
+        const offset = (pageNumber - 1) * pageSize;
+        // Define search condition along with the approved status
+        const searchCondition = Object.assign({ status: "approved" }, (search
+            ? {
+                [sequelize_1.Op.or]: [
+                    { title: { [sequelize_1.Op.iLike]: `%${search}%` } },
+                    { categoryId: { [sequelize_1.Op.iLike]: `%${search}%` } },
+                    { productId: { [sequelize_1.Op.iLike]: `%${search}%` } },
+                    { "$sub_category.name$": { [sequelize_1.Op.iLike]: `%${search}%` } },
+                    { "$product.name$": { [sequelize_1.Op.iLike]: `%${search}%` } }, // Search in product name
+                ],
+            }
+            : {}));
+        // Query adverts
+        const { rows: adverts, count } = yield advert_1.default.findAndCountAll({
+            where: searchCondition,
+            include: [
+                {
+                    model: user_1.default,
+                    as: "vendor",
+                    attributes: ["id", "firstName", "lastName", "email"],
+                },
+                {
+                    model: admin_1.default,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
+                },
+                {
+                    model: subcategory_1.default,
+                    as: "sub_category",
+                    attributes: ["id", "name"], // Include only necessary fields
+                },
+                {
+                    model: product_1.default,
+                    as: "product",
+                    attributes: ["id", "name"], // Include only necessary fields
+                },
+            ],
+            limit: pageSize,
+            offset: offset,
+            order: [["createdAt", "DESC"]],
+        });
+        res.status(200).json({
+            message: "Adverts retrieved successfully.",
+            data: adverts,
+            pagination: {
+                total: count,
+                page: pageNumber,
+                limit: pageSize,
+            },
+        });
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching adverts:", error);
+        res.status(500).json({ message: "Failed to retrieve adverts." });
+    }
+});
+exports.getAdverts = getAdverts;
 //# sourceMappingURL=homeController.js.map

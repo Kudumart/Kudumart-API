@@ -10,6 +10,7 @@ import SubscriptionPlan from '../models/subscriptionplan';
 import Product from '../models/product';
 import logger from '../middlewares/logger';
 import AuctionProduct from '../models/auctionproduct';
+import Advert from '../models/advert';
 
 interface PaystackResponse {
   status: boolean;
@@ -161,7 +162,7 @@ const checkVendorAuctionProductLimit = async (vendorId: string): Promise<{ statu
 
     // Handle the case where auctionProductLimit is null
     if (auctionProductLimit === null) {
-      return { status: false, message: 'Subscription plan does not define a limit for auction products.' };
+      return { status: false, message: 'Your subscription plan does not define a limit for auction products.' };
     }
 
     // Count the number of products already created by the vendor
@@ -170,13 +171,57 @@ const checkVendorAuctionProductLimit = async (vendorId: string): Promise<{ statu
     });
 
     if (auctionProductCount >= auctionProductLimit) {
-      return { status: false, message: 'You have reached the maximum number of products allowed for your current subscription plan. Please upgrade your plan to add more products.' };
+      return { status: false, message: 'You have reached the maximum number of auction products allowed for your current subscription plan. Please upgrade your plan to add more auction products.' };
     }
 
     return { status: true, message: 'Vendor can create more auction products.' };
   } catch (error: any) {
     // Error type should be handled more gracefully if you have custom error types
     throw new Error(error.message || 'An error occurred while checking the auction product limit.');
+  }
+};
+
+const checkAdvertLimit = async (vendorId: string): Promise<{ status: boolean, message: string }> => {
+  try {
+    // Find the active subscription for the vendor
+    const activeSubscription = await VendorSubscription.findOne({
+      where: {
+        vendorId,
+        isActive: true,
+      },
+    });
+
+    if (!activeSubscription) {
+      return { status: false, message: 'Vendor does not have an active subscription.' };
+    }
+
+    // Fetch the subscription plan details
+    const subscriptionPlan = await SubscriptionPlan.findByPk(activeSubscription.subscriptionPlanId);
+
+    if (!subscriptionPlan) {
+      return { status: false, message: 'Subscription plan not found.' };
+    }
+
+    const maxAds = subscriptionPlan.maxAds;
+
+    // Handle the case where maxAds is null
+    if (maxAds === null) {
+      return { status: false, message: 'Your subscription plan does not define a limit for adverts.' };
+    }
+
+    // Count the number of adverts already created by the vendor
+    const maxAdsCount = await Advert.count({
+      where: { userId: vendorId },
+    });
+
+    if (maxAdsCount >= maxAds) {
+      return { status: false, message: 'You have reached the maximum number of adverts allowed for your current subscription plan. Please upgrade your plan to add more adverts.' };
+    }
+
+    return { status: true, message: 'Vendor can create more adverts.' };
+  } catch (error: any) {
+    // Error type should be handled more gracefully if you have custom error types
+    throw new Error(error.message || 'An error occurred while checking the advert limit.');
   }
 };
 
@@ -231,4 +276,4 @@ const shuffleArray = <T>(array: T[]): T[] => {
 };
 
 // Export functions
-export { generateOTP, capitalizeFirstLetter, sendSMS, fetchAdminWithPermissions, checkVendorProductLimit, checkVendorAuctionProductLimit, verifyPayment, shuffleArray };
+export { generateOTP, capitalizeFirstLetter, sendSMS, fetchAdminWithPermissions, checkVendorProductLimit, checkVendorAuctionProductLimit, checkAdvertLimit, verifyPayment, shuffleArray };

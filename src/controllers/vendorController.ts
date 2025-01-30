@@ -11,7 +11,7 @@ import KYC from "../models/kyc";
 import Store from "../models/store";
 import Product from "../models/product";
 import SubCategory from "../models/subcategory";
-import { checkVendorAuctionProductLimit, checkVendorProductLimit } from "../utils/helpers";
+import { checkVendorAuctionProductLimit, checkVendorProductLimit, checkAdvertLimit} from "../utils/helpers";
 import AuctionProduct from "../models/auctionproduct";
 import Bid from "../models/bid";
 import https from 'https';
@@ -1489,9 +1489,17 @@ export const activeProducts = async (
 export const createAdvert = async (req: Request, res: Response): Promise<void> => {
     const vendorId = (req as AuthenticatedRequest).user?.id as string; // Authenticated user ID from middleware
 
-    const { userId, categoryId, productId, title, description, media_url } = req.body;
+    const { categoryId, productId, title, description, media_url } = req.body;
 
     try {
+        // Use the utility function to check the product limit
+        const { status, message } = await checkAdvertLimit(vendorId);
+
+        if (!status) {
+            res.status(403).json({ message });
+            return;
+        }
+
         // Check if categoryId and productId exist
         const categoryExists = await SubCategory.findByPk(categoryId);
         const productExists = await Product.findByPk(productId);

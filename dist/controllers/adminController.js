@@ -24,7 +24,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getGeneralProducts = exports.viewGeneralStore = exports.getGeneralStores = exports.viewUser = exports.toggleUserStatus = exports.getAllVendors = exports.getAllCustomers = exports.deleteCurrency = exports.getAllCurrencies = exports.updateCurrency = exports.addCurrency = exports.setPaymentGatewayActive = exports.getAllPaymentGateways = exports.deletePaymentGateway = exports.updatePaymentGateway = exports.createPaymentGateway = exports.approveOrRejectKYC = exports.getAllKYC = exports.getAllSubCategories = exports.deleteSubCategory = exports.updateSubCategory = exports.createSubCategory = exports.getCategoriesWithSubCategories = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getAllCategories = exports.deleteSubscriptionPlan = exports.updateSubscriptionPlan = exports.createSubscriptionPlan = exports.getAllSubscriptionPlans = exports.deletePermission = exports.updatePermission = exports.getPermissions = exports.createPermission = exports.deletePermissionFromRole = exports.assignPermissionToRole = exports.viewRolePermissions = exports.updateRole = exports.getRoles = exports.createRole = exports.resendLoginDetailsSubAdmin = exports.deleteSubAdmin = exports.deactivateOrActivateSubAdmin = exports.updateSubAdmin = exports.createSubAdmin = exports.subAdmins = exports.updatePassword = exports.updateProfile = exports.logout = void 0;
-exports.getTransactionsForAdmin = exports.viewAuctionProduct = exports.fetchVendorAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.getStore = exports.getAllSubscribers = exports.getGeneralPaymentDetails = exports.getAllGeneralOrderItems = exports.getAllGeneralOrders = exports.deleteGeneralAuctionProduct = exports.viewGeneralAuctionProduct = exports.getGeneralAuctionProducts = exports.deleteGeneralProduct = exports.viewGeneralProduct = void 0;
+exports.approveOrRejectAdvert = exports.viewGeneralAdvert = exports.getGeneralAdverts = exports.deleteAdvert = exports.viewAdvert = exports.getAdverts = exports.updateAdvert = exports.createAdvert = exports.activeProducts = exports.getTransactionsForAdmin = exports.viewAuctionProduct = exports.fetchAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.getStore = exports.getAllSubscribers = exports.getGeneralPaymentDetails = exports.getAllGeneralOrderItems = exports.getAllGeneralOrders = exports.deleteGeneralAuctionProduct = exports.viewGeneralAuctionProduct = exports.getGeneralAuctionProducts = exports.deleteGeneralProduct = exports.viewGeneralProduct = void 0;
 const sequelize_1 = require("sequelize");
 const uuid_1 = require("uuid");
 const mail_service_1 = require("../services/mail.service");
@@ -53,6 +53,8 @@ const bid_1 = __importDefault(require("../models/bid"));
 const vendorsubscription_1 = __importDefault(require("../models/vendorsubscription"));
 const sequelize_service_1 = __importDefault(require("../services/sequelize.service"));
 const transaction_1 = __importDefault(require("../models/transaction"));
+const advert_1 = __importDefault(require("../models/advert"));
+const notification_1 = __importDefault(require("../models/notification"));
 const logout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Get the token from the request
@@ -118,9 +120,9 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.updateProfile = updateProfile;
 const updatePassword = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _b;
     const { oldPassword, newPassword, confirmNewPassword } = req.body;
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    const adminId = (_b = req.admin) === null || _b === void 0 ? void 0 : _b.id;
     // Validate that new passwords match
     if (newPassword !== confirmNewPassword) {
         res.status(400).json({ message: "New passwords do not match." });
@@ -188,7 +190,7 @@ const subAdmins = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             where: whereCondition,
             include: [
                 {
-                    model: role_1.default, // Include the Role model in the query
+                    model: role_1.default,
                     as: "role", // Use the alias defined in the association (if any)
                 },
             ],
@@ -747,7 +749,7 @@ const getAllCategories = (req, res) => __awaiter(void 0, void 0, void 0, functio
     const { name } = req.query;
     try {
         const categories = yield category_1.default.findAll({
-            where: name ? { name: { [sequelize_1.Op.like]: `%${name}%` } } : {}, // Search by name if provided
+            where: name ? { name: { [sequelize_1.Op.like]: `%${name}%` } } : {},
             attributes: {
                 include: [
                     [
@@ -882,7 +884,7 @@ const getCategoriesWithSubCategories = (req, res) => __awaiter(void 0, void 0, v
                     as: "subCategories", // alias used in the association
                 },
             ],
-            attributes: ["id", "name", "image"], // select specific fields in Category
+            attributes: ["id", "name", "image"],
             order: [["name", "ASC"]], // sort categories alphabetically, for example
         });
         res.status(200).json({ data: categories });
@@ -1561,8 +1563,8 @@ const getGeneralStores = (req, res) => __awaiter(void 0, void 0, void 0, functio
                     ],
                 ],
             },
-            offset, // Apply offset for pagination
-            limit, // Apply limit for pagination
+            offset,
+            limit,
             order: [["createdAt", "DESC"]], // Order stores by creation date, newest first
         });
         // Check if any stores were found
@@ -2004,7 +2006,7 @@ const getAllGeneralOrders = (req, res) => __awaiter(void 0, void 0, void 0, func
                     attributes: [], // Do not include actual order items
                 },
             ],
-            group: ["Order.id"], // Group by order to ensure correct counting
+            group: ["Order.id"],
             order: [["createdAt", "DESC"]], // Order by createdAt
         });
         if (!orders || orders.length === 0) {
@@ -2062,7 +2064,7 @@ const getAllGeneralOrderItems = (req, res) => __awaiter(void 0, void 0, void 0, 
             message: "Order items retrieved successfully",
             data: orderItems,
             pagination: {
-                total: count, // Total number of order items
+                total: count,
                 page: pageNumber,
                 pages: totalPages,
                 limit: limitNumber,
@@ -2114,7 +2116,7 @@ const getGeneralPaymentDetails = (req, res) => __awaiter(void 0, void 0, void 0,
             message: "Payments retrieved successfully",
             data: payments,
             pagination: {
-                total: count, // Total number of payments
+                total: count,
                 page: pageNumber,
                 pages: totalPages,
                 limit: limitNumber,
@@ -2142,9 +2144,9 @@ const getAllSubscribers = (req, res) => __awaiter(void 0, void 0, void 0, functi
         }
         // Fetch vendor subscriptions with pagination and filters
         const subscribers = yield vendorsubscription_1.default.findAndCountAll({
-            where: filters, // Apply filters (if any)
-            limit: Number(limit), // Limit results per page
-            offset, // Offset for pagination
+            where: filters,
+            limit: Number(limit),
+            offset,
             include: [
                 {
                     model: user_1.default,
@@ -2169,7 +2171,7 @@ const getAllSubscribers = (req, res) => __awaiter(void 0, void 0, void 0, functi
             message: "Subscribers retrieved successfully",
             data: subscribers.rows,
             pagination: {
-                total: subscribers.count, // Total number of order items
+                total: subscribers.count,
                 page: Number(page),
                 pages: Math.ceil(subscribers.count / Number(limit)),
                 limit: Number(limit),
@@ -2184,8 +2186,8 @@ const getAllSubscribers = (req, res) => __awaiter(void 0, void 0, void 0, functi
 });
 exports.getAllSubscribers = getAllSubscribers;
 const getStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    var _c;
+    const adminId = (_c = req.admin) === null || _c === void 0 ? void 0 : _c.id;
     try {
         const stores = yield store_1.default.findAll({
             where: { vendorId: adminId },
@@ -2242,8 +2244,8 @@ const getStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.getStore = getStore;
 const createStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    var _d;
+    const adminId = (_d = req.admin) === null || _d === void 0 ? void 0 : _d.id;
     const { currencyId, name, location, logo, businessHours, deliveryOptions, tipsOnFinding } = req.body;
     if (!currencyId) {
         res.status(400).json({ message: 'Currency ID is required.' });
@@ -2288,8 +2290,8 @@ const createStore = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 });
 exports.createStore = createStore;
 const updateStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    var _e;
+    const adminId = (_e = req.admin) === null || _e === void 0 ? void 0 : _e.id;
     const { storeId, currencyId, name, location, businessHours, deliveryOptions, tipsOnFinding, logo } = req.body;
     try {
         const store = yield store_1.default.findOne({ where: { id: storeId } });
@@ -2366,9 +2368,9 @@ const deleteStore = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 exports.deleteStore = deleteStore;
 // Product
 const createProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
-    const _b = req.body, { storeId, categoryId, name } = _b, otherData = __rest(_b, ["storeId", "categoryId", "name"]);
+    var _f;
+    const adminId = (_f = req.admin) === null || _f === void 0 ? void 0 : _f.id;
+    const _g = req.body, { storeId, categoryId, name } = _g, otherData = __rest(_g, ["storeId", "categoryId", "name"]);
     try {
         // Check for duplicates
         const existingProduct = yield product_1.default.findOne({
@@ -2426,9 +2428,9 @@ const createProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.createProduct = createProduct;
 const updateProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const _b = req.body, { productId } = _b, updateData = __rest(_b, ["productId"]);
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    var _h;
+    const _j = req.body, { productId } = _j, updateData = __rest(_j, ["productId"]);
+    const adminId = (_h = req.admin) === null || _h === void 0 ? void 0 : _h.id;
     try {
         const product = yield product_1.default.findOne({
             where: {
@@ -2453,9 +2455,9 @@ const updateProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.updateProduct = updateProduct;
 const deleteProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _k;
     const { productId } = req.query;
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    const adminId = (_k = req.admin) === null || _k === void 0 ? void 0 : _k.id;
     try {
         const product = yield product_1.default.findOne({
             where: {
@@ -2479,8 +2481,8 @@ const deleteProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.deleteProduct = deleteProduct;
 const fetchProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    var _l;
+    const adminId = (_l = req.admin) === null || _l === void 0 ? void 0 : _l.id;
     const { name, sku, status, condition, categoryName } = req.query;
     try {
         const products = yield product_1.default.findAll(Object.assign({ where: { vendorId: adminId }, include: [
@@ -2515,10 +2517,10 @@ const fetchProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.fetchProducts = fetchProducts;
 const viewProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _m;
     // Get productId from route params instead of query
     const { productId } = req.query;
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    const adminId = (_m = req.admin) === null || _m === void 0 ? void 0 : _m.id;
     try {
         const product = yield product_1.default.findOne({
             where: {
@@ -2556,9 +2558,9 @@ const viewProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 });
 exports.viewProduct = viewProduct;
 const moveToDraft = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _o;
     const { productId } = req.query; // Get productId from request query
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    const adminId = (_o = req.admin) === null || _o === void 0 ? void 0 : _o.id;
     try {
         // Validate productId type
         if (typeof productId !== "string") {
@@ -2593,9 +2595,9 @@ const moveToDraft = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 });
 exports.moveToDraft = moveToDraft;
 const changeProductStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _p;
     const { productId, status } = req.body; // Get productId and status from request body
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    const adminId = (_p = req.admin) === null || _p === void 0 ? void 0 : _p.id;
     // Validate status
     if (!["active", "inactive", "draft"].includes(status)) {
         res.status(400).json({ message: "Invalid status." });
@@ -2630,8 +2632,8 @@ const changeProductStatus = (req, res) => __awaiter(void 0, void 0, void 0, func
 exports.changeProductStatus = changeProductStatus;
 // Auction Product
 const createAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    var _q;
+    const adminId = (_q = req.admin) === null || _q === void 0 ? void 0 : _q.id;
     const { storeId, categoryId, name, condition, description, specification, price, bidIncrement, maxBidsPerUser, participantsInterestFee, startDate, endDate, image, additionalImages, } = req.body;
     try {
         // Check if adminId, storeId, and categoryId exist
@@ -2698,8 +2700,8 @@ const createAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.createAuctionProduct = createAuctionProduct;
 const updateAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    var _r;
+    const adminId = (_r = req.admin) === null || _r === void 0 ? void 0 : _r.id;
     const { auctionProductId, storeId, categoryId, name, condition, description, specification, price, bidIncrement, maxBidsPerUser, participantsInterestFee, startDate, endDate, image, additionalImages, } = req.body;
     try {
         // Find the auction product by ID
@@ -2793,9 +2795,9 @@ const updateAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.updateAuctionProduct = updateAuctionProduct;
 const deleteAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _s;
     const { auctionProductId } = req.query;
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    const adminId = (_s = req.admin) === null || _s === void 0 ? void 0 : _s.id;
     try {
         // Find the auction product by ID
         const auctionProduct = yield auctionproduct_1.default.findOne({
@@ -2845,9 +2847,9 @@ const deleteAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.deleteAuctionProduct = deleteAuctionProduct;
 const cancelAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _t;
     const { auctionProductId } = req.query;
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    const adminId = (_t = req.admin) === null || _t === void 0 ? void 0 : _t.id;
     try {
         // Find the auction product by ID
         const auctionProduct = yield auctionproduct_1.default.findOne({
@@ -2890,9 +2892,9 @@ const cancelAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
     }
 });
 exports.cancelAuctionProduct = cancelAuctionProduct;
-const fetchVendorAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+const fetchAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _u;
+    const adminId = (_u = req.admin) === null || _u === void 0 ? void 0 : _u.id;
     const { name, sku, status, condition, categoryName } = req.query;
     try {
         // Fetch all auction products for the vendor
@@ -2937,12 +2939,12 @@ const fetchVendorAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 
         });
     }
 });
-exports.fetchVendorAuctionProducts = fetchVendorAuctionProducts;
+exports.fetchAuctionProducts = fetchAuctionProducts;
 const viewAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _v;
     // Get auctionProductId from route params instead of query
     const { auctionProductId } = req.query;
-    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    const adminId = (_v = req.admin) === null || _v === void 0 ? void 0 : _v.id;
     try {
         const product = yield auctionproduct_1.default.findOne({
             where: {
@@ -3000,8 +3002,8 @@ const getTransactionsForAdmin = (req, res) => __awaiter(void 0, void 0, void 0, 
                 })),
             ],
             where: Object.assign(Object.assign(Object.assign({}, (transactionType && { transactionType: { [sequelize_1.Op.like]: `%${transactionType}%` } })), (refId && { refId: { [sequelize_1.Op.like]: `%${refId}%` } })), (status && { status })),
-            offset, // Apply offset for pagination
-            limit: limitNumber, // Apply limit for pagination
+            offset,
+            limit: limitNumber,
             order: [["createdAt", "DESC"]], // Order by creation date (newest first)
         });
         // Check if transactions were found
@@ -3034,4 +3036,362 @@ const getTransactionsForAdmin = (req, res) => __awaiter(void 0, void 0, void 0, 
     }
 });
 exports.getTransactionsForAdmin = getTransactionsForAdmin;
+// Adverts
+const activeProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _w;
+    const adminId = (_w = req.admin) === null || _w === void 0 ? void 0 : _w.id;
+    const { name } = req.query;
+    try {
+        const products = yield product_1.default.findAll(Object.assign({ where: { vendorId: adminId, status: "active" } }, ((name) && {
+            where: Object.assign({}, (name && { name: { [sequelize_1.Op.like]: `%${name}%` } })),
+        })));
+        res.status(200).json({
+            data: products,
+        });
+    }
+    catch (error) {
+        logger_1.default.error(error);
+        res.status(500).json({ message: "Failed to fetch active products" });
+    }
+});
+exports.activeProducts = activeProducts;
+const createAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _x;
+    const adminId = (_x = req.admin) === null || _x === void 0 ? void 0 : _x.id;
+    const { categoryId, productId, title, description, media_url } = req.body;
+    try {
+        // Check if categoryId and productId exist
+        const categoryExists = yield subcategory_1.default.findByPk(categoryId);
+        const productExists = yield product_1.default.findByPk(productId);
+        if (!categoryExists) {
+            res
+                .status(404)
+                .json({ message: "Category not found." });
+            return;
+        }
+        if (!productExists) {
+            res
+                .status(404)
+                .json({ message: "Product not found." });
+            return;
+        }
+        const newAdvert = yield advert_1.default.create({
+            userId: adminId,
+            categoryId,
+            productId,
+            title,
+            description,
+            media_url,
+            status: "approved"
+        });
+        res.status(201).json({
+            message: "Advert created successfully",
+            data: newAdvert,
+        });
+    }
+    catch (error) {
+        logger_1.default.error(error);
+        res.status(500).json({ message: "Failed to create advert" });
+    }
+});
+exports.createAdvert = createAdvert;
+const updateAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { advertId, categoryId, productId, title, description, media_url } = req.body;
+    try {
+        // Check if categoryId and productId exist
+        const categoryExists = yield subcategory_1.default.findByPk(categoryId);
+        const productExists = yield product_1.default.findByPk(productId);
+        if (!categoryExists) {
+            res
+                .status(404)
+                .json({ message: "Category not found." });
+            return;
+        }
+        if (!productExists) {
+            res
+                .status(404)
+                .json({ message: "Product not found." });
+            return;
+        }
+        const advert = yield advert_1.default.findByPk(advertId);
+        if (!advert) {
+            res.status(404).json({ message: "Advert not found" });
+            return;
+        }
+        advert.categoryId = categoryId || advert.categoryId;
+        advert.productId = productId || advert.productId;
+        advert.title = title || advert.title;
+        advert.description = description || advert.description;
+        advert.media_url = media_url || advert.media_url;
+        yield advert.save();
+        res.status(200).json({
+            message: "Advert updated successfully",
+            data: advert,
+        });
+    }
+    catch (error) {
+        logger_1.default.error(error);
+        res.status(500).json({ message: "Failed to update advert" });
+    }
+});
+exports.updateAdvert = updateAdvert;
+const getAdverts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _y;
+    const { search, page = 1, limit = 10 } = req.query;
+    const adminId = (_y = req.admin) === null || _y === void 0 ? void 0 : _y.id;
+    // Convert `page` and `limit` to numbers and ensure they are valid
+    const pageNumber = parseInt(page, 10) || 1;
+    const limitNumber = parseInt(limit, 10) || 10;
+    const offset = (pageNumber - 1) * limitNumber;
+    try {
+        // Build the where condition for the search query (using Op.or for title and status)
+        const whereConditions = { userId: adminId };
+        if (search) {
+            whereConditions[sequelize_1.Op.or] = [
+                { title: { [sequelize_1.Op.like]: `%${search}%` } },
+                { status: { [sequelize_1.Op.like]: `%${search}%` } },
+            ];
+        }
+        // Fetch adverts with pagination, filters, and associated data
+        const { count, rows: adverts } = yield advert_1.default.findAndCountAll({
+            where: whereConditions,
+            include: [
+                { model: product_1.default, as: "product", attributes: ['id', 'name'] },
+                { model: subcategory_1.default, as: "sub_category" },
+            ],
+            limit: limitNumber,
+            offset,
+            order: [["createdAt", "DESC"]], // Order by latest adverts
+        });
+        // Handle case where no adverts are found
+        if (!adverts || adverts.length === 0) {
+            res.status(404).json({
+                message: "No adverts found",
+                data: [],
+                pagination: {
+                    total: 0,
+                    page: pageNumber,
+                    pages: 0,
+                },
+            });
+            return;
+        }
+        // Calculate total pages
+        const totalPages = Math.ceil(count / limitNumber);
+        // Return paginated results
+        res.status(200).json({
+            message: "Adverts fetched successfully",
+            data: adverts,
+            pagination: {
+                total: count,
+                page: pageNumber,
+                pages: totalPages,
+                limit: limitNumber,
+            },
+        });
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching adverts:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+exports.getAdverts = getAdverts;
+const viewAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const advertId = req.query.advertId;
+    try {
+        const advert = yield advert_1.default.findByPk(advertId, {
+            include: [
+                { model: product_1.default, as: "product" },
+                { model: subcategory_1.default, as: "sub_category" },
+            ],
+        });
+        if (!advert) {
+            res.status(404).json({ message: "Advert not found" });
+            return;
+        }
+        res.status(200).json({
+            message: "Advert fetched successfully",
+            data: advert,
+        });
+    }
+    catch (error) {
+        logger_1.default.error(error);
+        res.status(500).json({ message: "Failed to fetch advert" });
+    }
+});
+exports.viewAdvert = viewAdvert;
+const deleteAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const advertId = req.query.advertId;
+    try {
+        const advert = yield advert_1.default.findByPk(advertId);
+        if (!advert) {
+            res.status(404).json({ message: "Advert not found" });
+            return;
+        }
+        yield advert.destroy();
+        res.status(200).json({
+            message: "Advert deleted successfully",
+        });
+    }
+    catch (error) {
+        logger_1.default.error(error);
+        res.status(500).json({ message: "Failed to delete advert" });
+    }
+});
+exports.deleteAdvert = deleteAdvert;
+const getGeneralAdverts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { search, page = 1, limit = 10 } = req.query;
+    // Convert `page` and `limit` to numbers and ensure they are valid
+    const pageNumber = parseInt(page, 10) || 1;
+    const limitNumber = parseInt(limit, 10) || 10;
+    const offset = (pageNumber - 1) * limitNumber;
+    try {
+        // Build the where condition for the search query (using Op.or for title and status)
+        const whereConditions = {};
+        if (search) {
+            whereConditions[sequelize_1.Op.or] = [
+                { title: { [sequelize_1.Op.like]: `%${search}%` } },
+                { status: { [sequelize_1.Op.like]: `%${search}%` } },
+            ];
+        }
+        // Fetch adverts with pagination, filters, and associated data
+        const { count, rows: adverts } = yield advert_1.default.findAndCountAll({
+            where: whereConditions,
+            include: [
+                {
+                    model: user_1.default,
+                    as: "vendor",
+                    attributes: ["id", "firstName", "lastName", "email"],
+                },
+                {
+                    model: admin_1.default,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
+                },
+                { model: product_1.default, as: "product", attributes: ['id', 'name'] },
+                { model: subcategory_1.default, as: "sub_category" },
+            ],
+            limit: limitNumber,
+            offset,
+            order: [["createdAt", "DESC"]], // Order by latest adverts
+        });
+        // Handle case where no adverts are found
+        if (!adverts || adverts.length === 0) {
+            res.status(404).json({
+                message: "No adverts found",
+                data: [],
+                pagination: {
+                    total: 0,
+                    page: pageNumber,
+                    pages: 0,
+                },
+            });
+            return;
+        }
+        // Calculate total pages
+        const totalPages = Math.ceil(count / limitNumber);
+        // Return paginated results
+        res.status(200).json({
+            message: "Adverts fetched successfully",
+            data: adverts,
+            pagination: {
+                total: count,
+                page: pageNumber,
+                pages: totalPages,
+                limit: limitNumber,
+            },
+        });
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching adverts:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+exports.getGeneralAdverts = getGeneralAdverts;
+const viewGeneralAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const advertId = req.query.advertId;
+    try {
+        const advert = yield advert_1.default.findByPk(advertId, {
+            include: [
+                {
+                    model: user_1.default,
+                    as: "vendor",
+                    attributes: ["id", "firstName", "lastName", "email"],
+                },
+                {
+                    model: admin_1.default,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
+                },
+                { model: product_1.default, as: "product" },
+                { model: subcategory_1.default, as: "sub_category" },
+            ],
+        });
+        if (!advert) {
+            res.status(404).json({ message: "Advert not found" });
+            return;
+        }
+        res.status(200).json({
+            message: "Advert fetched successfully",
+            data: advert,
+        });
+    }
+    catch (error) {
+        logger_1.default.error(error);
+        res.status(500).json({ message: "Failed to fetch advert" });
+    }
+});
+exports.viewGeneralAdvert = viewGeneralAdvert;
+const approveOrRejectAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { advertId, status, adminNote } = req.body;
+    // Validate required fields
+    if (!advertId || !status) {
+        res.status(400).json({ message: "Advert ID and status are required." });
+        return;
+    }
+    // Validate status value
+    if (!["approved", "rejected"].includes(status)) {
+        res.status(400).json({ message: "Invalid status. Only 'approved' or 'rejected' allowed." });
+        return;
+    }
+    // If rejected, ensure adminNote is provided
+    if (status === "rejected" && !adminNote) {
+        res.status(400).json({ message: "Admin note is required when rejecting an advert." });
+        return;
+    }
+    try {
+        // Find the advert
+        const advert = yield advert_1.default.findByPk(advertId);
+        if (!advert) {
+            res.status(404).json({ message: "Advert not found." });
+            return;
+        }
+        // Update the advert status
+        advert.status = status;
+        if (status === "rejected") {
+            advert.adminNote = adminNote;
+        }
+        // Save the changes
+        yield advert.save();
+        // Send notification
+        yield notification_1.default.create({
+            userId: advert.userId,
+            title: `Your advert has been ${status}`,
+            message: status === "approved"
+                ? "Your advert has been approved and is now live."
+                : `Your advert was rejected. Reason: ${adminNote}`,
+            type: "advert_status",
+            isRead: false,
+        });
+        res.status(200).json({
+            message: `Advert ${status} successfully.`,
+            data: advert,
+        });
+    }
+    catch (error) {
+        logger_1.default.error("Error updating advert status:", error);
+        res.status(500).json({ message: "Failed to update advert status." });
+    }
+});
+exports.approveOrRejectAdvert = approveOrRejectAdvert;
 //# sourceMappingURL=adminController.js.map

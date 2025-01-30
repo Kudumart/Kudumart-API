@@ -58,19 +58,19 @@ const initModel = (sequelize) => {
             allowNull: true // Address or general location
         },
         businessHours: {
-            type: sequelize_1.DataTypes.JSON, // Example: { "Monday-Friday": "9am - 6pm", "Saturday": "10am - 4pm" }
+            type: sequelize_1.DataTypes.JSON,
             allowNull: true
         },
         deliveryOptions: {
-            type: sequelize_1.DataTypes.JSON, // Example: { "Standard": "5-7 days", "Express": "2-3 days" }
+            type: sequelize_1.DataTypes.JSON,
             allowNull: true
         },
         tipsOnFinding: {
-            type: sequelize_1.DataTypes.TEXT, // Any tips for finding the store, e.g., "Near Central Mall, second floor"
+            type: sequelize_1.DataTypes.TEXT,
             allowNull: true
         },
         logo: {
-            type: sequelize_1.DataTypes.TEXT, // Any tips for finding the store, e.g., "Near Central Mall, second floor"
+            type: sequelize_1.DataTypes.TEXT,
             allowNull: true
         },
         isVerified: {

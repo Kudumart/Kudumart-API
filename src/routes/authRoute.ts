@@ -29,4 +29,6 @@ authRoutes.get("/stores", homeController.getAllStores);
 authRoutes.get('/store/products', homeController.getStoreProducts); // Fetch a single product by ID
 authRoutes.get("/auction/products", homeController.getUpcomingAuctionProducts);
 authRoutes.get('/auction/product', homeController.getAuctionProductById); // Fetch a single product by ID
+
+authRoutes.get('/adverts', homeController.getAdverts);
 export default authRoutes; // Export the router
