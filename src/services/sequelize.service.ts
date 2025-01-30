@@ -25,7 +25,7 @@ const sequelizeService = {
         process.env.DB_PASS!,
         {
           host: process.env.DB_HOST!,
-          dialect: process.env.DB_DIALECT as any,
+          dialect: process.env.DB_DIALECT as any || 'mysql',
           logging: false,
           define: {
             timestamps: true,
