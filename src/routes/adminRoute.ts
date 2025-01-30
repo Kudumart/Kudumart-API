@@ -16,6 +16,8 @@ import {
     addProductValidation,
     updateProductValidation,
     auctionProductValidation,
+    createAdvertValidation,
+    updateAdvertValidation,
     validate,
     updateAuctionProductValidation } from '../utils/validations'; // Import the service
 import checkPermission from '../middlewares/checkPermissionMiddleware';
@@ -110,15 +112,14 @@ adminRoutes.patch("/products/move-to-draft", adminAuthMiddleware, adminControlle
 adminRoutes.patch("/products/change-status", adminAuthMiddleware, adminController.changeProductStatus);
 
 // Auction Product
-adminRoutes.get("/auction/products", adminAuthMiddleware, adminController.fetchVendorAuctionProducts);
+adminRoutes.get("/auction/products", adminAuthMiddleware, adminController.fetchAuctionProducts);
 adminRoutes.post("/auction/products", adminAuthMiddleware, auctionProductValidation(), validate, adminController.createAuctionProduct);
 adminRoutes.put("/auction/products", adminAuthMiddleware, updateAuctionProductValidation(), validate, adminController.updateAuctionProduct);
 adminRoutes.delete("/auction/products", adminAuthMiddleware, adminController.deleteAuctionProduct);
 adminRoutes.patch("/auction/products", adminAuthMiddleware, adminController.cancelAuctionProduct);
 adminRoutes.get("/auction/product", adminAuthMiddleware, adminController.viewAuctionProduct);
 
-
-//General Store | Product | Auction Products
+//General Store | Product | Auction Products | Adverts
 adminRoutes.get("/general/stores", adminAuthMiddleware, adminController.getGeneralStores);
 adminRoutes.get("/general/store/view", adminAuthMiddleware, adminController.viewGeneralStore);
 adminRoutes.get("/general/products", adminAuthMiddleware, adminController.getGeneralProducts);
@@ -130,11 +131,20 @@ adminRoutes.delete("/general/auction/product/delete", adminAuthMiddleware, admin
 adminRoutes.get("/general/orders", adminAuthMiddleware, adminController.getAllGeneralOrders);
 adminRoutes.get("/general/order/items", adminAuthMiddleware, adminController.getAllGeneralOrderItems);
 adminRoutes.get("/general/order/payment", adminAuthMiddleware, adminController.getGeneralPaymentDetails);
-
+adminRoutes.get("/general/adverts", adminAuthMiddleware, adminController.getGeneralAdverts);
+adminRoutes.get("/general/advert/view", adminAuthMiddleware, adminController.viewGeneralAdvert);
 // Subscribers
 adminRoutes.get("/subscribers", adminAuthMiddleware, adminController.getAllSubscribers);
 
 // Transactions
 adminRoutes.get("/transactions", adminAuthMiddleware, adminController.getTransactionsForAdmin);
+
+// Adverts
+adminRoutes.get("/active/products", adminAuthMiddleware, adminController.activeProducts); // Create a new advert
+adminRoutes.post("/adverts", createAdvertValidation(), validate, adminAuthMiddleware, adminController.createAdvert); // Create a new advert
+adminRoutes.put("/adverts", updateAdvertValidation(), validate, adminAuthMiddleware, adminController.updateAdvert); // Update an existing advert
+adminRoutes.get("/adverts", adminAuthMiddleware, adminController.getAdverts); // Get adverts
+adminRoutes.get("/advert", adminAuthMiddleware, adminController.viewAdvert); // View a specific advert
+adminRoutes.delete("/adverts", adminAuthMiddleware, adminController.deleteAdvert); // Delete an advert
 
 export default adminRoutes; // Export the router

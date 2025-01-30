@@ -1,89 +1,97 @@
-// src/controllers/userController.ts
-import { Request, Response, NextFunction } from "express";
-import bcrypt from "bcrypt";
-import { Op, Sequelize, ForeignKeyConstraintError } from "sequelize";
-import { v4 as uuidv4 } from "uuid";
-import { generateOTP } from "../utils/helpers";
-import { sendMail } from "../services/mail.service";
-import { emailTemplates } from "../utils/messages";
-import JwtService from "../services/jwt.service";
-import logger from "../middlewares/logger"; // Adjust the path to your logger.js
-import { capitalizeFirstLetter } from "../utils/helpers";
-import Admin from "../models/admin";
-import Role from "../models/role";
-import Permission from "../models/permission";
-import RolePermission from "../models/rolepermission";
-import SubscriptionPlan from "../models/subscriptionplan";
-import Category from "../models/category";
-import SubCategory from "../models/subcategory";
-import User from "../models/user";
-import KYC from "../models/kyc";
-import PaymentGateway from "../models/paymentgateway";
-import Currency from "../models/currency";
-import { log } from "console";
-import Product from "../models/product";
-import Store from "../models/store";
-import AuctionProduct from "../models/auctionproduct";
-import Order from "../models/order";
-import OrderItem from "../models/orderitem";
-import Payment from "../models/payment";
-import Bid from "../models/bid";
-import VendorSubscription from "../models/vendorsubscription";
-import sequelizeService from "../services/sequelize.service";
-import Transaction from "../models/transaction";
-import Advert from "../models/advert";
-
-// Extend the Express Request interface to include adminId and admin
-interface AuthenticatedRequest extends Request {
-    adminId?: string;
-    admin?: Admin; // This is the instance type of the Admin model
-}
-
-export const logout = async (req: Request, res: Response): Promise<void> => {
+"use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getGeneralProducts = exports.viewGeneralStore = exports.getGeneralStores = exports.viewUser = exports.toggleUserStatus = exports.getAllVendors = exports.getAllCustomers = exports.deleteCurrency = exports.getAllCurrencies = exports.updateCurrency = exports.addCurrency = exports.setPaymentGatewayActive = exports.getAllPaymentGateways = exports.deletePaymentGateway = exports.updatePaymentGateway = exports.createPaymentGateway = exports.approveOrRejectKYC = exports.getAllKYC = exports.getAllSubCategories = exports.deleteSubCategory = exports.updateSubCategory = exports.createSubCategory = exports.getCategoriesWithSubCategories = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getAllCategories = exports.deleteSubscriptionPlan = exports.updateSubscriptionPlan = exports.createSubscriptionPlan = exports.getAllSubscriptionPlans = exports.deletePermission = exports.updatePermission = exports.getPermissions = exports.createPermission = exports.deletePermissionFromRole = exports.assignPermissionToRole = exports.viewRolePermissions = exports.updateRole = exports.getRoles = exports.createRole = exports.resendLoginDetailsSubAdmin = exports.deleteSubAdmin = exports.deactivateOrActivateSubAdmin = exports.updateSubAdmin = exports.createSubAdmin = exports.subAdmins = exports.updatePassword = exports.updateProfile = exports.logout = void 0;
+exports.getTransactionsForAdmin = exports.viewAuctionProduct = exports.fetchVendorAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.getStore = exports.getAllSubscribers = exports.getGeneralPaymentDetails = exports.getAllGeneralOrderItems = exports.getAllGeneralOrders = exports.deleteGeneralAuctionProduct = exports.viewGeneralAuctionProduct = exports.getGeneralAuctionProducts = exports.deleteGeneralProduct = exports.viewGeneralProduct = void 0;
+const sequelize_1 = require("sequelize");
+const uuid_1 = require("uuid");
+const mail_service_1 = require("../services/mail.service");
+const messages_1 = require("../utils/messages");
+const jwt_service_1 = __importDefault(require("../services/jwt.service"));
+const logger_1 = __importDefault(require("../middlewares/logger")); // Adjust the path to your logger.js
+const helpers_1 = require("../utils/helpers");
+const admin_1 = __importDefault(require("../models/admin"));
+const role_1 = __importDefault(require("../models/role"));
+const permission_1 = __importDefault(require("../models/permission"));
+const rolepermission_1 = __importDefault(require("../models/rolepermission"));
+const subscriptionplan_1 = __importDefault(require("../models/subscriptionplan"));
+const category_1 = __importDefault(require("../models/category"));
+const subcategory_1 = __importDefault(require("../models/subcategory"));
+const user_1 = __importDefault(require("../models/user"));
+const kyc_1 = __importDefault(require("../models/kyc"));
+const paymentgateway_1 = __importDefault(require("../models/paymentgateway"));
+const currency_1 = __importDefault(require("../models/currency"));
+const product_1 = __importDefault(require("../models/product"));
+const store_1 = __importDefault(require("../models/store"));
+const auctionproduct_1 = __importDefault(require("../models/auctionproduct"));
+const order_1 = __importDefault(require("../models/order"));
+const orderitem_1 = __importDefault(require("../models/orderitem"));
+const payment_1 = __importDefault(require("../models/payment"));
+const bid_1 = __importDefault(require("../models/bid"));
+const vendorsubscription_1 = __importDefault(require("../models/vendorsubscription"));
+const sequelize_service_1 = __importDefault(require("../services/sequelize.service"));
+const transaction_1 = __importDefault(require("../models/transaction"));
+const logout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Get the token from the request
-        const token = JwtService.jwtGetToken(req);
-
+        const token = jwt_service_1.default.jwtGetToken(req);
         if (!token) {
             res.status(400).json({
                 message: "Token not provided",
             });
             return;
         }
-
         // Blacklist the token to prevent further usage
-        await JwtService.jwtBlacklistToken(token);
-
+        yield jwt_service_1.default.jwtBlacklistToken(token);
         res.status(200).json({
             message: "Logged out successfully.",
         });
-    } catch (error: any) {
-        logger.error(error);
+    }
+    catch (error) {
+        logger_1.default.error(error);
         res.status(500).json({
             message: "Server error during logout.",
         });
     }
-};
-
-export const updateProfile = async (
-    req: AuthenticatedRequest,
-    res: Response
-): Promise<void> => {
+});
+exports.logout = logout;
+const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         const { name, email, photo } = req.body;
-        const adminId = req.admin?.id;
-
+        const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
         // Fetch the admin by their ID
-        const admin = await Admin.findByPk(adminId);
+        const admin = yield admin_1.default.findByPk(adminId);
         if (!admin) {
             res.status(404).json({ message: "Admin not found." });
             return;
         }
-
         // Check if email is being updated
         if (email && email !== admin.email) {
             // Check if the email already exists for another user
-            const emailExists = await Admin.findOne({ where: { email } });
+            const emailExists = yield admin_1.default.findOne({ where: { email } });
             if (emailExists) {
                 res
                     .status(400)
@@ -91,212 +99,172 @@ export const updateProfile = async (
                 return;
             }
         }
-
         // Update admin profile information
-        admin.name = name ? capitalizeFirstLetter(name) : admin.name;
+        admin.name = name ? (0, helpers_1.capitalizeFirstLetter)(name) : admin.name;
         admin.photo = photo || admin.photo;
         admin.email = email || admin.email;
-
-        await admin.save();
-
+        yield admin.save();
         res.status(200).json({
             message: "Profile updated successfully.",
             data: admin,
         });
-    } catch (error: any) {
-        logger.error("Error updating admin profile:", error);
-
+    }
+    catch (error) {
+        logger_1.default.error("Error updating admin profile:", error);
         res.status(500).json({
             message: "Server error during profile update.",
         });
     }
-};
-
-export const updatePassword = async (
-    req: AuthenticatedRequest,
-    res: Response
-): Promise<void> => {
+});
+exports.updateProfile = updateProfile;
+const updatePassword = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     const { oldPassword, newPassword, confirmNewPassword } = req.body;
-    const adminId = req.admin?.id;
-
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     // Validate that new passwords match
     if (newPassword !== confirmNewPassword) {
         res.status(400).json({ message: "New passwords do not match." });
         return;
     }
-
     // Validate new password strength (example: length and complexity)
     if (newPassword.length < 8) {
         res.status(400).json({ message: "New password must be at least 8 characters long." });
         return;
     }
-
     try {
         // Find the admin
-        const admin = await Admin.scope("auth").findByPk(adminId);
+        const admin = yield admin_1.default.scope("auth").findByPk(adminId);
         if (!admin) {
             res.status(404).json({ message: "Admin not found." });
             return;
         }
-
         // Check if the old password is correct
-        const isMatch = await admin.checkPassword(oldPassword);
+        const isMatch = yield admin.checkPassword(oldPassword);
         if (!isMatch) {
             res.status(400).json({ message: "Old password is incorrect." });
             return;
         }
-
         // Update the password in the database
         admin.password = newPassword;
-        await admin.save();
-
+        yield admin.save();
         // Send password reset notification email
-        const message = emailTemplates.adminPasswordResetNotification(admin);
+        const message = messages_1.emailTemplates.adminPasswordResetNotification(admin);
         try {
-            await sendMail(
-                admin.email,
-                `${process.env.APP_NAME} - Password Reset Notification`,
-                message
-            );
-        } catch (emailError) {
-            logger.error("Error sending email:", emailError); // Log error for internal use
+            yield (0, mail_service_1.sendMail)(admin.email, `${process.env.APP_NAME} - Password Reset Notification`, message);
+        }
+        catch (emailError) {
+            logger_1.default.error("Error sending email:", emailError); // Log error for internal use
             // Continue with password update even if email fails
         }
-
         res.status(200).json({
             message: "Password updated successfully.",
         });
-    } catch (error) {
-        logger.error("Error updating password:", error);
-
+    }
+    catch (error) {
+        logger_1.default.error("Error updating password:", error);
         res.status(500).json({
             message: "Server error during password update.",
         });
     }
-};
-
-export const subAdmins = async (
-    req: AuthenticatedRequest,
-    res: Response
-): Promise<void> => {
+});
+exports.updatePassword = updatePassword;
+const subAdmins = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { name, email } = req.query; // Get the search query parameters
-
         // Build the where condition dynamically based on the presence of name and email
-        const whereCondition: any = {};
-
+        const whereCondition = {};
         if (name) {
             whereCondition.name = {
-                [Op.like]: `%${name}%`, // Use LIKE for case-insensitive match
+                [sequelize_1.Op.like]: `%${name}%`, // Use LIKE for case-insensitive match
             };
         }
-
         if (email) {
             whereCondition.email = {
-                [Op.like]: `%${email}%`, // Use LIKE for case-insensitive match
+                [sequelize_1.Op.like]: `%${email}%`, // Use LIKE for case-insensitive match
             };
         }
-
         // Fetch sub-admins along with their roles, applying the search conditions
-        const subAdmins = await Admin.findAll({
+        const subAdmins = yield admin_1.default.findAll({
             where: whereCondition,
             include: [
                 {
-                    model: Role, // Include the Role model in the query
+                    model: role_1.default, // Include the Role model in the query
                     as: "role", // Use the alias defined in the association (if any)
                 },
             ],
         });
-
         if (subAdmins.length === 0) {
             res.status(404).json({ message: "Sub-admins not found" });
             return;
         }
-
         res
             .status(200)
             .json({ message: "Sub-admins retrieved successfully", data: subAdmins });
-    } catch (error) {
-        logger.error("Error retrieving sub-admins:", error);
+    }
+    catch (error) {
+        logger_1.default.error("Error retrieving sub-admins:", error);
         res.status(500).json({ message: `Error retrieving sub-admins: ${error}` });
     }
-};
-
-export const createSubAdmin = async (
-    req: AuthenticatedRequest,
-    res: Response
-): Promise<void> => {
+});
+exports.subAdmins = subAdmins;
+const createSubAdmin = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { name, email, roleId } = req.body;
-
         // Check if the email already exists
-        const existingSubAdmin = await Admin.findOne({ where: { email } });
+        const existingSubAdmin = yield admin_1.default.findOne({ where: { email } });
         if (existingSubAdmin) {
             res.status(400).json({ message: "Email already in use" });
             return;
         }
-
         // Generate a random password (you can change this to your desired method)
         const password = Math.random().toString(36).slice(-8);
-
-        const checkRole = await Role.findByPk(roleId);
+        const checkRole = yield role_1.default.findByPk(roleId);
         if (!checkRole) {
             res.status(404).json({ message: "Role not found" });
             return;
         }
-
         // Create the sub-admin
-        const newSubAdmin = await Admin.create({
+        const newSubAdmin = yield admin_1.default.create({
             name,
             email,
             password: password,
             roleId,
             status: "active", // Default status
         });
-
         // Send mail
-        let message = emailTemplates.subAdminCreated(newSubAdmin, password);
+        let message = messages_1.emailTemplates.subAdminCreated(newSubAdmin, password);
         try {
-            await sendMail(
-                email,
-                `${process.env.APP_NAME} - Your Sub-Admin Login Details`,
-                message
-            );
-        } catch (emailError) {
-            logger.error("Error sending email:", emailError); // Log error for internal use
+            yield (0, mail_service_1.sendMail)(email, `${process.env.APP_NAME} - Your Sub-Admin Login Details`, message);
         }
-
+        catch (emailError) {
+            logger_1.default.error("Error sending email:", emailError); // Log error for internal use
+        }
         res.status(200).json({ message: "Sub Admin created successfully." });
-    } catch (error) {
-        logger.error(error);
+    }
+    catch (error) {
+        logger_1.default.error(error);
         res.status(500).json({ message: `Error creating sub-admin: ${error}` });
     }
-};
-
-export const updateSubAdmin = async (
-    req: AuthenticatedRequest,
-    res: Response
-): Promise<void> => {
+});
+exports.createSubAdmin = createSubAdmin;
+const updateSubAdmin = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { subAdminId, name, email, roleId } = req.body;
-
     try {
         // Find the sub-admin by their ID
-        const subAdmin = await Admin.findByPk(subAdminId);
+        const subAdmin = yield admin_1.default.findByPk(subAdminId);
         if (!subAdmin) {
             res.status(404).json({ message: "Sub-admin not found" });
             return;
         }
-
         // Check if the email is already in use by another sub-admin
         if (email && email !== subAdmin.email) {
             // Only check if the email has changed
-            const existingAdmin = await Admin.findOne({
+            const existingAdmin = yield admin_1.default.findOne({
                 where: {
                     email,
-                    id: { [Op.ne]: subAdminId }, // Ensure it's not the same sub-admin
+                    id: { [sequelize_1.Op.ne]: subAdminId }, // Ensure it's not the same sub-admin
                 },
             });
-
             if (existingAdmin) {
                 res
                     .status(400)
@@ -304,484 +272,381 @@ export const updateSubAdmin = async (
                 return;
             }
         }
-
         // Update sub-admin details
-        await subAdmin.update({
+        yield subAdmin.update({
             name,
             email,
             roleId,
         });
-
         res.status(200).json({ message: "Sub Admin updated successfully." });
-    } catch (error) {
+    }
+    catch (error) {
         // Log and send the error message in the response
-        logger.error("Error updating sub-admin:", error);
+        logger_1.default.error("Error updating sub-admin:", error);
         res.status(500).json({ message: `Error updating sub-admin: ${error}` });
     }
-};
-
-export const deactivateOrActivateSubAdmin = async (
-    req: AuthenticatedRequest,
-    res: Response
-): Promise<void> => {
+});
+exports.updateSubAdmin = updateSubAdmin;
+const deactivateOrActivateSubAdmin = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { subAdminId } = req.body;
-
     try {
         // Find the sub-admin by ID
-        const subAdmin = await Admin.findByPk(subAdminId);
+        const subAdmin = yield admin_1.default.findByPk(subAdminId);
         if (!subAdmin) {
             res.status(404).json({ message: "Sub-admin not found" });
             return;
         }
-
         // Toggle status: if active, set to inactive; if inactive, set to active
         const newStatus = subAdmin.status === "active" ? "inactive" : "active";
         subAdmin.status = newStatus;
-
         // Save the updated status
-        await subAdmin.save();
-
+        yield subAdmin.save();
         res
             .status(200)
             .json({ message: `Sub-admin status updated to ${newStatus}.` });
-    } catch (error) {
+    }
+    catch (error) {
         // Log the error and send the response
-        logger.error("Error updating sub-admin status:", error);
+        logger_1.default.error("Error updating sub-admin status:", error);
         res
             .status(500)
             .json({ message: `Error updating sub-admin status: ${error}` });
     }
-};
-
-export const deleteSubAdmin = async (
-    req: AuthenticatedRequest,
-    res: Response
-): Promise<void> => {
-    const subAdminId = req.query.subAdminId as string;
-
+});
+exports.deactivateOrActivateSubAdmin = deactivateOrActivateSubAdmin;
+const deleteSubAdmin = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const subAdminId = req.query.subAdminId;
     try {
-        const subAdmin = await Admin.findByPk(subAdminId);
+        const subAdmin = yield admin_1.default.findByPk(subAdminId);
         if (!subAdmin) {
             res.status(404).json({ message: "Sub-admin not found" });
             return;
         }
-
-        await subAdmin.destroy();
+        yield subAdmin.destroy();
         res.status(200).json({ message: "Sub-admin deleted successfully" });
-    } catch (error) {
-        logger.error(error);
+    }
+    catch (error) {
+        logger_1.default.error(error);
         res
             .status(500)
             .json({ message: "Error deleting sub-admin: ${error.message}" });
     }
-};
-
-export const resendLoginDetailsSubAdmin = async (
-    req: AuthenticatedRequest,
-    res: Response
-): Promise<void> => {
+});
+exports.deleteSubAdmin = deleteSubAdmin;
+const resendLoginDetailsSubAdmin = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { subAdminId } = req.body;
-
     try {
-        const subAdmin = await Admin.findByPk(subAdminId);
-
+        const subAdmin = yield admin_1.default.findByPk(subAdminId);
         if (!subAdmin) {
             res.status(404).json({ message: "Sub-admin not found" });
             return;
         }
-
         // Generate a new password (or reuse the existing one)
         const password = Math.random().toString(36).slice(-8);
-
         // Update the password in the database
         subAdmin.password = password;
-        await subAdmin.save();
-
+        yield subAdmin.save();
         // Send mail
-        let message = emailTemplates.subAdminCreated(subAdmin, password);
+        let message = messages_1.emailTemplates.subAdminCreated(subAdmin, password);
         try {
-            await sendMail(
-                subAdmin.email,
-                `${process.env.APP_NAME} - Your New Login Details`,
-                message
-            );
-        } catch (emailError) {
-            logger.error("Error sending email:", emailError); // Log error for internal use
+            yield (0, mail_service_1.sendMail)(subAdmin.email, `${process.env.APP_NAME} - Your New Login Details`, message);
         }
-
+        catch (emailError) {
+            logger_1.default.error("Error sending email:", emailError); // Log error for internal use
+        }
         res.status(200).json({ message: "Login details resent successfully" });
-    } catch (error) {
-        logger.error(error);
+    }
+    catch (error) {
+        logger_1.default.error(error);
         res
             .status(500)
             .json({ message: "Error resending login details: ${error.message}" });
     }
-};
-
+});
+exports.resendLoginDetailsSubAdmin = resendLoginDetailsSubAdmin;
 // Roles
 // Create a new Role
-export const createRole = async (
-    req: AuthenticatedRequest,
-    res: Response
-): Promise<void> => {
+const createRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { name } = req.body;
-
     try {
         if (!name) {
             res.status(400).json({ message: "Name is required." });
             return;
         }
-
         // Check if a role with the same name already exists
-        const existingRole = await Role.findOne({ where: { name } });
+        const existingRole = yield role_1.default.findOne({ where: { name } });
         if (existingRole) {
             res.status(409).json({ message: "Role with this name already exists." });
             return;
         }
-
         // Create the new role
-        const role = await Role.create({ name });
+        const role = yield role_1.default.create({ name });
         res.status(200).json({ message: "Role created successfully" });
-    } catch (error) {
-        logger.error("Error creating role:", error);
+    }
+    catch (error) {
+        logger_1.default.error("Error creating role:", error);
         res.status(500).json({ message: "Internal server error" });
     }
-};
-
+});
+exports.createRole = createRole;
 // Get all Roles
-export const getRoles = async (
-    req: AuthenticatedRequest,
-    res: Response
-): Promise<void> => {
+const getRoles = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const roles = await Role.findAll();
+        const roles = yield role_1.default.findAll();
         res.status(200).json({ data: roles });
-    } catch (error) {
-        logger.error("Error fetching roles:", error);
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching roles:", error);
         res.status(500).json({ message: "Internal server error" });
     }
-};
-
+});
+exports.getRoles = getRoles;
 // Update an existing Role
-export const updateRole = async (
-    req: AuthenticatedRequest,
-    res: Response
-): Promise<void> => {
+const updateRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { roleId, name } = req.body;
-
     try {
         if (!name) {
             res.status(400).json({ message: "Name is required." });
             return;
         }
-
-        const role = await Role.findByPk(roleId);
-
+        const role = yield role_1.default.findByPk(roleId);
         if (!role) {
             res.status(404).json({ message: "Role not found" });
             return;
         }
-
         // Check if another role with the same name exists
-        const existingRole = await Role.findOne({
-            where: { name, id: { [Op.ne]: roleId } }, // Exclude the current role ID
+        const existingRole = yield role_1.default.findOne({
+            where: { name, id: { [sequelize_1.Op.ne]: roleId } }, // Exclude the current role ID
         });
-
         if (existingRole) {
             res
                 .status(409)
                 .json({ message: "Another role with this name already exists." });
             return;
         }
-
         // Update the role name
         role.name = name;
-        await role.save();
-
+        yield role.save();
         res.status(200).json({ message: "Role updated successfully", role });
-    } catch (error) {
-        logger.error("Error updating role:", error);
+    }
+    catch (error) {
+        logger_1.default.error("Error updating role:", error);
         res.status(500).json({ message: "Internal server error" });
     }
-};
-
+});
+exports.updateRole = updateRole;
 // View a Role's Permissions
-export const viewRolePermissions = async (
-    req: AuthenticatedRequest,
-    res: Response
-): Promise<void> => {
-    const roleId = req.query.roleId as string;
-
+const viewRolePermissions = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const roleId = req.query.roleId;
     try {
-        const role = await Role.findByPk(roleId, {
-            include: [{ model: Permission, as: "permissions" }],
+        const role = yield role_1.default.findByPk(roleId, {
+            include: [{ model: permission_1.default, as: "permissions" }],
         });
-
         if (!role) {
             res.status(404).json({ message: "Role not found" });
             return;
         }
-
         res.status(200).json({ data: role });
-    } catch (error) {
-        logger.error("Error fetching role permissions:", error);
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching role permissions:", error);
         res.status(500).json({ message: "Internal server error" });
     }
-};
-
+});
+exports.viewRolePermissions = viewRolePermissions;
 // Assign a New Permission to a Role
-export const assignPermissionToRole = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+const assignPermissionToRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { roleId, permissionId } = req.body;
-
     try {
         // Ensure role and permission exist
-        const role = await Role.findByPk(roleId);
-
-        const permission = await Permission.findByPk(permissionId);
-
+        const role = yield role_1.default.findByPk(roleId);
+        const permission = yield permission_1.default.findByPk(permissionId);
         if (!role || !permission) {
             res.status(404).json({ message: "Role or Permission not found" });
             return;
         }
-
         // Check if the permission is already assigned to the role
-        const existingRolePermission = await RolePermission.findOne({
+        const existingRolePermission = yield rolepermission_1.default.findOne({
             where: { roleId, permissionId },
         });
-
         if (existingRolePermission) {
             res
                 .status(409)
                 .json({ message: "Permission is already assigned to this role" });
             return;
         }
-
         // Assign permission to role
-        await RolePermission.create({ roleId, permissionId });
-
+        yield rolepermission_1.default.create({ roleId, permissionId });
         res
             .status(200)
             .json({ message: "Permission assigned to role successfully" });
-    } catch (error) {
-        logger.error("Error assigning permission to role:", error);
+    }
+    catch (error) {
+        logger_1.default.error("Error assigning permission to role:", error);
         res.status(500).json({ message: "Internal server error" });
     }
-};
-
+});
+exports.assignPermissionToRole = assignPermissionToRole;
 // Delete a Permission from a Role
-export const deletePermissionFromRole = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+const deletePermissionFromRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { roleId, permissionId } = req.query;
-
     try {
-        const role = await Role.findOne({
+        const role = yield role_1.default.findOne({
             where: { id: roleId },
         });
-
         if (!role) {
             res.status(404).json({ message: "Role not found" });
             return;
         }
-
-        const rolePermission = await RolePermission.findOne({
+        const rolePermission = yield rolepermission_1.default.findOne({
             where: { roleId, permissionId },
         });
-
         if (!rolePermission) {
             res.status(404).json({ message: "Permission not found for the role" });
             return;
         }
-
-        await rolePermission.destroy();
-
+        yield rolePermission.destroy();
         res
             .status(200)
             .json({ message: "Permission removed from role successfully" });
-    } catch (error) {
-        logger.error("Error deleting permission from role:", error);
+    }
+    catch (error) {
+        logger_1.default.error("Error deleting permission from role:", error);
         res.status(500).json({ message: "Internal server error" });
     }
-};
-
+});
+exports.deletePermissionFromRole = deletePermissionFromRole;
 // Permission
 // Create a new Permission
-export const createPermission = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+const createPermission = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { name } = req.body;
-
     try {
         if (!name) {
             res.status(400).json({ message: "Name is required." });
             return;
         }
-
         // Check if permission name already exists
-        const existingPermission = await Permission.findOne({ where: { name } });
+        const existingPermission = yield permission_1.default.findOne({ where: { name } });
         if (existingPermission) {
             res.status(409).json({ message: "Permission name already exists." });
             return;
         }
-
         // Create new permission if it doesn't exist
-        const permission = await Permission.create({ name });
+        const permission = yield permission_1.default.create({ name });
         res.status(201).json({
             message: "Permission created successfully",
         });
-    } catch (error) {
-        logger.error("Error creating permission:", error);
+    }
+    catch (error) {
+        logger_1.default.error("Error creating permission:", error);
         res.status(500).json({ message: "Internal server error" });
     }
-};
-
+});
+exports.createPermission = createPermission;
 // Get all Permissions
-export const getPermissions = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+const getPermissions = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const permissions = await Permission.findAll();
+        const permissions = yield permission_1.default.findAll();
         res.status(200).json({ data: permissions });
-    } catch (error) {
-        logger.error("Error fetching permissions:", error);
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching permissions:", error);
         res.status(500).json({ message: "Internal server error" });
     }
-};
-
+});
+exports.getPermissions = getPermissions;
 // Update an existing Permission
-export const updatePermission = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+const updatePermission = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { permissionId, name } = req.body;
-
     try {
         if (!name) {
             res.status(400).json({ message: "Name is required." });
             return;
         }
-
-        const permission = await Permission.findByPk(permissionId);
-
+        const permission = yield permission_1.default.findByPk(permissionId);
         if (!permission) {
             res.status(404).json({ message: "Permission not found" });
             return;
         }
-
         // Check if the new name exists in another permission
-        const existingPermission = await Permission.findOne({
+        const existingPermission = yield permission_1.default.findOne({
             where: {
                 name,
-                id: { [Op.ne]: permissionId }, // Exclude current permission
+                id: { [sequelize_1.Op.ne]: permissionId }, // Exclude current permission
             },
         });
-
         if (existingPermission) {
             res.status(409).json({ message: "Permission name already exists." });
             return;
         }
-
         permission.name = name;
-        await permission.save();
-
+        yield permission.save();
         res.status(200).json({ message: "Permission updated successfully" });
-    } catch (error) {
-        logger.error("Error updating permission:", error);
+    }
+    catch (error) {
+        logger_1.default.error("Error updating permission:", error);
         res.status(500).json({ message: "Internal server error" });
     }
-};
-
+});
+exports.updatePermission = updatePermission;
 // Delete a Permission and cascade delete from role_permissions
-export const deletePermission = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+const deletePermission = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const permissionId = req.query.permissionId as string;
-
+        const permissionId = req.query.permissionId;
         // Find the permission
-        const permission = await Permission.findByPk(permissionId);
-
+        const permission = yield permission_1.default.findByPk(permissionId);
         if (!permission) {
             res.status(404).json({ message: "Permission not found" });
             return;
         }
-
         // Delete the permission and associated role_permissions
-        await permission.destroy();
-        await RolePermission.destroy({ where: { permissionId } });
-
+        yield permission.destroy();
+        yield rolepermission_1.default.destroy({ where: { permissionId } });
         res.status(200).json({
-            message:
-                "Permission and associated role permissions deleted successfully",
+            message: "Permission and associated role permissions deleted successfully",
         });
-    } catch (error) {
-        logger.error("Error deleting permission:", error);
+    }
+    catch (error) {
+        logger_1.default.error("Error deleting permission:", error);
         res.status(500).json({ message: "Internal server error" });
     }
-};
-
+});
+exports.deletePermission = deletePermission;
 // Subscription Plan
-export const getAllSubscriptionPlans = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+const getAllSubscriptionPlans = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { name } = req.query; // Get the name from query parameters
-
-        const queryOptions: any = {}; // Initialize query options
-
+        const queryOptions = {}; // Initialize query options
         // If a name is provided, add a condition to the query
         if (name) {
             queryOptions.where = {
                 name: {
-                    [Op.like]: `%${name}%`, // Use a partial match for name
+                    [sequelize_1.Op.like]: `%${name}%`, // Use a partial match for name
                 },
             };
         }
-
-        const plans = await SubscriptionPlan.findAll(queryOptions); // Use query options
+        const plans = yield subscriptionplan_1.default.findAll(queryOptions); // Use query options
         res.status(200).json({ data: plans });
-    } catch (error) {
-        logger.error("Error fetching subscription plans:", error);
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching subscription plans:", error);
         res.status(500).json({ message: "Internal server error" });
     }
-};
-
-export const createSubscriptionPlan = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
-    const {
-        name,
-        duration,
-        price,
-        productLimit,
-        allowsAuction,
-        auctionProductLimit,
-        maxAds,
-        adsDurationDays,
-    } = req.body;
-
+});
+exports.getAllSubscriptionPlans = getAllSubscriptionPlans;
+const createSubscriptionPlan = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { name, duration, price, productLimit, allowsAuction, auctionProductLimit, maxAds, adsDurationDays, } = req.body;
     try {
         // Check if the subscription plan name already exists
-        const existingPlan = await SubscriptionPlan.findOne({ where: { name } });
-
+        const existingPlan = yield subscriptionplan_1.default.findOne({ where: { name } });
         if (existingPlan) {
             res
                 .status(400)
                 .json({ message: "A plan with this name already exists." });
             return;
         }
-
         // Create the subscription plan
-        await SubscriptionPlan.create({
+        yield subscriptionplan_1.default.create({
             name,
             duration,
             price,
@@ -791,40 +656,25 @@ export const createSubscriptionPlan = async (
             maxAds,
             adsDurationDays,
         });
-
         res.status(200).json({
             message: "Subscription plan created successfully.",
         });
-    } catch (error) {
-        logger.error("Error creating subscription plan:", error);
+    }
+    catch (error) {
+        logger_1.default.error("Error creating subscription plan:", error);
         res.status(500).json({ message: "Internal server error" });
     }
-};
-
-export const updateSubscriptionPlan = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
-    const {
-        planId,
-        name,
-        duration,
-        price,
-        productLimit,
-        allowsAuction,
-        auctionProductLimit,
-        maxAds,
-        adsDurationDays,
-    } = req.body;
-
+});
+exports.createSubscriptionPlan = createSubscriptionPlan;
+const updateSubscriptionPlan = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { planId, name, duration, price, productLimit, allowsAuction, auctionProductLimit, maxAds, adsDurationDays, } = req.body;
     try {
         // Fetch the subscription plan to update
-        const plan = await SubscriptionPlan.findByPk(planId);
+        const plan = yield subscriptionplan_1.default.findByPk(planId);
         if (!plan) {
             res.status(404).json({ message: "Subscription plan not found." });
             return;
         }
-
         // Prevent name change for Free Plan
         if (plan.name === "Free Plan" && name !== "Free Plan") {
             res
@@ -832,19 +682,16 @@ export const updateSubscriptionPlan = async (
                 .json({ message: "The Free Plan name cannot be changed." });
             return;
         }
-
         // Check if the new name already exists (ignoring the current plan)
-        const existingPlan = await SubscriptionPlan.findOne({
-            where: { name, id: { [Op.ne]: planId } },
+        const existingPlan = yield subscriptionplan_1.default.findOne({
+            where: { name, id: { [sequelize_1.Op.ne]: planId } },
         });
-
         if (existingPlan) {
             res
                 .status(400)
                 .json({ message: "A different plan with this name already exists." });
             return;
         }
-
         // Update fields
         plan.name = name;
         plan.duration = duration;
@@ -853,90 +700,75 @@ export const updateSubscriptionPlan = async (
         plan.allowsAuction = allowsAuction;
         plan.auctionProductLimit = auctionProductLimit;
         plan.maxAds = maxAds;
-        plan.adsDurationDays =adsDurationDays; 
-        await plan.save();
-
+        plan.adsDurationDays = adsDurationDays;
+        yield plan.save();
         res.status(200).json({ message: "Subscription plan updated successfully" });
-    } catch (error) {
-        logger.error("Error updating subscription plan:", error);
+    }
+    catch (error) {
+        logger_1.default.error("Error updating subscription plan:", error);
         res.status(500).json({ message: "Internal server error" });
     }
-};
-
-export const deleteSubscriptionPlan = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
-    const planId = req.query.planId as string;
-
+});
+exports.updateSubscriptionPlan = updateSubscriptionPlan;
+const deleteSubscriptionPlan = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const planId = req.query.planId;
     try {
         // Fetch the subscription plan
-        const plan = await SubscriptionPlan.findByPk(planId);
+        const plan = yield subscriptionplan_1.default.findByPk(planId);
         if (!plan) {
             res.status(404).json({ message: "Subscription plan not found." });
             return;
         }
-
         // Prevent deletion of the Free Plan
         if (plan.name === "Free Plan") {
             res.status(400).json({ message: "The Free Plan cannot be deleted." });
             return;
         }
-
         // Attempt to delete the plan
-        await plan.destroy();
+        yield plan.destroy();
         res
             .status(200)
             .json({ message: "Subscription plan deleted successfully." });
-    } catch (error) {
-        if (error instanceof ForeignKeyConstraintError) {
+    }
+    catch (error) {
+        if (error instanceof sequelize_1.ForeignKeyConstraintError) {
             res.status(400).json({
-                message:
-                    "Cannot delete subscription plan because it is currently assigned to one or more vendors. Please reassign or delete these associations before proceeding.",
+                message: "Cannot delete subscription plan because it is currently assigned to one or more vendors. Please reassign or delete these associations before proceeding.",
             });
-        } else {
-            logger.error("Error deleting subscription plan:", error);
+        }
+        else {
+            logger_1.default.error("Error deleting subscription plan:", error);
             res.status(500).json({ message: "Error deleting subscription plan" });
         }
     }
-};
-
-export const getAllCategories = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+});
+exports.deleteSubscriptionPlan = deleteSubscriptionPlan;
+const getAllCategories = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { name } = req.query;
-
     try {
-        const categories = await Category.findAll({
-            where: name ? { name: { [Op.like]: `%${name}%` } } : {}, // Search by name if provided
+        const categories = yield category_1.default.findAll({
+            where: name ? { name: { [sequelize_1.Op.like]: `%${name}%` } } : {}, // Search by name if provided
             attributes: {
                 include: [
                     [
                         // Count the total number of subcategories without including them in the result
-                        Sequelize.literal(
-                            `(SELECT COUNT(*) FROM sub_categories WHERE sub_categories.categoryId = Category.id)`
-                        ),
+                        sequelize_1.Sequelize.literal(`(SELECT COUNT(*) FROM sub_categories WHERE sub_categories.categoryId = Category.id)`),
                         "subCategoryCount",
                     ],
                 ],
             },
         });
-
         res.status(200).json({ data: categories });
-    } catch (error) {
-        logger.error("Error fetching categories:", error);
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching categories:", error);
         res.status(500).json({ message: "Error fetching categories" });
     }
-};
-
+});
+exports.getAllCategories = getAllCategories;
 // category
-export const createCategory = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+const createCategory = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { name, image } = req.body;
-
     // Validate name and image fields
     if (!name || typeof name !== "string") {
         res
@@ -944,174 +776,146 @@ export const createCategory = async (
             .json({ message: "Category name is required and must be a string" });
         return;
     }
-
     if (!image || typeof image !== "string") {
         res
             .status(400)
             .json({ message: "Image URL is required and must be a string" });
         return;
     }
-
     try {
         // Check if the category name already exists
-        const existingCategory = await Category.findOne({ where: { name } });
+        const existingCategory = yield category_1.default.findOne({ where: { name } });
         if (existingCategory) {
             res.status(400).json({ message: "Category name already exists" });
             return;
         }
-
         // Create the new category
-        const category = await Category.create({ name, image });
+        const category = yield category_1.default.create({ name, image });
         res.status(200).json({ message: "Category created successfully" });
-    } catch (error) {
-        logger.error(error);
+    }
+    catch (error) {
+        logger_1.default.error(error);
         res.status(500).json({ message: "Error creating category" });
     }
-};
-
-export const updateCategory = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+});
+exports.createCategory = createCategory;
+const updateCategory = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { categoryId, name, image } = req.body;
-
     // Validate categoryId
     if (!categoryId) {
         res.status(400).json({ message: "Category ID is required" });
         return;
     }
-
     // Validate name
     if (!name || typeof name !== "string") {
         res.status(400).json({ message: "Valid category name is required" });
         return;
     }
-
     // Validate image
     if (!image || typeof image !== "string") {
         res.status(400).json({ message: "Valid image URL is required" });
         return;
     }
-
     try {
-        const checkCategory = await Category.findByPk(categoryId);
+        const checkCategory = yield category_1.default.findByPk(categoryId);
         if (!checkCategory) {
             res.status(404).json({
                 message: "Category not found",
             });
             return;
         }
-
         // Check if another category with the same name exists, excluding the current category
-        const existingCategory = await Category.findOne({
-            where: { name, id: { [Op.ne]: categoryId } },
+        const existingCategory = yield category_1.default.findOne({
+            where: { name, id: { [sequelize_1.Op.ne]: categoryId } },
         });
-
         if (existingCategory) {
             res.status(400).json({ message: "Category name already in use" });
             return; // Ensure the function returns after sending a response
         }
-
         // Fetch category by ID to update
-        const category = await Category.findByPk(categoryId);
+        const category = yield category_1.default.findByPk(categoryId);
         if (!category) {
             res.status(404).json({ message: "Category not found" });
             return; // Ensure the function returns after sending a response
         }
-
         // Update the category
-        await category.update({ name, image });
-
+        yield category.update({ name, image });
         // Send the success response
         res.status(200).json({ message: "Category updated successfully" });
-    } catch (error) {
-        logger.error(error); // Use logger.error instead of logger for debugging
+    }
+    catch (error) {
+        logger_1.default.error(error); // Use logger.error instead of logger for debugging
         res.status(500).json({ message: "Error updating category" });
     }
-};
-
-export const deleteCategory = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
-    const categoryId = req.query.categoryId as string;
-
+});
+exports.updateCategory = updateCategory;
+const deleteCategory = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const categoryId = req.query.categoryId;
     try {
-        const category = await Category.findByPk(categoryId);
-
+        const category = yield category_1.default.findByPk(categoryId);
         if (!category) {
             res.status(404).json({ message: "Category not found" });
             return;
         }
-
-        await category.destroy();
+        yield category.destroy();
         res.status(200).json({ message: "Category deleted successfully" });
-    } catch (error) {
-        if (error instanceof ForeignKeyConstraintError) {
+    }
+    catch (error) {
+        if (error instanceof sequelize_1.ForeignKeyConstraintError) {
             res.status(400).json({
-                message:
-                    "Cannot delete category because it has associated sub-categories. Delete or reassign sub-categories before deleting this category.",
+                message: "Cannot delete category because it has associated sub-categories. Delete or reassign sub-categories before deleting this category.",
             });
-        } else {
-            logger.error(error);
+        }
+        else {
+            logger_1.default.error(error);
             res.status(500).json({ message: "Error deleting category" });
         }
     }
-};
-
-export const getCategoriesWithSubCategories = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+});
+exports.deleteCategory = deleteCategory;
+const getCategoriesWithSubCategories = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const categories = await Category.findAll({
+        const categories = yield category_1.default.findAll({
             include: [
                 {
-                    model: SubCategory,
+                    model: subcategory_1.default,
                     as: "subCategories", // alias used in the association
                 },
             ],
             attributes: ["id", "name", "image"], // select specific fields in Category
             order: [["name", "ASC"]], // sort categories alphabetically, for example
         });
-
         res.status(200).json({ data: categories });
-    } catch (error) {
-        logger.error("Error fetching categories with subcategories:", error);
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching categories with subcategories:", error);
         res.status(500).json({ message: "Internal server error" });
     }
-};
-
+});
+exports.getCategoriesWithSubCategories = getCategoriesWithSubCategories;
 // sub_category
-export const createSubCategory = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+const createSubCategory = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { categoryId, name, image } = req.body;
-
     if (!categoryId || !name) {
         res.status(400).json({ message: "Category ID and name are required" });
         return;
     }
-
     if (!image || typeof image !== "string") {
         res
             .status(400)
             .json({ message: "Image URL is required and must be a string" });
         return;
     }
-
     try {
-        const checkCategory = await Category.findByPk(categoryId);
+        const checkCategory = yield category_1.default.findByPk(categoryId);
         if (!checkCategory) {
             res.status(404).json({
                 message: "Category not found",
             });
             return;
         }
-
         // Check if a sub_category with the same name already exists within the same category
-        const existingSubCategory = await SubCategory.findOne({
+        const existingSubCategory = yield subcategory_1.default.findOne({
             where: { name, categoryId },
         });
         if (existingSubCategory) {
@@ -1120,9 +924,8 @@ export const createSubCategory = async (
             });
             return;
         }
-
         // Create new sub_category
-        const newSubCategory = await SubCategory.create({
+        const newSubCategory = yield subcategory_1.default.create({
             categoryId,
             name,
             image,
@@ -1130,54 +933,46 @@ export const createSubCategory = async (
         res.status(200).json({
             message: "Sub-category created successfully",
         });
-    } catch (error) {
-        logger.error(error);
+    }
+    catch (error) {
+        logger_1.default.error(error);
         res.status(500).json({ message: "Error creating sub-category" });
     }
-};
-
-export const updateSubCategory = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+});
+exports.createSubCategory = createSubCategory;
+const updateSubCategory = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { subCategoryId, categoryId, name, image } = req.body;
-
     if (!categoryId) {
         res.status(400).json({ message: "Category ID is required" });
         return;
     }
-
     if (!subCategoryId || !name) {
         res.status(400).json({ message: "Sub-category ID and name are required" });
         return;
     }
-
     if (!image || typeof image !== "string") {
         res
             .status(400)
             .json({ message: "Image URL is required and must be a string" });
         return;
     }
-
     try {
-        const checkCategory = await Category.findByPk(categoryId);
+        const checkCategory = yield category_1.default.findByPk(categoryId);
         if (!checkCategory) {
             res.status(404).json({
                 message: "Category not found",
             });
             return;
         }
-
         // Fetch sub_category by ID to update
-        const subCategory = await SubCategory.findByPk(subCategoryId);
+        const subCategory = yield subcategory_1.default.findByPk(subCategoryId);
         if (!subCategory) {
             res.status(404).json({ message: "Sub-category not found" });
             return;
         }
-
         // Check if another sub_category with the same name exists within the same category
-        const existingSubCategory = await SubCategory.findOne({
-            where: { name, categoryId, id: { [Op.ne]: subCategoryId } },
+        const existingSubCategory = yield subcategory_1.default.findOne({
+            where: { name, categoryId, id: { [sequelize_1.Op.ne]: subCategoryId } },
         });
         if (existingSubCategory) {
             res.status(400).json({
@@ -1185,354 +980,289 @@ export const updateSubCategory = async (
             });
             return;
         }
-
         // Update the sub_category
-        await subCategory.update({ name, image });
+        yield subCategory.update({ name, image });
         res.status(200).json({ message: "Sub-category updated successfully" });
-    } catch (error) {
-        logger.error(error);
+    }
+    catch (error) {
+        logger_1.default.error(error);
         res.status(500).json({ message: "Error updating sub-category" });
     }
-};
-
-export const deleteSubCategory = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
-    const subCategoryId = req.query.subCategoryId as string;
-
+});
+exports.updateSubCategory = updateSubCategory;
+const deleteSubCategory = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const subCategoryId = req.query.subCategoryId;
     if (!subCategoryId) {
         res.status(400).json({ message: "Sub-category ID is required" });
         return;
     }
-
     try {
-        const subCategory = await SubCategory.findByPk(subCategoryId);
+        const subCategory = yield subcategory_1.default.findByPk(subCategoryId);
         if (!subCategory) {
             res.status(404).json({ message: "Sub-category not found" });
             return;
         }
-
-        await subCategory.destroy();
+        yield subCategory.destroy();
         res.status(200).json({ message: "Sub-category deleted successfully" });
-    } catch (error) {
-        if (error instanceof ForeignKeyConstraintError) {
+    }
+    catch (error) {
+        if (error instanceof sequelize_1.ForeignKeyConstraintError) {
             res.status(400).json({
-                message:
-                    "Cannot delete sub-category because it has associated products. Delete or reassign products before deleting this sub-category.",
+                message: "Cannot delete sub-category because it has associated products. Delete or reassign products before deleting this sub-category.",
             });
-        } else {
-            logger.error(error);
+        }
+        else {
+            logger_1.default.error(error);
             res.status(500).json({ message: "Error deleting sub-category" });
         }
     }
-};
-
-export const getAllSubCategories = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+});
+exports.deleteSubCategory = deleteSubCategory;
+const getAllSubCategories = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { name } = req.query;
-
     try {
         // Query with name filter if provided
-        const whereClause = name ? { name: { [Op.like]: `%${name}%` } } : {};
-
-        const subCategories = await SubCategory.findAll({ where: whereClause });
+        const whereClause = name ? { name: { [sequelize_1.Op.like]: `%${name}%` } } : {};
+        const subCategories = yield subcategory_1.default.findAll({ where: whereClause });
         res.status(200).json({ data: subCategories });
-    } catch (error) {
-        logger.error(error);
+    }
+    catch (error) {
+        logger_1.default.error(error);
         res.status(500).json({ message: "Error fetching sub-categories" });
     }
-};
-
+});
+exports.getAllSubCategories = getAllSubCategories;
 // KYC
-export const getAllKYC = async (req: Request, res: Response): Promise<void> => {
+const getAllKYC = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { email, firstName, lastName } = req.query;
-
     try {
         // Build query filters
-        const userFilter: any = {};
-        if (email) userFilter.email = { [Op.like]: `%${email}%` };
-        if (firstName) userFilter.firstName = { [Op.like]: `%${firstName}%` };
-        if (lastName) userFilter.lastName = { [Op.like]: `%${lastName}%` };
-
+        const userFilter = {};
+        if (email)
+            userFilter.email = { [sequelize_1.Op.like]: `%${email}%` };
+        if (firstName)
+            userFilter.firstName = { [sequelize_1.Op.like]: `%${firstName}%` };
+        if (lastName)
+            userFilter.lastName = { [sequelize_1.Op.like]: `%${lastName}%` };
         // Fetch all KYC records with User relationship
-        const kycRecords = await KYC.findAll({
+        const kycRecords = yield kyc_1.default.findAll({
             include: [
                 {
-                    model: User,
+                    model: user_1.default,
                     as: "user",
                     where: userFilter,
                 },
             ],
         });
-
         res.status(200).json({ data: kycRecords });
-    } catch (error: any) {
-        logger.error("Error retrieving KYC records:", error);
+    }
+    catch (error) {
+        logger_1.default.error("Error retrieving KYC records:", error);
         res.status(500).json({ message: error.message || "Internal server error" });
     }
-};
-
-export const approveOrRejectKYC = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+});
+exports.getAllKYC = getAllKYC;
+const approveOrRejectKYC = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { kycId, isVerified, note } = req.body; // Approve flag and note from request body
-
     try {
         // Find the KYC record by ID
-        const kycRecord = await KYC.findByPk(kycId, {
+        const kycRecord = yield kyc_1.default.findByPk(kycId, {
             include: [
                 {
-                    model: User,
+                    model: user_1.default,
                     as: "user",
                 },
             ],
         });
-
         if (!kycRecord) {
             res.status(404).json({ message: "KYC record not found" });
             return;
         }
-
         // Safely access the user property
         const user = kycRecord.user; // This should now work if the relationship is correctly defined
-
         // Check if user exists
         if (!user) {
             res.status(404).json({ message: "User not found for the KYC record." });
             return;
         }
-
         // Approve or reject with a note
         kycRecord.isVerified = isVerified;
         kycRecord.adminNote = isVerified
             ? "Approved by admin"
             : note || "Rejected without a note";
-
         // Save the updated record
-        await kycRecord.save();
-
+        yield kycRecord.save();
         // Prepare email notification
         const isApproved = isVerified;
-        const message = emailTemplates.kycStatusUpdate(
-            user,
-            isApproved,
-            kycRecord.adminNote
-        );
-
+        const message = messages_1.emailTemplates.kycStatusUpdate(user, isApproved, kycRecord.adminNote);
         // Send email notification
         try {
-            await sendMail(
-                user.email,
-                `${process.env.APP_NAME} - Your KYC Status Update`,
-                message
-            );
-        } catch (emailError) {
-            logger.error("Error sending email:", emailError); // Log error for internal use
+            yield (0, mail_service_1.sendMail)(user.email, `${process.env.APP_NAME} - Your KYC Status Update`, message);
+        }
+        catch (emailError) {
+            logger_1.default.error("Error sending email:", emailError); // Log error for internal use
             // Optionally handle this scenario (e.g., revert KYC status)
         }
-
         // Send response
         res.status(200).json({
             message: isApproved
                 ? "KYC approved successfully"
                 : "KYC rejected with note",
         });
-    } catch (error: any) {
-        logger.error("Error approving/rejecting KYC:", error);
+    }
+    catch (error) {
+        logger_1.default.error("Error approving/rejecting KYC:", error);
         res.status(500).json({ message: error.message || "Internal server error" });
     }
-};
-
+});
+exports.approveOrRejectKYC = approveOrRejectKYC;
 // Payment Gateway
-export const createPaymentGateway = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+const createPaymentGateway = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { name, publicKey, secretKey } = req.body;
-
     try {
         // Check if any payment gateway is active
-        const activeGateway = await PaymentGateway.findOne({
+        const activeGateway = yield paymentgateway_1.default.findOne({
             where: { isActive: true },
         });
-
         // If there's no active gateway, set the new one as active, else set it as inactive
         const newIsActive = activeGateway ? false : true;
-
-        const paymentGateway = await PaymentGateway.create({
+        const paymentGateway = yield paymentgateway_1.default.create({
             name,
             publicKey,
             secretKey,
             isActive: newIsActive,
         });
-
         res.status(200).json({
             message: "Payment Gateway created successfully",
             data: paymentGateway,
         });
-    } catch (error: any) {
+    }
+    catch (error) {
         res.status(500).json({
-            message:
-                error.message ||
+            message: error.message ||
                 "An error occurred while creating the payment gateway.",
         });
     }
-};
-
-export const updatePaymentGateway = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+});
+exports.createPaymentGateway = createPaymentGateway;
+const updatePaymentGateway = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { id, name, publicKey, secretKey } = req.body;
-
     try {
-        const paymentGateway = await PaymentGateway.findByPk(id);
-
+        const paymentGateway = yield paymentgateway_1.default.findByPk(id);
         if (!paymentGateway) {
             res.status(404).json({ message: "Payment Gateway not found" });
             return;
         }
-
-        await paymentGateway.update({
+        yield paymentGateway.update({
             name,
             publicKey,
             secretKey,
         });
-
         res.status(200).json({
             message: "Payment Gateway updated successfully",
             data: paymentGateway,
         });
-    } catch (error: any) {
+    }
+    catch (error) {
         res.status(500).json({
-            message:
-                error.message ||
+            message: error.message ||
                 "An error occurred while updating the payment gateway.",
         });
     }
-};
-
-export const deletePaymentGateway = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
-    const id = req.query.id as string;
-
+});
+exports.updatePaymentGateway = updatePaymentGateway;
+const deletePaymentGateway = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const id = req.query.id;
     try {
-        const paymentGateway = await PaymentGateway.findByPk(id);
-
+        const paymentGateway = yield paymentgateway_1.default.findByPk(id);
         if (!paymentGateway) {
             res.status(404).json({ message: "Payment Gateway not found" });
             return;
         }
-
         if (paymentGateway.isActive) {
             // If the gateway to be deleted is active, check for another active one
-            const anotherActiveGateway = await PaymentGateway.findOne({
-                where: { id: { [Op.ne]: id } },
+            const anotherActiveGateway = yield paymentgateway_1.default.findOne({
+                where: { id: { [sequelize_1.Op.ne]: id } },
             });
-
             if (anotherActiveGateway) {
                 // If another active gateway exists, set it to active and delete this one
-                await anotherActiveGateway.update({ isActive: true });
-                await paymentGateway.destroy();
+                yield anotherActiveGateway.update({ isActive: true });
+                yield paymentGateway.destroy();
                 res.status(200).json({
-                    message:
-                        "Payment Gateway deleted successfully and another one activated.",
+                    message: "Payment Gateway deleted successfully and another one activated.",
                 });
-            } else {
+            }
+            else {
                 // If no other active gateway, delete this one
-                await paymentGateway.destroy();
+                yield paymentGateway.destroy();
                 res.status(200).json({
                     message: "Last active payment gateway deleted.",
                 });
             }
-        } else {
+        }
+        else {
             // If the gateway is not active, just delete it
-            await paymentGateway.destroy();
+            yield paymentGateway.destroy();
             res.status(200).json({
                 message: "Payment Gateway deleted successfully.",
             });
         }
-    } catch (error: any) {
+    }
+    catch (error) {
         res.status(500).json({
-            message:
-                error.message ||
+            message: error.message ||
                 "An error occurred while deleting the payment gateway.",
         });
     }
-};
-
-export const getAllPaymentGateways = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+});
+exports.deletePaymentGateway = deletePaymentGateway;
+const getAllPaymentGateways = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const gateways = await PaymentGateway.findAll();
+        const gateways = yield paymentgateway_1.default.findAll();
         res.status(200).json({
             message: "Payment Gateways retrieved successfully",
             data: gateways,
         });
-    } catch (error: any) {
+    }
+    catch (error) {
         res.status(500).json({
-            message:
-                error.message || "An error occurred while fetching payment gateways.",
+            message: error.message || "An error occurred while fetching payment gateways.",
         });
     }
-};
-
-export const setPaymentGatewayActive = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
-    const id = req.query.id as string;
-
+});
+exports.getAllPaymentGateways = getAllPaymentGateways;
+const setPaymentGatewayActive = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const id = req.query.id;
     try {
-        const paymentGateway = await PaymentGateway.findByPk(id);
-
+        const paymentGateway = yield paymentgateway_1.default.findByPk(id);
         if (!paymentGateway) {
             res.status(404).json({ message: "Payment Gateway not found" });
             return;
         }
-
         // Check if the payment gateway is already active
         if (paymentGateway.isActive) {
             res.status(200).json({ message: "Payment Gateway is already active." });
             return;
         }
-
         // Set all other active gateways to false
-        await PaymentGateway.update(
-            { isActive: false },
-            { where: { isActive: true } }
-        );
-
+        yield paymentgateway_1.default.update({ isActive: false }, { where: { isActive: true } });
         // Set the specified gateway as active
-        await paymentGateway.update({ isActive: true });
-
+        yield paymentGateway.update({ isActive: true });
         res.status(200).json({
             message: "Payment Gateway successfully set to active.",
         });
-    } catch (error: any) {
+    }
+    catch (error) {
         res.status(500).json({
-            message:
-                error.message ||
+            message: error.message ||
                 "An error occurred while updating the payment gateway.",
         });
     }
-};
-
+});
+exports.setPaymentGatewayActive = setPaymentGatewayActive;
 // Currency
-export const addCurrency = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+const addCurrency = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { name, symbol } = req.body;
-
     if (!name || typeof name !== "string") {
         res.status(400).json({ message: "Name is required and must be a string." });
     }
@@ -1541,47 +1271,35 @@ export const addCurrency = async (
             .status(400)
             .json({ message: "Symbol is required and must be a string." });
     }
-
     try {
         // Check for existing currency with matching name or symbol (case-insensitive)
-        const existingCurrency = await Currency.findOne({
+        const existingCurrency = yield currency_1.default.findOne({
             where: {
-                [Op.or]: [
-                    Sequelize.where(
-                        Sequelize.fn("LOWER", Sequelize.col("name")),
-                        name.toLowerCase()
-                    ),
-                    Sequelize.where(
-                        Sequelize.fn("LOWER", Sequelize.col("symbol")),
-                        symbol.toLowerCase()
-                    ),
+                [sequelize_1.Op.or]: [
+                    sequelize_1.Sequelize.where(sequelize_1.Sequelize.fn("LOWER", sequelize_1.Sequelize.col("name")), name.toLowerCase()),
+                    sequelize_1.Sequelize.where(sequelize_1.Sequelize.fn("LOWER", sequelize_1.Sequelize.col("symbol")), symbol.toLowerCase()),
                 ],
             },
         });
-
         if (existingCurrency) {
             res
                 .status(400)
                 .json({
-                    message: "Currency with the same name or symbol already exists.",
-                });
+                message: "Currency with the same name or symbol already exists.",
+            });
             return;
         }
-
-        const currency = await Currency.create({ name, symbol });
+        const currency = yield currency_1.default.create({ name, symbol });
         res.status(200).json({ message: "Currency added successfully", currency });
-    } catch (error) {
-        logger.error("Error adding currency:", error);
+    }
+    catch (error) {
+        logger_1.default.error("Error adding currency:", error);
         res.status(500).json({ message: "Failed to add currency" });
     }
-};
-
-export const updateCurrency = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+});
+exports.addCurrency = addCurrency;
+const updateCurrency = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { currencyId, name, symbol } = req.body;
-
     // Validate inputs
     if (!currencyId) {
         res.status(400).json({ message: "Currency ID is required." });
@@ -1595,124 +1313,96 @@ export const updateCurrency = async (
         res.status(400).json({ message: "Symbol must be a string." });
         return;
     }
-
     try {
         // Find the currency by ID
-        const currency = await Currency.findByPk(currencyId);
-
+        const currency = yield currency_1.default.findByPk(currencyId);
         if (!currency) {
             res.status(404).json({ message: "Currency not found" });
             return;
         }
-
         // Check for uniqueness of name and symbol, excluding the current record
-        const existingCurrency = await Currency.findOne({
+        const existingCurrency = yield currency_1.default.findOne({
             where: {
-                [Op.or]: [
-                    Sequelize.where(
-                        Sequelize.fn("LOWER", Sequelize.col("name")),
-                        name.toLowerCase()
-                    ),
-                    Sequelize.where(
-                        Sequelize.fn("LOWER", Sequelize.col("symbol")),
-                        symbol.toLowerCase()
-                    ),
+                [sequelize_1.Op.or]: [
+                    sequelize_1.Sequelize.where(sequelize_1.Sequelize.fn("LOWER", sequelize_1.Sequelize.col("name")), name.toLowerCase()),
+                    sequelize_1.Sequelize.where(sequelize_1.Sequelize.fn("LOWER", sequelize_1.Sequelize.col("symbol")), symbol.toLowerCase()),
                 ],
-                id: { [Op.ne]: currencyId }, // Exclude the current currency
+                id: { [sequelize_1.Op.ne]: currencyId }, // Exclude the current currency
             },
         });
-
         if (existingCurrency) {
             res
                 .status(400)
                 .json({
-                    message: "Currency with the same name or symbol already exists.",
-                });
+                message: "Currency with the same name or symbol already exists.",
+            });
             return;
         }
-
         // Update the currency fields
-        await currency.update({ name, symbol });
+        yield currency.update({ name, symbol });
         res
             .status(200)
             .json({ message: "Currency updated successfully", currency });
-    } catch (error) {
-        logger.error("Error updating currency:", error);
+    }
+    catch (error) {
+        logger_1.default.error("Error updating currency:", error);
         res.status(500).json({ message: "Failed to update currency" });
     }
-};
-
-export const getAllCurrencies = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+});
+exports.updateCurrency = updateCurrency;
+const getAllCurrencies = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const currencies = await Currency.findAll();
+        const currencies = yield currency_1.default.findAll();
         res.status(200).json({ data: currencies });
-    } catch (error) {
-        logger.error("Error fetching currencies:", error);
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching currencies:", error);
         res.status(500).json({ message: "Failed to fetch currencies" });
     }
-};
-
-export const deleteCurrency = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
-    const currencyId = req.query.currencyId as string;
-
+});
+exports.getAllCurrencies = getAllCurrencies;
+const deleteCurrency = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const currencyId = req.query.currencyId;
     try {
-        const currency = await Currency.findByPk(currencyId);
-
+        const currency = yield currency_1.default.findByPk(currencyId);
         if (!currency) {
             res.status(404).json({ message: "Currency not found" });
             return;
         }
-
-        await currency.destroy();
+        yield currency.destroy();
         res.status(200).json({ message: "Currency deleted successfully" });
-    } catch (error) {
-        if (error instanceof ForeignKeyConstraintError) {
+    }
+    catch (error) {
+        if (error instanceof sequelize_1.ForeignKeyConstraintError) {
             res.status(400).json({
-                message:
-                    "Cannot delete currency because it is currently assigned to one or more stores. Please reassign or delete these associations before proceeding.",
+                message: "Cannot delete currency because it is currently assigned to one or more stores. Please reassign or delete these associations before proceeding.",
             });
-        } else {
-            logger.error("Error deleting currency:", error);
+        }
+        else {
+            logger_1.default.error("Error deleting currency:", error);
             res.status(500).json({ message: "Failed to delete currency" });
         }
     }
-};
-
-export const getAllCustomers = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+});
+exports.deleteCurrency = deleteCurrency;
+const getAllCustomers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { page = 1, limit = 10, search = "" } = req.query;
-
     try {
         const offset = (Number(page) - 1) * Number(limit);
-
         const searchCondition = {
-            [Op.or]: [
-                { firstName: { [Op.like]: `%${search}%` } },
-                { lastName: { [Op.like]: `%${search}%` } },
-                { email: { [Op.like]: `%${search}%` } },
-                { phoneNumber: { [Op.like]: `%${search}%` } },
+            [sequelize_1.Op.or]: [
+                { firstName: { [sequelize_1.Op.like]: `%${search}%` } },
+                { lastName: { [sequelize_1.Op.like]: `%${search}%` } },
+                { email: { [sequelize_1.Op.like]: `%${search}%` } },
+                { phoneNumber: { [sequelize_1.Op.like]: `%${search}%` } },
             ],
         };
-
-        const { rows: customers, count: totalCustomers } =
-            await User.findAndCountAll({
-                where: {
-                    accountType: "Customer",
-                    ...searchCondition,
-                },
-                limit: Number(limit),
-                offset,
-                order: [["createdAt", "DESC"]],
-            });
-
+        const { rows: customers, count: totalCustomers } = yield user_1.default.findAndCountAll({
+            where: Object.assign({ accountType: "Customer" }, searchCondition),
+            limit: Number(limit),
+            offset,
+            order: [["createdAt", "DESC"]],
+        });
         res.status(200).json({
             message: "Customers fetched successfully",
             data: customers,
@@ -1723,40 +1413,31 @@ export const getAllCustomers = async (
                 limit: Number(limit),
             },
         });
-    } catch (error) {
-        logger.error("Error fetching customers:", error);
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching customers:", error);
         res.status(500).json({ message: "Failed to fetch customers", error });
     }
-};
-
-export const getAllVendors = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+});
+exports.getAllCustomers = getAllCustomers;
+const getAllVendors = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { page = 1, limit = 10, search = "" } = req.query;
-
     try {
         const offset = (Number(page) - 1) * Number(limit);
-
         const searchCondition = {
-            [Op.or]: [
-                { firstName: { [Op.like]: `%${search}%` } },
-                { lastName: { [Op.like]: `%${search}%` } },
-                { email: { [Op.like]: `%${search}%` } },
-                { phoneNumber: { [Op.like]: `%${search}%` } },
+            [sequelize_1.Op.or]: [
+                { firstName: { [sequelize_1.Op.like]: `%${search}%` } },
+                { lastName: { [sequelize_1.Op.like]: `%${search}%` } },
+                { email: { [sequelize_1.Op.like]: `%${search}%` } },
+                { phoneNumber: { [sequelize_1.Op.like]: `%${search}%` } },
             ],
         };
-
-        const { rows: vendors, count: totalVendors } = await User.findAndCountAll({
-            where: {
-                accountType: "Vendor",
-                ...searchCondition,
-            },
+        const { rows: vendors, count: totalVendors } = yield user_1.default.findAndCountAll({
+            where: Object.assign({ accountType: "Vendor" }, searchCondition),
             limit: Number(limit),
             offset,
             order: [["createdAt", "DESC"]],
         });
-
         res.status(200).json({
             message: "Vendors fetched successfully",
             data: vendors,
@@ -1767,102 +1448,93 @@ export const getAllVendors = async (
                 limit: Number(limit),
             },
         });
-    } catch (error) {
-        logger.error("Error fetching vendors:", error);
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching vendors:", error);
         res.status(500).json({ message: "Failed to fetch vendors" });
     }
-};
-
-export const toggleUserStatus = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
-    const userId = req.query.userId as string;
-
+});
+exports.getAllVendors = getAllVendors;
+const toggleUserStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.query.userId;
     try {
         // Fetch the user
-        const user = await User.findByPk(userId);
-
+        const user = yield user_1.default.findByPk(userId);
         if (!user) {
             res.status(404).json({ message: "User not found." });
             return;
         }
-
         // Toggle the status
         user.status = user.status === "active" ? "inactive" : "active";
-        await user.save();
-
-        const statusMessage =
-            user.status === "active" ? "activated" : "deactivated";
+        yield user.save();
+        const statusMessage = user.status === "active" ? "activated" : "deactivated";
         res
             .status(200)
             .json({
-                message: `User successfully ${statusMessage}.`,
-            });
-    } catch (error) {
-        logger.error("Error toggling user status:", error);
+            message: `User successfully ${statusMessage}.`,
+        });
+    }
+    catch (error) {
+        logger_1.default.error("Error toggling user status:", error);
         res.status(500).json({ message: "Failed to toggle user status." });
     }
-};
-
-export const viewUser = async (req: Request, res: Response): Promise<void> => {
-    const userId = req.query.userId as string;
-
+});
+exports.toggleUserStatus = toggleUserStatus;
+const viewUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.query.userId;
     try {
         // Fetch the user
-        const user = await User.findByPk(userId, {
+        const user = yield user_1.default.findByPk(userId, {
             include: [
                 {
-                    model: KYC,
+                    model: kyc_1.default,
                     as: "kyc",
                 },
             ],
             attributes: { exclude: ["password"] }, // Exclude sensitive fields like password
         });
-
         if (!user) {
             res.status(404).json({ message: "User not found." });
             return;
         }
-
         res.status(200).json({ message: "User retrieved successfully.", data: user });
-    } catch (error) {
-        logger.error("Error retrieving user:", error);
+    }
+    catch (error) {
+        logger_1.default.error("Error retrieving user:", error);
         res.status(500).json({ message: "Failed to retrieve user.", error });
     }
-};
-
-export const getGeneralStores = async (req: Request, res: Response): Promise<void> => {
+});
+exports.viewUser = viewUser;
+const getGeneralStores = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Get pagination parameters
-        const page = parseInt(req.query.page as string, 10) || 1; // Default to page 1 if not provided
-        const limit = parseInt(req.query.limit as string, 10) || 10; // Default to 10 items per page
+        const page = parseInt(req.query.page, 10) || 1; // Default to page 1 if not provided
+        const limit = parseInt(req.query.limit, 10) || 10; // Default to 10 items per page
         const offset = (page - 1) * limit; // Calculate offset
-
         // Fetch stores with pagination and associated data
-        const { rows: stores, count: totalStores } = await Store.findAndCountAll({
+        const { rows: stores, count: totalStores } = yield store_1.default.findAndCountAll({
             include: [
                 {
-                    model: User,
+                    model: user_1.default,
                     as: "vendor",
                     attributes: ["id", "firstName", "lastName", "email"],
                 },
                 {
-                    model: Admin,
+                    model: admin_1.default,
                     as: "admin",
                     attributes: ["id", "name", "email"],
                 },
                 {
-                    model: Currency,
+                    model: currency_1.default,
                     as: "currency",
                 },
                 {
-                    model: Product,
+                    model: product_1.default,
                     as: "products",
                     attributes: [], // Exclude detailed product attributes
                 },
                 {
-                    model: AuctionProduct,
+                    model: auctionproduct_1.default,
                     as: "auctionproducts",
                     attributes: [], // Exclude detailed auction product attributes
                 },
@@ -1871,7 +1543,7 @@ export const getGeneralStores = async (req: Request, res: Response): Promise<voi
                 include: [
                     // Include total product count for each store
                     [
-                        Sequelize.literal(`(
+                        sequelize_1.Sequelize.literal(`(
                             SELECT COUNT(*)
                             FROM products AS product
                             WHERE product.storeId = Store.id
@@ -1880,7 +1552,7 @@ export const getGeneralStores = async (req: Request, res: Response): Promise<voi
                     ],
                     // Include total auction product count for each store
                     [
-                        Sequelize.literal(`(
+                        sequelize_1.Sequelize.literal(`(
                             SELECT COUNT(*)
                             FROM auction_products AS auctionproduct
                             WHERE auctionproduct.storeId = Store.id
@@ -1890,10 +1562,9 @@ export const getGeneralStores = async (req: Request, res: Response): Promise<voi
                 ],
             },
             offset, // Apply offset for pagination
-            limit,  // Apply limit for pagination
+            limit, // Apply limit for pagination
             order: [["createdAt", "DESC"]], // Order stores by creation date, newest first
         });
-
         // Check if any stores were found
         if (!stores || stores.length === 0) {
             res.status(404).json({
@@ -1907,7 +1578,6 @@ export const getGeneralStores = async (req: Request, res: Response): Promise<voi
             });
             return;
         }
-
         // Return stores with pagination metadata
         res.status(200).json({
             message: "Stores retrieved successfully.",
@@ -1918,47 +1588,44 @@ export const getGeneralStores = async (req: Request, res: Response): Promise<voi
                 pages: Math.ceil(totalStores / limit),
             },
         });
-    } catch (error: any) {
-        logger.error("Error retrieving stores:", error);
+    }
+    catch (error) {
+        logger_1.default.error("Error retrieving stores:", error);
         res.status(500).json({ message: "Failed to retrieve stores", error: error.message });
     }
-};
-
-export const viewGeneralStore = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+});
+exports.getGeneralStores = getGeneralStores;
+const viewGeneralStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     // Get productId from route params instead of query
     const { storeId } = req.query;
-
     try {
-        const store = await Store.findOne({
+        const store = yield store_1.default.findOne({
             where: {
-                [Op.or]: [{ id: storeId }, { name: storeId }],
+                [sequelize_1.Op.or]: [{ id: storeId }, { name: storeId }],
             },
             include: [
                 {
-                    model: User,
+                    model: user_1.default,
                     as: "vendor",
                     attributes: ["id", "firstName", "lastName", "email"],
                 },
                 {
-                    model: Admin,
+                    model: admin_1.default,
                     as: "admin",
                     attributes: ["id", "name", "email"],
                 },
                 {
-                    model: Currency,
+                    model: currency_1.default,
                     as: "currency",
                     attributes: ['symbol']
                 },
                 {
-                    model: Product,
+                    model: product_1.default,
                     as: "products",
                     attributes: [], // Exclude detailed product attributes
                 },
                 {
-                    model: AuctionProduct,
+                    model: auctionproduct_1.default,
                     as: "auctionproducts",
                     attributes: [], // Exclude detailed auction product attributes
                 },
@@ -1967,7 +1634,7 @@ export const viewGeneralStore = async (
                 include: [
                     // Include total product count for each store
                     [
-                        Sequelize.literal(`(
+                        sequelize_1.Sequelize.literal(`(
                             SELECT COUNT(*)
                             FROM products AS product
                             WHERE product.storeId = Store.id
@@ -1976,7 +1643,7 @@ export const viewGeneralStore = async (
                     ],
                     // Include total auction product count for each store
                     [
-                        Sequelize.literal(`(
+                        sequelize_1.Sequelize.literal(`(
                             SELECT COUNT(*)
                             FROM auction_products AS auctionproduct
                             WHERE auctionproduct.storeId = Store.id
@@ -1986,75 +1653,60 @@ export const viewGeneralStore = async (
                 ],
             },
         });
-
         if (!store) {
             res.status(404).json({ message: "Store not found." });
             return;
         }
-
         // Respond with the found store
         res.status(200).json({
             data: store,
         });
-    } catch (error) {
-        logger.error(error);
+    }
+    catch (error) {
+        logger_1.default.error(error);
         res.status(500).json({ message: "Failed to fetch store" });
     }
-};
-
-export const getGeneralProducts = async (req: Request, res: Response): Promise<void> => {
+});
+exports.viewGeneralStore = viewGeneralStore;
+const getGeneralProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { name, sku, status, condition, categoryName, page, limit } = req.query;
-
     try {
         // Get pagination parameters
-        const pageNumber = parseInt(page as string, 10) || 1; // Default to page 1 if not provided
-        const limitNumber = parseInt(limit as string, 10) || 10; // Default to 10 items per page
+        const pageNumber = parseInt(page, 10) || 1; // Default to page 1 if not provided
+        const limitNumber = parseInt(limit, 10) || 10; // Default to 10 items per page
         const offset = (pageNumber - 1) * limitNumber;
-
         // Fetch products with filters, pagination, and associated data
-        const { rows: products, count: totalProducts } = await Product.findAndCountAll({
-            include: [
+        const { rows: products, count: totalProducts } = yield product_1.default.findAndCountAll(Object.assign(Object.assign({ include: [
                 {
-                    model: User,
+                    model: user_1.default,
                     as: "vendor",
                     attributes: ["id", "firstName", "lastName", "email"],
                 },
                 {
-                    model: Admin,
+                    model: admin_1.default,
                     as: "admin",
                     attributes: ["id", "name", "email"],
                 },
                 {
-                    model: SubCategory,
+                    model: subcategory_1.default,
                     as: "sub_category",
                     where: categoryName ? { name: categoryName } : undefined,
                 },
                 {
-                    model: Store,
+                    model: store_1.default,
                     as: "store",
                     attributes: ["name"],
                     include: [
                         {
-                            model: Currency,
+                            model: currency_1.default,
                             as: "currency",
                             attributes: ["symbol"],
                         },
                     ],
                 },
-            ],
-            ...((name || sku || status || condition) && {
-                where: {
-                    ...(name && { name: { [Op.like]: `%${name}%` } }),
-                    ...(sku && { sku }),
-                    ...(status && { status }),
-                    ...(condition && { condition }),
-                },
-            }),
-            offset, // Apply offset for pagination
-            limit: limitNumber, // Apply limit for pagination
-            order: [["createdAt", "DESC"]], // Order by creation date (newest first)
-        });
-
+            ] }, ((name || sku || status || condition) && {
+            where: Object.assign(Object.assign(Object.assign(Object.assign({}, (name && { name: { [sequelize_1.Op.like]: `%${name}%` } })), (sku && { sku })), (status && { status })), (condition && { condition })),
+        })), { offset, limit: limitNumber, order: [["createdAt", "DESC"]] }));
         // Check if products were found
         if (!products || products.length === 0) {
             res.status(404).json({
@@ -2068,7 +1720,6 @@ export const getGeneralProducts = async (req: Request, res: Response): Promise<v
             });
             return;
         }
-
         // Return products with pagination metadata
         res.status(200).json({
             message: "Products retrieved successfully.",
@@ -2079,151 +1730,128 @@ export const getGeneralProducts = async (req: Request, res: Response): Promise<v
                 pages: Math.ceil(totalProducts / limitNumber),
             },
         });
-    } catch (error: any) {
-        logger.error(error);
+    }
+    catch (error) {
+        logger_1.default.error(error);
         res.status(500).json({ message: "Failed to fetch products", error: error.message });
     }
-};
-
-export const viewGeneralProduct = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+});
+exports.getGeneralProducts = getGeneralProducts;
+const viewGeneralProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     // Get productId from route params instead of query
     const { productId } = req.query;
-
     try {
-        const product = await Product.findOne({
+        const product = yield product_1.default.findOne({
             where: {
-                [Op.or]: [{ id: productId }, { sku: productId }],
+                [sequelize_1.Op.or]: [{ id: productId }, { sku: productId }],
             },
             include: [
                 {
-                    model: User,
+                    model: user_1.default,
                     as: "vendor",
                     attributes: ["id", "firstName", "lastName", "email"],
                 },
                 {
-                    model: Admin,
+                    model: admin_1.default,
                     as: "admin",
                     attributes: ["id", "name", "email"],
                 },
                 {
-                    model: Store,
+                    model: store_1.default,
                     as: "store",
                     include: [
                         {
-                            model: Currency,
+                            model: currency_1.default,
                             as: "currency",
                             attributes: ['symbol']
                         },
                     ]
                 },
-                { model: SubCategory, as: "sub_category" },
+                { model: subcategory_1.default, as: "sub_category" },
             ],
         });
-
         if (!product) {
             res.status(404).json({ message: "Product not found." });
             return;
         }
-
         // Respond with the found product
         res.status(200).json({
             data: product,
         });
-    } catch (error) {
-        logger.error(error);
+    }
+    catch (error) {
+        logger_1.default.error(error);
         res.status(500).json({ message: "Failed to fetch product" });
     }
-};
-
-export const deleteGeneralProduct = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+});
+exports.viewGeneralProduct = viewGeneralProduct;
+const deleteGeneralProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { productId } = req.query;
-
     try {
-        const product = await Product.findOne({
+        const product = yield product_1.default.findOne({
             where: {
-                [Op.or]: [{ id: productId }, { sku: productId }],
+                [sequelize_1.Op.or]: [{ id: productId }, { sku: productId }],
             },
         });
-
         if (!product) {
             res.status(404).json({ message: "Product not found." });
             return;
         }
-
-        await product.destroy();
+        yield product.destroy();
         res.status(200).json({
             message: "Product deleted successfully",
         });
-    } catch (error) {
-        logger.error(error);
+    }
+    catch (error) {
+        logger_1.default.error(error);
         res.status(500).json({ message: "Failed to delete product" });
     }
-};
-
-export const getGeneralAuctionProducts = async (req: Request, res: Response): Promise<void> => {
+});
+exports.deleteGeneralProduct = deleteGeneralProduct;
+const getGeneralAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { name, sku, status, condition, categoryName, page, limit } = req.query;
-
     try {
         // Get pagination parameters
-        const pageNumber = parseInt(page as string, 10) || 1; // Default to page 1 if not provided
-        const limitNumber = parseInt(limit as string, 10) || 10; // Default to 10 items per page
+        const pageNumber = parseInt(page, 10) || 1; // Default to page 1 if not provided
+        const limitNumber = parseInt(limit, 10) || 10; // Default to 10 items per page
         const offset = (pageNumber - 1) * limitNumber;
-
         // Fetch auction products with filters, pagination, and associated data
-        const { rows: auctionProducts, count: totalAuctionProducts } = await AuctionProduct.findAndCountAll({
-            include: [
+        const { rows: auctionProducts, count: totalAuctionProducts } = yield auctionproduct_1.default.findAndCountAll(Object.assign(Object.assign({ include: [
                 {
-                    model: User,
+                    model: user_1.default,
                     as: "vendor",
                     attributes: ["id", "firstName", "lastName", "email"],
                 },
                 {
-                    model: Admin,
+                    model: admin_1.default,
                     as: "admin",
                     attributes: ["id", "name", "email"],
                 },
                 {
-                    model: Admin,
+                    model: admin_1.default,
                     as: "admin",
                     attributes: ["id", "name", "email"],
                 },
                 {
-                    model: SubCategory,
+                    model: subcategory_1.default,
                     as: "sub_category",
                     where: categoryName ? { name: categoryName } : undefined,
                 },
                 {
-                    model: Store,
+                    model: store_1.default,
                     as: "store",
                     attributes: ["name"],
                     include: [
                         {
-                            model: Currency,
+                            model: currency_1.default,
                             as: "currency",
                             attributes: ["symbol"],
                         },
                     ],
                 },
-            ],
-            ...((name || sku || status || condition) && {
-                where: {
-                    ...(name && { name: { [Op.like]: `%${name}%` } }),
-                    ...(sku && { sku }),
-                    ...(status && { status }),
-                    ...(condition && { condition }),
-                },
-            }),
-            offset, // Apply offset for pagination
-            limit: limitNumber, // Apply limit for pagination
-            order: [["createdAt", "DESC"]], // Order by creation date (newest first)
-        });
-
+            ] }, ((name || sku || status || condition) && {
+            where: Object.assign(Object.assign(Object.assign(Object.assign({}, (name && { name: { [sequelize_1.Op.like]: `%${name}%` } })), (sku && { sku })), (status && { status })), (condition && { condition })),
+        })), { offset, limit: limitNumber, order: [["createdAt", "DESC"]] }));
         // Check if auction products were found
         if (!auctionProducts || auctionProducts.length === 0) {
             res.status(404).json({
@@ -2237,7 +1865,6 @@ export const getGeneralAuctionProducts = async (req: Request, res: Response): Pr
             });
             return;
         }
-
         // Return auction products with pagination metadata
         res.status(200).json({
             message: "Auction products fetched successfully.",
@@ -2248,86 +1875,76 @@ export const getGeneralAuctionProducts = async (req: Request, res: Response): Pr
                 pages: Math.ceil(totalAuctionProducts / limitNumber),
             },
         });
-    } catch (error: any) {
-        logger.error(error);
+    }
+    catch (error) {
+        logger_1.default.error(error);
         res.status(500).json({
             message: error.message || "An error occurred while fetching auction products.",
         });
     }
-};
-
-export const viewGeneralAuctionProduct = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+});
+exports.getGeneralAuctionProducts = getGeneralAuctionProducts;
+const viewGeneralAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     // Get auctionProductId from route params instead of query
     const { auctionProductId } = req.query;
-
     try {
-        const product = await AuctionProduct.findOne({
+        const product = yield auctionproduct_1.default.findOne({
             where: {
-                [Op.or]: [{ id: auctionProductId }, { sku: auctionProductId }],
+                [sequelize_1.Op.or]: [{ id: auctionProductId }, { sku: auctionProductId }],
             },
             include: [
                 {
-                    model: User,
+                    model: user_1.default,
                     as: "vendor",
                     attributes: ["id", "firstName", "lastName", "email"],
                 },
                 {
-                    model: Admin,
+                    model: admin_1.default,
                     as: "admin",
                     attributes: ["id", "name", "email"],
                 },
                 {
-                    model: Store,
+                    model: store_1.default,
                     as: "store",
                     include: [
                         {
-                            model: Currency,
+                            model: currency_1.default,
                             as: "currency",
                             attributes: ['symbol']
                         },
                     ]
                 },
-                { model: SubCategory, as: "sub_category" },
+                { model: subcategory_1.default, as: "sub_category" },
             ],
         });
-
         if (!product) {
             res.status(404).json({ message: "Auction Product not found." });
             return;
         }
-
         // Respond with the found product
         res.status(200).json({
             data: product,
         });
-    } catch (error) {
-        logger.error(error);
+    }
+    catch (error) {
+        logger_1.default.error(error);
         res.status(500).json({ message: "Failed to fetch product" });
     }
-};
-
-export const deleteGeneralAuctionProduct = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+});
+exports.viewGeneralAuctionProduct = viewGeneralAuctionProduct;
+const deleteGeneralAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { auctionProductId } = req.query;
-
     try {
         // Find the auction product by ID
-        const auctionProduct = await AuctionProduct.findOne({
+        const auctionProduct = yield auctionproduct_1.default.findOne({
             where: {
-                [Op.or]: [{ id: auctionProductId }, { sku: auctionProductId }],
+                [sequelize_1.Op.or]: [{ id: auctionProductId }, { sku: auctionProductId }],
             },
         });
-
         if (!auctionProduct) {
             res.status(404).json({ message: "Auction product not found." });
             return;
         }
-
         // Check if the auctionStatus is 'upcoming' and no bids exist
         if (auctionProduct.auctionStatus !== "upcoming") {
             res
@@ -2335,61 +1952,54 @@ export const deleteGeneralAuctionProduct = async (
                 .json({ message: "Only upcoming auction products can be deleted." });
             return;
         }
-
-        const bidCount = await Bid.count({
+        const bidCount = yield bid_1.default.count({
             where: { auctionProductId },
         });
-
         if (bidCount > 0) {
             res.status(400).json({
                 message: "Auction product already has bids, cannot be deleted.",
             });
             return;
         }
-
         // Delete the auction product
-        await auctionProduct.destroy();
-
+        yield auctionProduct.destroy();
         res.status(200).json({ message: "Auction product deleted successfully." });
-    } catch (error: any) {
-        if (error instanceof ForeignKeyConstraintError) {
+    }
+    catch (error) {
+        if (error instanceof sequelize_1.ForeignKeyConstraintError) {
             res.status(400).json({
-                message:
-                    "Cannot delete store because it has associated products. Delete or reassign products before deleting this store.",
+                message: "Cannot delete store because it has associated products. Delete or reassign products before deleting this store.",
             });
-        } else {
-            logger.error(error);
+        }
+        else {
+            logger_1.default.error(error);
             res.status(500).json({
-                message:
-                    error.message ||
+                message: error.message ||
                     "An error occurred while deleting the auction product.",
             });
         }
     }
-};
-
-export const getAllGeneralOrders = async (req: Request, res: Response): Promise<void> => {
+});
+exports.deleteGeneralAuctionProduct = deleteGeneralAuctionProduct;
+const getAllGeneralOrders = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { trackingNumber, page, limit } = req.query; // Only track by tracking number, no pagination
-
     try {
         // Fetch orders with the count of order items, and apply search by tracking number
-        const orders = await Order.findAll({
-            where: {
-                ...(trackingNumber && {
-                    trackingNumber: { [Op.like]: `%${trackingNumber}%` }, // Search by tracking number
-                }),
-            },
+        const orders = yield order_1.default.findAll({
+            where: Object.assign({}, (trackingNumber && {
+                trackingNumber: { [sequelize_1.Op.like]: `%${trackingNumber}%` }, // Search by tracking number
+            })),
             attributes: {
                 include: [
                     [
-                        Sequelize.fn("COUNT", Sequelize.col("orderItems.id")),
+                        sequelize_1.Sequelize.fn("COUNT", sequelize_1.Sequelize.col("orderItems.id")),
                         "orderItemsCount", // Alias for the count of order items
                     ],
                 ],
             },
             include: [
                 {
-                    model: OrderItem,
+                    model: orderitem_1.default,
                     as: "orderItems",
                     attributes: [], // Do not include actual order items
                 },
@@ -2397,46 +2007,41 @@ export const getAllGeneralOrders = async (req: Request, res: Response): Promise<
             group: ["Order.id"], // Group by order to ensure correct counting
             order: [["createdAt", "DESC"]], // Order by createdAt
         });
-
         if (!orders || orders.length === 0) {
             res.status(404).json({ message: "No orders found for this user" });
             return;
         }
-
         // Return the response with orders data
         res.status(200).json({
             message: "Orders retrieved successfully",
             data: orders,
         });
-    } catch (error) {
-        logger.error("Error fetching orders:", error);
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching orders:", error);
         res.status(500).json({ message: "Internal server error" });
     }
-};
-
-export const getAllGeneralOrderItems = async (req: Request, res: Response): Promise<void> => {
+});
+exports.getAllGeneralOrders = getAllGeneralOrders;
+const getAllGeneralOrderItems = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { orderId, page = 1, limit = 10 } = req.query;
-
     // Convert `page` and `limit` to numbers and ensure they are valid
-    const pageNumber = parseInt(page as string, 10) || 1;
-    const limitNumber = parseInt(limit as string, 10) || 10;
+    const pageNumber = parseInt(page, 10) || 1;
+    const limitNumber = parseInt(limit, 10) || 10;
     const offset = (pageNumber - 1) * limitNumber;
-
     try {
         // Ensure `orderId` is provided
         if (!orderId) {
             res.status(400).json({ message: "Order ID is required" });
             return;
         }
-
         // Query for order items with pagination
-        const { rows: orderItems, count } = await OrderItem.findAndCountAll({
+        const { rows: orderItems, count } = yield orderitem_1.default.findAndCountAll({
             where: { orderId },
             limit: limitNumber,
             offset,
             order: [["createdAt", "DESC"]],
         });
-
         // Handle the case where no order items are found
         if (!orderItems || orderItems.length === 0) {
             res.status(404).json({
@@ -2450,10 +2055,8 @@ export const getAllGeneralOrderItems = async (req: Request, res: Response): Prom
             });
             return;
         }
-
         // Calculate total pages
         const totalPages = Math.ceil(count / limitNumber);
-
         // Return paginated results
         res.status(200).json({
             message: "Order items retrieved successfully",
@@ -2465,35 +2068,32 @@ export const getAllGeneralOrderItems = async (req: Request, res: Response): Prom
                 limit: limitNumber,
             },
         });
-    } catch (error) {
-        logger.error("Error fetching order items:", error);
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching order items:", error);
         res.status(500).json({ message: "Internal server error" });
     }
-};
-
-export const getGeneralPaymentDetails = async (req: Request, res: Response): Promise<void> => {
+});
+exports.getAllGeneralOrderItems = getAllGeneralOrderItems;
+const getGeneralPaymentDetails = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { orderId, page = 1, limit = 10 } = req.query;
-
     // Convert `page` and `limit` to numbers and ensure they are valid
-    const pageNumber = parseInt(page as string, 10) || 1;
-    const limitNumber = parseInt(limit as string, 10) || 10;
+    const pageNumber = parseInt(page, 10) || 1;
+    const limitNumber = parseInt(limit, 10) || 10;
     const offset = (pageNumber - 1) * limitNumber;
-
     try {
         // Ensure `orderId` is provided
         if (!orderId) {
             res.status(400).json({ message: "Order ID is required" });
             return;
         }
-
         // Fetch payments for the given orderId with pagination
-        const { count, rows: payments } = await Payment.findAndCountAll({
+        const { count, rows: payments } = yield payment_1.default.findAndCountAll({
             where: { orderId },
             limit: limitNumber,
             offset,
             order: [["createdAt", "DESC"]], // Order by latest payments
         });
-
         // Handle case where no payments are found
         if (!payments || payments.length === 0) {
             res.status(404).json({
@@ -2507,10 +2107,8 @@ export const getGeneralPaymentDetails = async (req: Request, res: Response): Pro
             });
             return;
         }
-
         // Calculate total pages
         const totalPages = Math.ceil(count / limitNumber);
-
         // Return paginated results
         res.status(200).json({
             message: "Payments retrieved successfully",
@@ -2522,54 +2120,50 @@ export const getGeneralPaymentDetails = async (req: Request, res: Response): Pro
                 limit: limitNumber,
             },
         });
-    } catch (error) {
-        logger.error("Error fetching payment details:", error);
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching payment details:", error);
         res.status(500).json({ message: "Internal server error" });
     }
-};
-
-export const getAllSubscribers = async (req: Request, res: Response): Promise<void> => {
+});
+exports.getGeneralPaymentDetails = getGeneralPaymentDetails;
+const getAllSubscribers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { page = 1, limit = 10, subscriptionPlanId, isActive } = req.query; // Destructure query params for page, limit, etc.
-
     try {
         // Pagination and filtering
         const offset = (Number(page) - 1) * Number(limit);
-
         // Construct filter criteria
-        const filters: any = {};
+        const filters = {};
         if (subscriptionPlanId) {
             filters.subscriptionPlanId = subscriptionPlanId;
         }
         if (isActive !== undefined) {
             filters.isActive = isActive === 'true';
         }
-
         // Fetch vendor subscriptions with pagination and filters
-        const subscribers = await VendorSubscription.findAndCountAll({
+        const subscribers = yield vendorsubscription_1.default.findAndCountAll({
             where: filters, // Apply filters (if any)
             limit: Number(limit), // Limit results per page
             offset, // Offset for pagination
             include: [
                 {
-                    model: User,
+                    model: user_1.default,
                     as: "vendor",
                     attributes: ["id", "firstName", "lastName", "email", "phoneNumber"], // Specify which subscription plan fields to include
                 },
                 {
-                    model: SubscriptionPlan,
+                    model: subscriptionplan_1.default,
                     as: "subscriptionPlans",
                     attributes: ["id", "name", "price", "duration"], // Specify which subscription plan fields to include
                 }
             ],
             order: [["createdAt", "DESC"]], // Optional: Order by creation date
         });
-
         // If no subscribers found
         if (!subscribers || subscribers.count === 0) {
             res.status(404).json({ message: "No subscribers found" });
             return;
         }
-
         // Return the paginated subscribers with subscription plan details
         res.status(200).json({
             message: "Subscribers retrieved successfully",
@@ -2581,31 +2175,32 @@ export const getAllSubscribers = async (req: Request, res: Response): Promise<vo
                 limit: Number(limit),
             },
         });
-    } catch (error) {
+    }
+    catch (error) {
         // Handle any unexpected errors
-        logger.error("Error retrieving subscribers:", error);
+        logger_1.default.error("Error retrieving subscribers:", error);
         res.status(500).json({ message: "Failed to retrieve subscribers" });
     }
-};
-
-export const getStore = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    const adminId = req.admin?.id;
-
+});
+exports.getAllSubscribers = getAllSubscribers;
+const getStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     try {
-        const stores = await Store.findAll({
+        const stores = yield store_1.default.findAll({
             where: { vendorId: adminId },
             include: [
                 {
-                    model: Currency,
+                    model: currency_1.default,
                     as: "currency",
                 },
                 {
-                    model: Product,
+                    model: product_1.default,
                     as: "products",
                     attributes: [], // Don't include individual product details
                 },
                 {
-                    model: AuctionProduct,
+                    model: auctionproduct_1.default,
                     as: "auctionproducts",
                     attributes: [], // Don't include individual product details
                 },
@@ -2614,7 +2209,7 @@ export const getStore = async (req: AuthenticatedRequest, res: Response): Promis
                 include: [
                     // Include total product count for each store
                     [
-                        Sequelize.literal(`(
+                        sequelize_1.Sequelize.literal(`(
                             SELECT COUNT(*)
                             FROM products AS product
                             WHERE product.storeId = Store.id
@@ -2623,7 +2218,7 @@ export const getStore = async (req: AuthenticatedRequest, res: Response): Promis
                     ],
                     // Include total auction product count for each store
                     [
-                        Sequelize.literal(`(
+                        sequelize_1.Sequelize.literal(`(
                             SELECT COUNT(*)
                             FROM auction_products AS auctionproduct
                             WHERE auctionproduct.storeId = Store.id
@@ -2633,57 +2228,46 @@ export const getStore = async (req: AuthenticatedRequest, res: Response): Promis
                 ],
             },
         });
-
         // Check if any stores were found
         if (stores.length === 0) {
             res.status(404).json({ message: "No stores found for this admin.", data: [] });
             return;
         }
-
         res.status(200).json({ data: stores });
-    } catch (error) {
-        logger.error("Error retrieving stores:", error);
+    }
+    catch (error) {
+        logger_1.default.error("Error retrieving stores:", error);
         res.status(500).json({ message: "Failed to retrieve stores", error });
     }
-};
-
-export const createStore = async (
-    req: AuthenticatedRequest,
-    res: Response
-): Promise<void> => {
-    const adminId = req.admin?.id;
-
-    const { currencyId, name, location, logo, businessHours, deliveryOptions, tipsOnFinding } =
-        req.body;
-
+});
+exports.getStore = getStore;
+const createStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    const { currencyId, name, location, logo, businessHours, deliveryOptions, tipsOnFinding } = req.body;
     if (!currencyId) {
         res.status(400).json({ message: 'Currency ID is required.' });
         return;
     }
-
     try {
         // Check if a store with the same name exists for this vendorId
-        const existingStore = await Store.findOne({
+        const existingStore = yield store_1.default.findOne({
             where: { vendorId: adminId, name },
         });
-
         if (existingStore) {
             res.status(400).json({
                 message: "A store with this name already exists for the vendor.",
             });
             return;
         }
-
         // Find the currency by ID
-        const currency = await Currency.findByPk(currencyId);
-
+        const currency = yield currency_1.default.findByPk(currencyId);
         if (!currency) {
             res.status(404).json({ message: 'Currency not found' });
             return;
         }
-
         // Create the store
-        const store = await Store.create({
+        const store = yield store_1.default.create({
             vendorId: adminId,
             currencyId: currency.id,
             name,
@@ -2693,53 +2277,36 @@ export const createStore = async (
             logo,
             tipsOnFinding,
         });
-
         res
             .status(200)
             .json({ message: "Store created successfully", data: store });
-    } catch (error) {
-        logger.error(error);
+    }
+    catch (error) {
+        logger_1.default.error(error);
         res.status(500).json({ message: "Failed to create store", error });
     }
-};
-
-export const updateStore = async (
-    req: AuthenticatedRequest,
-    res: Response
-): Promise<void> => {
-    const adminId = req.admin?.id;
-
-    const {
-        storeId,
-        currencyId,
-        name,
-        location,
-        businessHours,
-        deliveryOptions,
-        tipsOnFinding,
-        logo
-    } = req.body;
-
+});
+exports.createStore = createStore;
+const updateStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    const { storeId, currencyId, name, location, businessHours, deliveryOptions, tipsOnFinding, logo } = req.body;
     try {
-        const store = await Store.findOne({ where: { id: storeId } });
-
+        const store = yield store_1.default.findOne({ where: { id: storeId } });
         if (!store) {
             res.status(404).json({ message: "Store not found" });
             return;
         }
-
         // Find the currency by ID
-        const currency = await Currency.findByPk(currencyId);
-
+        const currency = yield currency_1.default.findByPk(currencyId);
         if (!currency) {
             res.status(404).json({ message: 'Currency not found' });
             return;
         }
-
         // Check for unique name for this vendorId if name is being updated
         if (name && store.name !== name) {
-            const existingStore = await Store.findOne({
-                where: { vendorId: adminId, name, id: { [Op.ne]: storeId } },
+            const existingStore = yield store_1.default.findOne({
+                where: { vendorId: adminId, name, id: { [sequelize_1.Op.ne]: storeId } },
             });
             if (existingStore) {
                 res.status(400).json({
@@ -2748,9 +2315,8 @@ export const updateStore = async (
                 return;
             }
         }
-
         // Update store fields
-        await store.update({
+        yield store.update({
             currencyId,
             name,
             location,
@@ -2759,435 +2325,347 @@ export const updateStore = async (
             tipsOnFinding,
             logo
         });
-
         res
             .status(200)
             .json({ message: "Store updated successfully", data: store });
-    } catch (error) {
-        logger.error(error);
+    }
+    catch (error) {
+        logger_1.default.error(error);
         res.status(500).json({ message: "Failed to update store", error });
     }
-};
-
-export const deleteStore = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
-    const storeId = req.query.storeId as string;
-
-    const transaction = await sequelizeService.connection!.transaction();
-
+});
+exports.updateStore = updateStore;
+const deleteStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const storeId = req.query.storeId;
+    const transaction = yield sequelize_service_1.default.connection.transaction();
     try {
-        const store = await Store.findOne({ where: { id: storeId }, transaction });
-
+        const store = yield store_1.default.findOne({ where: { id: storeId }, transaction });
         if (!store) {
             res.status(404).json({ message: "Store not found" });
             return;
         }
-
-        await AuctionProduct.destroy({ where: { storeId }, transaction });
-        await Product.destroy({ where: { storeId }, transaction });
-        await store.destroy({ transaction });
-
-        await transaction.commit();
-
+        yield auctionproduct_1.default.destroy({ where: { storeId }, transaction });
+        yield product_1.default.destroy({ where: { storeId }, transaction });
+        yield store.destroy({ transaction });
+        yield transaction.commit();
         res.status(200).json({ message: "Store and all associations deleted successfully" });
-    } catch (error) {
-        await transaction.rollback();
-
-        if (error instanceof ForeignKeyConstraintError) {
+    }
+    catch (error) {
+        yield transaction.rollback();
+        if (error instanceof sequelize_1.ForeignKeyConstraintError) {
             res.status(400).json({
-                message:
-                    "Cannot delete store because it has associated records. Ensure all dependencies are handled before deleting the store.",
+                message: "Cannot delete store because it has associated records. Ensure all dependencies are handled before deleting the store.",
             });
-        } else {
-            logger.error(error);
+        }
+        else {
+            logger_1.default.error(error);
             res.status(500).json({ message: "Failed to delete store", error });
         }
     }
-};
-
+});
+exports.deleteStore = deleteStore;
 // Product
-export const createProduct = async (
-    req: AuthenticatedRequest,
-    res: Response
-): Promise<void> => {
-    const adminId = req.admin?.id;
-
-    const { storeId, categoryId, name, ...otherData } = req.body;
-
+const createProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    const _b = req.body, { storeId, categoryId, name } = _b, otherData = __rest(_b, ["storeId", "categoryId", "name"]);
     try {
         // Check for duplicates
-        const existingProduct = await Product.findOne({
+        const existingProduct = yield product_1.default.findOne({
             where: { vendorId: adminId, name },
         });
-
         if (existingProduct) {
             res.status(400).json({
                 message: "Product with this vendorId and name already exists.",
             });
             return;
         }
-
         // Check if vendorId, storeId, and categoryId exist
-        const vendorExists = await Admin.findByPk(adminId);
-        const storeExists = await Store.findByPk(storeId);
-        const categoryExists = await SubCategory.findByPk(categoryId);
-
+        const vendorExists = yield admin_1.default.findByPk(adminId);
+        const storeExists = yield store_1.default.findByPk(storeId);
+        const categoryExists = yield subcategory_1.default.findByPk(categoryId);
         if (!vendorExists) {
             res
                 .status(404)
                 .json({ message: "Admin not found." });
             return;
         }
-
         if (!storeExists) {
             res
                 .status(404)
                 .json({ message: "Store not found." });
             return;
         }
-
         if (!categoryExists) {
             res
                 .status(404)
                 .json({ message: "Category not found." });
             return;
         }
-
         // Generate a unique SKU (could also implement a more complex logic if needed)
         let sku;
         let isUnique = false;
-
         while (!isUnique) {
-            sku = `KDM-${uuidv4()}`; // Generate a unique SKU
-            const skuExists = await Product.findOne({ where: { sku } }); // Check if the SKU already exists
+            sku = `KDM-${(0, uuid_1.v4)()}`; // Generate a unique SKU
+            const skuExists = yield product_1.default.findOne({ where: { sku } }); // Check if the SKU already exists
             isUnique = !skuExists; // Set to true if SKU is unique
         }
-
         // Create the product
-        const product = await Product.create({
-            vendorId: adminId,
-            storeId,
+        const product = yield product_1.default.create(Object.assign({ vendorId: adminId, storeId,
             categoryId,
             name,
-            sku, // Use the generated SKU
-            ...otherData,
-        });
-
+            sku }, otherData));
         res
             .status(200)
             .json({ message: "Product created successfully", data: product });
-    } catch (error) {
-        logger.error(error);
+    }
+    catch (error) {
+        logger_1.default.error(error);
         res.status(500).json({ message: "Failed to create product" });
     }
-};
-
-export const updateProduct = async (
-    req: AuthenticatedRequest,
-    res: Response
-): Promise<void> => {
-    const { productId, ...updateData } = req.body;
-    const adminId = req.admin?.id;
-
+});
+exports.createProduct = createProduct;
+const updateProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const _b = req.body, { productId } = _b, updateData = __rest(_b, ["productId"]);
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     try {
-        const product = await Product.findOne({
+        const product = yield product_1.default.findOne({
             where: {
-                [Op.or]: [{ id: productId }, { sku: productId }],
+                [sequelize_1.Op.or]: [{ id: productId }, { sku: productId }],
                 vendorId: adminId,
             },
         });
-
         if (!product) {
             res.status(404).json({ message: "Product not found." });
             return;
         }
-
-        await product.update(updateData);
-
+        yield product.update(updateData);
         res.status(200).json({
             message: "Product updated successfully",
             data: product,
         });
-    } catch (error) {
-        logger.error(error);
+    }
+    catch (error) {
+        logger_1.default.error(error);
         res.status(500).json({ message: "Failed to update product" });
     }
-};
-
-export const deleteProduct = async (
-    req: AuthenticatedRequest,
-    res: Response
-): Promise<void> => {
+});
+exports.updateProduct = updateProduct;
+const deleteProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     const { productId } = req.query;
-    const adminId = req.admin?.id;
-
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     try {
-        const product = await Product.findOne({
+        const product = yield product_1.default.findOne({
             where: {
-                [Op.or]: [{ id: productId }, { sku: productId }],
+                [sequelize_1.Op.or]: [{ id: productId }, { sku: productId }],
                 vendorId: adminId,
             },
         });
-
         if (!product) {
             res.status(404).json({ message: "Product not found." });
             return;
         }
-
-        await product.destroy();
+        yield product.destroy();
         res.status(200).json({
             message: "Product deleted successfully",
         });
-    } catch (error) {
-        logger.error(error);
+    }
+    catch (error) {
+        logger_1.default.error(error);
         res.status(500).json({ message: "Failed to delete product" });
     }
-};
-
-export const fetchProducts = async (
-    req: AuthenticatedRequest,
-    res: Response
-): Promise<void> => {
-    const adminId = req.admin?.id;
-    
+});
+exports.deleteProduct = deleteProduct;
+const fetchProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     const { name, sku, status, condition, categoryName } = req.query;
-
     try {
-        const products = await Product.findAll({
-            where: { vendorId: adminId },
-            include: [
+        const products = yield product_1.default.findAll(Object.assign({ where: { vendorId: adminId }, include: [
                 {
-                    model: SubCategory,
+                    model: subcategory_1.default,
                     as: "sub_category",
                     where: categoryName ? { name: categoryName } : undefined,
                 },
                 {
-                    model: Store,
+                    model: store_1.default,
                     as: "store",
                     attributes: ['name'],
                     include: [
                         {
-                            model: Currency,
+                            model: currency_1.default,
                             as: "currency",
                             attributes: ['symbol']
                         },
                     ]
                 },
-            ],
-            ...((name || sku || status || condition) && {
-                where: {
-                    ...(name && { name: { [Op.like]: `%${name}%` } }),
-                    ...(sku && { sku }),
-                    ...(status && { status }),
-                    ...(condition && { condition }),
-                },
-            }),
-        });
-
+            ] }, ((name || sku || status || condition) && {
+            where: Object.assign(Object.assign(Object.assign(Object.assign({}, (name && { name: { [sequelize_1.Op.like]: `%${name}%` } })), (sku && { sku })), (status && { status })), (condition && { condition })),
+        })));
         res.status(200).json({
             data: products,
         });
-    } catch (error) {
-        logger.error(error);
+    }
+    catch (error) {
+        logger_1.default.error(error);
         res.status(500).json({ message: "Failed to fetch products" });
     }
-};
-
-export const viewProduct = async (
-    req: AuthenticatedRequest,
-    res: Response
-): Promise<void> => {
+});
+exports.fetchProducts = fetchProducts;
+const viewProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     // Get productId from route params instead of query
     const { productId } = req.query;
-    const adminId = req.admin?.id;
-
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     try {
-        const product = await Product.findOne({
+        const product = yield product_1.default.findOne({
             where: {
-                [Op.or]: [{ id: productId }, { sku: productId }],
+                [sequelize_1.Op.or]: [{ id: productId }, { sku: productId }],
                 vendorId: adminId,
             },
             include: [
                 {
-                    model: Store,
+                    model: store_1.default,
                     as: "store",
                     include: [
                         {
-                            model: Currency,
+                            model: currency_1.default,
                             as: "currency",
                             attributes: ['symbol']
                         },
                     ]
                 },
-                { model: SubCategory, as: "sub_category" },
+                { model: subcategory_1.default, as: "sub_category" },
             ],
         });
-
         if (!product) {
             res.status(404).json({ message: "Product not found." });
             return;
         }
-
         // Respond with the found product
         res.status(200).json({
             data: product,
         });
-    } catch (error) {
-        logger.error(error);
+    }
+    catch (error) {
+        logger_1.default.error(error);
         res.status(500).json({ message: "Failed to fetch product" });
     }
-};
-
-export const moveToDraft = async (
-    req: AuthenticatedRequest,
-    res: Response
-): Promise<void> => {
+});
+exports.viewProduct = viewProduct;
+const moveToDraft = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     const { productId } = req.query; // Get productId from request query
-    const adminId = req.admin?.id;
-
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     try {
         // Validate productId type
         if (typeof productId !== "string") {
             res.status(400).json({ message: "Invalid productId." });
             return;
         }
-
         // Find the product by either ID or SKU, ensuring it belongs to the authenticated vendor
-        const product = await Product.findOne({
+        const product = yield product_1.default.findOne({
             where: {
-                [Op.or]: [{ id: productId }, { sku: productId }],
+                [sequelize_1.Op.or]: [{ id: productId }, { sku: productId }],
                 vendorId: adminId,
             },
         });
-
         // If no product is found, return a 404 response
         if (!product) {
             res.status(404).json({ message: "Product not found." });
             return;
         }
-
         // Update the product's status to 'draft'
         product.status = "draft";
-        await product.save();
-
+        yield product.save();
         // Respond with the updated product
         res.status(200).json({
             message: "Product moved to draft.",
             data: product,
         });
-    } catch (error) {
-        logger.error(error); // Log the error for debugging
+    }
+    catch (error) {
+        logger_1.default.error(error); // Log the error for debugging
         res.status(500).json({ message: "Failed to move product to draft." });
     }
-};
-
-export const changeProductStatus = async (
-    req: AuthenticatedRequest,
-    res: Response
-): Promise<void> => {
+});
+exports.moveToDraft = moveToDraft;
+const changeProductStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     const { productId, status } = req.body; // Get productId and status from request body
-    const adminId = req.admin?.id;
-
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     // Validate status
     if (!["active", "inactive", "draft"].includes(status)) {
         res.status(400).json({ message: "Invalid status." });
         return;
     }
-
     try {
         // Find the product by ID or SKU
-        const product = await Product.findOne({
+        const product = yield product_1.default.findOne({
             where: {
-                [Op.or]: [{ id: productId }, { sku: productId }],
+                [sequelize_1.Op.or]: [{ id: productId }, { sku: productId }],
                 vendorId: adminId,
             },
         });
-
         // Check if the product exists
         if (!product) {
             res.status(404).json({ message: "Product not found." });
             return;
         }
-
         // Update the product status
         product.status = status;
-        await product.save();
-
+        yield product.save();
         // Respond with the updated product details
         res.status(200).json({
             message: "Product status updated successfully.",
         });
-    } catch (error) {
-        logger.error(error); // Log the error for debugging
+    }
+    catch (error) {
+        logger_1.default.error(error); // Log the error for debugging
         res.status(500).json({ message: "Failed to update product status." });
     }
-};
-
+});
+exports.changeProductStatus = changeProductStatus;
 // Auction Product
-export const createAuctionProduct = async (
-    req: AuthenticatedRequest,
-    res: Response
-): Promise<void> => {
-    const adminId = req.admin?.id;
-
-    const {
-        storeId,
-        categoryId,
-        name,
-        condition,
-        description,
-        specification,
-        price,
-        bidIncrement,
-        maxBidsPerUser,
-        participantsInterestFee,
-        startDate,
-        endDate,
-        image,
-        additionalImages,
-    } = req.body;
-
+const createAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    const { storeId, categoryId, name, condition, description, specification, price, bidIncrement, maxBidsPerUser, participantsInterestFee, startDate, endDate, image, additionalImages, } = req.body;
     try {
         // Check if adminId, storeId, and categoryId exist
-        const vendorExists = await Admin.findByPk(adminId);
-        const storeExists = await Store.findByPk(storeId);
-        const categoryExists = await SubCategory.findByPk(categoryId);
-
+        const vendorExists = yield admin_1.default.findByPk(adminId);
+        const storeExists = yield store_1.default.findByPk(storeId);
+        const categoryExists = yield subcategory_1.default.findByPk(categoryId);
         if (!vendorExists) {
             res
                 .status(404)
                 .json({ message: "Admin not found." });
             return;
         }
-
         if (!storeExists) {
             res
                 .status(404)
                 .json({ message: "Store not found." });
             return;
         }
-
         if (!categoryExists) {
             res
                 .status(404)
                 .json({ message: "Category not found." });
             return;
         }
-
         // Generate a unique SKU
         let sku;
         let isUnique = false;
-
         while (!isUnique) {
-            sku = `KDM-${uuidv4()}`; // Generate a unique SKU
-            const skuExists = await Product.findOne({ where: { sku } }); // Check if the SKU already exists
+            sku = `KDM-${(0, uuid_1.v4)()}`; // Generate a unique SKU
+            const skuExists = yield product_1.default.findOne({ where: { sku } }); // Check if the SKU already exists
             isUnique = !skuExists; // Set to true if SKU is unique
         }
-
         // Create the auction product
-        const auctionProduct = await AuctionProduct.create({
+        const auctionProduct = yield auctionproduct_1.default.create({
             vendorId: adminId,
             storeId,
             categoryId,
@@ -3205,51 +2683,29 @@ export const createAuctionProduct = async (
             image,
             additionalImages,
         });
-
         res.status(201).json({
             message: "Auction product created successfully.",
             data: auctionProduct,
         });
-    } catch (error: any) {
-        logger.error(error); // Log the error for debugging
+    }
+    catch (error) {
+        logger_1.default.error(error); // Log the error for debugging
         res.status(500).json({
-            message:
-                error.message ||
+            message: error.message ||
                 "An error occurred while creating the auction product.",
         });
     }
-};
-
-export const updateAuctionProduct = async (
-    req: AuthenticatedRequest,
-    res: Response
-): Promise<void> => {
-    const adminId = req.admin?.id;
-
-    const {
-        auctionProductId,
-        storeId,
-        categoryId,
-        name,
-        condition,
-        description,
-        specification,
-        price,
-        bidIncrement,
-        maxBidsPerUser,
-        participantsInterestFee,
-        startDate,
-        endDate,
-        image,
-        additionalImages,
-    } = req.body;
-
+});
+exports.createAuctionProduct = createAuctionProduct;
+const updateAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    const { auctionProductId, storeId, categoryId, name, condition, description, specification, price, bidIncrement, maxBidsPerUser, participantsInterestFee, startDate, endDate, image, additionalImages, } = req.body;
     try {
-
         // Find the auction product by ID
-        const auctionProduct = await AuctionProduct.findOne({
+        const auctionProduct = yield auctionproduct_1.default.findOne({
             where: {
-                [Op.or]: [{ id: auctionProductId }, { sku: auctionProductId }],
+                [sequelize_1.Op.or]: [{ id: auctionProductId }, { sku: auctionProductId }],
                 vendorId: adminId,
             },
         });
@@ -3257,7 +2713,6 @@ export const updateAuctionProduct = async (
             res.status(404).json({ message: "Auction product not found." });
             return;
         }
-
         // Check if the auction product is "upcoming" and has no bids
         if (auctionProduct.auctionStatus !== "upcoming") {
             res.status(400).json({
@@ -3265,16 +2720,14 @@ export const updateAuctionProduct = async (
             });
             return;
         }
-
         // Check if there are any bids placed for the auction product
-        const bidExists = await Bid.findOne({ where: { auctionProductId } });
+        const bidExists = yield bid_1.default.findOne({ where: { auctionProductId } });
         if (bidExists) {
             res.status(400).json({
                 message: "Auction product already has bids and cannot be updated.",
             });
             return;
         }
-
         // Check if vendorId matches the auction product's vendorId
         if (auctionProduct.vendorId !== adminId) {
             res
@@ -3282,33 +2735,28 @@ export const updateAuctionProduct = async (
                 .json({ message: "You can only update your own auction products." });
             return;
         }
-
         // Check if vendor, store, and category exist
-        const vendorExists = await Admin.findByPk(adminId);
-        const storeExists = await Store.findByPk(storeId);
-        const categoryExists = await SubCategory.findByPk(categoryId);
-
+        const vendorExists = yield admin_1.default.findByPk(adminId);
+        const storeExists = yield store_1.default.findByPk(storeId);
+        const categoryExists = yield subcategory_1.default.findByPk(categoryId);
         if (!vendorExists) {
             res
                 .status(404)
                 .json({ message: "Admin not found." });
             return;
         }
-
         if (!storeExists) {
             res
                 .status(404)
                 .json({ message: "Store not found." });
             return;
         }
-
         if (!categoryExists) {
             res
                 .status(404)
                 .json({ message: "Category not found." });
             return;
         }
-
         // Update the auction product
         auctionProduct.storeId = storeId || auctionProduct.storeId;
         auctionProduct.categoryId = categoryId || auctionProduct.categoryId;
@@ -3328,45 +2776,38 @@ export const updateAuctionProduct = async (
         auctionProduct.image = image || auctionProduct.image;
         auctionProduct.additionalImages =
             additionalImages || auctionProduct.additionalImages;
-
         // Save the updated auction product
-        await auctionProduct.save();
-
+        yield auctionProduct.save();
         res.status(200).json({
             message: "Auction product updated successfully.",
             auctionProduct,
         });
-    } catch (error: any) {
-        logger.error(error); // Log the error for debugging
+    }
+    catch (error) {
+        logger_1.default.error(error); // Log the error for debugging
         res.status(500).json({
-            message:
-                error.message ||
+            message: error.message ||
                 "An error occurred while updating the auction product.",
         });
     }
-};
-
-export const deleteAuctionProduct = async (
-    req: AuthenticatedRequest,
-    res: Response
-): Promise<void> => {
+});
+exports.updateAuctionProduct = updateAuctionProduct;
+const deleteAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     const { auctionProductId } = req.query;
-    const adminId = req.admin?.id;
-
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     try {
         // Find the auction product by ID
-        const auctionProduct = await AuctionProduct.findOne({
+        const auctionProduct = yield auctionproduct_1.default.findOne({
             where: {
-                [Op.or]: [{ id: auctionProductId }, { sku: auctionProductId }],
+                [sequelize_1.Op.or]: [{ id: auctionProductId }, { sku: auctionProductId }],
                 vendorId: adminId,
             },
         });
-
         if (!auctionProduct) {
             res.status(404).json({ message: "Auction product not found." });
             return;
         }
-
         // Check if the auctionStatus is 'upcoming' and no bids exist
         if (auctionProduct.auctionStatus !== "upcoming") {
             res
@@ -3374,60 +2815,51 @@ export const deleteAuctionProduct = async (
                 .json({ message: "Only upcoming auction products can be deleted." });
             return;
         }
-
-        const bidCount = await Bid.count({
+        const bidCount = yield bid_1.default.count({
             where: { auctionProductId },
         });
-
         if (bidCount > 0) {
             res.status(400).json({
                 message: "Auction product already has bids, cannot be deleted.",
             });
             return;
         }
-
         // Delete the auction product
-        await auctionProduct.destroy();
-
+        yield auctionProduct.destroy();
         res.status(200).json({ message: "Auction product deleted successfully." });
-    } catch (error: any) {
-        if (error instanceof ForeignKeyConstraintError) {
+    }
+    catch (error) {
+        if (error instanceof sequelize_1.ForeignKeyConstraintError) {
             res.status(400).json({
-                message:
-                    "Cannot delete store because it has associated products. Delete or reassign products before deleting this store.",
+                message: "Cannot delete store because it has associated products. Delete or reassign products before deleting this store.",
             });
-        } else {
-            logger.error(error);
+        }
+        else {
+            logger_1.default.error(error);
             res.status(500).json({
-                message:
-                    error.message ||
+                message: error.message ||
                     "An error occurred while deleting the auction product.",
             });
         }
     }
-};
-
-export const cancelAuctionProduct = async (
-    req: AuthenticatedRequest,
-    res: Response
-): Promise<void> => {
+});
+exports.deleteAuctionProduct = deleteAuctionProduct;
+const cancelAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     const { auctionProductId } = req.query;
-    const adminId = req.admin?.id;
-
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     try {
         // Find the auction product by ID
-        const auctionProduct = await AuctionProduct.findOne({
+        const auctionProduct = yield auctionproduct_1.default.findOne({
             where: {
-                [Op.or]: [{ id: auctionProductId }, { sku: auctionProductId }],
+                [sequelize_1.Op.or]: [{ id: auctionProductId }, { sku: auctionProductId }],
                 vendorId: adminId,
             },
         });
-
         if (!auctionProduct) {
             res.status(404).json({ message: "Auction product not found." });
             return;
         }
-
         // Check if the auctionStatus is 'upcoming' and no bids exist
         if (auctionProduct.auctionStatus !== "upcoming") {
             res
@@ -3435,7 +2867,6 @@ export const cancelAuctionProduct = async (
                 .json({ message: "Only upcoming auction products can be cancelled." });
             return;
         }
-
         // Check if vendorId matches the auction product's vendorId
         if (auctionProduct.vendorId !== adminId) {
             res
@@ -3443,171 +2874,136 @@ export const cancelAuctionProduct = async (
                 .json({ message: "You can only cancel your own auction products." });
             return;
         }
-
         // Change the auction product auctionStatus to 'cancelled'
         auctionProduct.auctionStatus = "cancelled";
-        await auctionProduct.save();
-
+        yield auctionProduct.save();
         res.status(200).json({
             message: "Auction product has been cancelled successfully.",
         });
-    } catch (error: any) {
-        logger.error(error); // Log the error for debugging
+    }
+    catch (error) {
+        logger_1.default.error(error); // Log the error for debugging
         res.status(500).json({
-            message:
-                error.message ||
+            message: error.message ||
                 "An error occurred while cancelling the auction product.",
         });
     }
-};
-
-export const fetchAuctionProducts = async (
-    req: AuthenticatedRequest,
-    res: Response
-): Promise<void> => {
-    const adminId = req.admin?.id;
+});
+exports.cancelAuctionProduct = cancelAuctionProduct;
+const fetchVendorAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     const { name, sku, status, condition, categoryName } = req.query;
-
     try {
         // Fetch all auction products for the vendor
-        const auctionProducts = await AuctionProduct.findAll({
-            where: {
+        const auctionProducts = yield auctionproduct_1.default.findAll(Object.assign({ where: {
                 vendorId: adminId,
-            },
-            include: [
+            }, include: [
                 {
-                    model: SubCategory,
+                    model: subcategory_1.default,
                     as: "sub_category",
                     where: categoryName ? { name: categoryName } : undefined,
                 },
                 {
-                    model: Store,
+                    model: store_1.default,
                     as: "store",
                     attributes: ['name'],
                     include: [
                         {
-                            model: Currency,
+                            model: currency_1.default,
                             as: "currency",
                             attributes: ['symbol']
                         },
                     ]
                 },
-            ],
-            ...((name || sku || status || condition) && {
-                where: {
-                    ...(name && { name: { [Op.like]: `%${name}%` } }),
-                    ...(sku && { sku }),
-                    ...(status && { status }),
-                    ...(condition && { condition }),
-                },
-            }),
-        });
-
+            ] }, ((name || sku || status || condition) && {
+            where: Object.assign(Object.assign(Object.assign(Object.assign({}, (name && { name: { [sequelize_1.Op.like]: `%${name}%` } })), (sku && { sku })), (status && { status })), (condition && { condition })),
+        })));
         if (auctionProducts.length === 0) {
             res
                 .status(404)
                 .json({ message: "No auction products found for this vendor.", data: [] });
             return;
         }
-
         res.status(200).json({
             message: "Auction products fetched successfully.",
             data: auctionProducts,
         });
-    } catch (error: any) {
-        logger.error(error); // Log the error for debugging
+    }
+    catch (error) {
+        logger_1.default.error(error); // Log the error for debugging
         res.status(500).json({
-            message:
-                error.message || "An error occurred while fetching auction products.",
+            message: error.message || "An error occurred while fetching auction products.",
         });
     }
-};
-
-export const viewAuctionProduct = async (
-    req: AuthenticatedRequest,
-    res: Response
-): Promise<void> => {
+});
+exports.fetchVendorAuctionProducts = fetchVendorAuctionProducts;
+const viewAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     // Get auctionProductId from route params instead of query
     const { auctionProductId } = req.query;
-    const adminId = req.admin?.id;
-
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     try {
-        const product = await AuctionProduct.findOne({
+        const product = yield auctionproduct_1.default.findOne({
             where: {
-                [Op.or]: [{ id: auctionProductId }, { sku: auctionProductId }],
+                [sequelize_1.Op.or]: [{ id: auctionProductId }, { sku: auctionProductId }],
                 vendorId: adminId,
             },
             include: [
                 {
-                    model: Store,
+                    model: store_1.default,
                     as: "store",
                     include: [
                         {
-                            model: Currency,
+                            model: currency_1.default,
                             as: "currency",
                             attributes: ['symbol']
                         },
                     ]
                 },
-                { model: SubCategory, as: "sub_category" },
+                { model: subcategory_1.default, as: "sub_category" },
             ],
         });
-
         if (!product) {
             res.status(404).json({ message: "Auction Product not found." });
             return;
         }
-
         // Respond with the found product
         res.status(200).json({
             data: product,
         });
-    } catch (error) {
-        logger.error(error);
+    }
+    catch (error) {
+        logger_1.default.error(error);
         res.status(500).json({ message: "Failed to fetch product" });
     }
-};
-
-export const getTransactionsForAdmin = async (
-    req: Request,
-    res: Response
-): Promise<void> => {
+});
+exports.viewAuctionProduct = viewAuctionProduct;
+const getTransactionsForAdmin = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { transactionType, refId, status, userName, page, limit } = req.query;
-
     try {
         // Get pagination parameters
-        const pageNumber = parseInt(page as string, 10) || 1; // Default to page 1 if not provided
-        const limitNumber = parseInt(limit as string, 10) || 10; // Default to 10 items per page
+        const pageNumber = parseInt(page, 10) || 1; // Default to page 1 if not provided
+        const limitNumber = parseInt(limit, 10) || 10; // Default to 10 items per page
         const offset = (pageNumber - 1) * limitNumber;
-
         // Fetch transactions with filters, pagination, and associated data
-        const { rows: transactions, count: totalTransactions } = await Transaction.findAndCountAll({
+        const { rows: transactions, count: totalTransactions } = yield transaction_1.default.findAndCountAll({
             include: [
-                {
-                    model: User,
-                    as: "user",
-                    attributes: ["id", "firstName", "lastName", "email"],
-                    ...(userName && {
-                        where: {
-                            [Op.or]: [
-                                { firstName: { [Op.like]: `%${userName}%` } },
-                                { lastName: { [Op.like]: `%${userName}%` } },
-                                { email: { [Op.like]: `%${userName}%` } },
-                            ],
-                        },
-                    }),
-                },
+                Object.assign({ model: user_1.default, as: "user", attributes: ["id", "firstName", "lastName", "email"] }, (userName && {
+                    where: {
+                        [sequelize_1.Op.or]: [
+                            { firstName: { [sequelize_1.Op.like]: `%${userName}%` } },
+                            { lastName: { [sequelize_1.Op.like]: `%${userName}%` } },
+                            { email: { [sequelize_1.Op.like]: `%${userName}%` } },
+                        ],
+                    },
+                })),
             ],
-            where: {
-                ...(transactionType && { transactionType: { [Op.like]: `%${transactionType}%` } }),
-                ...(refId && { refId: { [Op.like]: `%${refId}%` } }),
-                ...(status && { status }),
-            },
+            where: Object.assign(Object.assign(Object.assign({}, (transactionType && { transactionType: { [sequelize_1.Op.like]: `%${transactionType}%` } })), (refId && { refId: { [sequelize_1.Op.like]: `%${refId}%` } })), (status && { status })),
             offset, // Apply offset for pagination
             limit: limitNumber, // Apply limit for pagination
             order: [["createdAt", "DESC"]], // Order by creation date (newest first)
         });
-
         // Check if transactions were found
         if (!transactions || transactions.length === 0) {
             res.status(404).json({
@@ -3621,7 +3017,6 @@ export const getTransactionsForAdmin = async (
             });
             return;
         }
-
         // Return transactions with pagination metadata
         res.status(200).json({
             message: "Transactions retrieved successfully.",
@@ -3632,350 +3027,11 @@ export const getTransactionsForAdmin = async (
                 pages: Math.ceil(totalTransactions / limitNumber),
             },
         });
-    } catch (error: any) {
+    }
+    catch (error) {
         console.error(error);
         res.status(500).json({ message: "Failed to fetch transactions", error: error.message });
     }
-};
-
-// Adverts
-export const activeProducts = async (
-    req: AuthenticatedRequest,
-    res: Response
-): Promise<void> => {
-    const adminId = req.admin?.id;
-    const { name } = req.query;
-
-    try {
-        const products = await Product.findAll({
-            where: { vendorId: adminId, status: "active" },
-            ...((name) && {
-                where: {
-                    ...(name && { name: { [Op.like]: `%${name}%` } }),
-                },
-            }),
-        });
-
-        res.status(200).json({
-            data: products,
-        });
-    } catch (error) {
-        logger.error(error);
-        res.status(500).json({ message: "Failed to fetch active products" });
-    }
-};
-
-export const createAdvert = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    const adminId = req.admin?.id;
-    const { categoryId, productId, title, description, media_url } = req.body;
-
-    try {
-        // Check if categoryId and productId exist
-        const categoryExists = await SubCategory.findByPk(categoryId);
-        const productExists = await Product.findByPk(productId);
-
-        if (!categoryExists) {
-            res
-                .status(404)
-                .json({ message: "Category not found." });
-            return;
-        }
-
-        if (!productExists) {
-            res
-                .status(404)
-                .json({ message: "Product not found." });
-            return;
-        }
-
-        const newAdvert = await Advert.create({
-            userId: adminId,
-            categoryId,
-            productId,
-            title,
-            description,
-            media_url,
-            status: "approved"
-        });
-
-        res.status(201).json({
-            message: "Advert created successfully",
-            data: newAdvert,
-        });
-    } catch (error: any) {
-        logger.error(error);
-        res.status(500).json({ message: "Failed to create advert" });
-    }
-};
-
-export const updateAdvert = async (req: Request, res: Response): Promise<void> => {
-    const { advertId, categoryId, productId, title, description, media_url } = req.body;
-
-    try {
-        // Check if categoryId and productId exist
-        const categoryExists = await SubCategory.findByPk(categoryId);
-        const productExists = await Product.findByPk(productId);
-
-        if (!categoryExists) {
-            res
-                .status(404)
-                .json({ message: "Category not found." });
-            return;
-        }
-
-        if (!productExists) {
-            res
-                .status(404)
-                .json({ message: "Product not found." });
-            return;
-        }
-
-        const advert = await Advert.findByPk(advertId);
-
-        if (!advert) {
-            res.status(404).json({ message: "Advert not found" });
-            return;
-        }
-
-        advert.categoryId = categoryId || advert.categoryId;
-        advert.productId = productId || advert.productId;
-        advert.title = title || advert.title;
-        advert.description = description || advert.description;
-        advert.media_url = media_url || advert.media_url;
-
-        await advert.save();
-
-        res.status(200).json({
-            message: "Advert updated successfully",
-            data: advert,
-        });
-    } catch (error) {
-        logger.error(error);
-        res.status(500).json({ message: "Failed to update advert" });
-    }
-};
-
-export const getAdverts = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    const { search, page = 1, limit = 10 } = req.query;
-    const adminId = req.admin?.id;
-
-    // Convert `page` and `limit` to numbers and ensure they are valid
-    const pageNumber = parseInt(page as string, 10) || 1;
-    const limitNumber = parseInt(limit as string, 10) || 10;
-    const offset = (pageNumber - 1) * limitNumber;
-
-    try {
-        // Build the where condition for the search query (using Op.or for title and status)
-        const whereConditions: any = { userId: adminId };
-
-        if (search) {
-            whereConditions[Op.or] = [
-                { title: { [Op.like]: `%${search}%` } },
-                { status: { [Op.like]: `%${search}%` } },
-            ];
-        }
-
-        // Fetch adverts with pagination, filters, and associated data
-        const { count, rows: adverts } = await Advert.findAndCountAll({
-            where: whereConditions,
-            include: [
-                { model: Product, as: "product", attributes: ['id', 'name'] },
-                { model: SubCategory, as: "sub_category" },
-            ],
-            limit: limitNumber,
-            offset,
-            order: [["createdAt", "DESC"]], // Order by latest adverts
-        });
-
-        // Handle case where no adverts are found
-        if (!adverts || adverts.length === 0) {
-            res.status(404).json({
-                message: "No adverts found",
-                data: [],
-                pagination: {
-                    total: 0,
-                    page: pageNumber,
-                    pages: 0,
-                },
-            });
-            return;
-        }
-
-        // Calculate total pages
-        const totalPages = Math.ceil(count / limitNumber);
-
-        // Return paginated results
-        res.status(200).json({
-            message: "Adverts fetched successfully",
-            data: adverts,
-            pagination: {
-                total: count, // Total number of adverts
-                page: pageNumber,
-                pages: totalPages,
-                limit: limitNumber,
-            },
-        });
-    } catch (error) {
-        logger.error("Error fetching adverts:", error);
-        res.status(500).json({ message: "Internal server error" });
-    }
-};
-
-export const viewAdvert = async (req: Request, res: Response): Promise<void> => {
-    const advertId = req.query.advertId as string;
-
-    try {
-        const advert = await Advert.findByPk(advertId, {
-            include: [
-                { model: Product, as: "product"},
-                { model: SubCategory, as: "sub_category" },
-            ],
-        });
-
-        if (!advert) {
-            res.status(404).json({ message: "Advert not found" });
-            return;
-        }
-
-        res.status(200).json({
-            message: "Advert fetched successfully",
-            data: advert,
-        });
-    } catch (error) {
-        logger.error(error);
-        res.status(500).json({ message: "Failed to fetch advert" });
-    }
-};
-
-export const deleteAdvert = async (req: Request, res: Response): Promise<void> => {
-    const advertId = req.query.advertId as string;
-
-    try {
-        const advert = await Advert.findByPk(advertId);
-
-        if (!advert) {
-            res.status(404).json({ message: "Advert not found" });
-            return;
-        }
-
-        await advert.destroy();
-
-        res.status(200).json({
-            message: "Advert deleted successfully",
-        });
-    } catch (error) {
-        logger.error(error);
-        res.status(500).json({ message: "Failed to delete advert" });
-    }
-};
-
-export const getGeneralAdverts = async (req: Request, res: Response): Promise<void> => {
-    const { search, page = 1, limit = 10 } = req.query;
-
-    // Convert `page` and `limit` to numbers and ensure they are valid
-    const pageNumber = parseInt(page as string, 10) || 1;
-    const limitNumber = parseInt(limit as string, 10) || 10;
-    const offset = (pageNumber - 1) * limitNumber;
-
-    try {
-        // Build the where condition for the search query (using Op.or for title and status)
-        const whereConditions: any = {};
-
-        if (search) {
-            whereConditions[Op.or] = [
-                { title: { [Op.like]: `%${search}%` } },
-                { status: { [Op.like]: `%${search}%` } },
-            ];
-        }
-
-        // Fetch adverts with pagination, filters, and associated data
-        const { count, rows: adverts } = await Advert.findAndCountAll({
-            where: whereConditions,
-            include: [
-                {
-                    model: User,
-                    as: "vendor",
-                    attributes: ["id", "firstName", "lastName", "email"],
-                },
-                {
-                    model: Admin,
-                    as: "admin",
-                    attributes: ["id", "name", "email"],
-                },
-                { model: Product, as: "product", attributes: ['id', 'name'] },
-                { model: SubCategory, as: "sub_category" },
-            ],
-            limit: limitNumber,
-            offset,
-            order: [["createdAt", "DESC"]], // Order by latest adverts
-        });
-
-        // Handle case where no adverts are found
-        if (!adverts || adverts.length === 0) {
-            res.status(404).json({
-                message: "No adverts found",
-                data: [],
-                pagination: {
-                    total: 0,
-                    page: pageNumber,
-                    pages: 0,
-                },
-            });
-            return;
-        }
-
-        // Calculate total pages
-        const totalPages = Math.ceil(count / limitNumber);
-
-        // Return paginated results
-        res.status(200).json({
-            message: "Adverts fetched successfully",
-            data: adverts,
-            pagination: {
-                total: count, // Total number of adverts
-                page: pageNumber,
-                pages: totalPages,
-                limit: limitNumber,
-            },
-        });
-    } catch (error) {
-        logger.error("Error fetching adverts:", error);
-        res.status(500).json({ message: "Internal server error" });
-    }
-};
-
-export const viewGeneralAdvert = async (req: Request, res: Response): Promise<void> => {
-    const advertId = req.query.advertId as string;
-
-    try {
-        const advert = await Advert.findByPk(advertId, {
-            include: [
-                {
-                    model: User,
-                    as: "vendor",
-                    attributes: ["id", "firstName", "lastName", "email"],
-                },
-                {
-                    model: Admin,
-                    as: "admin",
-                    attributes: ["id", "name", "email"],
-                },
-                { model: Product, as: "product"},
-                { model: SubCategory, as: "sub_category" },
-            ],
-        });
-
-        if (!advert) {
-            res.status(404).json({ message: "Advert not found" });
-            return;
-        }
-
-        res.status(200).json({
-            message: "Advert fetched successfully",
-            data: advert,
-        });
-    } catch (error) {
-        logger.error(error);
-        res.status(500).json({ message: "Failed to fetch advert" });
-    }
-};
+});
+exports.getTransactionsForAdmin = getTransactionsForAdmin;
+//# sourceMappingURL=adminController.js.map
