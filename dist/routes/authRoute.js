@@ -42,7 +42,9 @@ authRoutes.post("/auth/password/reset", (0, validations_1.resetPasswordValidatio
 // Admin
 authRoutes.post("/auth/admin/login", (0, validations_1.loginValidationRules)(), validations_1.validate, authController.adminLogin);
 // Frontend
-authRoutes.get('/categories', homeController.getCategoriesWithSubcategories); // Fetch categories with subcategories
+authRoutes.get('/categories', homeController.getAllCategories); // Fetch categories with subcategories
+authRoutes.get('/category/sub-categories', homeController.getCategorySubCategories); // Fetch categories with subcategories
+authRoutes.get('/categories/with/sub-categories', homeController.getCategoriesWithSubcategories); // Fetch categories with subcategories
 authRoutes.get("/products", homeController.products);
 authRoutes.get('/product', homeController.getProductById); // Fetch a single product by ID
 authRoutes.get("/stores", homeController.getAllStores);

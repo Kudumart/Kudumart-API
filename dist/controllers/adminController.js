@@ -3058,7 +3058,7 @@ exports.activeProducts = activeProducts;
 const createAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _x;
     const adminId = (_x = req.admin) === null || _x === void 0 ? void 0 : _x.id;
-    const { categoryId, productId, title, description, media_url } = req.body;
+    const { categoryId, productId, title, description, media_url, showOnHomepage } = req.body;
     try {
         // Check if categoryId and productId exist
         const categoryExists = yield subcategory_1.default.findByPk(categoryId);
@@ -3082,7 +3082,8 @@ const createAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             title,
             description,
             media_url,
-            status: "approved"
+            status: "approved",
+            showOnHomepage
         });
         res.status(201).json({
             message: "Advert created successfully",
@@ -3096,7 +3097,7 @@ const createAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* (
 });
 exports.createAdvert = createAdvert;
 const updateAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { advertId, categoryId, productId, title, description, media_url } = req.body;
+    const { advertId, categoryId, productId, title, description, media_url, showOnHomepage } = req.body;
     try {
         // Check if categoryId and productId exist
         const categoryExists = yield subcategory_1.default.findByPk(categoryId);
@@ -3123,6 +3124,7 @@ const updateAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         advert.title = title || advert.title;
         advert.description = description || advert.description;
         advert.media_url = media_url || advert.media_url;
+        advert.showOnHomepage = showOnHomepage || advert.showOnHomepage;
         yield advert.save();
         res.status(200).json({
             message: "Advert updated successfully",
@@ -3252,6 +3254,7 @@ const getGeneralAdverts = (req, res) => __awaiter(void 0, void 0, void 0, functi
             whereConditions[sequelize_1.Op.or] = [
                 { title: { [sequelize_1.Op.like]: `%${search}%` } },
                 { status: { [sequelize_1.Op.like]: `%${search}%` } },
+                { showOnHomepage: { [sequelize_1.Op.like]: `%${search}%` } }
             ];
         }
         // Fetch adverts with pagination, filters, and associated data

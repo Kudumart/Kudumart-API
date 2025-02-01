@@ -79,6 +79,11 @@ const initModel = (sequelize) => {
             allowNull: true,
             type: sequelize_1.DataTypes.TEXT
         },
+        showOnHomepage: {
+            type: sequelize_1.DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false, // Default to false (not on homepage)
+        },
     }, {
         sequelize,
         modelName: 'Advert',

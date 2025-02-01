@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAdverts = exports.getAuctionProductById = exports.getUpcomingAuctionProducts = exports.getStoreProducts = exports.getAllStores = exports.getProductById = exports.products = exports.getCategoriesWithSubcategories = void 0;
+exports.getAdverts = exports.getAuctionProductById = exports.getUpcomingAuctionProducts = exports.getStoreProducts = exports.getAllStores = exports.getProductById = exports.products = exports.getCategoriesWithSubcategories = exports.getCategorySubCategories = exports.getAllCategories = void 0;
 const logger_1 = __importDefault(require("../middlewares/logger")); // Adjust the path to your logger.js
 const product_1 = __importDefault(require("../models/product"));
 const sequelize_1 = require("sequelize");
@@ -26,6 +26,35 @@ const auctionproduct_1 = __importDefault(require("../models/auctionproduct"));
 const currency_1 = __importDefault(require("../models/currency"));
 const admin_1 = __importDefault(require("../models/admin"));
 const advert_1 = __importDefault(require("../models/advert"));
+const getAllCategories = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const categories = yield category_1.default.findAll();
+        res.status(200).json({ data: categories });
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching categories", error);
+        res.status(500).json({
+            message: "An error occurred while fetching categories.",
+        });
+    }
+});
+exports.getAllCategories = getAllCategories;
+const getCategorySubCategories = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { categoryId } = req.query;
+    try {
+        const subCategories = yield subcategory_1.default.findAll({
+            where: { categoryId }
+        });
+        res.status(200).json({ data: subCategories });
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching sub categories", error);
+        res.status(500).json({
+            message: "An error occurred while fetching sub categories.",
+        });
+    }
+});
+exports.getCategorySubCategories = getCategorySubCategories;
 const getCategoriesWithSubcategories = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const categories = yield category_1.default.findAll({
@@ -456,23 +485,27 @@ const getAuctionProductById = (req, res) => __awaiter(void 0, void 0, void 0, fu
 exports.getAuctionProductById = getAuctionProductById;
 const getAdverts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { search = "", page = 1, limit = 10 } = req.query;
+        const { search = "", page = 1, limit = 10, showOnHomePage } = req.query;
         // Convert pagination params
         const pageNumber = parseInt(page) || 1;
         const pageSize = parseInt(limit) || 10;
         const offset = (pageNumber - 1) * pageSize;
-        // Define search condition along with the approved status
-        const searchCondition = Object.assign({ status: "approved" }, (search
-            ? {
-                [sequelize_1.Op.or]: [
-                    { title: { [sequelize_1.Op.iLike]: `%${search}%` } },
-                    { categoryId: { [sequelize_1.Op.iLike]: `%${search}%` } },
-                    { productId: { [sequelize_1.Op.iLike]: `%${search}%` } },
-                    { "$sub_category.name$": { [sequelize_1.Op.iLike]: `%${search}%` } },
-                    { "$product.name$": { [sequelize_1.Op.iLike]: `%${search}%` } }, // Search in product name
-                ],
-            }
-            : {}));
+        // Base condition: Only approved adverts
+        const searchCondition = { status: "approved" };
+        // Apply search query if provided
+        if (search) {
+            searchCondition[sequelize_1.Op.or] = [
+                { title: { [sequelize_1.Op.like]: `%${search}%` } },
+                { categoryId: { [sequelize_1.Op.like]: `%${search}%` } },
+                { productId: { [sequelize_1.Op.like]: `%${search}%` } },
+                { "$sub_category.name$": { [sequelize_1.Op.like]: `%${search}%` } },
+                { "$product.name$": { [sequelize_1.Op.like]: `%${search}%` } }, // Search in product name
+            ];
+        }
+        // Handle boolean filtering for showOnHomePage
+        if (showOnHomePage !== undefined) {
+            searchCondition.showOnHomePage = showOnHomePage === "true";
+        }
         // Query adverts
         const { rows: adverts, count } = yield advert_1.default.findAndCountAll({
             where: searchCondition,
