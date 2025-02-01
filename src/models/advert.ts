@@ -11,6 +11,7 @@ class Advert extends Model {
   public media_url!: string;
   public status?: "pending" | "approved" | "rejected";
   public adminNote?: string;
+  public showOnHomepage?: boolean;
   public createdAt?: Date;
   public updatedAt?: Date;
 
@@ -90,6 +91,11 @@ const initModel = (sequelize: Sequelize) => {
       adminNote: {
         allowNull: true,
         type: DataTypes.TEXT
+      },
+      showOnHomepage: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false, // Default to false (not on homepage)
       },
     },
     {

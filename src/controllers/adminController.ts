@@ -3668,7 +3668,7 @@ export const activeProducts = async (
 
 export const createAdvert = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const adminId = req.admin?.id;
-    const { categoryId, productId, title, description, media_url } = req.body;
+    const { categoryId, productId, title, description, media_url, showOnHomepage } = req.body;
 
     try {
         // Check if categoryId and productId exist
@@ -3696,7 +3696,8 @@ export const createAdvert = async (req: AuthenticatedRequest, res: Response): Pr
             title,
             description,
             media_url,
-            status: "approved"
+            status: "approved",
+            showOnHomepage
         });
 
         res.status(201).json({
@@ -3710,7 +3711,7 @@ export const createAdvert = async (req: AuthenticatedRequest, res: Response): Pr
 };
 
 export const updateAdvert = async (req: Request, res: Response): Promise<void> => {
-    const { advertId, categoryId, productId, title, description, media_url } = req.body;
+    const { advertId, categoryId, productId, title, description, media_url, showOnHomepage } = req.body;
 
     try {
         // Check if categoryId and productId exist
@@ -3743,6 +3744,7 @@ export const updateAdvert = async (req: Request, res: Response): Promise<void> =
         advert.title = title || advert.title;
         advert.description = description || advert.description;
         advert.media_url = media_url || advert.media_url;
+        advert.showOnHomepage = showOnHomepage || advert.showOnHomepage;
 
         await advert.save();
 
@@ -3886,6 +3888,7 @@ export const getGeneralAdverts = async (req: Request, res: Response): Promise<vo
             whereConditions[Op.or] = [
                 { title: { [Op.like]: `%${search}%` } },
                 { status: { [Op.like]: `%${search}%` } },
+                { showOnHomepage: { [Op.like]: `%${search}%` } }
             ];
         }
 

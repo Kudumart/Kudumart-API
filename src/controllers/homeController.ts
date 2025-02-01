@@ -17,6 +17,42 @@ import Currency from "../models/currency";
 import Admin from "../models/admin";
 import Advert from "../models/advert";
 
+export const getAllCategories = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
+    try {
+        const categories = await Category.findAll();
+
+        res.status(200).json({ data: categories });
+    } catch (error: any) {
+        logger.error("Error fetching categories", error);
+        res.status(500).json({
+            message: "An error occurred while fetching categories.",
+        });
+    }
+};
+
+export const getCategorySubCategories = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
+    const { categoryId } = req.query;
+
+    try {
+        const subCategories = await SubCategory.findAll({
+            where: { categoryId }
+        });
+
+        res.status(200).json({ data: subCategories });
+    } catch (error: any) {
+        logger.error("Error fetching sub categories", error);
+        res.status(500).json({
+            message: "An error occurred while fetching sub categories.",
+        });
+    }
+};
+
 export const getCategoriesWithSubcategories = async (
     req: Request,
     res: Response
@@ -491,28 +527,31 @@ export const getAuctionProductById = async (
 
 export const getAdverts = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { search = "", page = 1, limit = 10 } = req.query;
+        const { search = "", page = 1, limit = 10, showOnHomePage } = req.query;
 
         // Convert pagination params
         const pageNumber = parseInt(page as string) || 1;
         const pageSize = parseInt(limit as string) || 10;
         const offset = (pageNumber - 1) * pageSize;
 
-        // Define search condition along with the approved status
-        const searchCondition = {
-            status: "approved", // Only approved adverts
-            ...(search
-                ? {
-                      [Op.or]: [
-                          { title: { [Op.iLike]: `%${search}%` } }, // Search in advert title
-                          { categoryId: { [Op.iLike]: `%${search}%` } },
-                          { productId: { [Op.iLike]: `%${search}%` } },
-                          { "$sub_category.name$": { [Op.iLike]: `%${search}%` } }, // Search in category name
-                          { "$product.name$": { [Op.iLike]: `%${search}%` } }, // Search in product name
-                      ],
-                  }
-                : {}),
-        };
+        // Base condition: Only approved adverts
+        const searchCondition: any = { status: "approved" };
+
+        // Apply search query if provided
+        if (search) {
+            searchCondition[Op.or] = [
+                { title: { [Op.like]: `%${search}%` } }, // Search in advert title
+                { categoryId: { [Op.like]: `%${search}%` } },
+                { productId: { [Op.like]: `%${search}%` } },          
+                { "$sub_category.name$": { [Op.like]: `%${search}%` } }, // Search in category name
+                { "$product.name$": { [Op.like]: `%${search}%` } }, // Search in product name
+            ];
+        }
+
+        // Handle boolean filtering for showOnHomePage
+        if (showOnHomePage !== undefined) {
+            searchCondition.showOnHomePage = showOnHomePage === "true";
+        }
 
         // Query adverts
         const { rows: adverts, count } = await Advert.findAndCountAll({

@@ -115,7 +115,7 @@ export const confirmProfileEmailValidationRules = () => {
 export const updateProfilePhoneNumberValidationRules = () => {
   return [
     check("newPhoneNumber")
-      .optional()
+      .optional({ checkFalsy: true })
       .isMobilePhone("any")
       .withMessage("Invalid phone number")
       .custom((value) => {
@@ -130,7 +130,7 @@ export const updateProfilePhoneNumberValidationRules = () => {
 export const confirmProfilePhoneNumberValidationRules = () => {
   return [
     check("newPhoneNumber")
-      .optional()
+      .optional({ checkFalsy: true })
       .isMobilePhone("any")
       .withMessage("Invalid phone number")
       .custom((value) => {
@@ -235,7 +235,7 @@ export const createSubscriptionPlanValidationRules = () => {
       .withMessage("Allows auction must be a boolean value"),
 
     check("auctionProductLimit")
-      .optional()
+      .optional({ checkFalsy: true })
       .isInt({ min: 0 })
       .withMessage("Auction product limit must be a non-negative integer"),
   ];
@@ -252,32 +252,32 @@ export const updateSubscriptionPlanValidationRules = () => {
       .withMessage("Plan ID must be a valid UUID"),
 
     check("name")
-      .optional()
+      .optional({ checkFalsy: true })
       .isLength({ min: 2, max: 50 })
       .withMessage("Plan name must be between 2 and 50 characters"),
 
     check("duration")
-      .optional()
+      .optional({ checkFalsy: true })
       .isInt({ min: 1 })
       .withMessage("Duration must be a positive integer representing months"),
 
     check("price")
-      .optional()
+      .optional({ checkFalsy: true })
       .isFloat({ min: 0 })
       .withMessage("Price must be a non-negative number"),
 
     check("productLimit")
-      .optional()
+      .optional({ checkFalsy: true })
       .isInt({ min: 0 })
       .withMessage("Product limit must be a non-negative integer"),
 
     check("allowsAuction")
-      .optional()
+      .optional({ checkFalsy: true })
       .isBoolean()
       .withMessage("Allows auction must be a boolean value"),
 
     check("auctionProductLimit")
-      .optional()
+      .optional({ checkFalsy: true })
       .isInt({ min: 0 })
       .withMessage("Auction product limit must be a non-negative integer"),
   ];
@@ -307,46 +307,46 @@ export const kycValidationRules = () => {
       .withMessage("Contact phone number must be between 10 and 15 digits"),
 
     check("businessDescription")
-      .optional()
+      .optional({ checkFalsy: true })
       .isLength({ max: 500 })
       .withMessage("Business description must be less than 500 characters"),
 
     check("businessLink")
-      .optional()
+      .optional({ checkFalsy: true })
       .isURL()
       .withMessage("Business link must be a valid URL"),
 
     check("businessRegistrationNumber")
-      .optional()
+      .optional({ checkFalsy: true })
       .isLength({ min: 2, max: 50 })
       .withMessage(
         "Business registration number must be between 2 and 50 characters"
       ),
 
     check("taxIdentificationNumber")
-      .optional()
+      .optional({ checkFalsy: true })
       .isLength({ min: 2, max: 50 })
       .withMessage(
         "Tax identification number must be between 2 and 50 characters"
       ),
 
     check("idVerification.name")
-      .optional()
+      .optional({ checkFalsy: true })
       .isLength({ min: 2, max: 50 })
       .withMessage("ID verification name must be between 2 and 50 characters"),
 
     check("idVerification.photoFront")
-      .optional()
+      .optional({ checkFalsy: true })
       .isURL()
       .withMessage("Front of ID verification must be a valid URL"),
 
     check("idVerification.photoBack")
-      .optional()
+      .optional({ checkFalsy: true })
       .isURL()
       .withMessage("Back of ID verification must be a valid URL"),
 
     check("certificateOfIncorporation")
-      .optional()
+      .optional({ checkFalsy: true })
       .isURL()
       .withMessage("Certificate of Incorporation must be a valid URL"),
   ];
@@ -359,7 +359,7 @@ export const validateKYCNotification = () => {
       .withMessage("Approval status is required and must be a boolean"),
 
     check("adminNote")
-      .optional()
+      .optional({ checkFalsy: true })
       .isLength({ max: 500 })
       .withMessage("Admin note must not exceed 500 characters"),
   ];
@@ -372,15 +372,15 @@ export const createStoreValidation = () => {
       .isLength({ min: 1 })
       .withMessage("Store name is required."),
     check("location")
-      .optional()
+      .optional({ checkFalsy: true })
       .isObject()
       .withMessage("Location must be a valid object."),
     check("businessHours")
-      .optional()
+      .optional({ checkFalsy: true })
       .isObject()
       .withMessage("Business hours must be a valid object."),
     check("deliveryOptions")
-      .optional()
+      .optional({ checkFalsy: true })
       .isArray()
       .withMessage("Delivery options must be an array.")
       .custom((value) => {
@@ -401,11 +401,11 @@ export const createStoreValidation = () => {
         return true; // if all checks pass
       }),
     check("logo")
-      .optional()
+      .optional({ checkFalsy: true })
       .isString()
       .withMessage("Logo must be a valid string."),
     check("tipsOnFinding")
-      .optional()
+      .optional({ checkFalsy: true })
       .isString()
       .withMessage("Tips on finding the store must be a string."),
   ];
@@ -415,20 +415,20 @@ export const updateStoreValidation = () => {
   return [
     check("storeId").isUUID().withMessage("Store ID must be a valid UUID."),
     check("name")
-      .optional()
+      .optional({ checkFalsy: true })
       .isString()
       .isLength({ min: 1 })
       .withMessage("Store name must be a non-empty string."),
     check("location")
-      .optional()
+      .optional({ checkFalsy: true })
       .isObject()
       .withMessage("Location must be a valid object."),
     check("businessHours")
-      .optional()
+      .optional({ checkFalsy: true })
       .isObject()
       .withMessage("Business hours must be a valid object."),
     check("deliveryOptions")
-      .optional()
+      .optional({ checkFalsy: true })
       .isArray()
       .withMessage("Delivery options must be an array.")
       .custom((value) => {
@@ -449,7 +449,7 @@ export const updateStoreValidation = () => {
         return true; // if all checks pass
       }),
     check("tipsOnFinding")
-      .optional()
+      .optional({ checkFalsy: true })
       .isString()
       .withMessage("Tips on finding the store must be a string."),
   ];
@@ -470,11 +470,11 @@ export const addProductValidation = () => {
       .isIn(["brand_new", "fairly_used", "fairly_foreign", "refurbished"])
       .withMessage("Condition must be one of the specified values."),
     check("description")
-      .optional()
+      .optional({ checkFalsy: true })
       .isString()
       .withMessage("Description must be a string."),
     check("specification")
-      .optional()
+      .optional({ checkFalsy: true })
       .isString()
       .withMessage("Specification must be a string."),
     check("price")
@@ -483,17 +483,17 @@ export const addProductValidation = () => {
         "Price must be a valid decimal number with up to two decimal places."
       ),
     check("discount_price")
-      .optional()
+      .optional({ checkFalsy: true })
       .isDecimal({ decimal_digits: "0,2" })
       .withMessage(
         "Discount price must be a valid decimal number with up to two decimal places if provided."
       ),
     check("image_url")
-      .optional()
+      .optional({ checkFalsy: true })
       .isString()
       .withMessage("Image URL must be a valid string."),
     check("additional_images")
-      .optional()
+      .optional({ checkFalsy: true })
       .isArray({ min: 1 })
       .withMessage("Additional images must be an array of URLs.")
       .custom((array) => {
@@ -511,27 +511,27 @@ export const addProductValidation = () => {
         return true;
       }),
     check("warranty")
-      .optional()
+      .optional({ checkFalsy: true })
       .isString()
       .withMessage("Warranty must be a valid string."),
     check("return_policy")
-      .optional()
+      .optional({ checkFalsy: true })
       .isString()
       .withMessage("Return policy must be a valid string."),
     check("seo_title")
-      .optional()
+      .optional({ checkFalsy: true })
       .isString()
       .withMessage("SEO title must be a valid string."),
     check("meta_description")
-      .optional()
+      .optional({ checkFalsy: true })
       .isString()
       .withMessage("Meta description must be a valid string."),
     check("keywords")
-      .optional()
+      .optional({ checkFalsy: true })
       .isString()
       .withMessage("Keywords must be a valid string."),
     check("status")
-      .optional()
+      .optional({ checkFalsy: true })
       .isIn(["active", "inactive", "draft"])
       .withMessage("Status must be one of the specified values."),
   ];
@@ -544,40 +544,40 @@ export const updateProductValidation = () => {
       .isString()
       .withMessage("Product ID must be a valid UUID or SKU."),
     check("name")
-      .optional()
+      .optional({ checkFalsy: true })
       .isString()
       .isLength({ min: 1 })
       .withMessage("Product name must be a non-empty string."),
     check("condition")
-      .optional()
+      .optional({ checkFalsy: true })
       .isIn(["brand_new", "fairly_used", "fairly_foreign", "refurbished"])
       .withMessage("Condition must be one of the specified values."),
     check("description")
-      .optional()
+      .optional({ checkFalsy: true })
       .isString()
       .withMessage("Description must be a string."),
     check("specification")
-      .optional()
+      .optional({ checkFalsy: true })
       .isString()
       .withMessage("Specification must be a string."),
     check("price")
-      .optional()
+      .optional({ checkFalsy: true })
       .isDecimal({ decimal_digits: "0,2" })
       .withMessage(
         "Price must be a valid decimal number with up to two decimal places."
       ),
     check("discount_price")
-      .optional()
+      .optional({ checkFalsy: true })
       .isDecimal({ decimal_digits: "0,2" })
       .withMessage(
         "Discount price must be a valid decimal number with up to two decimal places if provided."
       ),
     check("image_url")
-      .optional()
+      .optional({ checkFalsy: true })
       .isString()
       .withMessage("Image URL must be a valid string."),
     check("additional_images")
-      .optional()
+      .optional({ checkFalsy: true })
       .isArray({ min: 1 })
       .withMessage("Additional images must be an array of URLs.")
       .custom((array) => {
@@ -595,27 +595,27 @@ export const updateProductValidation = () => {
         return true;
       }),
     check("warranty")
-      .optional()
+      .optional({ checkFalsy: true })
       .isString()
       .withMessage("Warranty must be a valid string."),
     check("return_policy")
-      .optional()
+      .optional({ checkFalsy: true })
       .isString()
       .withMessage("Return policy must be a valid string."),
     check("seo_title")
-      .optional()
+      .optional({ checkFalsy: true })
       .isString()
       .withMessage("SEO title must be a valid string."),
     check("meta_description")
-      .optional()
+      .optional({ checkFalsy: true })
       .isString()
       .withMessage("Meta description must be a valid string."),
     check("keywords")
-      .optional()
+      .optional({ checkFalsy: true })
       .isString()
       .withMessage("Keywords must be a valid string."),
     check("status")
-      .optional()
+      .optional({ checkFalsy: true })
       .isIn(["active", "inactive", "draft"])
       .withMessage("Status must be one of the specified values."),
   ];
@@ -646,13 +646,13 @@ export const auctionProductValidation = () => {
         "Price must be a valid decimal number with up to two decimal places."
       ),
     check("bidIncrement")
-      .optional()
+      .optional({ checkFalsy: true })
       .isDecimal({ decimal_digits: "0,2" })
       .withMessage(
         "Bid increment must be a valid decimal number with up to two decimal places."
       ),
     check("maxBidsPerUser")
-      .optional()
+      .optional({ checkFalsy: true })
       .isInt({ min: 1 })
       .withMessage(
         "Max bids per user must be a valid integer greater than or equal to 1."
@@ -669,11 +669,11 @@ export const auctionProductValidation = () => {
       .isISO8601()
       .withMessage("End date must be a valid date in ISO 8601 format."),
     check("image")
-      .optional()
+      .optional({ checkFalsy: true })
       .isString()
       .withMessage("Image must be a valid url."),
     check("additionalImages")
-      .optional()
+      .optional({ checkFalsy: true })
       .isArray({ min: 1 })
       .withMessage("Additional images must be an array of URLs.")
       .custom((array) => {
@@ -721,13 +721,13 @@ export const updateAuctionProductValidation = () => {
         "Price must be a valid decimal number with up to two decimal places."
       ),
     check("bidIncrement")
-      .optional()
+      .optional({ checkFalsy: true })
       .isDecimal({ decimal_digits: "0,2" })
       .withMessage(
         "Bid increment must be a valid decimal number with up to two decimal places."
       ),
     check("maxBidsPerUser")
-      .optional()
+      .optional({ checkFalsy: true })
       .isInt({ min: 1 })
       .withMessage(
         "Max bids per user must be a valid integer greater than or equal to 1."
@@ -744,11 +744,11 @@ export const updateAuctionProductValidation = () => {
       .isISO8601()
       .withMessage("End date must be a valid date in ISO 8601 format."),
     check("image")
-      .optional()
+      .optional({ checkFalsy: true })
       .isString()
       .withMessage("Image must be a valid url."),
     check("additionalImages")
-      .optional()
+      .optional({ checkFalsy: true })
       .isArray({ min: 1 })
       .withMessage("Additional images must be an array of URLs.")
       .custom((array) => {
@@ -813,7 +813,7 @@ export const validateSendMessage = () => {
 
     // Validate fileUrl (Optional)
     check("fileUrl")
-      .optional()
+      .optional({ checkFalsy: true })
       .isURL()
       .withMessage("File URL must be a valid URL"),
 
@@ -857,7 +857,7 @@ export const validateAddItemToCart = () => {
 
     // Validate quantity
     check("quantity")
-      .optional()
+      .optional({ checkFalsy: true })
       .isInt({ min: 1 })
       .withMessage("Quantity must be a positive integer"),
   ];
@@ -907,42 +907,50 @@ export const createAdvertValidation = () => {
       .isLength({ min: 1 })
       .withMessage("Advert description is required."),
     check("media_url")
-      .optional()
+      .optional({ checkFalsy: true })
       .isString()
       .withMessage("Media URL must be a valid string."),
     check("status")
-      .optional()
+      .optional({ checkFalsy: true })
       .isIn(['pending', 'approved', 'rejected'])
       .withMessage("Status must be one of 'pending', 'approved', or 'rejected'."),
     check("productId")
-      .optional()
+      .optional({ checkFalsy: true })
       .isUUID()
       .withMessage("Product ID must be a valid UUID."),
+    check("showOnHomepage")
+      .optional({ checkFalsy: true })
+      .isBoolean()
+      .withMessage("show on home page must be a boolean value"),
   ];
 };
 
 export const updateAdvertValidation = () => {
   return [
     check("title")
-      .optional()
+      .optional({ checkFalsy: true })
       .isString()
       .withMessage("Advert title must be a valid string."),
     check("description")
-      .optional()
+      .optional({ checkFalsy: true })
       .isString()
       .withMessage("Advert description must be a valid string."),
     check("media_url")
-      .optional()
+      .optional({ checkFalsy: true })
       .isString()
       .withMessage("Media URL must be a valid string."),
     check("status")
-      .optional()
+      .optional({ checkFalsy: true })
       .isIn(['pending', 'approved', 'rejected'])
       .withMessage("Status must be one of 'pending', 'approved', or 'rejected'."),
     check("productId")
-      .optional()
+      .optional({ checkFalsy: true })
       .isUUID()
       .withMessage("Product ID must be a valid UUID."),
+    check("showOnHomepage")
+      .optional({ checkFalsy: true })
+      .isBoolean()
+      .withMessage("show on home page must be a boolean value"),
   ];
 };
 

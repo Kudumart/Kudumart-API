@@ -1489,7 +1489,7 @@ export const activeProducts = async (
 export const createAdvert = async (req: Request, res: Response): Promise<void> => {
     const vendorId = (req as AuthenticatedRequest).user?.id as string; // Authenticated user ID from middleware
 
-    const { categoryId, productId, title, description, media_url } = req.body;
+    const { categoryId, productId, title, description, media_url, showOnHomepage } = req.body;
 
     try {
         // Use the utility function to check the product limit
@@ -1525,6 +1525,7 @@ export const createAdvert = async (req: Request, res: Response): Promise<void> =
             title,
             description,
             media_url,
+            showOnHomepage
         });
 
         res.status(201).json({
@@ -1538,7 +1539,7 @@ export const createAdvert = async (req: Request, res: Response): Promise<void> =
 };
 
 export const updateAdvert = async (req: Request, res: Response): Promise<void> => {
-    const { advertId, categoryId, productId, title, description, media_url } = req.body;
+    const { advertId, categoryId, productId, title, description, media_url, showOnHomepage } = req.body;
 
     try {
         // Check if categoryId and productId exist
@@ -1571,6 +1572,7 @@ export const updateAdvert = async (req: Request, res: Response): Promise<void> =
         advert.title = title || advert.title;
         advert.description = description || advert.description;
         advert.media_url = media_url || advert.media_url;
+        advert.showOnHomepage = showOnHomepage || advert.showOnHomepage;
 
         await advert.save();
 

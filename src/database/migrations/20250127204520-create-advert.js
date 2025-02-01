@@ -51,6 +51,11 @@ module.exports = {
         allowNull: true,
         type: Sequelize.TEXT
       },
+      showOnHomepage: {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: false, // Default to false (not on homepage)
+      },
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE
