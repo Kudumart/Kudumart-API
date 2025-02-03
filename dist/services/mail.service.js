@@ -20,7 +20,7 @@ dotenv_1.default.config();
 const transporter = nodemailer_1.default.createTransport({
     host: process.env.MAIL_HOST,
     port: parseInt(process.env.MAIL_PORT, 10),
-    secure: ((_a = process.env.MAIL_ENCRYPTION) === null || _a === void 0 ? void 0 : _a.toLowerCase()) === 'ssl',
+    secure: ((_a = process.env.MAIL_ENCRYPTION) === null || _a === void 0 ? void 0 : _a.toLowerCase()) === 'ssl', // true for SSL/TLS
     auth: {
         user: process.env.MAIL_USERNAME,
         pass: process.env.MAIL_PASSWORD,
@@ -29,7 +29,7 @@ const transporter = nodemailer_1.default.createTransport({
 transporter.verify()
     .then(() => console.log("Connected to email server"))
     .catch((err) => console.error("Unable to connect to email server:", err.message));
-const sendMail = (email, subject, message, files = []) => __awaiter(void 0, void 0, void 0, function* () {
+const sendMail = (email_1, subject_1, message_1, ...args_1) => __awaiter(void 0, [email_1, subject_1, message_1, ...args_1], void 0, function* (email, subject, message, files = []) {
     try {
         const mailOptions = {
             from: process.env.MAIL_FROM_ADDRESS,

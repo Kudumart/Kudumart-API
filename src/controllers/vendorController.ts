@@ -136,6 +136,39 @@ export const getStore = async (req: Request, res: Response): Promise<void> => {
     }
 };
 
+export const viewStore = async (req: Request, res: Response): Promise<void> => {
+    const vendorId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID from middleware
+
+    const storeId = req.query.storeId as string;
+
+    try {
+        const store = await Store.findOne({
+            where: { vendorId, id: storeId },
+            include: [
+                {
+                    model: Currency,
+                    as: "currency",
+                },
+                {
+                    model: Product,
+                    as: "products",
+                    attributes: [], // Don't include individual product details
+                },
+                {
+                    model: AuctionProduct,
+                    as: "auctionproducts",
+                    attributes: [], // Don't include individual product details
+                },
+            ]
+        });
+
+        res.status(200).json({ data: store });
+    } catch (error) {
+        logger.error("Error retrieving store:", error);
+        res.status(500).json({ message: "Failed to retrieve store", error });
+    }
+};
+
 export const createStore = async (
     req: Request,
     res: Response
@@ -1502,8 +1535,6 @@ export const createAdvert = async (req: Request, res: Response): Promise<void> =
 
         // Check if categoryId and productId exist
         const categoryExists = await SubCategory.findByPk(categoryId);
-        const productExists = await Product.findByPk(productId);
-
         if (!categoryExists) {
             res
                 .status(404)
@@ -1511,11 +1542,15 @@ export const createAdvert = async (req: Request, res: Response): Promise<void> =
             return;
         }
 
-        if (!productExists) {
-            res
-                .status(404)
-                .json({ message: "Product not found." });
-            return;
+        if(productId) {
+            const productExists = await Product.findByPk(productId);
+
+            if (!productExists) {
+                res
+                    .status(404)
+                    .json({ message: "Product not found." });
+                return;
+            }
         }
 
         const newAdvert = await Advert.create({
@@ -1544,7 +1579,6 @@ export const updateAdvert = async (req: Request, res: Response): Promise<void> =
     try {
         // Check if categoryId and productId exist
         const categoryExists = await SubCategory.findByPk(categoryId);
-        const productExists = await Product.findByPk(productId);
 
         if (!categoryExists) {
             res
@@ -1553,11 +1587,15 @@ export const updateAdvert = async (req: Request, res: Response): Promise<void> =
             return;
         }
 
-        if (!productExists) {
-            res
-                .status(404)
-                .json({ message: "Product not found." });
-            return;
+        if(productId) {
+            const productExists = await Product.findByPk(productId);
+
+            if (!productExists) {
+                res
+                    .status(404)
+                    .json({ message: "Product not found." });
+                return;
+            }
         }
 
         const advert = await Advert.findByPk(advertId);

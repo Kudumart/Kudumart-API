@@ -58,11 +58,11 @@ const initModel = (sequelize) => {
             allowNull: true,
         },
         idVerification: {
-            type: sequelize_1.DataTypes.JSON,
+            type: sequelize_1.DataTypes.JSON, // This could be a URL to the uploaded document
             allowNull: true,
         },
         adminNote: {
-            type: sequelize_1.DataTypes.TEXT,
+            type: sequelize_1.DataTypes.TEXT, // This field is for admin's notes or remarks
             allowNull: true,
         },
         isVerified: {

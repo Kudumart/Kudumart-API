@@ -3673,8 +3673,6 @@ export const createAdvert = async (req: AuthenticatedRequest, res: Response): Pr
     try {
         // Check if categoryId and productId exist
         const categoryExists = await SubCategory.findByPk(categoryId);
-        const productExists = await Product.findByPk(productId);
-
         if (!categoryExists) {
             res
                 .status(404)
@@ -3682,11 +3680,15 @@ export const createAdvert = async (req: AuthenticatedRequest, res: Response): Pr
             return;
         }
 
-        if (!productExists) {
-            res
-                .status(404)
-                .json({ message: "Product not found." });
-            return;
+        if(productId) {
+            const productExists = await Product.findByPk(productId);
+
+            if (!productExists) {
+                res
+                    .status(404)
+                    .json({ message: "Product not found." });
+                return;
+            }
         }
 
         const newAdvert = await Advert.create({
@@ -3716,8 +3718,6 @@ export const updateAdvert = async (req: Request, res: Response): Promise<void> =
     try {
         // Check if categoryId and productId exist
         const categoryExists = await SubCategory.findByPk(categoryId);
-        const productExists = await Product.findByPk(productId);
-
         if (!categoryExists) {
             res
                 .status(404)
@@ -3725,11 +3725,15 @@ export const updateAdvert = async (req: Request, res: Response): Promise<void> =
             return;
         }
 
-        if (!productExists) {
-            res
-                .status(404)
-                .json({ message: "Product not found." });
-            return;
+        if(productId) {
+            const productExists = await Product.findByPk(productId);
+
+            if (!productExists) {
+                res
+                    .status(404)
+                    .json({ message: "Product not found." });
+                return;
+            }
         }
 
         const advert = await Advert.findByPk(advertId);

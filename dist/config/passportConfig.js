@@ -37,8 +37,8 @@ passport_1.default.use(new passport_facebook_1.Strategy({
         // Create a new user if they don't exist
         const newUser = yield user_1.default.create({
             email,
-            firstName: (_a = profile.name) === null || _a === void 0 ? void 0 : _a.givenName,
-            lastName: (_b = profile.name) === null || _b === void 0 ? void 0 : _b.familyName,
+            firstName: (_a = profile.name) === null || _a === void 0 ? void 0 : _a.givenName, // Optional chaining
+            lastName: (_b = profile.name) === null || _b === void 0 ? void 0 : _b.familyName, // Optional chaining
             facebookId: profile.id // Save Facebook ID to associate with the user
         });
         return done(null, newUser);
@@ -53,7 +53,7 @@ passport_1.default.use(new passport_google_oauth20_1.Strategy({
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: '/auth/google/callback',
 }, (token, tokenSecret, profile, done) => __awaiter(void 0, void 0, void 0, function* () {
-    var _c, _d;
+    var _a, _b;
     try {
         // Type guard for profile.emails
         if (!profile.emails || profile.emails.length === 0) {
@@ -67,8 +67,8 @@ passport_1.default.use(new passport_google_oauth20_1.Strategy({
         // Create a new user if they don't exist
         const newUser = yield user_1.default.create({
             email,
-            firstName: (_c = profile.name) === null || _c === void 0 ? void 0 : _c.givenName,
-            lastName: (_d = profile.name) === null || _d === void 0 ? void 0 : _d.familyName,
+            firstName: (_a = profile.name) === null || _a === void 0 ? void 0 : _a.givenName, // Optional chaining
+            lastName: (_b = profile.name) === null || _b === void 0 ? void 0 : _b.familyName, // Optional chaining
             googleId: profile.id // Save Google ID to associate with the user
         });
         return done(null, newUser);

@@ -195,7 +195,7 @@ const getProductById = (req, res) => __awaiter(void 0, void 0, void 0, function*
         const recommendedProducts = yield product_1.default.findAll({
             where: {
                 categoryId: product.categoryId,
-                id: { [sequelize_1.Op.ne]: product.id },
+                id: { [sequelize_1.Op.ne]: product.id }, // Exclude the currently viewed product
                 status: "active",
             },
             include: [
@@ -277,8 +277,8 @@ const getAllStores = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             message: "Stores fetched successfully",
             data: stores,
             pagination: {
-                total,
-                page: Number(page),
+                total, // Total number of matching records
+                page: Number(page), // Current page number
                 limit: Number(limit) // Number of items per page
             }
         });
@@ -495,10 +495,10 @@ const getAdverts = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         // Apply search query if provided
         if (search) {
             searchCondition[sequelize_1.Op.or] = [
-                { title: { [sequelize_1.Op.like]: `%${search}%` } },
+                { title: { [sequelize_1.Op.like]: `%${search}%` } }, // Search in advert title
                 { categoryId: { [sequelize_1.Op.like]: `%${search}%` } },
                 { productId: { [sequelize_1.Op.like]: `%${search}%` } },
-                { "$sub_category.name$": { [sequelize_1.Op.like]: `%${search}%` } },
+                { "$sub_category.name$": { [sequelize_1.Op.like]: `%${search}%` } }, // Search in category name
                 { "$product.name$": { [sequelize_1.Op.like]: `%${search}%` } }, // Search in product name
             ];
         }

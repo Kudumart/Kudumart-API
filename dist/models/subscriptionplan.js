@@ -23,7 +23,7 @@ const initModel = (sequelize) => {
             allowNull: false,
         },
         duration: {
-            type: sequelize_1.DataTypes.INTEGER,
+            type: sequelize_1.DataTypes.INTEGER, // Duration in days
             allowNull: false,
         },
         price: {
@@ -46,12 +46,12 @@ const initModel = (sequelize) => {
         },
         maxAds: {
             type: sequelize_1.DataTypes.INTEGER,
-            allowNull: true,
+            allowNull: true, // Null if auctions are not allowed
             defaultValue: 0
         },
         adsDurationDays: {
             type: sequelize_1.DataTypes.INTEGER,
-            allowNull: true,
+            allowNull: true, // Null if auctions are not allowed
             defaultValue: 0
         },
     }, {

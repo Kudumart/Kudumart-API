@@ -23,6 +23,7 @@ vendorRoutes.get("/kyc", authMiddleware, vendorController.getKYC);
 
 // Store
 vendorRoutes.get("/store", authMiddleware, vendorController.getStore);
+vendorRoutes.get("/view/store", authMiddleware, vendorController.viewStore);
 vendorRoutes.post("/store", authMiddleware, authorizeVendor, createStoreValidation(), validate, vendorController.createStore);
 vendorRoutes.put("/store", authMiddleware, authorizeVendor, updateStoreValidation(), validate, vendorController.updateStore);
 vendorRoutes.delete("/store", authMiddleware, authorizeVendor, vendorController.deleteStore);
