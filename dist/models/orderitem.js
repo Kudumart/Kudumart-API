@@ -11,6 +11,16 @@ class OrderItem extends sequelize_1.Model {
             foreignKey: 'orderId',
             onDelete: 'RESTRICT',
         });
+        this.belongsTo(models.User, {
+            as: 'vendor',
+            foreignKey: 'vendorId',
+            onDelete: 'RESTRICT'
+        });
+        this.belongsTo(models.Admin, {
+            as: 'admin',
+            foreignKey: 'vendorId',
+            onDelete: 'RESTRICT'
+        });
     }
 }
 const initModel = (sequelize) => {
@@ -24,11 +34,6 @@ const initModel = (sequelize) => {
         vendorId: {
             type: sequelize_1.DataTypes.UUID,
             allowNull: false,
-            references: {
-                model: "users",
-                key: "id",
-            },
-            onDelete: "RESTRICT",
         },
         orderId: {
             type: sequelize_1.DataTypes.UUID,

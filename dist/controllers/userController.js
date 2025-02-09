@@ -42,6 +42,7 @@ const notification_1 = __importDefault(require("../models/notification"));
 const subscriptionplan_1 = __importDefault(require("../models/subscriptionplan"));
 const vendorsubscription_1 = __importDefault(require("../models/vendorsubscription"));
 const subcategory_1 = __importDefault(require("../models/subcategory"));
+const admin_1 = __importDefault(require("../models/admin"));
 const logout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Get the token from the request
@@ -89,10 +90,10 @@ const profile = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.profile = profile;
 const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _b;
     try {
         const { firstName, lastName, dateOfBirth, gender, location } = req.body;
-        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Assuming the user ID is passed in the URL params
+        const userId = (_b = req.user) === null || _b === void 0 ? void 0 : _b.id; // Assuming the user ID is passed in the URL params
         const user = yield user_1.default.findByPk(userId);
         if (!user) {
             res.status(404).json({ message: "User not found." });
@@ -121,10 +122,10 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.updateProfile = updateProfile;
 const updateProfilePhoto = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _c;
     try {
         const { photo } = req.body;
-        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Assuming the user ID is passed in the URL params
+        const userId = (_c = req.user) === null || _c === void 0 ? void 0 : _c.id; // Assuming the user ID is passed in the URL params
         const user = yield user_1.default.findByPk(userId);
         if (!user) {
             res.status(404).json({ message: "User not found." });
@@ -147,9 +148,9 @@ const updateProfilePhoto = (req, res) => __awaiter(void 0, void 0, void 0, funct
 });
 exports.updateProfilePhoto = updateProfilePhoto;
 const updatePassword = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _d;
     const { oldPassword, newPassword, confirmNewPassword } = req.body;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Using optional chaining to access userId
+    const userId = (_d = req.user) === null || _d === void 0 ? void 0 : _d.id; // Using optional chaining to access userId
     try {
         // Find the user
         const user = yield user_1.default.scope("auth").findByPk(userId);
@@ -198,8 +199,8 @@ const updatePassword = (req, res) => __awaiter(void 0, void 0, void 0, function*
 });
 exports.updatePassword = updatePassword;
 const updateProfileEmail = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _e;
+    const userId = (_e = req.user) === null || _e === void 0 ? void 0 : _e.id; // Authenticated user ID from middleware
     const { newEmail } = req.body;
     try {
         // Check if the current email matches the authenticated user's email
@@ -246,8 +247,8 @@ const updateProfileEmail = (req, res) => __awaiter(void 0, void 0, void 0, funct
 });
 exports.updateProfileEmail = updateProfileEmail;
 const confirmEmailUpdate = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _f;
+    const userId = (_f = req.user) === null || _f === void 0 ? void 0 : _f.id; // Authenticated user ID from middleware
     const { newEmail, otpCode } = req.body;
     try {
         // Check if the current email matches the authenticated user's email
@@ -313,8 +314,8 @@ const confirmEmailUpdate = (req, res) => __awaiter(void 0, void 0, void 0, funct
 });
 exports.confirmEmailUpdate = confirmEmailUpdate;
 const updateProfilePhoneNumber = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _g;
+    const userId = (_g = req.user) === null || _g === void 0 ? void 0 : _g.id; // Authenticated user ID from middleware
     const { newPhoneNumber } = req.body;
     try {
         // Check if the current user exists
@@ -367,8 +368,8 @@ const updateProfilePhoneNumber = (req, res) => __awaiter(void 0, void 0, void 0,
 });
 exports.updateProfilePhoneNumber = updateProfilePhoneNumber;
 const confirmPhoneNumberUpdate = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _h;
+    const userId = (_h = req.user) === null || _h === void 0 ? void 0 : _h.id; // Authenticated user ID from middleware
     const { newPhoneNumber, otpCode } = req.body;
     try {
         // Check if the current user exists
@@ -436,8 +437,8 @@ const confirmPhoneNumberUpdate = (req, res) => __awaiter(void 0, void 0, void 0,
 });
 exports.confirmPhoneNumberUpdate = confirmPhoneNumberUpdate;
 const getUserNotificationSettings = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get the authenticated user's ID
+    var _j;
+    const userId = (_j = req.user) === null || _j === void 0 ? void 0 : _j.id; // Get the authenticated user's ID
     try {
         // Step 1: Retrieve the user's notification settings
         const userSettings = yield usernotificationsetting_1.default.findOne({
@@ -465,8 +466,8 @@ const getUserNotificationSettings = (req, res) => __awaiter(void 0, void 0, void
 });
 exports.getUserNotificationSettings = getUserNotificationSettings;
 const updateUserNotificationSettings = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get the authenticated user's ID
+    var _k;
+    const userId = (_k = req.user) === null || _k === void 0 ? void 0 : _k.id; // Get the authenticated user's ID
     const { hotDeals, auctionProducts, subscription } = req.body; // These values will be passed from the frontend
     // Step 1: Validate the notification settings
     if (typeof hotDeals !== "boolean" ||
@@ -515,8 +516,8 @@ const updateUserNotificationSettings = (req, res) => __awaiter(void 0, void 0, v
 });
 exports.updateUserNotificationSettings = updateUserNotificationSettings;
 const getConversations = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get the authenticated user's ID
+    var _l;
+    const userId = (_l = req.user) === null || _l === void 0 ? void 0 : _l.id; // Get the authenticated user's ID
     if (!userId) {
         res
             .status(400)
@@ -532,12 +533,12 @@ const getConversations = (req, res) => __awaiter(void 0, void 0, void 0, functio
             include: [
                 {
                     model: user_1.default,
-                    as: "senderUser", // Assuming senderId references the User model
+                    as: "senderUser",
                     attributes: ["id", "firstName", "lastName", "email", "phoneNumber", "photo"], // Modify attributes as needed
                 },
                 {
                     model: user_1.default,
-                    as: "receiverUser", // Assuming receiverId references the User model
+                    as: "receiverUser",
                     attributes: ["id", "firstName", "lastName", "email", "phoneNumber", "photo"], // Modify attributes as needed
                 },
                 {
@@ -548,8 +549,8 @@ const getConversations = (req, res) => __awaiter(void 0, void 0, void 0, functio
                 {
                     model: message_1.default,
                     as: "message",
-                    limit: 1, // Limit to 1 message to get the last one
-                    order: [["createdAt", "DESC"]], // Order by createdAt in descending order to get the latest message
+                    limit: 1,
+                    order: [["createdAt", "DESC"]],
                     attributes: ["id", "content", "fileUrl", "createdAt", "isRead"], // Modify attributes as needed
                 },
             ],
@@ -582,8 +583,8 @@ const getConversations = (req, res) => __awaiter(void 0, void 0, void 0, functio
 });
 exports.getConversations = getConversations;
 const getAllConversationMessages = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get the authenticated user's ID
+    var _m;
+    const userId = (_m = req.user) === null || _m === void 0 ? void 0 : _m.id; // Get the authenticated user's ID
     try {
         const { conversationId } = req.query;
         // Validate that conversationId is provided
@@ -597,11 +598,11 @@ const getAllConversationMessages = (req, res) => __awaiter(void 0, void 0, void 
             include: [
                 {
                     model: message_1.default,
-                    as: "message", // Ensure this matches your Sequelize model alias
+                    as: "message",
                     include: [
                         {
                             model: user_1.default,
-                            as: "user", // Alias for sender relationship
+                            as: "user",
                             attributes: ["id", "firstName", "lastName", "email"],
                         },
                     ],
@@ -624,7 +625,7 @@ const getAllConversationMessages = (req, res) => __awaiter(void 0, void 0, void 
         yield message_1.default.update({ isRead: true }, {
             where: {
                 conversationId,
-                userId: { [sequelize_1.Op.ne]: userId }, // Not equal to userId
+                userId: { [sequelize_1.Op.ne]: userId },
                 isRead: false, // Only update unread messages
             },
         });
@@ -640,8 +641,8 @@ const getAllConversationMessages = (req, res) => __awaiter(void 0, void 0, void 
 });
 exports.getAllConversationMessages = getAllConversationMessages;
 const sendMessageHandler = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get the authenticated user's ID
+    var _o;
+    const userId = (_o = req.user) === null || _o === void 0 ? void 0 : _o.id; // Get the authenticated user's ID
     // Ensure userId is defined
     if (!userId) {
         res.status(400).json({
@@ -721,8 +722,8 @@ const saveMessage = (conversationId, userId, content, fileUrl) => __awaiter(void
 });
 exports.saveMessage = saveMessage;
 const deleteMessageHandler = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get the authenticated user's ID
+    var _p;
+    const userId = (_p = req.user) === null || _p === void 0 ? void 0 : _p.id; // Get the authenticated user's ID
     // Ensure userId is defined
     if (!userId) {
         res.status(400).json({
@@ -757,8 +758,8 @@ const deleteMessageHandler = (req, res) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.deleteMessageHandler = deleteMessageHandler;
 const markAsReadHandler = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get the authenticated user's ID
+    var _q;
+    const userId = (_q = req.user) === null || _q === void 0 ? void 0 : _q.id; // Get the authenticated user's ID
     // Ensure userId is defined
     if (!userId) {
         res.status(400).json({ message: "User must be authenticated" });
@@ -793,8 +794,8 @@ const markAsReadHandler = (req, res) => __awaiter(void 0, void 0, void 0, functi
 exports.markAsReadHandler = markAsReadHandler;
 // Cart
 const addItemToCart = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get the authenticated user's ID
+    var _r;
+    const userId = (_r = req.user) === null || _r === void 0 ? void 0 : _r.id; // Get the authenticated user's ID
     if (!userId) {
         res.status(400).json({ message: "User must be authenticated" });
         return;
@@ -803,7 +804,7 @@ const addItemToCart = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     try {
         // Find the product by productId and include vendor and currency details
         const product = yield product_1.default.findByPk(productId, {
-            attributes: ["vendorId"],
+            attributes: ["vendorId", "name"],
             include: [
                 {
                     model: store_1.default,
@@ -822,15 +823,18 @@ const addItemToCart = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             res.status(404).json({ message: "Product not found or invalid currency data" });
             return;
         }
-        const { vendorId } = product;
+        const { vendorId, name } = product;
         const productCurrency = product.store.currency;
-        // Find the vendor by vendorId and check if isVerified is true
+        // Check if vendorId exists in the User table (Vendor)
         const vendor = yield user_1.default.findByPk(vendorId);
-        if (!vendor) {
-            res.status(404).json({ message: "Vendor not found" });
+        // Check if vendorId exists in the Admin table
+        const admin = yield admin_1.default.findByPk(vendorId);
+        if (!vendor && !admin) {
+            res.status(404).json({ message: "Owner not found" });
             return;
         }
-        if (!vendor.isVerified) {
+        // If it's a vendor, ensure they are verified
+        if (vendor && !vendor.isVerified) {
             res.status(400).json({
                 message: "Cannot add item to cart. Vendor is not verified.",
             });
@@ -924,8 +928,8 @@ const updateCartItem = (req, res) => __awaiter(void 0, void 0, void 0, function*
 });
 exports.updateCartItem = updateCartItem;
 const removeCartItem = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get the authenticated user's ID
+    var _s;
+    const userId = (_s = req.user) === null || _s === void 0 ? void 0 : _s.id; // Get the authenticated user's ID
     // Ensure userId is defined
     if (!userId) {
         res.status(400).json({ message: "User must be authenticated" });
@@ -950,8 +954,8 @@ const removeCartItem = (req, res) => __awaiter(void 0, void 0, void 0, function*
 });
 exports.removeCartItem = removeCartItem;
 const getCartContents = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get the authenticated user's ID
+    var _t;
+    const userId = (_t = req.user) === null || _t === void 0 ? void 0 : _t.id; // Get the authenticated user's ID
     try {
         const cartItems = yield cart_1.default.findAll({
             where: { userId },
@@ -989,8 +993,8 @@ const getCartContents = (req, res) => __awaiter(void 0, void 0, void 0, function
 });
 exports.getCartContents = getCartContents;
 const clearCart = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get the authenticated user's ID
+    var _u;
+    const userId = (_u = req.user) === null || _u === void 0 ? void 0 : _u.id; // Get the authenticated user's ID
     try {
         yield cart_1.default.destroy({ where: { userId } });
         res.status(200).json({ message: "Cart cleared successfully." });
@@ -1025,8 +1029,8 @@ const getActivePaymentGateway = (req, res) => __awaiter(void 0, void 0, void 0, 
 });
 exports.getActivePaymentGateway = getActivePaymentGateway;
 const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get authenticated user ID
+    var _v;
+    const userId = (_v = req.user) === null || _v === void 0 ? void 0 : _v.id; // Get authenticated user ID
     const { refId, shippingAddress } = req.body;
     if (!userId) {
         res.status(400).json({ message: "User must be authenticated" });
@@ -1060,12 +1064,6 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             return;
         }
         const paymentData = verificationResponse;
-        // Fetch user
-        const user = yield user_1.default.findByPk(userId);
-        if (!user) {
-            res.status(404).json({ message: "User not found" });
-            return;
-        }
         // Fetch cart items
         const cartItems = yield cart_1.default.findAll({
             where: { userId },
@@ -1135,6 +1133,14 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             if (!product) {
                 throw new Error(`Product with ID ${cartItem.product.id} not found.`);
             }
+            // Check if vendorId exists in the User table (Vendor)
+            const vendor = yield user_1.default.findByPk(product.vendorId);
+            // Check if vendorId exists in the Admin table
+            const admin = yield admin_1.default.findByPk(product.vendorId);
+            if (!vendor && !admin) {
+                res.status(404).json({ message: "Owner not found" });
+                return;
+            }
             // Create the order item
             yield orderitem_1.default.create({
                 vendorId: product.vendorId,
@@ -1143,6 +1149,10 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 quantity: cartItem.quantity,
                 price: product.price,
             }, { transaction });
+            // If it's a vendor 
+            if (vendor) {
+                yield vendor.update({ wallet: vendor.wallet + totalAmount }, { transaction });
+            }
             // Update product inventory
             // await product.update(
             //   { quantity: product.quantity - cartItem.quantity },
@@ -1161,7 +1171,6 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         }, { transaction });
         // Clear user's cart
         yield cart_1.default.destroy({ where: { userId }, transaction });
-        yield user.update({ wallet: user.wallet + totalAmount }, { transaction });
         // Commit the transaction
         yield transaction.commit();
         res.status(200).json({
@@ -1177,10 +1186,10 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 exports.checkout = checkout;
 // Bid
 const showInterest = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _w;
     try {
         const { auctionProductId, amountPaid } = req.body;
-        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get the authenticated user's ID
+        const userId = (_w = req.user) === null || _w === void 0 ? void 0 : _w.id; // Get the authenticated user's ID
         // Fetch the auction product
         const auctionProduct = yield auctionproduct_1.default.findOne({
             where: {
@@ -1244,10 +1253,10 @@ const showInterest = (req, res) => __awaiter(void 0, void 0, void 0, function* (
 });
 exports.showInterest = showInterest;
 const placeBid = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b;
+    var _x, _y;
     try {
         const { auctionProductId, bidAmount } = req.body;
-        const bidderId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+        const bidderId = (_x = req.user) === null || _x === void 0 ? void 0 : _x.id; // Authenticated user ID from middleware
         // Fetch the auction product
         const auctionProduct = yield auctionproduct_1.default.findOne({
             where: {
@@ -1279,7 +1288,7 @@ const placeBid = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             return;
         }
         // Get the current highest bid
-        const highestBid = (_b = auctionProduct === null || auctionProduct === void 0 ? void 0 : auctionProduct.bids) === null || _b === void 0 ? void 0 : _b[0];
+        const highestBid = (_y = auctionProduct === null || auctionProduct === void 0 ? void 0 : auctionProduct.bids) === null || _y === void 0 ? void 0 : _y[0];
         // Determine minimum acceptable bid
         const highestBidAmount = highestBid ? Number(highestBid.bidAmount) : 0;
         const bidIncrement = auctionProduct.bidIncrement ? Number(auctionProduct.bidIncrement) : 0;
@@ -1379,8 +1388,8 @@ const placeBid = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.placeBid = placeBid;
 const becomeVendor = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _z;
+    const userId = (_z = req.user) === null || _z === void 0 ? void 0 : _z.id; // Authenticated user ID from middleware
     if (!userId) {
         res.status(400).json({ message: "User must be authenticated" });
         return;
@@ -1448,8 +1457,8 @@ const becomeVendor = (req, res) => __awaiter(void 0, void 0, void 0, function* (
 });
 exports.becomeVendor = becomeVendor;
 const getUserNotifications = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _0;
+    const userId = (_0 = req.user) === null || _0 === void 0 ? void 0 : _0.id; // Authenticated user ID from middleware
     if (!userId) {
         res.status(400).json({ message: "User must be authenticated" });
         return;
@@ -1489,8 +1498,8 @@ const getUserNotifications = (req, res) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.getUserNotifications = getUserNotifications;
 const userMarkNotificationAsRead = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _1;
+    const userId = (_1 = req.user) === null || _1 === void 0 ? void 0 : _1.id; // Authenticated user ID from middleware
     const notificationId = req.query.notificationId; // Notification ID passed in the request body
     if (!userId) {
         res.status(400).json({ message: "User must be authenticated" });
@@ -1521,8 +1530,8 @@ const userMarkNotificationAsRead = (req, res) => __awaiter(void 0, void 0, void 
 });
 exports.userMarkNotificationAsRead = userMarkNotificationAsRead;
 const getAllOrders = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _2;
+    const userId = (_2 = req.user) === null || _2 === void 0 ? void 0 : _2.id; // Authenticated user ID from middleware
     if (!userId) {
         res.status(400).json({ message: "User must be authenticated" });
         return;
@@ -1549,7 +1558,7 @@ const getAllOrders = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                     attributes: [], // Do not include actual order items
                 },
             ],
-            group: ["Order.id"], // Group by order to ensure correct counting
+            group: ["Order.id"],
             order: [["createdAt", "DESC"]], // Order by createdAt
         });
         if (!orders || orders.length === 0) {
@@ -1597,7 +1606,7 @@ const getAllOrderItems = (req, res) => __awaiter(void 0, void 0, void 0, functio
             message: "Order items retrieved successfully",
             data: orderItems,
             meta: {
-                total: count, // Total number of order items
+                total: count,
                 page: pageNumber,
                 limit: limitNumber,
                 totalPages,
@@ -1633,7 +1642,7 @@ const getPaymentDetails = (req, res) => __awaiter(void 0, void 0, void 0, functi
             message: "Payments retrieved successfully",
             data: payments,
             meta: {
-                total: count, // Total number of payments for the order
+                total: count,
                 page: pageNumber,
                 limit: limitNumber,
                 totalPages: Math.ceil(count / limitNumber), // Calculate total pages

@@ -83,8 +83,8 @@ const submitOrUpdateKYC = (req, res) => __awaiter(void 0, void 0, void 0, functi
 });
 exports.submitOrUpdateKYC = submitOrUpdateKYC;
 const getKYC = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _b;
+    const vendorId = (_b = req.user) === null || _b === void 0 ? void 0 : _b.id; // Authenticated user ID from middleware
     try {
         // Check if a KYC record already exists for this user
         const kyc = yield kyc_1.default.findOne({ where: { vendorId } });
@@ -97,8 +97,8 @@ const getKYC = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.getKYC = getKYC;
 const getStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _c;
+    const vendorId = (_c = req.user) === null || _c === void 0 ? void 0 : _c.id; // Authenticated user ID from middleware
     try {
         const stores = yield store_1.default.findAll({
             where: { vendorId },
@@ -155,8 +155,8 @@ const getStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.getStore = getStore;
 const viewStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _d;
+    const vendorId = (_d = req.user) === null || _d === void 0 ? void 0 : _d.id; // Authenticated user ID from middleware
     const storeId = req.query.storeId;
     try {
         const store = yield store_1.default.findOne({
@@ -187,8 +187,8 @@ const viewStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.viewStore = viewStore;
 const createStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _e;
+    const vendorId = (_e = req.user) === null || _e === void 0 ? void 0 : _e.id; // Authenticated user ID from middleware
     const { currencyId, name, location, logo, businessHours, deliveryOptions, tipsOnFinding } = req.body;
     if (!currencyId) {
         res.status(400).json({ message: 'Currency ID is required.' });
@@ -233,8 +233,8 @@ const createStore = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 });
 exports.createStore = createStore;
 const updateStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _f;
+    const vendorId = (_f = req.user) === null || _f === void 0 ? void 0 : _f.id; // Authenticated user ID from middleware
     const { storeId, currencyId, name, location, businessHours, deliveryOptions, tipsOnFinding, logo } = req.body;
     try {
         const store = yield store_1.default.findOne({ where: { id: storeId } });
@@ -306,9 +306,9 @@ const deleteStore = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 exports.deleteStore = deleteStore;
 // Product
 const createProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
-    const _b = req.body, { storeId, categoryId, name } = _b, otherData = __rest(_b, ["storeId", "categoryId", "name"]);
+    var _g;
+    const vendorId = (_g = req.user) === null || _g === void 0 ? void 0 : _g.id; // Authenticated user ID from middleware
+    const _h = req.body, { storeId, categoryId, name } = _h, otherData = __rest(_h, ["storeId", "categoryId", "name"]);
     try {
         // Use the utility function to check the product limit
         const { status, message } = yield (0, helpers_1.checkVendorProductLimit)(vendorId);
@@ -373,9 +373,9 @@ const createProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.createProduct = createProduct;
 const updateProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const _b = req.body, { productId } = _b, updateData = __rest(_b, ["productId"]);
-    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _j;
+    const _k = req.body, { productId } = _k, updateData = __rest(_k, ["productId"]);
+    const vendorId = (_j = req.user) === null || _j === void 0 ? void 0 : _j.id; // Authenticated user ID from middleware
     try {
         // Use the utility function to check the product limit
         const { status, message } = yield (0, helpers_1.checkVendorProductLimit)(vendorId);
@@ -406,9 +406,9 @@ const updateProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.updateProduct = updateProduct;
 const deleteProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _l;
     const { productId } = req.query;
-    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    const vendorId = (_l = req.user) === null || _l === void 0 ? void 0 : _l.id; // Authenticated user ID from middleware
     try {
         const product = yield product_1.default.findOne({
             where: {
@@ -432,8 +432,8 @@ const deleteProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.deleteProduct = deleteProduct;
 const fetchVendorProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _m;
+    const vendorId = (_m = req.user) === null || _m === void 0 ? void 0 : _m.id; // Authenticated user ID from middleware
     const { name, sku, status, condition, categoryName } = req.query;
     try {
         const products = yield product_1.default.findAll(Object.assign({ where: { vendorId }, include: [
@@ -468,10 +468,10 @@ const fetchVendorProducts = (req, res) => __awaiter(void 0, void 0, void 0, func
 });
 exports.fetchVendorProducts = fetchVendorProducts;
 const viewProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _o;
     // Get productId from route params instead of query
     const { productId } = req.query;
-    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    const vendorId = (_o = req.user) === null || _o === void 0 ? void 0 : _o.id; // Authenticated user ID from middleware
     try {
         const product = yield product_1.default.findOne({
             where: {
@@ -509,9 +509,9 @@ const viewProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 });
 exports.viewProduct = viewProduct;
 const moveToDraft = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _p;
     const { productId } = req.query; // Get productId from request query
-    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    const vendorId = (_p = req.user) === null || _p === void 0 ? void 0 : _p.id; // Authenticated user ID from middleware
     try {
         // Validate productId type
         if (typeof productId !== "string") {
@@ -546,9 +546,9 @@ const moveToDraft = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 });
 exports.moveToDraft = moveToDraft;
 const changeProductStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _q;
     const { productId, status } = req.body; // Get productId and status from request body
-    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    const vendorId = (_q = req.user) === null || _q === void 0 ? void 0 : _q.id; // Authenticated user ID from middleware
     // Validate status
     if (!["active", "inactive", "draft"].includes(status)) {
         res.status(400).json({ message: "Invalid status." });
@@ -583,8 +583,8 @@ const changeProductStatus = (req, res) => __awaiter(void 0, void 0, void 0, func
 exports.changeProductStatus = changeProductStatus;
 // Auction Product
 const createAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _r;
+    const vendorId = (_r = req.user) === null || _r === void 0 ? void 0 : _r.id; // Authenticated user ID from middleware
     const { storeId, categoryId, name, condition, description, specification, price, bidIncrement, maxBidsPerUser, participantsInterestFee, startDate, endDate, image, additionalImages, } = req.body;
     try {
         // Use the utility function to check the product limit
@@ -668,8 +668,8 @@ const createAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.createAuctionProduct = createAuctionProduct;
 const updateAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _s;
+    const vendorId = (_s = req.user) === null || _s === void 0 ? void 0 : _s.id; // Authenticated user ID from middleware
     const { auctionProductId, storeId, categoryId, name, condition, description, specification, price, bidIncrement, maxBidsPerUser, participantsInterestFee, startDate, endDate, image, additionalImages, } = req.body;
     try {
         // Use the utility function to check the product limit
@@ -757,9 +757,9 @@ const updateAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.updateAuctionProduct = updateAuctionProduct;
 const deleteAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _t;
     const { auctionProductId } = req.query;
-    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    const vendorId = (_t = req.user) === null || _t === void 0 ? void 0 : _t.id; // Authenticated user ID from middleware
     try {
         // Find the auction product by ID
         const auctionProduct = yield auctionproduct_1.default.findOne({
@@ -809,9 +809,9 @@ const deleteAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.deleteAuctionProduct = deleteAuctionProduct;
 const cancelAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _u;
     const { auctionProductId } = req.query;
-    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    const vendorId = (_u = req.user) === null || _u === void 0 ? void 0 : _u.id; // Authenticated user ID from middleware
     try {
         // Find the auction product by ID
         const auctionProduct = yield auctionproduct_1.default.findOne({
@@ -855,8 +855,8 @@ const cancelAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.cancelAuctionProduct = cancelAuctionProduct;
 const fetchVendorAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _v;
+    const vendorId = (_v = req.user) === null || _v === void 0 ? void 0 : _v.id; // Authenticated user ID from middleware
     const { name, sku, status, condition, categoryName } = req.query;
     try {
         // Fetch all auction products for the vendor
@@ -903,10 +903,10 @@ const fetchVendorAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 
 });
 exports.fetchVendorAuctionProducts = fetchVendorAuctionProducts;
 const viewAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _w;
     // Get auctionProductId from route params instead of query
     const { auctionProductId } = req.query;
-    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    const vendorId = (_w = req.user) === null || _w === void 0 ? void 0 : _w.id; // Authenticated user ID from middleware
     try {
         const product = yield auctionproduct_1.default.findOne({
             where: {
@@ -945,8 +945,8 @@ const viewAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, funct
 exports.viewAuctionProduct = viewAuctionProduct;
 // Subscription
 const subscriptionPlans = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _x;
+    const vendorId = (_x = req.user) === null || _x === void 0 ? void 0 : _x.id; // Authenticated user ID from middleware
     try {
         // Fetch all subscription plans
         const subscriptionPlans = yield subscriptionplan_1.default.findAll();
@@ -980,8 +980,8 @@ const subscriptionPlans = (req, res) => __awaiter(void 0, void 0, void 0, functi
 });
 exports.subscriptionPlans = subscriptionPlans;
 const subscribe = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _y;
+    const vendorId = (_y = req.user) === null || _y === void 0 ? void 0 : _y.id; // Authenticated user ID from middleware
     const { subscriptionPlanId, isWallet, refId } = req.body; // Including isWallet and refId in the request body
     if (!subscriptionPlanId) {
         res.status(400).json({ message: 'Subscription plan ID is required.' });
@@ -996,7 +996,7 @@ const subscribe = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             },
             include: [{
                     model: subscriptionplan_1.default,
-                    as: "subscriptionPlans", // Assuming alias in your model definition
+                    as: "subscriptionPlans",
                     attributes: ['id', 'name'],
                 }],
         });
@@ -1067,7 +1067,7 @@ const subscribe = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                     vendorId,
                     subscriptionPlanId,
                     startDate,
-                    endDate, // Adjust depending on plan duration
+                    endDate,
                     isActive: true,
                 });
                 // Create a notification for the vendor
@@ -1153,7 +1153,7 @@ const verifyCAC = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         path: '/bank/validate',
         method: 'POST',
         headers: {
-            Authorization: 'Bearer sk_test_fde1e5319c69aa49534344c95485a8f1cef333ac', // Replace with your Paystack secret key
+            Authorization: 'Bearer sk_test_fde1e5319c69aa49534344c95485a8f1cef333ac',
             'Content-Type': 'application/json',
         },
     };
@@ -1238,8 +1238,8 @@ const getAllSubCategories = (req, res) => __awaiter(void 0, void 0, void 0, func
 });
 exports.getAllSubCategories = getAllSubCategories;
 const getVendorOrderItems = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _z;
+    const vendorId = (_z = req.user) === null || _z === void 0 ? void 0 : _z.id; // Authenticated user ID from middleware
     if (!vendorId) {
         res.status(403).json({ message: "Unauthorized. Vendor ID is required." });
         return;
@@ -1291,8 +1291,8 @@ const getOrderItemsInfo = (req, res) => __awaiter(void 0, void 0, void 0, functi
 exports.getOrderItemsInfo = getOrderItemsInfo;
 // Adverts
 const activeProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _0;
+    const vendorId = (_0 = req.user) === null || _0 === void 0 ? void 0 : _0.id; // Authenticated user ID from middleware
     const { name } = req.query;
     try {
         const products = yield product_1.default.findAll(Object.assign({ where: { vendorId, status: "active" } }, ((name) && {
@@ -1309,8 +1309,8 @@ const activeProducts = (req, res) => __awaiter(void 0, void 0, void 0, function*
 });
 exports.activeProducts = activeProducts;
 const createAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _1;
+    const vendorId = (_1 = req.user) === null || _1 === void 0 ? void 0 : _1.id; // Authenticated user ID from middleware
     const { categoryId, productId, title, description, media_url, showOnHomepage } = req.body;
     try {
         // Use the utility function to check the product limit
@@ -1400,9 +1400,9 @@ const updateAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* (
 });
 exports.updateAdvert = updateAdvert;
 const getAdverts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _2;
     const { search, page = 1, limit = 10 } = req.query;
-    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    const vendorId = (_2 = req.user) === null || _2 === void 0 ? void 0 : _2.id; // Authenticated user ID from middleware
     // Convert `page` and `limit` to numbers and ensure they are valid
     const pageNumber = parseInt(page, 10) || 1;
     const limitNumber = parseInt(limit, 10) || 10;
@@ -1447,7 +1447,7 @@ const getAdverts = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             message: "Adverts fetched successfully",
             data: adverts,
             pagination: {
-                total: count, // Total number of adverts
+                total: count,
                 page: pageNumber,
                 pages: totalPages,
                 limit: limitNumber,

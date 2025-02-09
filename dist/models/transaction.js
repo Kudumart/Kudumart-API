@@ -10,6 +10,10 @@ class Transaction extends sequelize_1.Model {
             as: 'user',
             foreignKey: 'userId', // Ensure the Transaction model has a 'userId' column
         });
+        this.belongsTo(models.Admin, {
+            as: 'admin',
+            foreignKey: 'userId', // Ensure the Transaction model has a 'userId' column
+        });
     }
 }
 const initModel = (sequelize) => {

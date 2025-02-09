@@ -12,8 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.shuffleArray = exports.verifyPayment = exports.checkAdvertLimit = exports.checkVendorAuctionProductLimit = exports.checkVendorProductLimit = exports.fetchAdminWithPermissions = exports.sendSMS = exports.generateOTP = void 0;
-exports.capitalizeFirstLetter = capitalizeFirstLetter;
+exports.shuffleArray = exports.verifyPayment = exports.checkAdvertLimit = exports.checkVendorAuctionProductLimit = exports.checkVendorProductLimit = exports.fetchAdminWithPermissions = exports.sendSMS = exports.capitalizeFirstLetter = exports.generateOTP = void 0;
 // utils/helpers.ts
 const http_1 = __importDefault(require("http"));
 const https_1 = __importDefault(require("https"));
@@ -36,12 +35,13 @@ exports.generateOTP = generateOTP;
 function capitalizeFirstLetter(string) {
     return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
 }
+exports.capitalizeFirstLetter = capitalizeFirstLetter;
 const sendSMS = (mobile, messageContent) => __awaiter(void 0, void 0, void 0, function* () {
     const apiUrl = 'portal.nigeriabulksms.com';
     const data = querystring_1.default.stringify({
-        username: process.env.SMS_USERNAME, // Your SMS API username
-        password: process.env.SMS_PASSWORD, // Your SMS API password
-        sender: process.env.APP_NAME, // Sender ID
+        username: process.env.SMS_USERNAME,
+        password: process.env.SMS_PASSWORD,
+        sender: process.env.APP_NAME,
         message: messageContent,
         mobiles: mobile,
     });

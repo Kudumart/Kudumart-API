@@ -106,6 +106,16 @@ const vendorRegister = (req, res) => __awaiter(void 0, void 0, void 0, function*
         catch (emailError) {
             logger_1.default.error("Error sending email:", emailError);
         }
+        // Corrected Notification
+        const notificationTitle = "Vendor Registration Successful";
+        const notificationMessage = `Welcome, ${newUser.firstName}! Your vendor account has been created successfully.`;
+        const notificationType = "vendor_registration";
+        yield notification_1.default.create({
+            userId: newUser.id,
+            title: notificationTitle,
+            message: notificationMessage,
+            type: notificationType,
+        });
         // Return a success response
         res.status(200).json({
             message: "Vendor registered successfully. A verification email has been sent to your email address. Please check your inbox to verify your account.",
@@ -153,9 +163,9 @@ const customerRegister = (req, res) => __awaiter(void 0, void 0, void 0, functio
         });
         // Step 2: Create default notification settings for the user
         yield usernotificationsetting_1.default.create({
-            userId: newUser.id, // Link the settings to the new user
-            hotDeals: false, // Default value is false
-            auctionProducts: false, // Default value is false
+            userId: newUser.id,
+            hotDeals: false,
+            auctionProducts: false,
             subscription: false, // Default value is false
         });
         // Generate OTP for verification
@@ -173,6 +183,16 @@ const customerRegister = (req, res) => __awaiter(void 0, void 0, void 0, functio
         catch (emailError) {
             logger_1.default.error("Error sending email:", emailError); // Log error for internal use
         }
+        // Corrected Notification
+        const notificationTitle = "Registration Successful";
+        const notificationMessage = `Welcome, ${newUser.firstName}! Your account has been created successfully.`;
+        const notificationType = "vendor_registration";
+        yield notification_1.default.create({
+            userId: newUser.id,
+            title: notificationTitle,
+            message: notificationMessage,
+            type: notificationType,
+        });
         // Return a success response
         res.status(200).json({ message: "Customer registered successfully. A verification email has been sent to your email address. Please check your inbox to verify your account." });
     }
@@ -387,7 +407,7 @@ const codeCheck = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 otpCode,
             },
             include: {
-                model: user_1.default, // Assuming OTP is linked to User model
+                model: user_1.default,
                 as: "user",
                 where: { email },
             },
@@ -468,7 +488,7 @@ const adminLogin = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             where: { email },
             include: [
                 {
-                    model: role_1.default, // Assuming you've imported the Role model
+                    model: role_1.default,
                     as: "role", // Make sure this alias matches the one you used in the association
                 },
             ],
