@@ -940,7 +940,7 @@ export const addItemToCart = async (
   try {
     // Find the product by productId and include vendor and currency details
     const product = await Product.findByPk(productId, {
-      attributes: ["vendorId"],
+      attributes: ["vendorId", "name"],
       include: [
         {
           model: Store,
@@ -961,7 +961,7 @@ export const addItemToCart = async (
       return;
     }
 
-    const { vendorId } = product;
+    const { vendorId, name } = product;
     const productCurrency = product.store.currency;
 
     // Check if vendorId exists in the User table (Vendor)

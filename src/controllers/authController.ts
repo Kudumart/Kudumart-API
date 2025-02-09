@@ -111,6 +111,19 @@ export const vendorRegister = async (
       logger.error("Error sending email:", emailError);
     }
 
+    // Corrected Notification
+    const notificationTitle = "Vendor Registration Successful";
+    const notificationMessage = `Welcome, ${newUser.firstName}! Your vendor account has been created successfully.`;
+    const notificationType = "vendor_registration";
+
+    await Notification.create({
+      userId: newUser.id,
+      title: notificationTitle,
+      message: notificationMessage,
+      type: notificationType,
+    });
+
+
     // Return a success response
     res.status(200).json({
       message:
@@ -190,6 +203,19 @@ export const customerRegister = async (
     } catch (emailError) {
       logger.error("Error sending email:", emailError); // Log error for internal use
     }
+
+    // Corrected Notification
+    const notificationTitle = "Registration Successful";
+    const notificationMessage = `Welcome, ${newUser.firstName}! Your account has been created successfully.`;
+    const notificationType = "vendor_registration";
+
+    await Notification.create({
+      userId: newUser.id,
+      title: notificationTitle,
+      message: notificationMessage,
+      type: notificationType,
+    });
+
 
     // Return a success response
     res.status(200).json({ message: "Customer registered successfully. A verification email has been sent to your email address. Please check your inbox to verify your account." });
