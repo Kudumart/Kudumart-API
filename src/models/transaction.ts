@@ -17,6 +17,10 @@ class Transaction extends Model {
       as: 'user',
       foreignKey: 'userId', // Ensure the Transaction model has a 'userId' column
     });
+    this.belongsTo(models.Admin, {
+      as: 'admin',
+      foreignKey: 'userId', // Ensure the Transaction model has a 'userId' column
+    });
   }
 }
 

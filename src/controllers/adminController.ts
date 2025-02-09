@@ -2433,6 +2433,18 @@ export const getAllGeneralOrderItems = async (req: Request, res: Response): Prom
         // Query for order items with pagination
         const { rows: orderItems, count } = await OrderItem.findAndCountAll({
             where: { orderId },
+            include: [
+                {
+                    model: User,
+                    as: "vendor",
+                    attributes: ["id", "firstName", "lastName", "email"],
+                },
+                {
+                    model: Admin,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
+                },
+            ],
             limit: limitNumber,
             offset,
             order: [["createdAt", "DESC"]],
@@ -4044,5 +4056,57 @@ export const approveOrRejectAdvert = async (req: Request, res: Response): Promis
     } catch (error) {
         logger.error("Error updating advert status:", error);
         res.status(500).json({ message: "Failed to update advert status." });
+    }
+};
+
+
+// Orders
+export const getOrderItems = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const adminId = req.admin?.id;
+
+    try {
+        // Fetch OrderItems related to the vendor
+        const orderItems = await OrderItem.findAll({
+            where: { vendorId: adminId },
+            order: [["createdAt", "DESC"]], // Sort by most recent
+        });
+
+        if (!orderItems || orderItems.length === 0) {
+            res.status(404).json({ message: "No order items found for this vendor." });
+            return;
+        }
+
+        res.status(200).json({
+            message: "Order items retrieved successfully",
+            data: orderItems,
+        });
+    } catch (error: any) {
+        res.status(500).json({ message: error.message || "Failed to retrieve order items." });
+    }
+};
+
+export const getOrderItemsInfo = async (req: Request, res: Response): Promise<void> => {
+    const orderId = req.query.orderId as string;
+
+    try {
+        // Fetch Order related to the vendor
+        const order = await Order.findOne({
+            where: { id: orderId },
+            include: [
+                {
+                    model: User,
+                    as: "user",
+                    attributes: ["id", "firstName", "lastName", "email", "phoneNumber"], // Include user details
+                },
+            ],
+            order: [["createdAt", "DESC"]], // Sort by most recent
+        });
+
+        res.status(200).json({
+            message: "Order details retrieved successfully",
+            data: order,
+        });
+    } catch (error: any) {
+        res.status(500).json({ message: error.message || "Failed to retrieve order details." });
     }
 };

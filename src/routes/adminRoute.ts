@@ -119,6 +119,10 @@ adminRoutes.delete("/auction/products", adminAuthMiddleware, adminController.del
 adminRoutes.patch("/auction/products", adminAuthMiddleware, adminController.cancelAuctionProduct);
 adminRoutes.get("/auction/product", adminAuthMiddleware, adminController.viewAuctionProduct);
 
+// Orders
+adminRoutes.get("/order/items", adminAuthMiddleware, adminController.getOrderItems);
+adminRoutes.get("/order/item/details", adminAuthMiddleware, adminController.getOrderItemsInfo);
+
 //General Store | Product | Auction Products | Adverts
 adminRoutes.get("/general/stores", adminAuthMiddleware, adminController.getGeneralStores);
 adminRoutes.get("/general/store/view", adminAuthMiddleware, adminController.viewGeneralStore);

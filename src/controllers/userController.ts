@@ -30,6 +30,7 @@ import Notification from "../models/notification";
 import SubscriptionPlan from "../models/subscriptionplan";
 import VendorSubscription from "../models/vendorsubscription";
 import SubCategory from "../models/subcategory";
+import Admin from "../models/admin";
 
 export const logout = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -963,15 +964,19 @@ export const addItemToCart = async (
     const { vendorId } = product;
     const productCurrency = product.store.currency;
 
-    // Find the vendor by vendorId and check if isVerified is true
+    // Check if vendorId exists in the User table (Vendor)
     const vendor = await User.findByPk(vendorId);
 
-    if (!vendor) {
-      res.status(404).json({ message: "Vendor not found" });
+    // Check if vendorId exists in the Admin table
+    const admin = await Admin.findByPk(vendorId);
+
+    if (!vendor && !admin) {
+      res.status(404).json({ message: "Owner not found" });
       return;
     }
-
-    if (!vendor.isVerified) {
+    
+    // If it's a vendor, ensure they are verified
+    if (vendor && !vendor.isVerified) {
       res.status(400).json({
         message: "Cannot add item to cart. Vendor is not verified.",
       });
@@ -1242,13 +1247,6 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 
     const paymentData = verificationResponse;
 
-    // Fetch user
-    const user = await User.findByPk(userId);
-    if (!user) {
-      res.status(404).json({ message: "User not found" });
-      return;
-    }
-
     // Fetch cart items
     const cartItems = await Cart.findAll({
       where: { userId },
@@ -1331,6 +1329,17 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
         throw new Error(`Product with ID ${cartItem.product.id} not found.`);
       }
 
+      // Check if vendorId exists in the User table (Vendor)
+      const vendor = await User.findByPk(product.vendorId);
+
+      // Check if vendorId exists in the Admin table
+      const admin = await Admin.findByPk(product.vendorId);
+  
+      if (!vendor && !admin) {
+        res.status(404).json({ message: "Owner not found" });
+        return;
+      }
+
       // Create the order item
       await OrderItem.create(
         {
@@ -1341,7 +1350,15 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
           price: product.price,
         },
         { transaction }
-      );      
+      ); 
+      
+      // If it's a vendor 
+      if (vendor) {
+        await vendor.update(
+          { wallet: (vendor.wallet as number) + totalAmount },
+          { transaction }
+        );    
+      }
 
       // Update product inventory
       // await product.update(
@@ -1367,10 +1384,7 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 
     // Clear user's cart
     await Cart.destroy({ where: { userId }, transaction });
-    await user.update(
-      { wallet: (user.wallet as number) + totalAmount },
-      { transaction }
-    );    
+
     // Commit the transaction
     await transaction.commit();
 

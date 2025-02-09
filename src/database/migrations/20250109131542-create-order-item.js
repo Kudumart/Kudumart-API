@@ -11,12 +11,7 @@ module.exports = {
       },
       vendorId: {
         type: Sequelize.UUID,
-        allowNull: false,
-        references: {
-          model: "users",
-          key: "id",
-        },
-        onDelete: "RESTRICT",
+        allowNull: false
       },
       orderId: {
         type: Sequelize.UUID,
