@@ -47,7 +47,7 @@ authRoutes.post("/auth/password/reset", (0, validations_1.resetPasswordValidatio
 authRoutes.get('/auth/facebook', passport_1.default.authenticate('facebook', { scope: ['email'] }));
 authRoutes.get('/auth/facebook/callback', passport_1.default.authenticate('facebook', { session: false }), authController.socialAuthCallback);
 // Google Authentication
-authRoutes.get('/auth/google', passport_1.default.authenticate('google', { scope: ['profile', 'email'] }));
+authRoutes.get('/auth/google', authController.googleAuth);
 authRoutes.get('/auth/google/callback', passport_1.default.authenticate('google', { session: false }), authController.socialAuthCallback);
 // Admin
 authRoutes.post("/auth/admin/login", (0, validations_1.loginValidationRules)(), validations_1.validate, authController.adminLogin);

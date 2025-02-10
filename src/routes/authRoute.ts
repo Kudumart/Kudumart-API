@@ -23,7 +23,7 @@ authRoutes.get('/auth/facebook', passport.authenticate('facebook', { scope: ['em
 authRoutes.get('/auth/facebook/callback', passport.authenticate('facebook', { session: false }), authController.socialAuthCallback);
 
 // Google Authentication
-authRoutes.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+authRoutes.get('/auth/google', authController.googleAuth);
 authRoutes.get('/auth/google/callback', passport.authenticate('google', { session: false }), authController.socialAuthCallback);
 
 // Admin

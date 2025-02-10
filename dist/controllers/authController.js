@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.adminLogin = exports.socialAuthCallback = exports.resetPassword = exports.codeCheck = exports.forgetPassword = exports.resendVerificationEmail = exports.login = exports.verifyEmail = exports.customerRegister = exports.vendorRegister = exports.index = void 0;
+exports.adminLogin = exports.socialAuthCallback = exports.googleAuth = exports.resetPassword = exports.codeCheck = exports.forgetPassword = exports.resendVerificationEmail = exports.login = exports.verifyEmail = exports.customerRegister = exports.vendorRegister = exports.index = void 0;
 const user_1 = __importDefault(require("../models/user"));
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const helpers_1 = require("../utils/helpers");
@@ -28,6 +28,7 @@ const subscriptionplan_1 = __importDefault(require("../models/subscriptionplan")
 const vendorsubscription_1 = __importDefault(require("../models/vendorsubscription"));
 const usernotificationsetting_1 = __importDefault(require("../models/usernotificationsetting"));
 const notification_1 = __importDefault(require("../models/notification"));
+const passport_1 = __importDefault(require("passport"));
 const index = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     res.status(200).json({
         code: 200,
@@ -479,6 +480,20 @@ const resetPassword = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
 });
 exports.resetPassword = resetPassword;
+const googleAuth = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const account_type = req.query.account_type;
+    if (!account_type || !["Customer", "Vendor"].includes(account_type)) {
+        res.status(400).json({
+            message: "Invalid account type. Use 'Customer' or 'Vendor'.",
+        });
+        return;
+    }
+    passport_1.default.authenticate("google", {
+        scope: ["profile", "email"],
+        state: account_type, // Pass account type as state
+    })(req, res);
+});
+exports.googleAuth = googleAuth;
 /**
  * Handle Successful Social Login
  */
@@ -488,15 +503,42 @@ const socialAuthCallback = (req, res) => __awaiter(void 0, void 0, void 0, funct
             res.status(401).json({ message: 'Authentication failed' });
             return;
         }
-        // Type assertion for user
-        const user = req.user;
+        // Extract the user object from the request
+        const user = req.user.toJSON() || req.user;
+        // Ensure user.accountType is a string and matches the Vendor condition
+        if (user.accountType === 'Vendor') {
+            // Find the free subscription plan
+            const freePlan = yield subscriptionplan_1.default.findOne({ where: { name: "Free Plan" } });
+            if (!freePlan) {
+                res.status(400).json({ message: "Free plan not found. Please contact support." });
+                return;
+            }
+            // Assign the free plan to the new user
+            const startDate = new Date();
+            const endDate = new Date();
+            endDate.setMonth(startDate.getMonth() + freePlan.duration);
+            yield vendorsubscription_1.default.create({
+                vendorId: user.id,
+                subscriptionPlanId: freePlan.id,
+                startDate,
+                endDate,
+                isActive: true,
+            });
+            // Create default notification settings for the user
+            yield usernotificationsetting_1.default.create({
+                userId: user.id,
+                hotDeals: false,
+                auctionProducts: false,
+                subscription: false,
+            });
+        }
         // Generate token
         const token = jwt_service_1.default.jwtSign(user.id);
-        // Successful login
+        // Successful login, return the user data including token
         res.status(200).json({
-            message: "User login successful",
-            data: user,
-            tokon: token,
+            message: "Login successful",
+            data: Object.assign(Object.assign({}, user), { // Spread the user object directly
+                token }),
         });
     }
     catch (error) {

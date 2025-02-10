@@ -17,6 +17,20 @@ const passport_facebook_1 = require("passport-facebook");
 const passport_google_oauth20_1 = require("passport-google-oauth20");
 const user_1 = __importDefault(require("../models/user")); // Your User Sequelize model
 const jwt_service_1 = __importDefault(require("../services/jwt.service"));
+const generateUniquePhoneNumber = () => __awaiter(void 0, void 0, void 0, function* () {
+    let phoneNumber;
+    let isUnique = false;
+    while (!isUnique) {
+        // Generate a random 10-digit number (US-style format)
+        phoneNumber = `+1${Math.floor(1000000000 + Math.random() * 9000000000)}`;
+        // Check if this phone number already exists in the database
+        const existingUser = yield user_1.default.findOne({ where: { phoneNumber } });
+        if (!existingUser) {
+            isUnique = true;
+        }
+    }
+    return phoneNumber;
+});
 // Facebook Strategy
 passport_1.default.use(new passport_facebook_1.Strategy({
     clientID: process.env.FACEBOOK_APP_ID,
@@ -24,7 +38,7 @@ passport_1.default.use(new passport_facebook_1.Strategy({
     callbackURL: '/auth/facebook/callback',
     profileFields: ['id', 'emails', 'name']
 }, (jwaccessToken, refreshToken, profile, done) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c, _d;
+    var _a, _b, _c, _d, _e;
     try {
         // Type guard for profile.emails
         if (!profile.emails || profile.emails.length === 0) {
@@ -41,7 +55,9 @@ passport_1.default.use(new passport_facebook_1.Strategy({
             firstName: (_c = profile.name) === null || _c === void 0 ? void 0 : _c.givenName,
             lastName: (_d = profile.name) === null || _d === void 0 ? void 0 : _d.familyName,
             accountType: "Customer",
-            facebookId: profile.id,
+            password: yield generateUniquePhoneNumber(),
+            phoneNumber: yield generateUniquePhoneNumber(),
+            facebookId: (_e = profile.id) !== null && _e !== void 0 ? _e : "Facebook",
             email_verified_at: new Date()
         });
         // Generate token
@@ -56,29 +72,38 @@ passport_1.default.use(new passport_facebook_1.Strategy({
 passport_1.default.use(new passport_google_oauth20_1.Strategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.GOOGLE_CALLBACK_URL
-}, (token, tokenSecret, profile, done) => __awaiter(void 0, void 0, void 0, function* () {
-    var _e, _f, _g, _h;
+    callbackURL: process.env.GOOGLE_CALLBACK_URL,
+    passReqToCallback: true, // To access 'req' in the callback
+}, (req, token, tokenSecret, profile, done) => __awaiter(void 0, void 0, void 0, function* () {
+    var _f, _g;
     try {
+        // Extract the account type passed as 'state'
+        const accountType = req.query.state;
+        if (!accountType || !["Customer", "Vendor"].includes(accountType)) {
+            return done(new Error("Invalid account type."));
+        }
         // Type guard for profile.emails
         if (!profile.emails || profile.emails.length === 0) {
-            return done(new Error('No email found for this user.'));
+            return done(new Error("No email found for this user."));
         }
-        const email = (_f = (_e = profile.emails) === null || _e === void 0 ? void 0 : _e[0]) === null || _f === void 0 ? void 0 : _f.value; // Use the value property
-        const existingUser = yield user_1.default.findOne({ where: { email } });
+        const email = profile.emails[0].value; // Use the value property
+        // Check if the user exists in the database with the given email and accountType
+        const existingUser = yield user_1.default.findOne({ where: { email, accountType } });
         if (existingUser) {
             return done(null, existingUser);
         }
         // Create a new user if they don't exist
         const newUser = yield user_1.default.create({
             email,
-            firstName: (_g = profile.name) === null || _g === void 0 ? void 0 : _g.givenName,
-            lastName: (_h = profile.name) === null || _h === void 0 ? void 0 : _h.familyName,
-            accountType: "Customer",
-            facebookId: profile.id,
-            email_verified_at: new Date()
+            firstName: (_f = profile.name) === null || _f === void 0 ? void 0 : _f.givenName,
+            lastName: (_g = profile.name) === null || _g === void 0 ? void 0 : _g.familyName,
+            accountType,
+            password: yield generateUniquePhoneNumber(),
+            phoneNumber: yield generateUniquePhoneNumber(),
+            googleId: profile.id,
+            email_verified_at: new Date(),
         });
-        // Generate token
+        // Generate JWT token for the user
         const token = jwt_service_1.default.jwtSign(newUser.id);
         return done(null, { newUser, token });
     }

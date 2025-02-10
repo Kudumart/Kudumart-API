@@ -15,6 +15,7 @@ import SubscriptionPlan from "../models/subscriptionplan";
 import VendorSubscription from "../models/vendorsubscription";
 import UserNotificationSetting from "../models/usernotificationsetting";
 import Notification from "../models/notification";
+import passport from "passport";
 
 export const index = async (req: Request, res: Response) => {
   res.status(200).json({
@@ -151,7 +152,7 @@ export const customerRegister = async (
       res.status(400).json({ message: "All fields are required" });
       return;
     }
-    
+
     // Check if the user already exists
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
@@ -266,7 +267,7 @@ export const verifyEmail = async (
       const message = isVendor
         ? "Thank you for joining as a vendor! Start adding your products and managing your store."
         : "Welcome to our platform! Start exploring our amazing products and features.";
-  
+
       // Create the notification in the database
       const notification = await Notification.create({
         userId: user.id,
@@ -384,7 +385,7 @@ export const resendVerificationEmail = async (
       return;
     }
 
-    if(user.email_verified_at) {
+    if (user.email_verified_at) {
       // If the email is already verified
       res.status(200).json({
         message: "Your account has already been verified. You can now log in.",
@@ -567,6 +568,22 @@ export const resetPassword = async (
   }
 };
 
+export const googleAuth = async (req: Request, res: Response): Promise<void> => {
+  const account_type = req.query.account_type as string;
+
+  if (!account_type || !["Customer", "Vendor"].includes(account_type)) {
+    res.status(400).json({
+      message: "Invalid account type. Use 'Customer' or 'Vendor'.",
+    });
+    return;
+  }
+
+  passport.authenticate("google", {
+    scope: ["profile", "email"],
+    state: account_type, // Pass account type as state
+  })(req, res);
+};
+
 /**
  * Handle Successful Social Login
  */
@@ -577,17 +594,50 @@ export const socialAuthCallback = async (req: Request, res: Response): Promise<v
       return;
     }
 
-    // Type assertion for user
-    const user = req.user as { id: string; email: string };
+    // Extract the user object from the request
+    const user = (req.user as any).toJSON() || req.user;
+
+    // Ensure user.accountType is a string and matches the Vendor condition
+    if (user.accountType === 'Vendor') {
+      // Find the free subscription plan
+      const freePlan = await SubscriptionPlan.findOne({ where: { name: "Free Plan" } });
+      if (!freePlan) {
+        res.status(400).json({ message: "Free plan not found. Please contact support." });
+        return;
+      }
+
+      // Assign the free plan to the new user
+      const startDate = new Date();
+      const endDate = new Date();
+      endDate.setMonth(startDate.getMonth() + freePlan.duration);
+
+      await VendorSubscription.create({
+        vendorId: user.id,
+        subscriptionPlanId: freePlan.id,
+        startDate,
+        endDate,
+        isActive: true,
+      });
+
+      // Create default notification settings for the user
+      await UserNotificationSetting.create({
+        userId: user.id,
+        hotDeals: false,
+        auctionProducts: false,
+        subscription: false,
+      });
+    }
 
     // Generate token
     const token = JwtService.jwtSign(user.id);
 
-    // Successful login
+    // Successful login, return the user data including token
     res.status(200).json({
-      message: "User login successful",
-      data: user,
-      tokon: token,
+      message: "Login successful",
+      data: {
+        ...user, // Spread the user object directly
+        token, // Add the token directly here
+      },
     });
   } catch (error) {
     logger.error("Error in login:", error);
