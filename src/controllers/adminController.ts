@@ -2167,6 +2167,47 @@ export const deleteGeneralProduct = async (
     }
 };
 
+export const unpublishProduct = async (req: Request, res: Response): Promise<void> => {
+    const productId = req.query.productId as string;
+
+    try {
+      // Find the product by ID
+      const product = await Product.findByPk(productId, { include: [{ model: User, as: "vendor" }] });
+      if (!product) {
+        res.status(404).json({ message: "Product not found" });
+        return;
+      }
+  
+      // Check if the product is already unpublished
+      if (product.status === 'inactive') {
+        res.status(400).json({ message: "Product is already unpublished" });
+        return;
+      }
+  
+      // Update product status to inactive
+      product.status = 'inactive';
+      await product.save();
+  
+      // Notify the vendor
+      const notificationTitle = "Product Unpublished";
+      const notificationMessage = `Your product "${product.name}" has been unpublished by an admin. Please review your listing.`;
+      const notificationType = "product_unpublished";
+  
+      await Notification.create({
+        userId: product.vendorId,
+        title: notificationTitle,
+        message: notificationMessage,
+        type: notificationType,
+      });
+  
+      res.status(200).json({ message: "Product unpublished successfully" });
+  
+    } catch (error: any) {
+      logger.error("Error unpublishing product:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+};
+  
 export const getGeneralAuctionProducts = async (req: Request, res: Response): Promise<void> => {
     const { name, sku, status, condition, categoryName, page, limit } = req.query;
 

@@ -5,6 +5,8 @@ import createExpressApp from "./services/express.service";
 import sequelizeService from "./services/sequelize.service"; // Adjusted to match your service structure
 import apiRouter from "./routes/authRoute"; // Import your routes here
 import { configureSocket } from "./services/socket.service";
+import './config/passportConfig'; // Import Password Configuration
+import passport from "passport";
 
 dotenv.config();
 
@@ -20,6 +22,8 @@ const io = new Server(server, {
         origin: "*", // Change to specific origins in production
     },
 });
+
+app.use(passport.initialize());
 
 app.use("/api", apiRouter); // Mount the router to /api
 

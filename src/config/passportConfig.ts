@@ -2,6 +2,7 @@ import passport from 'passport';
 import { Strategy as FacebookStrategy } from 'passport-facebook';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import User from '../models/user'; // Your User Sequelize model
+import JwtService from "../services/jwt.service";
 
 // Facebook Strategy
 passport.use(new FacebookStrategy({
@@ -10,14 +11,14 @@ passport.use(new FacebookStrategy({
     callbackURL: '/auth/facebook/callback',
     profileFields: ['id', 'emails', 'name']
   },
-  async (accessToken, refreshToken, profile, done) => {
+  async (jwaccessToken, refreshToken, profile, done) => {
     try {
       // Type guard for profile.emails
       if (!profile.emails || profile.emails.length === 0) {
         return done(new Error('No email found for this user.'), null);
       }
       
-      const email = profile.emails[0].value; // Use the value property
+      const email = profile.emails?.[0]?.value; // Use the value property
       const existingUser = await User.findOne({ where: { email } });
       
       if (existingUser) {
@@ -29,10 +30,15 @@ passport.use(new FacebookStrategy({
         email,
         firstName: profile.name?.givenName, // Optional chaining
         lastName: profile.name?.familyName, // Optional chaining
-        facebookId: profile.id // Save Facebook ID to associate with the user
+        accountType: "Customer",
+        facebookId: profile.id, // Save Facebook ID to associate with the user
+        email_verified_at: new Date()
       });
 
-      return done(null, newUser);
+      // Generate token
+      const token = JwtService.jwtSign(newUser.id);
+
+      return done(null, { newUser, token });
     } catch (error) {
       return done(error, null);
     }
@@ -52,7 +58,7 @@ passport.use(new GoogleStrategy({
         return done(new Error('No email found for this user.'));
       }
       
-      const email = profile.emails[0].value; // Use the value property
+      const email = profile.emails?.[0]?.value; // Use the value property
       const existingUser = await User.findOne({ where: { email } });
       
       if (existingUser) {
@@ -64,10 +70,15 @@ passport.use(new GoogleStrategy({
         email,
         firstName: profile.name?.givenName, // Optional chaining
         lastName: profile.name?.familyName, // Optional chaining
-        googleId: profile.id // Save Google ID to associate with the user
+        accountType: "Customer",
+        facebookId: profile.id, // Save Facebook ID to associate with the user
+        email_verified_at: new Date()
       });
 
-      return done(null, newUser);
+      // Generate token
+      const token = JwtService.jwtSign(newUser.id);
+
+      return done(null, { newUser, token });
     } catch (error) {
       return done(error);
     }

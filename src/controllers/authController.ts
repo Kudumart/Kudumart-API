@@ -216,7 +216,6 @@ export const customerRegister = async (
       type: notificationType,
     });
 
-
     // Return a success response
     res.status(200).json({ message: "Customer registered successfully. A verification email has been sent to your email address. Please check your inbox to verify your account." });
   } catch (error) {
@@ -564,6 +563,36 @@ export const resetPassword = async (
     });
   } catch (error) {
     logger.error("Error in resetPassword:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+/**
+ * Handle Successful Social Login
+ */
+export const socialAuthCallback = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: 'Authentication failed' });
+      return;
+    }
+
+    // Type assertion for user
+    const user = req.user as { id: string; email: string };
+
+    // Generate token
+    const token = JwtService.jwtSign(user.id);
+
+    // Successful login
+    res.status(200).json({
+      message: "User login successful",
+      data: user,
+      tokon: token,
+    });
+  } catch (error) {
+    logger.error("Error in login:", error);
+
+    // Handle server errors
     res.status(500).json({ message: "Internal server error" });
   }
 };

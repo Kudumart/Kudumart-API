@@ -806,9 +806,9 @@ export const validateSendMessage = () => {
     check("content")
       .isString()
       .withMessage("Content is required and must be a string")
-      .isLength({ min: 10 })
+      .isLength({ min: 1 })
       .withMessage("Content cannot be empty")
-      .isLength({ max: 1000 })
+      .isLength({ max: 10000 })
       .withMessage("Content should not exceed 1000 characters"),
 
     // Validate fileUrl (Optional)

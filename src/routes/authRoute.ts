@@ -1,5 +1,6 @@
 // src/routes/authroute.ts
 import { Router } from 'express';
+import passport from 'passport';
 import * as authController from '../controllers/authController';
 import * as homeController from '../controllers/homeController';
 import { registrationValidationRules, verificationValidationRules, loginValidationRules, resendVerificationValidationRules, forgotPasswordValidationRules, resetPasswordValidationRules, validate } from '../utils/validations'; // Import the service
@@ -17,9 +18,16 @@ authRoutes.post("/auth/password/forgot", forgotPasswordValidationRules(), valida
 authRoutes.post("/auth/password/code/check", verificationValidationRules(), validate, authController.codeCheck);
 authRoutes.post("/auth/password/reset", resetPasswordValidationRules(), validate, authController.resetPassword);
 
+// Facebook Authentication
+authRoutes.get('/facebook', passport.authenticate('facebook', { scope: ['email'] }));
+authRoutes.get('/facebook/callback', passport.authenticate('facebook', { session: false }), authController.socialAuthCallback);
+
+// Google Authentication
+authRoutes.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+authRoutes.get('/google/callback', passport.authenticate('google', { session: false }), authController.socialAuthCallback);
+
 // Admin
 authRoutes.post("/auth/admin/login", loginValidationRules(), validate, authController.adminLogin);
-
 
 // Frontend
 authRoutes.get('/categories', homeController.getAllCategories); // Fetch categories with subcategories
