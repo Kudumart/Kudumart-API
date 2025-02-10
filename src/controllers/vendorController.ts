@@ -11,7 +11,7 @@ import KYC from "../models/kyc";
 import Store from "../models/store";
 import Product from "../models/product";
 import SubCategory from "../models/subcategory";
-import { checkVendorAuctionProductLimit, checkVendorProductLimit, checkAdvertLimit} from "../utils/helpers";
+import { checkVendorAuctionProductLimit, checkVendorProductLimit, checkAdvertLimit } from "../utils/helpers";
 import AuctionProduct from "../models/auctionproduct";
 import Bid from "../models/bid";
 import https from 'https';
@@ -25,6 +25,7 @@ import Currency from "../models/currency";
 import OrderItem from "../models/orderitem";
 import Order from "../models/order";
 import Advert from "../models/advert";
+import BankInformation from "../models/bankinformation";
 
 export const submitOrUpdateKYC = async (
     req: Request,
@@ -1542,7 +1543,7 @@ export const createAdvert = async (req: Request, res: Response): Promise<void> =
             return;
         }
 
-        if(productId) {
+        if (productId) {
             const productExists = await Product.findByPk(productId);
 
             if (!productExists) {
@@ -1587,7 +1588,7 @@ export const updateAdvert = async (req: Request, res: Response): Promise<void> =
             return;
         }
 
-        if(productId) {
+        if (productId) {
             const productExists = await Product.findByPk(productId);
 
             if (!productExists) {
@@ -1696,7 +1697,7 @@ export const viewAdvert = async (req: Request, res: Response): Promise<void> => 
     try {
         const advert = await Advert.findByPk(advertId, {
             include: [
-                { model: Product, as: "product"},
+                { model: Product, as: "product" },
                 { model: SubCategory, as: "sub_category" },
             ],
         });
@@ -1735,5 +1736,158 @@ export const deleteAdvert = async (req: Request, res: Response): Promise<void> =
     } catch (error) {
         logger.error(error);
         res.status(500).json({ message: "Failed to delete advert" });
+    }
+};
+
+/**
+ * Add a new bank account for a vendor
+ */
+export const addBankInformation = async (req: Request, res: Response): Promise<void> => {
+    const { bankInfo } = req.body; // bankInfo contains bankName, accountNumber, accountName
+
+    const vendorId = (req as AuthenticatedRequest).user?.id as string; // Authenticated user ID from middleware
+
+    try {
+        // Ensure required fields are provided
+        if (!bankInfo) {
+            res.status(400).json({ message: "Field is required" });
+            return;
+        }
+
+        // Check if bank details already exist for this vendor
+        // const existingBank = await BankInformation.findOne({ where: { vendorId, accountNumber: bankInfo.accountNumber } });
+        // if (existingBank) {
+        //     res.status(400).json({ message: "Bank details already exist" });
+        //     return;
+        // }
+
+        // Check if vendorId exists in the User table (Vendor)
+        const vendor = await User.findByPk(vendorId);
+
+        if (!vendor) {
+        res.status(404).json({ message: "Owner not found" });
+        return;
+        }
+        
+        // If it's a vendor, ensure they are verified
+        if (vendor && !vendor.isVerified) {
+            res.status(400).json({
+                message: "Cannot add bank information. You are not verified.",
+            });
+            return;
+        }
+
+        // Create bank information entry
+        const bankData = await BankInformation.create({
+            vendorId,
+            bankInfo
+        });
+
+        res.status(200).json({ message: "Bank information added successfully", data: bankData });
+
+    } catch (error: any) {
+        logger.error("Error adding bank information:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+/**
+ * Update bank account details for a vendor
+ */
+export const updateBankInformation = async (req: Request, res: Response): Promise<void> => {
+    const { bankId, bankInfo } = req.body;
+
+    try {
+        // Find the bank record
+        const bankData = await BankInformation.findOne({ where: { id: bankId } });
+        if (!bankData) {
+            res.status(404).json({ message: "Bank information not found" });
+            return;
+        }
+
+        // Update bank details
+        await bankData.update({
+            bankInfo
+        });
+
+        res.status(200).json({ message: "Bank information updated successfully", data: bankData });
+
+    } catch (error: any) {
+        logger.error("Error updating bank information:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+/**
+ * Get bank information for a specific vendor or all vendors
+ */
+export const getBankInformation = async (req: Request, res: Response): Promise<void> => {
+    const vendorId = (req as AuthenticatedRequest).user?.id as string; // Authenticated user ID from middleware
+
+    try {
+        let bankData;
+
+        // Fetch bank details for a specific vendor
+        bankData = await BankInformation.findAll({ where: { vendorId } });
+
+        if (!bankData.length) {
+            res.status(404).json({ message: "No bank information found for this vendor" });
+            return;
+        }
+
+        res.status(200).json({ message: "Bank information retrieved successfully", data: bankData });
+
+    } catch (error: any) {
+        logger.error("Error fetching bank information:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+/**
+ * Get a single bank information record for a specific vendor
+ */
+export const getSingleBankInformation = async (req: Request, res: Response): Promise<void> => {
+    const bankId = req.query.bankId; // bankId is required
+
+    try {
+        // Fetch bank details
+        const bankInfo = await BankInformation.findOne({ where: { id: bankId } });
+
+        if (!bankInfo) {
+            res.status(404).json({ message: "Bank information not found" });
+            return;
+        }
+
+        res.status(200).json({ message: "Bank information retrieved successfully", data: bankInfo });
+
+    } catch (error: any) {
+        logger.error("Error fetching bank information:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+
+/**
+ * Delete bank account details for a vendor
+ */
+export const deleteBankInformation = async (req: Request, res: Response): Promise<void> => {
+    const bankId = req.query.bankId; // bankId is required
+
+    try {
+        // Find the bank record
+        const bankData = await BankInformation.findOne({ where: { id: bankId } });
+        if (!bankData) {
+            res.status(404).json({ message: "Bank information not found" });
+            return;
+        }
+
+        // Delete the bank record
+        await bankData.destroy();
+
+        res.status(200).json({ message: "Bank information deleted successfully" });
+
+    } catch (error: any) {
+        logger.error("Error deleting bank information:", error);
+        res.status(500).json({ message: "Server error" });
     }
 };

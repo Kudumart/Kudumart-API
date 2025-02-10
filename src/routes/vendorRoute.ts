@@ -65,4 +65,11 @@ vendorRoutes.get("/adverts", authMiddleware, vendorController.getAdverts); // Ge
 vendorRoutes.get("/advert", authMiddleware, vendorController.viewAdvert); // View a specific advert
 vendorRoutes.delete("/adverts", authMiddleware, vendorController.deleteAdvert); // Delete an advert
 
+// Bank Information
+vendorRoutes.post("/bank/informations", authMiddleware, vendorController.addBankInformation);
+vendorRoutes.put("/bank/informations", authMiddleware, vendorController.updateBankInformation);
+vendorRoutes.get("/bank/informations", authMiddleware, vendorController.getBankInformation);
+vendorRoutes.get("/bank/information", authMiddleware, vendorController.getSingleBankInformation);
+vendorRoutes.delete("/bank/information", authMiddleware, vendorController.deleteBankInformation);
+
 export default vendorRoutes;

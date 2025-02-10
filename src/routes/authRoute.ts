@@ -19,12 +19,12 @@ authRoutes.post("/auth/password/code/check", verificationValidationRules(), vali
 authRoutes.post("/auth/password/reset", resetPasswordValidationRules(), validate, authController.resetPassword);
 
 // Facebook Authentication
-authRoutes.get('/facebook', passport.authenticate('facebook', { scope: ['email'] }));
-authRoutes.get('/facebook/callback', passport.authenticate('facebook', { session: false }), authController.socialAuthCallback);
+authRoutes.get('/auth/facebook', passport.authenticate('facebook', { scope: ['email'] }));
+authRoutes.get('/auth/facebook/callback', passport.authenticate('facebook', { session: false }), authController.socialAuthCallback);
 
 // Google Authentication
-authRoutes.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-authRoutes.get('/google/callback', passport.authenticate('google', { session: false }), authController.socialAuthCallback);
+authRoutes.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+authRoutes.get('/auth/google/callback', passport.authenticate('google', { session: false }), authController.socialAuthCallback);
 
 // Admin
 authRoutes.post("/auth/admin/login", loginValidationRules(), validate, authController.adminLogin);

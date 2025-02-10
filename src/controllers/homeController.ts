@@ -117,6 +117,15 @@ export const products = async (req: Request, res: Response): Promise<void> => {
         // Include the subCategory relation with name and id filtering
         const includeClause = [
             {
+                model: User,
+                as: "vendor",
+            },
+            {
+                model: Admin,
+                as: "admin",
+                attributes: ["id", "name", "email"],
+            },
+            {
                 model: SubCategory,
                 as: "sub_category",
                 where:
