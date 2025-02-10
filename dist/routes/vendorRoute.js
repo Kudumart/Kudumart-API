@@ -72,5 +72,11 @@ vendorRoutes.put("/adverts", (0, validations_1.updateAdvertValidation)(), valida
 vendorRoutes.get("/adverts", authMiddleware_1.default, vendorController.getAdverts); // Get adverts
 vendorRoutes.get("/advert", authMiddleware_1.default, vendorController.viewAdvert); // View a specific advert
 vendorRoutes.delete("/adverts", authMiddleware_1.default, vendorController.deleteAdvert); // Delete an advert
+// Bank Information
+vendorRoutes.post("/bank/informations", authMiddleware_1.default, vendorController.addBankInformation);
+vendorRoutes.put("/bank/informations", authMiddleware_1.default, vendorController.updateBankInformation);
+vendorRoutes.get("/bank/informations", authMiddleware_1.default, vendorController.getBankInformation);
+vendorRoutes.get("/bank/information", authMiddleware_1.default, vendorController.getSingleBankInformation);
+vendorRoutes.delete("/bank/information", authMiddleware_1.default, vendorController.deleteBankInformation);
 exports.default = vendorRoutes;
 //# sourceMappingURL=vendorRoute.js.map

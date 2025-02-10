@@ -24,7 +24,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getGeneralProducts = exports.viewGeneralStore = exports.getGeneralStores = exports.viewUser = exports.toggleUserStatus = exports.getAllVendors = exports.getAllCustomers = exports.deleteCurrency = exports.getAllCurrencies = exports.updateCurrency = exports.addCurrency = exports.setPaymentGatewayActive = exports.getAllPaymentGateways = exports.deletePaymentGateway = exports.updatePaymentGateway = exports.createPaymentGateway = exports.approveOrRejectKYC = exports.getAllKYC = exports.getAllSubCategories = exports.deleteSubCategory = exports.updateSubCategory = exports.createSubCategory = exports.getCategoriesWithSubCategories = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getAllCategories = exports.deleteSubscriptionPlan = exports.updateSubscriptionPlan = exports.createSubscriptionPlan = exports.getAllSubscriptionPlans = exports.deletePermission = exports.updatePermission = exports.getPermissions = exports.createPermission = exports.deletePermissionFromRole = exports.assignPermissionToRole = exports.viewRolePermissions = exports.updateRole = exports.getRoles = exports.createRole = exports.resendLoginDetailsSubAdmin = exports.deleteSubAdmin = exports.deactivateOrActivateSubAdmin = exports.updateSubAdmin = exports.createSubAdmin = exports.subAdmins = exports.updatePassword = exports.updateProfile = exports.logout = void 0;
-exports.getOrderItemsInfo = exports.getOrderItems = exports.approveOrRejectAdvert = exports.viewGeneralAdvert = exports.getGeneralAdverts = exports.deleteAdvert = exports.viewAdvert = exports.getAdverts = exports.updateAdvert = exports.createAdvert = exports.activeProducts = exports.getTransactionsForAdmin = exports.viewAuctionProduct = exports.fetchAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.getStore = exports.getAllSubscribers = exports.getGeneralPaymentDetails = exports.getAllGeneralOrderItems = exports.getAllGeneralOrders = exports.deleteGeneralAuctionProduct = exports.viewGeneralAuctionProduct = exports.getGeneralAuctionProducts = exports.deleteGeneralProduct = exports.viewGeneralProduct = void 0;
+exports.getOrderItemsInfo = exports.getOrderItems = exports.approveOrRejectAdvert = exports.viewGeneralAdvert = exports.getGeneralAdverts = exports.deleteAdvert = exports.viewAdvert = exports.getAdverts = exports.updateAdvert = exports.createAdvert = exports.activeProducts = exports.getTransactionsForAdmin = exports.viewAuctionProduct = exports.fetchAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.getStore = exports.getAllSubscribers = exports.getGeneralPaymentDetails = exports.getAllGeneralOrderItems = exports.getAllGeneralOrders = exports.deleteGeneralAuctionProduct = exports.viewGeneralAuctionProduct = exports.getGeneralAuctionProducts = exports.unpublishProduct = exports.deleteGeneralProduct = exports.viewGeneralProduct = void 0;
 const sequelize_1 = require("sequelize");
 const uuid_1 = require("uuid");
 const mail_service_1 = require("../services/mail.service");
@@ -1810,6 +1810,41 @@ const deleteGeneralProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
     }
 });
 exports.deleteGeneralProduct = deleteGeneralProduct;
+const unpublishProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const productId = req.query.productId;
+    try {
+        // Find the product by ID
+        const product = yield product_1.default.findByPk(productId, { include: [{ model: user_1.default, as: "vendor" }] });
+        if (!product) {
+            res.status(404).json({ message: "Product not found" });
+            return;
+        }
+        // Check if the product is already unpublished
+        if (product.status === 'inactive') {
+            res.status(400).json({ message: "Product is already unpublished" });
+            return;
+        }
+        // Update product status to inactive
+        product.status = 'inactive';
+        yield product.save();
+        // Notify the vendor
+        const notificationTitle = "Product Unpublished";
+        const notificationMessage = `Your product "${product.name}" has been unpublished by an admin. Please review your listing.`;
+        const notificationType = "product_unpublished";
+        yield notification_1.default.create({
+            userId: product.vendorId,
+            title: notificationTitle,
+            message: notificationMessage,
+            type: notificationType,
+        });
+        res.status(200).json({ message: "Product unpublished successfully" });
+    }
+    catch (error) {
+        logger_1.default.error("Error unpublishing product:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+exports.unpublishProduct = unpublishProduct;
 const getGeneralAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { name, sku, status, condition, categoryName, page, limit } = req.query;
     try {

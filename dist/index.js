@@ -20,6 +20,8 @@ const express_service_1 = __importDefault(require("./services/express.service"))
 const sequelize_service_1 = __importDefault(require("./services/sequelize.service")); // Adjusted to match your service structure
 const authRoute_1 = __importDefault(require("./routes/authRoute")); // Import your routes here
 const socket_service_1 = require("./services/socket.service");
+require("./config/passportConfig"); // Import Password Configuration
+const passport_1 = __importDefault(require("passport"));
 dotenv_1.default.config();
 // Initialize the Express app
 const app = (0, express_service_1.default)();
@@ -32,6 +34,7 @@ const io = new socket_io_1.Server(server, {
     },
 });
 exports.io = io;
+app.use(passport_1.default.initialize());
 app.use("/api", authRoute_1.default); // Mount the router to /api
 // Configure Socket.IO
 (0, socket_service_1.configureSocket)(io);

@@ -23,7 +23,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteAdvert = exports.viewAdvert = exports.getAdverts = exports.updateAdvert = exports.createAdvert = exports.activeProducts = exports.getOrderItemsInfo = exports.getVendorOrderItems = exports.getAllSubCategories = exports.getAllCurrencies = exports.verifyCAC = exports.subscribe = exports.subscriptionPlans = exports.viewAuctionProduct = exports.fetchVendorAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchVendorProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.viewStore = exports.getStore = exports.getKYC = exports.submitOrUpdateKYC = void 0;
+exports.deleteBankInformation = exports.getSingleBankInformation = exports.getBankInformation = exports.updateBankInformation = exports.addBankInformation = exports.deleteAdvert = exports.viewAdvert = exports.getAdverts = exports.updateAdvert = exports.createAdvert = exports.activeProducts = exports.getOrderItemsInfo = exports.getVendorOrderItems = exports.getAllSubCategories = exports.getAllCurrencies = exports.verifyCAC = exports.subscribe = exports.subscriptionPlans = exports.viewAuctionProduct = exports.fetchVendorAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchVendorProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.viewStore = exports.getStore = exports.getKYC = exports.submitOrUpdateKYC = void 0;
 const user_1 = __importDefault(require("../models/user"));
 const uuid_1 = require("uuid");
 const sequelize_1 = require("sequelize");
@@ -46,6 +46,7 @@ const currency_1 = __importDefault(require("../models/currency"));
 const orderitem_1 = __importDefault(require("../models/orderitem"));
 const order_1 = __importDefault(require("../models/order"));
 const advert_1 = __importDefault(require("../models/advert"));
+const bankinformation_1 = __importDefault(require("../models/bankinformation"));
 const submitOrUpdateKYC = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
@@ -1503,4 +1504,137 @@ const deleteAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* (
     }
 });
 exports.deleteAdvert = deleteAdvert;
+/**
+ * Add a new bank account for a vendor
+ */
+const addBankInformation = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _3;
+    const { bankInfo } = req.body; // bankInfo contains bankName, accountNumber, accountName
+    const vendorId = (_3 = req.user) === null || _3 === void 0 ? void 0 : _3.id; // Authenticated user ID from middleware
+    try {
+        // Ensure required fields are provided
+        if (!bankInfo) {
+            res.status(400).json({ message: "Field is required" });
+            return;
+        }
+        // Check if bank details already exist for this vendor
+        // const existingBank = await BankInformation.findOne({ where: { vendorId, accountNumber: bankInfo.accountNumber } });
+        // if (existingBank) {
+        //     res.status(400).json({ message: "Bank details already exist" });
+        //     return;
+        // }
+        // Check if vendorId exists in the User table (Vendor)
+        const vendor = yield user_1.default.findByPk(vendorId);
+        if (!vendor) {
+            res.status(404).json({ message: "Owner not found" });
+            return;
+        }
+        // If it's a vendor, ensure they are verified
+        if (vendor && !vendor.isVerified) {
+            res.status(400).json({
+                message: "Cannot add bank information. You are not verified.",
+            });
+            return;
+        }
+        // Create bank information entry
+        const bankData = yield bankinformation_1.default.create({
+            vendorId,
+            bankInfo
+        });
+        res.status(200).json({ message: "Bank information added successfully", data: bankData });
+    }
+    catch (error) {
+        logger_1.default.error("Error adding bank information:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+exports.addBankInformation = addBankInformation;
+/**
+ * Update bank account details for a vendor
+ */
+const updateBankInformation = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { bankId, bankInfo } = req.body;
+    try {
+        // Find the bank record
+        const bankData = yield bankinformation_1.default.findOne({ where: { id: bankId } });
+        if (!bankData) {
+            res.status(404).json({ message: "Bank information not found" });
+            return;
+        }
+        // Update bank details
+        yield bankData.update({
+            bankInfo
+        });
+        res.status(200).json({ message: "Bank information updated successfully", data: bankData });
+    }
+    catch (error) {
+        logger_1.default.error("Error updating bank information:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+exports.updateBankInformation = updateBankInformation;
+/**
+ * Get bank information for a specific vendor or all vendors
+ */
+const getBankInformation = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _4;
+    const vendorId = (_4 = req.user) === null || _4 === void 0 ? void 0 : _4.id; // Authenticated user ID from middleware
+    try {
+        let bankData;
+        // Fetch bank details for a specific vendor
+        bankData = yield bankinformation_1.default.findAll({ where: { vendorId } });
+        if (!bankData.length) {
+            res.status(404).json({ message: "No bank information found for this vendor" });
+            return;
+        }
+        res.status(200).json({ message: "Bank information retrieved successfully", data: bankData });
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching bank information:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+exports.getBankInformation = getBankInformation;
+/**
+ * Get a single bank information record for a specific vendor
+ */
+const getSingleBankInformation = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const bankId = req.query.bankId; // bankId is required
+    try {
+        // Fetch bank details
+        const bankInfo = yield bankinformation_1.default.findOne({ where: { id: bankId } });
+        if (!bankInfo) {
+            res.status(404).json({ message: "Bank information not found" });
+            return;
+        }
+        res.status(200).json({ message: "Bank information retrieved successfully", data: bankInfo });
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching bank information:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+exports.getSingleBankInformation = getSingleBankInformation;
+/**
+ * Delete bank account details for a vendor
+ */
+const deleteBankInformation = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const bankId = req.query.bankId; // bankId is required
+    try {
+        // Find the bank record
+        const bankData = yield bankinformation_1.default.findOne({ where: { id: bankId } });
+        if (!bankData) {
+            res.status(404).json({ message: "Bank information not found" });
+            return;
+        }
+        // Delete the bank record
+        yield bankData.destroy();
+        res.status(200).json({ message: "Bank information deleted successfully" });
+    }
+    catch (error) {
+        logger_1.default.error("Error deleting bank information:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+exports.deleteBankInformation = deleteBankInformation;
 //# sourceMappingURL=vendorController.js.map

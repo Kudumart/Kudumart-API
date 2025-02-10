@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.adminLogin = exports.resetPassword = exports.codeCheck = exports.forgetPassword = exports.resendVerificationEmail = exports.login = exports.verifyEmail = exports.customerRegister = exports.vendorRegister = exports.index = void 0;
+exports.adminLogin = exports.socialAuthCallback = exports.resetPassword = exports.codeCheck = exports.forgetPassword = exports.resendVerificationEmail = exports.login = exports.verifyEmail = exports.customerRegister = exports.vendorRegister = exports.index = void 0;
 const user_1 = __importDefault(require("../models/user"));
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const helpers_1 = require("../utils/helpers");
@@ -479,6 +479,33 @@ const resetPassword = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
 });
 exports.resetPassword = resetPassword;
+/**
+ * Handle Successful Social Login
+ */
+const socialAuthCallback = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        if (!req.user) {
+            res.status(401).json({ message: 'Authentication failed' });
+            return;
+        }
+        // Type assertion for user
+        const user = req.user;
+        // Generate token
+        const token = jwt_service_1.default.jwtSign(user.id);
+        // Successful login
+        res.status(200).json({
+            message: "User login successful",
+            data: user,
+            tokon: token,
+        });
+    }
+    catch (error) {
+        logger_1.default.error("Error in login:", error);
+        // Handle server errors
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+exports.socialAuthCallback = socialAuthCallback;
 // Admin Login
 const adminLogin = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { email, password } = req.body;

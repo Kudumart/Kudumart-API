@@ -22,9 +22,13 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 // src/routes/authroute.ts
 const express_1 = require("express");
+const passport_1 = __importDefault(require("passport"));
 const authController = __importStar(require("../controllers/authController"));
 const homeController = __importStar(require("../controllers/homeController"));
 const validations_1 = require("../utils/validations"); // Import the service
@@ -39,6 +43,12 @@ authRoutes.post("/auth/resend/verification/email", (0, validations_1.resendVerif
 authRoutes.post("/auth/password/forgot", (0, validations_1.forgotPasswordValidationRules)(), validations_1.validate, authController.forgetPassword);
 authRoutes.post("/auth/password/code/check", (0, validations_1.verificationValidationRules)(), validations_1.validate, authController.codeCheck);
 authRoutes.post("/auth/password/reset", (0, validations_1.resetPasswordValidationRules)(), validations_1.validate, authController.resetPassword);
+// Facebook Authentication
+authRoutes.get('/auth/facebook', passport_1.default.authenticate('facebook', { scope: ['email'] }));
+authRoutes.get('/auth/facebook/callback', passport_1.default.authenticate('facebook', { session: false }), authController.socialAuthCallback);
+// Google Authentication
+authRoutes.get('/auth/google', passport_1.default.authenticate('google', { scope: ['profile', 'email'] }));
+authRoutes.get('/auth/google/callback', passport_1.default.authenticate('google', { session: false }), authController.socialAuthCallback);
 // Admin
 authRoutes.post("/auth/admin/login", (0, validations_1.loginValidationRules)(), validations_1.validate, authController.adminLogin);
 // Frontend

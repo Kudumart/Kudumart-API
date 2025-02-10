@@ -107,6 +107,15 @@ const products = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         // Include the subCategory relation with name and id filtering
         const includeClause = [
             {
+                model: user_1.default,
+                as: "vendor",
+            },
+            {
+                model: admin_1.default,
+                as: "admin",
+                attributes: ["id", "name", "email"],
+            },
+            {
                 model: subcategory_1.default,
                 as: "sub_category",
                 where: Object.keys(subCategoryWhereClause).length > 0

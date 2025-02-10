@@ -122,6 +122,7 @@ adminRoutes.get("/general/store/view", adminAuthMiddleware_1.default, adminContr
 adminRoutes.get("/general/products", adminAuthMiddleware_1.default, adminController.getGeneralProducts);
 adminRoutes.get("/general/product/view", adminAuthMiddleware_1.default, adminController.viewGeneralProduct);
 adminRoutes.delete("/general/product/delete", adminAuthMiddleware_1.default, adminController.deleteGeneralProduct);
+adminRoutes.put("/general/product/unpublished", adminAuthMiddleware_1.default, adminController.unpublishProduct);
 adminRoutes.get("/general/auction/products", adminAuthMiddleware_1.default, adminController.getGeneralAuctionProducts);
 adminRoutes.get("/general/auction/product/view", adminAuthMiddleware_1.default, adminController.viewGeneralAuctionProduct);
 adminRoutes.delete("/general/auction/product/delete", adminAuthMiddleware_1.default, adminController.deleteGeneralAuctionProduct);
