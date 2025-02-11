@@ -26,6 +26,7 @@ import OrderItem from "../models/orderitem";
 import Order from "../models/order";
 import Advert from "../models/advert";
 import BankInformation from "../models/bankinformation";
+import Cart from "../models/cart";
 
 export const submitOrUpdateKYC = async (
     req: Request,
@@ -599,6 +600,9 @@ export const moveToDraft = async (
         // Update the product's status to 'draft'
         product.status = "draft";
         await product.save();
+
+        // Remove the product from all carts
+        await Cart.destroy({ where: { productId } });
 
         // Respond with the updated product
         res.status(200).json({

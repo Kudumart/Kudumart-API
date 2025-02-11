@@ -3172,6 +3172,9 @@ export const moveToDraft = async (
         product.status = "draft";
         await product.save();
 
+        // Remove the product from all carts
+        await Cart.destroy({ where: { productId } });
+
         // Respond with the updated product
         res.status(200).json({
             message: "Product moved to draft.",
