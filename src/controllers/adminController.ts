@@ -33,6 +33,7 @@ import sequelizeService from "../services/sequelize.service";
 import Transaction from "../models/transaction";
 import Advert from "../models/advert";
 import Notification from "../models/notification";
+import Cart from "../models/cart";
 
 // Extend the Express Request interface to include adminId and admin
 interface AuthenticatedRequest extends Request {
@@ -2187,6 +2188,9 @@ export const unpublishProduct = async (req: Request, res: Response): Promise<voi
       // Update product status to inactive
       product.status = 'inactive';
       await product.save();
+
+      // Remove the product from all carts
+      await Cart.destroy({ where: { productId } });
   
       // Notify the vendor
       const notificationTitle = "Product Unpublished";
@@ -2208,6 +2212,48 @@ export const unpublishProduct = async (req: Request, res: Response): Promise<voi
     }
 };
   
+export const publishProduct = async (req: Request, res: Response): Promise<void> => {
+    const productId = req.query.productId as string;
+
+    try {
+        // Find the product by ID
+        const product = await Product.findByPk(productId, { include: [{ model: User, as: "vendor" }] });
+
+        if (!product) {
+            res.status(404).json({ message: "Product not found" });
+            return;
+        }
+
+        // Check if the product is already active
+        if (product.status === 'active') {
+            res.status(400).json({ message: "Product is already published" });
+            return;
+        }
+
+        // Update product status to active
+        product.status = 'active';
+        await product.save();
+
+        // Notify the vendor
+        const notificationTitle = "Product Published";
+        const notificationMessage = `Your product "${product.name}" has been published and is now visible to customers.`;
+        const notificationType = "product_published";
+
+        await Notification.create({
+            userId: product.vendorId,
+            title: notificationTitle,
+            message: notificationMessage,
+            type: notificationType,
+        });
+
+        res.status(200).json({ message: "Product published successfully" });
+
+    } catch (error: any) {
+        logger.error("Error publishing product:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
 export const getGeneralAuctionProducts = async (req: Request, res: Response): Promise<void> => {
     const { name, sku, status, condition, categoryName, page, limit } = req.query;
 
