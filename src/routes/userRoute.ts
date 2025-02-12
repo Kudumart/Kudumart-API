@@ -63,4 +63,8 @@ userRoutes.get("/orders", authMiddleware, userController.getAllOrders);
 userRoutes.get("/order/items", authMiddleware, userController.getAllOrderItems);
 userRoutes.get("/order/payment", authMiddleware, userController.getPaymentDetails);
 
+// Save Product
+userRoutes.post("/save/product", authMiddleware, userController.toggleSaveProduct);
+userRoutes.get("/saved/products", authMiddleware, userController.getSavedProducts);
+
 export default userRoutes;

@@ -9,6 +9,7 @@ class Advert extends Model {
   public title!: string;
   public description!: string;
   public media_url!: string;
+  public link?: string;
   public status?: "pending" | "approved" | "rejected";
   public adminNote?: string;
   public showOnHomepage?: boolean;
@@ -75,6 +76,10 @@ const initModel = (sequelize: Sequelize) => {
         allowNull: true
       },
       media_url: {
+        type: DataTypes.TEXT,
+        allowNull: true
+      },
+      link: {
         type: DataTypes.TEXT,
         allowNull: true
       },

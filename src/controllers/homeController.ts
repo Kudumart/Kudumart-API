@@ -5,7 +5,7 @@ import { emailTemplates } from "../utils/messages";
 import JwtService from "../services/jwt.service";
 import logger from "../middlewares/logger"; // Adjust the path to your logger.js
 import Product from "../models/product";
-import { Op, ForeignKeyConstraintError, Sequelize } from "sequelize";
+import { Op, ForeignKeyConstraintError, Sequelize, Order } from "sequelize";
 import SubCategory from "../models/subcategory";
 import Category from "../models/category";
 import User from "../models/user";
@@ -16,6 +16,10 @@ import AuctionProduct from "../models/auctionproduct";
 import Currency from "../models/currency";
 import Admin from "../models/admin";
 import Advert from "../models/advert";
+import Testimonial from "../models/testimonial";
+import FaqCategory from "../models/faqcategory";
+import Faq from "../models/faq";
+import Contact from "../models/contact";
 
 export const getAllCategories = async (
     req: Request,
@@ -85,6 +89,8 @@ export const products = async (req: Request, res: Response): Promise<void> => {
         name, // Product name
         subCategoryName, // Subcategory name filter
         condition, // Product condition filter
+        categoryId,
+        popular // Query parameter to sort by most viewed
     } = req.query;
 
     try {
@@ -113,6 +119,9 @@ export const products = async (req: Request, res: Response): Promise<void> => {
         if (subCategoryName) {
             subCategoryWhereClause.name = { [Op.like]: `%${subCategoryName}%` };
         }
+        if (categoryId) {
+            subCategoryWhereClause.categoryId = categoryId; // Filter by categoryId
+        }
 
         // Include the subCategory relation with name and id filtering
         const includeClause = [
@@ -132,7 +141,7 @@ export const products = async (req: Request, res: Response): Promise<void> => {
                     Object.keys(subCategoryWhereClause).length > 0
                         ? subCategoryWhereClause
                         : undefined,
-                attributes: ["id", "name"],
+                attributes: ["id", "name", "categoryId"],
             },
             {
                 model: Store,
@@ -141,16 +150,23 @@ export const products = async (req: Request, res: Response): Promise<void> => {
                     {
                         model: Currency,
                         as: "currency",
-                        attributes: ['symbol']
+                        attributes: ["symbol"],
                     },
-                ]
-            }
+                ],
+            },
         ];
+
+        // Determine sorting order dynamically
+        const orderClause: Order = popular === "true"
+        ? [["views", "DESC"], [Sequelize.literal("RAND()"), "ASC"]] // Sort by views first, then randomize
+        : [[Sequelize.literal("RAND()"), "ASC"]]; // Default random sorting
 
         // Fetch active products with subcategory details
         const products = await Product.findAll({
             where: whereClause,
             include: includeClause,
+            order: orderClause, // Dynamic ordering
+            limit: 20, // Fetch top 20 products
         });
 
         res.status(200).json({ data: products });
@@ -196,9 +212,9 @@ export const getProductById = async (
                         {
                             model: Currency,
                             as: "currency",
-                            attributes: ['symbol']
+                            attributes: ["symbol"],
                         },
-                    ]
+                    ],
                 },
                 {
                     model: SubCategory,
@@ -208,22 +224,24 @@ export const getProductById = async (
             ],
         });
 
-        console.log(product);
-
         if (!product) {
             res.status(404).json({ message: "Product not found" });
             return;
         }
 
-        if (product && product.vendor) { // This should now return the associated User (vendor)
+        // Increment the view count by 1
+        await product.increment("views", { by: 1 });
+
+        // Fetch vendor KYC verification status
+        if (product.vendor) {
             const kyc = await KYC.findOne({ where: { vendorId: product.vendor.id } });
-            product.vendor.setDataValue('isVerified', kyc ? kyc.isVerified : false);
+            product.vendor.setDataValue("isVerified", kyc ? kyc.isVerified : false);
         }
 
-        // Fetch recommended products based on the same category
+        // Fetch recommended products based on the same subcategory
         const recommendedProducts = await Product.findAll({
             where: {
-                categoryId: product.categoryId,
+                categoryId: product.categoryId, // Fetch products from the same subcategory
                 id: { [Op.ne]: product.id }, // Exclude the currently viewed product
                 status: "active",
             },
@@ -231,11 +249,11 @@ export const getProductById = async (
                 {
                     model: User,
                     as: "vendor",
-                    required: true, // Make sure the user is included in the result
+                    required: true, // Ensure the user is included
                 },
                 {
                     model: Admin,
-                    as: "admin"
+                    as: "admin",
                 },
                 {
                     model: Store,
@@ -244,9 +262,9 @@ export const getProductById = async (
                         {
                             model: Currency,
                             as: "currency",
-                            attributes: ['symbol']
+                            attributes: ["symbol"],
                         },
-                    ]
+                    ],
                 },
                 {
                     model: SubCategory,
@@ -255,7 +273,7 @@ export const getProductById = async (
                 },
             ],
             limit: 10,
-            order: Sequelize.fn('RAND'), // Randomize the order
+            order: Sequelize.literal("RAND()"), // Randomize the order
         });
 
         // Send the product and recommended products in the response
@@ -562,6 +580,11 @@ export const getAdverts = async (req: Request, res: Response): Promise<void> => 
             searchCondition.showOnHomePage = showOnHomePage === "true";
         }
 
+        const shuffle = "true";
+
+        // Determine sorting order
+        const orderClause: Order = [[Sequelize.literal("RAND()"), "ASC"]]; // Ensure valid format
+
         // Query adverts
         const { rows: adverts, count } = await Advert.findAndCountAll({
             where: searchCondition,
@@ -589,7 +612,7 @@ export const getAdverts = async (req: Request, res: Response): Promise<void> => 
             ],
             limit: pageSize,
             offset: offset,
-            order: [["createdAt", "DESC"]],
+            order: orderClause,
         });
 
         res.status(200).json({
@@ -604,5 +627,68 @@ export const getAdverts = async (req: Request, res: Response): Promise<void> => 
     } catch (error) {
         logger.error("Error fetching adverts:", error);
         res.status(500).json({ message: "Failed to retrieve adverts." });
+    }
+};
+
+// Get all testimonials
+export const getAllTestimonials = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const testimonials = await Testimonial.findAll();
+        res.status(200).json({ data: testimonials });
+
+    } catch (error: any) {
+        logger.error(`Error retrieving testimonials: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while retrieving testimonials. Please try again later." });
+    }
+};
+
+// Get FAQ Categories with its FAQs
+export const getFaqCategoryWithFaqs = async (req: Request, res: Response): Promise<void> => {
+
+    try {
+        const categories = await FaqCategory.findAll({
+            include: [
+                {
+                    model: Faq,
+                    as: "faqs",
+                    attributes: ["id", "question", "answer"], // Select only required fields
+                },
+            ],
+        });
+
+        if (!categories) {
+            res.status(404).json({ message: "FAQ category not found" });
+            return;
+        }
+
+        res.status(200).json({ data: categories });
+
+    } catch (error: any) {
+        logger.error(`Error fetching FAQ categories with faqs: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while fetching the FAQ category." });
+    }
+};
+
+export const submitContactForm = async (req: Request, res: Response): Promise<void> => {
+    const { name, phoneNumber, email, message } = req.body;
+
+    try {
+        // Create a new contact entry in the database
+        const newContact = await Contact.create({
+            name,
+            phoneNumber,
+            email,
+            message,
+        });
+
+        res.status(201).json({
+            message: "Thank you for reaching out! Your message has been successfully submitted. We will get back to you as soon as possible.",
+            data: newContact,
+        });
+    } catch (error: any) {
+        console.error("Error submitting contact form:", error);
+        res.status(500).json({
+            message: "An error occurred while submitting the contact form.",
+        });
     }
 };

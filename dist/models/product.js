@@ -115,6 +115,11 @@ const initModel = (sequelize) => {
             type: sequelize_1.DataTypes.STRING,
             allowNull: true,
         },
+        views: {
+            type: sequelize_1.DataTypes.INTEGER,
+            allowNull: true,
+            defaultValue: 0
+        },
         status: {
             type: sequelize_1.DataTypes.ENUM('active', 'inactive', 'draft'),
             defaultValue: 'active',

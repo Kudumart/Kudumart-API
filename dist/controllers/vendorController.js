@@ -41,12 +41,13 @@ const vendorsubscription_1 = __importDefault(require("../models/vendorsubscripti
 const notification_1 = __importDefault(require("../models/notification"));
 const transaction_1 = __importDefault(require("../models/transaction"));
 const paymentgateway_1 = __importDefault(require("../models/paymentgateway"));
-const helpers_2 = require("../utils/helpers");
 const currency_1 = __importDefault(require("../models/currency"));
 const orderitem_1 = __importDefault(require("../models/orderitem"));
 const order_1 = __importDefault(require("../models/order"));
 const advert_1 = __importDefault(require("../models/advert"));
 const bankinformation_1 = __importDefault(require("../models/bankinformation"));
+const cart_1 = __importDefault(require("../models/cart"));
+const sequelize_service_1 = __importDefault(require("../services/sequelize.service"));
 const submitOrUpdateKYC = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
@@ -84,8 +85,8 @@ const submitOrUpdateKYC = (req, res) => __awaiter(void 0, void 0, void 0, functi
 });
 exports.submitOrUpdateKYC = submitOrUpdateKYC;
 const getKYC = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _b;
-    const vendorId = (_b = req.user) === null || _b === void 0 ? void 0 : _b.id; // Authenticated user ID from middleware
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     try {
         // Check if a KYC record already exists for this user
         const kyc = yield kyc_1.default.findOne({ where: { vendorId } });
@@ -98,8 +99,8 @@ const getKYC = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.getKYC = getKYC;
 const getStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _c;
-    const vendorId = (_c = req.user) === null || _c === void 0 ? void 0 : _c.id; // Authenticated user ID from middleware
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     try {
         const stores = yield store_1.default.findAll({
             where: { vendorId },
@@ -156,8 +157,8 @@ const getStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.getStore = getStore;
 const viewStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _d;
-    const vendorId = (_d = req.user) === null || _d === void 0 ? void 0 : _d.id; // Authenticated user ID from middleware
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     const storeId = req.query.storeId;
     try {
         const store = yield store_1.default.findOne({
@@ -188,8 +189,8 @@ const viewStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.viewStore = viewStore;
 const createStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _e;
-    const vendorId = (_e = req.user) === null || _e === void 0 ? void 0 : _e.id; // Authenticated user ID from middleware
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     const { currencyId, name, location, logo, businessHours, deliveryOptions, tipsOnFinding } = req.body;
     if (!currencyId) {
         res.status(400).json({ message: 'Currency ID is required.' });
@@ -234,8 +235,8 @@ const createStore = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 });
 exports.createStore = createStore;
 const updateStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _f;
-    const vendorId = (_f = req.user) === null || _f === void 0 ? void 0 : _f.id; // Authenticated user ID from middleware
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     const { storeId, currencyId, name, location, businessHours, deliveryOptions, tipsOnFinding, logo } = req.body;
     try {
         const store = yield store_1.default.findOne({ where: { id: storeId } });
@@ -307,9 +308,9 @@ const deleteStore = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 exports.deleteStore = deleteStore;
 // Product
 const createProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _g;
-    const vendorId = (_g = req.user) === null || _g === void 0 ? void 0 : _g.id; // Authenticated user ID from middleware
-    const _h = req.body, { storeId, categoryId, name } = _h, otherData = __rest(_h, ["storeId", "categoryId", "name"]);
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    const _b = req.body, { storeId, categoryId, name } = _b, otherData = __rest(_b, ["storeId", "categoryId", "name"]);
     try {
         // Use the utility function to check the product limit
         const { status, message } = yield (0, helpers_1.checkVendorProductLimit)(vendorId);
@@ -374,9 +375,9 @@ const createProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.createProduct = createProduct;
 const updateProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _j;
-    const _k = req.body, { productId } = _k, updateData = __rest(_k, ["productId"]);
-    const vendorId = (_j = req.user) === null || _j === void 0 ? void 0 : _j.id; // Authenticated user ID from middleware
+    var _a;
+    const _b = req.body, { productId } = _b, updateData = __rest(_b, ["productId"]);
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     try {
         // Use the utility function to check the product limit
         const { status, message } = yield (0, helpers_1.checkVendorProductLimit)(vendorId);
@@ -407,9 +408,9 @@ const updateProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.updateProduct = updateProduct;
 const deleteProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _l;
+    var _a;
     const { productId } = req.query;
-    const vendorId = (_l = req.user) === null || _l === void 0 ? void 0 : _l.id; // Authenticated user ID from middleware
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     try {
         const product = yield product_1.default.findOne({
             where: {
@@ -433,8 +434,8 @@ const deleteProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.deleteProduct = deleteProduct;
 const fetchVendorProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _m;
-    const vendorId = (_m = req.user) === null || _m === void 0 ? void 0 : _m.id; // Authenticated user ID from middleware
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     const { name, sku, status, condition, categoryName } = req.query;
     try {
         const products = yield product_1.default.findAll(Object.assign({ where: { vendorId }, include: [
@@ -469,10 +470,10 @@ const fetchVendorProducts = (req, res) => __awaiter(void 0, void 0, void 0, func
 });
 exports.fetchVendorProducts = fetchVendorProducts;
 const viewProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _o;
+    var _a;
     // Get productId from route params instead of query
     const { productId } = req.query;
-    const vendorId = (_o = req.user) === null || _o === void 0 ? void 0 : _o.id; // Authenticated user ID from middleware
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     try {
         const product = yield product_1.default.findOne({
             where: {
@@ -510,9 +511,9 @@ const viewProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 });
 exports.viewProduct = viewProduct;
 const moveToDraft = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _p;
+    var _a;
     const { productId } = req.query; // Get productId from request query
-    const vendorId = (_p = req.user) === null || _p === void 0 ? void 0 : _p.id; // Authenticated user ID from middleware
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     try {
         // Validate productId type
         if (typeof productId !== "string") {
@@ -534,6 +535,8 @@ const moveToDraft = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         // Update the product's status to 'draft'
         product.status = "draft";
         yield product.save();
+        // Remove the product from all carts
+        yield cart_1.default.destroy({ where: { productId } });
         // Respond with the updated product
         res.status(200).json({
             message: "Product moved to draft.",
@@ -547,9 +550,9 @@ const moveToDraft = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 });
 exports.moveToDraft = moveToDraft;
 const changeProductStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _q;
+    var _a;
     const { productId, status } = req.body; // Get productId and status from request body
-    const vendorId = (_q = req.user) === null || _q === void 0 ? void 0 : _q.id; // Authenticated user ID from middleware
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     // Validate status
     if (!["active", "inactive", "draft"].includes(status)) {
         res.status(400).json({ message: "Invalid status." });
@@ -584,8 +587,8 @@ const changeProductStatus = (req, res) => __awaiter(void 0, void 0, void 0, func
 exports.changeProductStatus = changeProductStatus;
 // Auction Product
 const createAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _r;
-    const vendorId = (_r = req.user) === null || _r === void 0 ? void 0 : _r.id; // Authenticated user ID from middleware
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     const { storeId, categoryId, name, condition, description, specification, price, bidIncrement, maxBidsPerUser, participantsInterestFee, startDate, endDate, image, additionalImages, } = req.body;
     try {
         // Use the utility function to check the product limit
@@ -669,8 +672,8 @@ const createAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.createAuctionProduct = createAuctionProduct;
 const updateAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _s;
-    const vendorId = (_s = req.user) === null || _s === void 0 ? void 0 : _s.id; // Authenticated user ID from middleware
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     const { auctionProductId, storeId, categoryId, name, condition, description, specification, price, bidIncrement, maxBidsPerUser, participantsInterestFee, startDate, endDate, image, additionalImages, } = req.body;
     try {
         // Use the utility function to check the product limit
@@ -758,9 +761,9 @@ const updateAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.updateAuctionProduct = updateAuctionProduct;
 const deleteAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _t;
+    var _a;
     const { auctionProductId } = req.query;
-    const vendorId = (_t = req.user) === null || _t === void 0 ? void 0 : _t.id; // Authenticated user ID from middleware
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     try {
         // Find the auction product by ID
         const auctionProduct = yield auctionproduct_1.default.findOne({
@@ -810,9 +813,9 @@ const deleteAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.deleteAuctionProduct = deleteAuctionProduct;
 const cancelAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _u;
+    var _a;
     const { auctionProductId } = req.query;
-    const vendorId = (_u = req.user) === null || _u === void 0 ? void 0 : _u.id; // Authenticated user ID from middleware
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     try {
         // Find the auction product by ID
         const auctionProduct = yield auctionproduct_1.default.findOne({
@@ -856,8 +859,8 @@ const cancelAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.cancelAuctionProduct = cancelAuctionProduct;
 const fetchVendorAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _v;
-    const vendorId = (_v = req.user) === null || _v === void 0 ? void 0 : _v.id; // Authenticated user ID from middleware
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     const { name, sku, status, condition, categoryName } = req.query;
     try {
         // Fetch all auction products for the vendor
@@ -904,10 +907,10 @@ const fetchVendorAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 
 });
 exports.fetchVendorAuctionProducts = fetchVendorAuctionProducts;
 const viewAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _w;
+    var _a;
     // Get auctionProductId from route params instead of query
     const { auctionProductId } = req.query;
-    const vendorId = (_w = req.user) === null || _w === void 0 ? void 0 : _w.id; // Authenticated user ID from middleware
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     try {
         const product = yield auctionproduct_1.default.findOne({
             where: {
@@ -946,8 +949,8 @@ const viewAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, funct
 exports.viewAuctionProduct = viewAuctionProduct;
 // Subscription
 const subscriptionPlans = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _x;
-    const vendorId = (_x = req.user) === null || _x === void 0 ? void 0 : _x.id; // Authenticated user ID from middleware
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     try {
         // Fetch all subscription plans
         const subscriptionPlans = yield subscriptionplan_1.default.findAll();
@@ -981,158 +984,157 @@ const subscriptionPlans = (req, res) => __awaiter(void 0, void 0, void 0, functi
 });
 exports.subscriptionPlans = subscriptionPlans;
 const subscribe = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _y;
-    const vendorId = (_y = req.user) === null || _y === void 0 ? void 0 : _y.id; // Authenticated user ID from middleware
-    const { subscriptionPlanId, isWallet, refId } = req.body; // Including isWallet and refId in the request body
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+    const { subscriptionPlanId, isWallet, refId } = req.body;
     if (!subscriptionPlanId) {
-        res.status(400).json({ message: 'Subscription plan ID is required.' });
+        res.status(400).json({ message: "Subscription plan ID is required." });
         return;
     }
+    const transaction = yield sequelize_service_1.default.connection.transaction();
     try {
         // Step 1: Check for active subscription
         const activeSubscription = yield vendorsubscription_1.default.findOne({
-            where: {
-                vendorId,
-                isActive: true,
-            },
+            where: { vendorId, isActive: true },
             include: [{
                     model: subscriptionplan_1.default,
                     as: "subscriptionPlans",
-                    attributes: ['id', 'name'],
+                    attributes: ["id", "name"],
                 }],
+            transaction, // Use the same transaction
+            lock: true, // Prevents concurrent modifications
         });
         const startDate = new Date();
         const endDate = new Date();
+        // Step 2: Function to handle payment (wallet or external)
         const handleTransaction = (amount) => __awaiter(void 0, void 0, void 0, function* () {
-            // If isWallet is true, deduct from wallet balance
             if (isWallet) {
-                const vendor = yield user_1.default.findByPk(vendorId);
+                const vendor = yield user_1.default.findByPk(vendorId, { transaction, lock: true });
                 if (!vendor || vendor.wallet === undefined || vendor.wallet < amount) {
+                    yield transaction.rollback();
                     res.status(400).json({ message: "Insufficient wallet balance." });
                     return false;
                 }
-                // Deduct the amount from the wallet
-                yield vendor.update({ wallet: vendor.wallet - amount });
+                yield vendor.update({ wallet: vendor.wallet - amount }, { transaction });
             }
             else {
-                const paymentGateway = yield paymentgateway_1.default.findOne({ where: { isActive: true } });
+                const paymentGateway = yield paymentgateway_1.default.findOne({
+                    where: { isActive: true },
+                    transaction,
+                });
                 if (!paymentGateway) {
+                    yield transaction.rollback();
                     res.status(400).json({ message: "No active payment gateway found." });
                     return false;
                 }
-                // If refId is provided, verify the payment
                 if (!refId) {
-                    res.status(400).json({ message: 'Payment reference ID (refId) is required.' });
-                    return;
+                    yield transaction.rollback();
+                    res.status(400).json({ message: "Payment reference ID (refId) is required." });
+                    return false;
                 }
-                // Simulate a payment verification function
-                const isPaymentValid = yield (0, helpers_2.verifyPayment)(refId, paymentGateway.secretKey);
+                const isPaymentValid = yield (0, helpers_1.verifyPayment)(refId, paymentGateway.secretKey);
                 if (!isPaymentValid) {
-                    res.status(400).json({ message: 'Invalid or unverified payment reference.' });
+                    yield transaction.rollback();
+                    res.status(400).json({ message: "Invalid or unverified payment reference." });
                     return false;
                 }
             }
-            // Save the transaction in the database
             yield transaction_1.default.create({
                 userId: vendorId,
                 amount,
-                transactionType: 'subscription',
-                status: 'success',
+                transactionType: "subscription",
+                status: "success",
                 refId: isWallet ? null : refId,
-            });
+            }, { transaction });
             return true;
         });
         if (activeSubscription) {
-            // Handle active subscription
             const activePlan = activeSubscription.subscriptionPlans;
-            // Check if the active plan is defined and handle accordingly
             if (!activePlan) {
-                res.status(400).json({ message: 'No subscription plan found for the vendor.' });
+                yield transaction.rollback();
+                res.status(400).json({ message: "No subscription plan found for the vendor." });
                 return;
             }
-            if (activePlan.name === 'Free Plan') {
-                // If the active plan is free, proceed with the subscription
-                // Create a new subscription for the vendor
-                const subscriptionPlan = yield subscriptionplan_1.default.findByPk(subscriptionPlanId);
+            if (activePlan.name === "Free Plan") {
+                const subscriptionPlan = yield subscriptionplan_1.default.findByPk(subscriptionPlanId, { transaction });
                 if (!subscriptionPlan) {
-                    res.status(404).json({ message: 'Subscription plan not found' });
+                    yield transaction.rollback();
+                    res.status(404).json({ message: "Subscription plan not found." });
                     return;
                 }
                 const transactionSuccess = yield handleTransaction(subscriptionPlan.price);
                 if (!transactionSuccess)
                     return;
-                endDate.setMonth(startDate.getMonth() + subscriptionPlan.duration); // Set end date by adding months
-                // Mark the current free plan as inactive
-                yield activeSubscription.update({ isActive: false });
+                endDate.setMonth(startDate.getMonth() + subscriptionPlan.duration);
+                yield activeSubscription.update({ isActive: false }, { transaction });
                 const newSubscription = yield vendorsubscription_1.default.create({
                     vendorId,
                     subscriptionPlanId,
                     startDate,
                     endDate,
                     isActive: true,
-                });
-                // Create a notification for the vendor
+                }, { transaction });
                 yield notification_1.default.create({
                     userId: vendorId,
+                    title: "Subscription",
                     message: `You have successfully subscribed to the ${subscriptionPlan.name} plan.`,
-                    type: 'subscription',
+                    type: "subscription",
                     isRead: false,
-                });
+                }, { transaction });
+                yield transaction.commit(); // Commit all changes
                 res.status(200).json({
-                    message: 'Subscribed to new plan successfully',
+                    message: "Subscribed to new plan successfully",
                     subscription: newSubscription,
                 });
             }
             else {
-                // Create a notification about the existing active subscription
                 yield notification_1.default.create({
                     userId: vendorId,
-                    message: 'You already have an active non-free subscription and cannot switch to a new plan.',
-                    type: 'subscription',
+                    title: "Subscription",
+                    message: "You already have an active non-free subscription.",
+                    type: "subscription",
                     isRead: false,
-                });
-                // If the existing subscription is not free, notify the vendor
-                res.status(400).json({
-                    message: 'You already have an active non-free subscription',
-                });
+                }, { transaction });
+                yield transaction.rollback();
+                res.status(400).json({ message: "You already have an active non-free subscription." });
             }
         }
         else {
-            // No active subscription exists, create a new one
-            const subscriptionPlan = yield subscriptionplan_1.default.findByPk(subscriptionPlanId);
+            const subscriptionPlan = yield subscriptionplan_1.default.findByPk(subscriptionPlanId, { transaction });
             if (!subscriptionPlan) {
-                res.status(404).json({ message: 'Subscription plan not found' });
+                yield transaction.rollback();
+                res.status(404).json({ message: "Subscription plan not found." });
                 return;
             }
             const transactionSuccess = yield handleTransaction(subscriptionPlan.price);
             if (!transactionSuccess)
                 return;
-            endDate.setMonth(startDate.getMonth() + subscriptionPlan.duration); // Set end date by adding months
+            endDate.setMonth(startDate.getMonth() + subscriptionPlan.duration);
             const newSubscription = yield vendorsubscription_1.default.create({
                 vendorId,
                 subscriptionPlanId,
                 startDate,
                 endDate,
                 isActive: true,
-            });
-            // Create a notification for the new subscription
+            }, { transaction });
             yield notification_1.default.create({
                 userId: vendorId,
+                title: "Subscription",
                 message: `You have successfully subscribed to the ${subscriptionPlan.name} plan.`,
-                type: 'subscription',
+                type: "subscription",
                 isRead: false,
-            });
+            }, { transaction });
+            yield transaction.commit(); // Commit all changes
             res.status(200).json({
-                message: 'Subscribed to plan successfully',
+                message: "Subscribed to plan successfully",
                 subscription: newSubscription,
             });
         }
     }
     catch (error) {
-        logger_1.default.error('Error subscribing vendor:', error);
-        res.status(500).json({
-            message: error.message || 'An error occurred while processing the subscription.',
-        });
+        yield transaction.rollback(); // Rollback changes on error
+        logger_1.default.error("Error subscribing vendor:", error);
+        res.status(500).json({ message: "An error occurred while processing the subscription." });
     }
 });
 exports.subscribe = subscribe;
@@ -1154,7 +1156,7 @@ const verifyCAC = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         path: '/bank/validate',
         method: 'POST',
         headers: {
-            Authorization: 'Bearer sk_test_fde1e5319c69aa49534344c95485a8f1cef333ac',
+            Authorization: 'Bearer sk_test_fde1e5319c69aa49534344c95485a8f1cef333ac', // Replace with your Paystack secret key
             'Content-Type': 'application/json',
         },
     };
@@ -1239,8 +1241,8 @@ const getAllSubCategories = (req, res) => __awaiter(void 0, void 0, void 0, func
 });
 exports.getAllSubCategories = getAllSubCategories;
 const getVendorOrderItems = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _z;
-    const vendorId = (_z = req.user) === null || _z === void 0 ? void 0 : _z.id; // Authenticated user ID from middleware
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     if (!vendorId) {
         res.status(403).json({ message: "Unauthorized. Vendor ID is required." });
         return;
@@ -1292,8 +1294,8 @@ const getOrderItemsInfo = (req, res) => __awaiter(void 0, void 0, void 0, functi
 exports.getOrderItemsInfo = getOrderItemsInfo;
 // Adverts
 const activeProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _0;
-    const vendorId = (_0 = req.user) === null || _0 === void 0 ? void 0 : _0.id; // Authenticated user ID from middleware
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     const { name } = req.query;
     try {
         const products = yield product_1.default.findAll(Object.assign({ where: { vendorId, status: "active" } }, ((name) && {
@@ -1310,9 +1312,9 @@ const activeProducts = (req, res) => __awaiter(void 0, void 0, void 0, function*
 });
 exports.activeProducts = activeProducts;
 const createAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _1;
-    const vendorId = (_1 = req.user) === null || _1 === void 0 ? void 0 : _1.id; // Authenticated user ID from middleware
-    const { categoryId, productId, title, description, media_url, showOnHomepage } = req.body;
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    const { categoryId, productId, title, description, media_url, showOnHomepage, link } = req.body;
     try {
         // Use the utility function to check the product limit
         const { status, message } = yield (0, helpers_1.checkAdvertLimit)(vendorId);
@@ -1344,7 +1346,8 @@ const createAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             title,
             description,
             media_url,
-            showOnHomepage
+            showOnHomepage,
+            link
         });
         res.status(201).json({
             message: "Advert created successfully",
@@ -1358,7 +1361,7 @@ const createAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* (
 });
 exports.createAdvert = createAdvert;
 const updateAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { advertId, categoryId, productId, title, description, media_url, showOnHomepage } = req.body;
+    const { advertId, categoryId, productId, title, description, media_url, showOnHomepage, link } = req.body;
     try {
         // Check if categoryId and productId exist
         const categoryExists = yield subcategory_1.default.findByPk(categoryId);
@@ -1388,6 +1391,7 @@ const updateAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         advert.description = description || advert.description;
         advert.media_url = media_url || advert.media_url;
         advert.showOnHomepage = showOnHomepage || advert.showOnHomepage;
+        advert.link = link || advert.link;
         yield advert.save();
         res.status(200).json({
             message: "Advert updated successfully",
@@ -1401,9 +1405,9 @@ const updateAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* (
 });
 exports.updateAdvert = updateAdvert;
 const getAdverts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _2;
+    var _a;
     const { search, page = 1, limit = 10 } = req.query;
-    const vendorId = (_2 = req.user) === null || _2 === void 0 ? void 0 : _2.id; // Authenticated user ID from middleware
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     // Convert `page` and `limit` to numbers and ensure they are valid
     const pageNumber = parseInt(page, 10) || 1;
     const limitNumber = parseInt(limit, 10) || 10;
@@ -1448,7 +1452,7 @@ const getAdverts = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             message: "Adverts fetched successfully",
             data: adverts,
             pagination: {
-                total: count,
+                total: count, // Total number of adverts
                 page: pageNumber,
                 pages: totalPages,
                 limit: limitNumber,
@@ -1508,9 +1512,9 @@ exports.deleteAdvert = deleteAdvert;
  * Add a new bank account for a vendor
  */
 const addBankInformation = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _3;
+    var _a;
     const { bankInfo } = req.body; // bankInfo contains bankName, accountNumber, accountName
-    const vendorId = (_3 = req.user) === null || _3 === void 0 ? void 0 : _3.id; // Authenticated user ID from middleware
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     try {
         // Ensure required fields are provided
         if (!bankInfo) {
@@ -1577,8 +1581,8 @@ exports.updateBankInformation = updateBankInformation;
  * Get bank information for a specific vendor or all vendors
  */
 const getBankInformation = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _4;
-    const vendorId = (_4 = req.user) === null || _4 === void 0 ? void 0 : _4.id; // Authenticated user ID from middleware
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     try {
         let bankData;
         // Fetch bank details for a specific vendor

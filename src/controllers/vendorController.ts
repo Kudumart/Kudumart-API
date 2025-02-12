@@ -11,7 +11,7 @@ import KYC from "../models/kyc";
 import Store from "../models/store";
 import Product from "../models/product";
 import SubCategory from "../models/subcategory";
-import { checkVendorAuctionProductLimit, checkVendorProductLimit, checkAdvertLimit } from "../utils/helpers";
+import { checkVendorAuctionProductLimit, checkVendorProductLimit, checkAdvertLimit, verifyPayment } from "../utils/helpers";
 import AuctionProduct from "../models/auctionproduct";
 import Bid from "../models/bid";
 import https from 'https';
@@ -20,13 +20,13 @@ import VendorSubscription from "../models/vendorsubscription";
 import Notification from "../models/notification";
 import Transaction from "../models/transaction";
 import PaymentGateway from "../models/paymentgateway";
-import { verifyPayment } from "../utils/helpers";
 import Currency from "../models/currency";
 import OrderItem from "../models/orderitem";
 import Order from "../models/order";
 import Advert from "../models/advert";
 import BankInformation from "../models/bankinformation";
 import Cart from "../models/cart";
+import sequelizeService from "../services/sequelize.service";
 
 export const submitOrUpdateKYC = async (
     req: Request,
@@ -1156,152 +1156,153 @@ export const subscriptionPlans = async (
 };
 
 export const subscribe = async (req: Request, res: Response): Promise<void> => {
-    const vendorId = (req as AuthenticatedRequest).user?.id as string; // Authenticated user ID from middleware
-    const { subscriptionPlanId, isWallet, refId } = req.body; // Including isWallet and refId in the request body
+    const vendorId = (req as AuthenticatedRequest).user?.id as string;
+    const { subscriptionPlanId, isWallet, refId } = req.body;
 
     if (!subscriptionPlanId) {
-        res.status(400).json({ message: 'Subscription plan ID is required.' });
+        res.status(400).json({ message: "Subscription plan ID is required." });
         return;
     }
+
+    const transaction = await sequelizeService.connection!.transaction();
 
     try {
         // Step 1: Check for active subscription
         const activeSubscription = await VendorSubscription.findOne({
-            where: {
-                vendorId,
-                isActive: true,
-            },
+            where: { vendorId, isActive: true },
             include: [{
                 model: SubscriptionPlan,
-                as: "subscriptionPlans", // Assuming alias in your model definition
-                attributes: ['id', 'name'],
+                as: "subscriptionPlans",
+                attributes: ["id", "name"],
             }],
+            transaction, // Use the same transaction
+            lock: true, // Prevents concurrent modifications
         });
 
         const startDate = new Date();
         const endDate = new Date();
 
+        // Step 2: Function to handle payment (wallet or external)
         const handleTransaction = async (amount: number) => {
-            // If isWallet is true, deduct from wallet balance
             if (isWallet) {
-                const vendor = await User.findByPk(vendorId);
+                const vendor = await User.findByPk(vendorId, { transaction, lock: true });
 
                 if (!vendor || vendor.wallet === undefined || vendor.wallet < amount) {
+                    await transaction.rollback();
                     res.status(400).json({ message: "Insufficient wallet balance." });
                     return false;
                 }
 
-                // Deduct the amount from the wallet
-                await vendor.update({ wallet: vendor.wallet - amount });
+                await vendor.update({ wallet: vendor.wallet - amount }, { transaction });
             } else {
-                const paymentGateway = await PaymentGateway.findOne({ where: { isActive: true } });
+                const paymentGateway = await PaymentGateway.findOne({
+                    where: { isActive: true },
+                    transaction,
+                });
 
                 if (!paymentGateway) {
+                    await transaction.rollback();
                     res.status(400).json({ message: "No active payment gateway found." });
                     return false;
                 }
 
-                // If refId is provided, verify the payment
                 if (!refId) {
-                    res.status(400).json({ message: 'Payment reference ID (refId) is required.' });
-                    return;
+                    await transaction.rollback();
+                    res.status(400).json({ message: "Payment reference ID (refId) is required." });
+                    return false;
                 }
 
-                // Simulate a payment verification function
                 const isPaymentValid = await verifyPayment(refId, paymentGateway.secretKey);
                 if (!isPaymentValid) {
-                    res.status(400).json({ message: 'Invalid or unverified payment reference.' });
+                    await transaction.rollback();
+                    res.status(400).json({ message: "Invalid or unverified payment reference." });
                     return false;
                 }
             }
 
-            // Save the transaction in the database
             await Transaction.create({
                 userId: vendorId,
                 amount,
-                transactionType: 'subscription',
-                status: 'success',
+                transactionType: "subscription",
+                status: "success",
                 refId: isWallet ? null : refId,
-            });
+            }, { transaction });
 
             return true;
         };
 
         if (activeSubscription) {
-            // Handle active subscription
             const activePlan = activeSubscription.subscriptionPlans;
 
-            // Check if the active plan is defined and handle accordingly
             if (!activePlan) {
-                res.status(400).json({ message: 'No subscription plan found for the vendor.' });
+                await transaction.rollback();
+                res.status(400).json({ message: "No subscription plan found for the vendor." });
                 return;
             }
 
-            if (activePlan.name === 'Free Plan') {
-                // If the active plan is free, proceed with the subscription
-                // Create a new subscription for the vendor
-                const subscriptionPlan = await SubscriptionPlan.findByPk(subscriptionPlanId);
+            if (activePlan.name === "Free Plan") {
+                const subscriptionPlan = await SubscriptionPlan.findByPk(subscriptionPlanId, { transaction });
 
                 if (!subscriptionPlan) {
-                    res.status(404).json({ message: 'Subscription plan not found' });
+                    await transaction.rollback();
+                    res.status(404).json({ message: "Subscription plan not found." });
                     return;
                 }
 
                 const transactionSuccess = await handleTransaction(subscriptionPlan.price);
                 if (!transactionSuccess) return;
 
-                endDate.setMonth(startDate.getMonth() + subscriptionPlan.duration); // Set end date by adding months
+                endDate.setMonth(startDate.getMonth() + subscriptionPlan.duration);
 
-                // Mark the current free plan as inactive
-                await activeSubscription.update({ isActive: false });
+                await activeSubscription.update({ isActive: false }, { transaction });
 
                 const newSubscription = await VendorSubscription.create({
                     vendorId,
                     subscriptionPlanId,
                     startDate,
-                    endDate, // Adjust depending on plan duration
+                    endDate,
                     isActive: true,
-                });
+                }, { transaction });
 
-                // Create a notification for the vendor
                 await Notification.create({
                     userId: vendorId,
+                    title: "Subscription",
                     message: `You have successfully subscribed to the ${subscriptionPlan.name} plan.`,
-                    type: 'subscription',
+                    type: "subscription",
                     isRead: false,
-                });
+                }, { transaction });
+
+                await transaction.commit(); // Commit all changes
 
                 res.status(200).json({
-                    message: 'Subscribed to new plan successfully',
+                    message: "Subscribed to new plan successfully",
                     subscription: newSubscription,
                 });
             } else {
-                // Create a notification about the existing active subscription
                 await Notification.create({
                     userId: vendorId,
-                    message: 'You already have an active non-free subscription and cannot switch to a new plan.',
-                    type: 'subscription',
+                    title: "Subscription",
+                    message: "You already have an active non-free subscription.",
+                    type: "subscription",
                     isRead: false,
-                });
+                }, { transaction });
 
-                // If the existing subscription is not free, notify the vendor
-                res.status(400).json({
-                    message: 'You already have an active non-free subscription',
-                });
+                await transaction.rollback();
+                res.status(400).json({ message: "You already have an active non-free subscription." });
             }
         } else {
-            // No active subscription exists, create a new one
-            const subscriptionPlan = await SubscriptionPlan.findByPk(subscriptionPlanId);
+            const subscriptionPlan = await SubscriptionPlan.findByPk(subscriptionPlanId, { transaction });
 
             if (!subscriptionPlan) {
-                res.status(404).json({ message: 'Subscription plan not found' });
+                await transaction.rollback();
+                res.status(404).json({ message: "Subscription plan not found." });
                 return;
             }
 
             const transactionSuccess = await handleTransaction(subscriptionPlan.price);
             if (!transactionSuccess) return;
 
-            endDate.setMonth(startDate.getMonth() + subscriptionPlan.duration); // Set end date by adding months
+            endDate.setMonth(startDate.getMonth() + subscriptionPlan.duration);
 
             const newSubscription = await VendorSubscription.create({
                 vendorId,
@@ -1309,28 +1310,30 @@ export const subscribe = async (req: Request, res: Response): Promise<void> => {
                 startDate,
                 endDate,
                 isActive: true,
-            });
+            }, { transaction });
 
-            // Create a notification for the new subscription
             await Notification.create({
                 userId: vendorId,
+                title: "Subscription",
                 message: `You have successfully subscribed to the ${subscriptionPlan.name} plan.`,
-                type: 'subscription',
+                type: "subscription",
                 isRead: false,
-            });
+            }, { transaction });
+
+            await transaction.commit(); // Commit all changes
 
             res.status(200).json({
-                message: 'Subscribed to plan successfully',
+                message: "Subscribed to plan successfully",
                 subscription: newSubscription,
             });
         }
-    } catch (error: any) {
-        logger.error('Error subscribing vendor:', error);
-        res.status(500).json({
-            message: error.message || 'An error occurred while processing the subscription.',
-        });
+    } catch (error) {
+        await transaction.rollback(); // Rollback changes on error
+        logger.error("Error subscribing vendor:", error);
+        res.status(500).json({ message: "An error occurred while processing the subscription." });
     }
 };
+
 
 export const verifyCAC = async (req: Request, res: Response): Promise<void> => {
     const businessName = 'GREEN MOUSE TECHNOLOGIES ENTERPRISES';
@@ -1527,7 +1530,7 @@ export const activeProducts = async (
 export const createAdvert = async (req: Request, res: Response): Promise<void> => {
     const vendorId = (req as AuthenticatedRequest).user?.id as string; // Authenticated user ID from middleware
 
-    const { categoryId, productId, title, description, media_url, showOnHomepage } = req.body;
+    const { categoryId, productId, title, description, media_url, showOnHomepage, link } = req.body;
 
     try {
         // Use the utility function to check the product limit
@@ -1565,7 +1568,8 @@ export const createAdvert = async (req: Request, res: Response): Promise<void> =
             title,
             description,
             media_url,
-            showOnHomepage
+            showOnHomepage,
+            link
         });
 
         res.status(201).json({
@@ -1579,7 +1583,7 @@ export const createAdvert = async (req: Request, res: Response): Promise<void> =
 };
 
 export const updateAdvert = async (req: Request, res: Response): Promise<void> => {
-    const { advertId, categoryId, productId, title, description, media_url, showOnHomepage } = req.body;
+    const { advertId, categoryId, productId, title, description, media_url, showOnHomepage, link } = req.body;
 
     try {
         // Check if categoryId and productId exist
@@ -1616,6 +1620,7 @@ export const updateAdvert = async (req: Request, res: Response): Promise<void> =
         advert.description = description || advert.description;
         advert.media_url = media_url || advert.media_url;
         advert.showOnHomepage = showOnHomepage || advert.showOnHomepage;
+        advert.link = link || advert.link;
 
         await advert.save();
 

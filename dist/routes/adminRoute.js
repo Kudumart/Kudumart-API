@@ -15,13 +15,23 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -123,6 +133,7 @@ adminRoutes.get("/general/products", adminAuthMiddleware_1.default, adminControl
 adminRoutes.get("/general/product/view", adminAuthMiddleware_1.default, adminController.viewGeneralProduct);
 adminRoutes.delete("/general/product/delete", adminAuthMiddleware_1.default, adminController.deleteGeneralProduct);
 adminRoutes.put("/general/product/unpublished", adminAuthMiddleware_1.default, adminController.unpublishProduct);
+adminRoutes.put("/general/product/publish", adminAuthMiddleware_1.default, adminController.publishProduct);
 adminRoutes.get("/general/auction/products", adminAuthMiddleware_1.default, adminController.getGeneralAuctionProducts);
 adminRoutes.get("/general/auction/product/view", adminAuthMiddleware_1.default, adminController.viewGeneralAuctionProduct);
 adminRoutes.delete("/general/auction/product/delete", adminAuthMiddleware_1.default, adminController.deleteGeneralAuctionProduct);
@@ -143,5 +154,27 @@ adminRoutes.get("/adverts", adminAuthMiddleware_1.default, adminController.getAd
 adminRoutes.get("/advert", adminAuthMiddleware_1.default, adminController.viewAdvert); // View a specific advert
 adminRoutes.delete("/adverts", adminAuthMiddleware_1.default, adminController.deleteAdvert); // Delete an advert
 adminRoutes.post("/approved-reject/advert", adminAuthMiddleware_1.default, adminController.approveOrRejectAdvert);
+// Testimonial
+adminRoutes.post("/testimonial", adminAuthMiddleware_1.default, adminController.createTestimonial); // Create a new testimonial
+adminRoutes.put("/testimonial", adminAuthMiddleware_1.default, adminController.updateTestimonial); // Update a testimonial
+adminRoutes.get("/testimonials", adminAuthMiddleware_1.default, adminController.getAllTestimonials); // Get all testimonials
+adminRoutes.get("/testimonial", adminAuthMiddleware_1.default, adminController.getTestimonial); // Get a single testimonial
+adminRoutes.delete("/testimonial", adminAuthMiddleware_1.default, adminController.deleteTestimonial); // Delete a testimonial
+// FAQ Category Routes
+adminRoutes.post("/faq/category", adminAuthMiddleware_1.default, adminController.createFaqCategory);
+adminRoutes.get("/faq/categories", adminAuthMiddleware_1.default, adminController.getAllFaqCategories);
+adminRoutes.get("/faq/category", adminAuthMiddleware_1.default, adminController.getFaqCategory);
+adminRoutes.put("/faq/category", adminAuthMiddleware_1.default, adminController.updateFaqCategory);
+adminRoutes.delete("/faq/category", adminAuthMiddleware_1.default, adminController.deleteFaqCategory);
+// FAQ Routes
+adminRoutes.post("/faq", adminAuthMiddleware_1.default, adminController.createFaq);
+adminRoutes.get("/faqs", adminAuthMiddleware_1.default, adminController.getAllFaqs);
+adminRoutes.get("/faq", adminAuthMiddleware_1.default, adminController.getFaq);
+adminRoutes.put("/faq", adminAuthMiddleware_1.default, adminController.updateFaq);
+adminRoutes.delete("/faq", adminAuthMiddleware_1.default, adminController.deleteFaq);
+// Contact Us Form
+adminRoutes.get("/contact/us/forms", adminAuthMiddleware_1.default, adminController.getAllContacts);
+adminRoutes.get("/contact/us/form", adminAuthMiddleware_1.default, adminController.getContactById);
+adminRoutes.delete("/contact/us/form", adminAuthMiddleware_1.default, adminController.deleteContactById);
 exports.default = adminRoutes; // Export the router
 //# sourceMappingURL=adminRoute.js.map

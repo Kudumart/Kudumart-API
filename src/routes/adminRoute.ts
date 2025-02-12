@@ -139,6 +139,7 @@ adminRoutes.get("/general/order/items", adminAuthMiddleware, adminController.get
 adminRoutes.get("/general/order/payment", adminAuthMiddleware, adminController.getGeneralPaymentDetails);
 adminRoutes.get("/general/adverts", adminAuthMiddleware, adminController.getGeneralAdverts);
 adminRoutes.get("/general/advert/view", adminAuthMiddleware, adminController.viewGeneralAdvert);
+
 // Subscribers
 adminRoutes.get("/subscribers", adminAuthMiddleware, adminController.getAllSubscribers);
 
@@ -153,5 +154,31 @@ adminRoutes.get("/adverts", adminAuthMiddleware, adminController.getAdverts); //
 adminRoutes.get("/advert", adminAuthMiddleware, adminController.viewAdvert); // View a specific advert
 adminRoutes.delete("/adverts", adminAuthMiddleware, adminController.deleteAdvert); // Delete an advert
 adminRoutes.post("/approved-reject/advert", adminAuthMiddleware, adminController.approveOrRejectAdvert);
+
+// Testimonial
+adminRoutes.post("/testimonial", adminAuthMiddleware, adminController.createTestimonial); // Create a new testimonial
+adminRoutes.put("/testimonial", adminAuthMiddleware, adminController.updateTestimonial); // Update a testimonial
+adminRoutes.get("/testimonials", adminAuthMiddleware, adminController.getAllTestimonials); // Get all testimonials
+adminRoutes.get("/testimonial", adminAuthMiddleware, adminController.getTestimonial); // Get a single testimonial
+adminRoutes.delete("/testimonial", adminAuthMiddleware, adminController.deleteTestimonial); // Delete a testimonial
+
+// FAQ Category Routes
+adminRoutes.post("/faq/category", adminAuthMiddleware, adminController.createFaqCategory);
+adminRoutes.get("/faq/categories", adminAuthMiddleware, adminController.getAllFaqCategories);
+adminRoutes.get("/faq/category", adminAuthMiddleware, adminController.getFaqCategory);
+adminRoutes.put("/faq/category", adminAuthMiddleware, adminController.updateFaqCategory);
+adminRoutes.delete("/faq/category", adminAuthMiddleware, adminController.deleteFaqCategory);
+
+// FAQ Routes
+adminRoutes.post("/faq", adminAuthMiddleware, adminController.createFaq);
+adminRoutes.get("/faqs", adminAuthMiddleware, adminController.getAllFaqs);
+adminRoutes.get("/faq",adminAuthMiddleware, adminController.getFaq);
+adminRoutes.put("/faq", adminAuthMiddleware, adminController.updateFaq);
+adminRoutes.delete("/faq", adminAuthMiddleware, adminController.deleteFaq);
+
+// Contact Us Form
+adminRoutes.get("/contact/us/forms", adminAuthMiddleware, adminController.getAllContacts);
+adminRoutes.get("/contact/us/form",adminAuthMiddleware, adminController.getContactById);
+adminRoutes.delete("/contact/us/form", adminAuthMiddleware, adminController.deleteContactById);
 
 export default adminRoutes; // Export the router

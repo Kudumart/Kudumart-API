@@ -23,6 +23,7 @@ class Product extends Model {
   public seo_title!: string | null;
   public meta_description!: string | null;
   public keywords!: string | null;
+  public views!: number | null;
   public status!: 'active' | 'inactive' | 'draft';
   public vendor?: User;  // Declare the relationship to User (vendor)
   public createdAt!: Date;
@@ -143,6 +144,11 @@ const initModel = (sequelize: Sequelize) => {
       keywords: {
         type: DataTypes.STRING,
         allowNull: true,
+      },
+      views: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        defaultValue: 0
       },
       status: {
         type: DataTypes.ENUM('active', 'inactive', 'draft'),

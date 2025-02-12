@@ -88,6 +88,11 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull: true,
       },
+      views: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+        defaultValue: 0
+      },
       status: {
         type: Sequelize.ENUM('active', 'inactive', 'draft'),
         defaultValue: 'active', // Default status is draft

@@ -31,7 +31,7 @@ const checkPermission = (requiredPermission) => {
             }
             // Fetch the permissions associated with the admin's role from the role_permissions table
             const rolePermissions = yield rolepermission_1.default.findAll({
-                where: { roleId: admin.roleId },
+                where: { roleId: admin.roleId }, // Assuming roleId is stored in the admin model
                 include: [{ model: permission_1.default, as: "permission" }], // Include permission details
             });
             // Check if the admin has the required permission

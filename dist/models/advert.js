@@ -65,6 +65,10 @@ const initModel = (sequelize) => {
             type: sequelize_1.DataTypes.TEXT,
             allowNull: true
         },
+        link: {
+            type: sequelize_1.DataTypes.TEXT,
+            allowNull: true
+        },
         clicks: {
             type: sequelize_1.DataTypes.INTEGER,
             allowNull: true,

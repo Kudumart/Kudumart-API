@@ -34,6 +34,10 @@ import Transaction from "../models/transaction";
 import Advert from "../models/advert";
 import Notification from "../models/notification";
 import Cart from "../models/cart";
+import Testimonial from "../models/testimonial";
+import FaqCategory from "../models/faqcategory";
+import Faq from "../models/faq";
+import Contact  from "../models/contact"; // Adjust the path as needed
 
 // Extend the Express Request interface to include adminId and admin
 interface AuthenticatedRequest extends Request {
@@ -3770,7 +3774,7 @@ export const activeProducts = async (
 
 export const createAdvert = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     const adminId = req.admin?.id;
-    const { categoryId, productId, title, description, media_url, showOnHomepage } = req.body;
+    const { categoryId, productId, title, description, media_url, showOnHomepage, link } = req.body;
 
     try {
         // Check if categoryId and productId exist
@@ -3801,7 +3805,8 @@ export const createAdvert = async (req: AuthenticatedRequest, res: Response): Pr
             description,
             media_url,
             status: "approved",
-            showOnHomepage
+            showOnHomepage,
+            link
         });
 
         res.status(201).json({
@@ -3815,7 +3820,7 @@ export const createAdvert = async (req: AuthenticatedRequest, res: Response): Pr
 };
 
 export const updateAdvert = async (req: Request, res: Response): Promise<void> => {
-    const { advertId, categoryId, productId, title, description, media_url, showOnHomepage } = req.body;
+    const { advertId, categoryId, productId, title, description, media_url, showOnHomepage, link } = req.body;
 
     try {
         // Check if categoryId and productId exist
@@ -3851,6 +3856,7 @@ export const updateAdvert = async (req: Request, res: Response): Promise<void> =
         advert.description = description || advert.description;
         advert.media_url = media_url || advert.media_url;
         advert.showOnHomepage = showOnHomepage || advert.showOnHomepage;
+        advert.link = link || advert.link;
 
         await advert.save();
 
@@ -4198,5 +4204,413 @@ export const getOrderItemsInfo = async (req: Request, res: Response): Promise<vo
         });
     } catch (error: any) {
         res.status(500).json({ message: error.message || "Failed to retrieve order details." });
+    }
+};
+
+// Create a testimonial
+export const createTestimonial = async (req: Request, res: Response): Promise<void> => {
+    const { name, position, photo, message } = req.body;
+
+    try {
+        if (!name || !message) {
+            res.status(400).json({ message: "Name and message are required" });
+            return;
+        }
+
+        const newTestimonial = await Testimonial.create({ name, position, photo, message });
+
+        res.status(200).json({
+            message: "Testimonial created successfully",
+            data: newTestimonial,
+        });
+
+    } catch (error: any) {
+        logger.error(`Error creating testimonial: ${error.message}`);
+        res.status(500).json({ message: "An unexpected error occurred while creating the testimonial. Please try again later." });
+    }
+};
+
+// Update a testimonial
+export const updateTestimonial = async (req: Request, res: Response): Promise<void> => {
+    const { id, name, position, photo, message } = req.body;
+
+    try {
+        const testimonial = await Testimonial.findByPk(id);
+
+        if (!testimonial) {
+            res.status(404).json({ message: "Testimonial not found" });
+            return;
+        }
+
+        await testimonial.update({ name, position, photo, message });
+
+        res.status(200).json({ message: "Testimonial updated successfully", data: testimonial });
+
+    } catch (error: any) {
+        logger.error(`Error updating testimonial ID ${id}: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while updating the testimonial. Please try again later." });
+    }
+};
+
+// Get all testimonials
+export const getAllTestimonials = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const testimonials = await Testimonial.findAll();
+        res.status(200).json({ data: testimonials });
+
+    } catch (error: any) {
+        logger.error(`Error retrieving testimonials: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while retrieving testimonials. Please try again later." });
+    }
+};
+
+// Get a single testimonial
+export const getTestimonial = async (req: Request, res: Response): Promise<void> => {
+    const id = req.query.id as string;
+
+    try {
+        const testimonial = await Testimonial.findByPk(id);
+
+        if (!testimonial) {
+            res.status(404).json({ message: "Testimonial not found" });
+            return;
+        }
+
+        res.status(200).json({ data: testimonial });
+
+    } catch (error: any) {
+        logger.error(`Error fetching testimonial ID ${id}: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while fetching the testimonial. Please try again later." });
+    }
+};
+
+// Delete a testimonial
+export const deleteTestimonial = async (req: Request, res: Response): Promise<void> => {
+    const id = req.query.id as string;
+
+    try {
+        const testimonial = await Testimonial.findByPk(id);
+
+        if (!testimonial) {
+            res.status(404).json({ message: "Testimonial not found" });
+            return;
+        }
+
+        await testimonial.destroy();
+        res.status(200).json({ message: "Testimonial deleted successfully" });
+
+    } catch (error: any) {
+        logger.error(`Error deleting testimonial ID ${id}: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while deleting the testimonial. Please try again later." });
+    }
+};
+
+// Create FAQ Category
+export const createFaqCategory = async (req: Request, res: Response): Promise<void> => {
+    const { name } = req.body;
+
+    try {
+        if (!name) {
+            res.status(400).json({ message: "Category name is required" });
+            return;
+        }
+
+        const newCategory = await FaqCategory.create({ name });
+
+        res.status(200).json({ message: "FAQ category created successfully", data: newCategory });
+
+    } catch (error: any) {
+        logger.error(`Error creating FAQ category: ${error.message}`);
+        res.status(500).json({ message: "An unexpected error occurred while creating the FAQ category." });
+    }
+};
+
+// Get all FAQ Categories with FAQ count
+export const getAllFaqCategories = async (_req: Request, res: Response): Promise<void> => {
+    try {
+        const categories = await FaqCategory.findAll({
+            include: [
+                {
+                    model: Faq,
+                    as: "faqs",
+                    attributes: [],
+                },
+            ],
+            attributes: [
+                "id",
+                "name",
+                [Sequelize.fn("COUNT", Sequelize.col("faqs.id")), "faqCount"],
+            ],
+            group: ["FaqCategory.id"],
+        });
+
+        res.status(200).json({ data: categories });
+
+    } catch (error: any) {
+        logger.error(`Error retrieving FAQ categories: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while retrieving FAQ categories." });
+    }
+};
+
+// Get a single FAQ Category with its FAQs
+export const getFaqCategory = async (req: Request, res: Response): Promise<void> => {
+    const id = req.query.id as string;
+
+    try {
+        const category = await FaqCategory.findByPk(id, {
+            include: [
+                {
+                    model: Faq,
+                    as: "faqs",
+                    attributes: ["id", "question", "answer"], // Select only required fields
+                },
+            ],
+        });
+
+        if (!category) {
+            res.status(404).json({ message: "FAQ category not found" });
+            return;
+        }
+
+        res.status(200).json({ data: category });
+
+    } catch (error: any) {
+        logger.error(`Error fetching FAQ category ID ${id}: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while fetching the FAQ category." });
+    }
+};
+
+// Update FAQ Category
+export const updateFaqCategory = async (req: Request, res: Response): Promise<void> => {
+    const { id, name } = req.body;
+
+    try {
+        const category = await FaqCategory.findByPk(id);
+
+        if (!category) {
+            res.status(404).json({ message: "FAQ category not found" });
+            return;
+        }
+
+        await category.update({ name });
+
+        res.status(200).json({ message: "FAQ category updated successfully", data: category });
+
+    } catch (error: any) {
+        logger.error(`Error updating FAQ category ID ${id}: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while updating the FAQ category." });
+    }
+};
+
+// Delete FAQ Category
+export const deleteFaqCategory = async (req: Request, res: Response): Promise<void> => {
+    const id = req.query.id as string;
+
+    try {
+        const category = await FaqCategory.findByPk(id);
+
+        if (!category) {
+            res.status(404).json({ message: "FAQ category not found" });
+            return;
+        }
+
+        await category.destroy();
+        res.status(200).json({ message: "FAQ category deleted successfully" });
+
+    } catch (error: any) {
+        logger.error(`Error deleting FAQ category ID ${id}: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while deleting the FAQ category." });
+    }
+};
+
+// Create an FAQ
+export const createFaq = async (req: Request, res: Response): Promise<void> => {
+    const { categoryId, question, answer } = req.body;
+
+    try {
+        if (!categoryId || !question || !answer) {
+            res.status(400).json({ message: "Category ID, question, and answer are required" });
+            return;
+        }
+
+        const categoryExists = await FaqCategory.findByPk(categoryId);
+        if (!categoryExists) {
+            res.status(404).json({ message: "FAQ category not found" });
+            return;
+        }
+
+        const newFaq = await Faq.create({ faqCategoryId: 
+            categoryId, question, answer });
+
+        res.status(200).json({ message: "FAQ created successfully", data: newFaq });
+
+    } catch (error: any) {
+        logger.error(`Error creating FAQ: ${error.message}`);
+        res.status(500).json({ message: "An unexpected error occurred while creating the FAQ." });
+    }
+};
+
+// Get all FAQs
+export const getAllFaqs = async (_req: Request, res: Response): Promise<void> => {
+    try {
+        const faqs = await Faq.findAll({ include: [{ model: FaqCategory, as: "faqCategory" }] });
+        res.status(200).json({ data: faqs });
+
+    } catch (error: any) {
+        logger.error(`Error retrieving FAQs: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while retrieving FAQs." });
+    }
+};
+
+// Get a single FAQ
+export const getFaq = async (req: Request, res: Response): Promise<void> => {
+    const id = req.query.id as string;
+
+    try {
+        const faq = await Faq.findByPk(id, { include: [{ model: FaqCategory, as: "faqCategory" }] });
+
+        if (!faq) {
+            res.status(404).json({ message: "FAQ not found" });
+            return;
+        }
+
+        res.status(200).json({ data: faq });
+
+    } catch (error: any) {
+        logger.error(`Error fetching FAQ ID ${id}: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while fetching the FAQ." });
+    }
+};
+
+// Update an FAQ
+export const updateFaq = async (req: Request, res: Response): Promise<void> => {
+    const { id, categoryId, question, answer } = req.body;
+
+    try {
+        const faq = await Faq.findByPk(id);
+
+        if (!faq) {
+            res.status(404).json({ message: "FAQ not found" });
+            return;
+        }
+
+        await faq.update({ faqCategoryId: 
+            categoryId, question, answer });
+
+        res.status(200).json({ message: "FAQ updated successfully", data: faq });
+
+    } catch (error: any) {
+        logger.error(`Error updating FAQ ID ${id}: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while updating the FAQ." });
+    }
+};
+
+// Delete an FAQ
+export const deleteFaq = async (req: Request, res: Response): Promise<void> => {
+    const { id } = req.params;
+
+    try {
+        const faq = await Faq.findByPk(id);
+
+        if (!faq) {
+            res.status(404).json({ message: "FAQ not found" });
+            return;
+        }
+
+        await faq.destroy();
+        res.status(200).json({ message: "FAQ deleted successfully" });
+
+    } catch (error: any) {
+        logger.error(`Error deleting FAQ ID ${id}: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while deleting the FAQ." });
+    }
+};
+
+// Contact Us Form
+export const getAllContacts = async (req: Request, res: Response): Promise<void> => {
+    const { search } = req.query; // Capture the search parameter from the query string
+
+    try {
+        // Construct the search query object
+        const searchConditions: any = {};
+
+        if (search) {
+            const searchTerm = `%${search}%`; // Add wildcards for partial matching
+
+            // Add conditions for each searchable field (name, phoneNumber, email, message)
+            searchConditions[Op.or] = [
+                { name: { [Op.like]: searchTerm } },
+                { phoneNumber: { [Op.like]: searchTerm } },
+                { email: { [Op.like]: searchTerm } },
+                { message: { [Op.like]: searchTerm } },
+            ];
+        }
+
+        // Fetch all contact entries from the database, applying the search conditions if provided
+        const contacts = await Contact.findAll({
+            where: searchConditions,
+        });
+
+        // If no contacts are found
+        if (contacts.length === 0) {
+            res.status(404).json({ message: "No contact entries found." });
+            return;
+        }
+
+        // Return the contact entries
+        res.status(200).json({ data: contacts });
+    } catch (error: any) {
+        console.error("Error fetching contacts:", error);
+        res.status(500).json({
+            message: "An error occurred while fetching contact entries.",
+        });
+    }
+};
+
+export const getContactById = async (req: Request, res: Response): Promise<void> => {
+    const id = req.query.id as string; // Assuming contact ID is passed as a URL parameter
+
+    try {
+        // Fetch the contact entry by ID
+        const contact = await Contact.findByPk(id);
+
+        // If the contact is not found
+        if (!contact) {
+            res.status(404).json({ message: "Contact entry not found." });
+            return;
+        }
+
+        // Return the contact entry
+        res.status(200).json({ data: contact });
+    } catch (error: any) {
+        console.error("Error fetching contact:", error);
+        res.status(500).json({
+            message: "An error occurred while fetching the contact entry.",
+        });
+    }
+};
+
+export const deleteContactById = async (req: Request, res: Response): Promise<void> => {
+    const id = req.query.id as string; // Assuming contact ID is passed as a URL parameter
+
+    try {
+        // Find and delete the contact entry by ID
+        const contact = await Contact.findByPk(id);
+
+        // If the contact is not found
+        if (!contact) {
+            res.status(404).json({ message: "Contact entry not found." });
+            return;
+        }
+
+        await contact.destroy();
+
+        // Return success message
+        res.status(200).json({ message: "Contact entry deleted successfully." });
+    } catch (error: any) {
+        console.error("Error deleting contact:", error);
+        res.status(500).json({
+            message: "An error occurred while deleting the contact entry.",
+        });
     }
 };

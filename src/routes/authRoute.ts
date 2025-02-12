@@ -41,4 +41,11 @@ authRoutes.get("/auction/products", homeController.getUpcomingAuctionProducts);
 authRoutes.get('/auction/product', homeController.getAuctionProductById); // Fetch a single product by ID
 
 authRoutes.get('/adverts', homeController.getAdverts);
+
+authRoutes.get("/testimonials", homeController.getAllTestimonials); // Get all testimonials
+
+authRoutes.get("/faq/categories/with/faqs", homeController.getFaqCategoryWithFaqs);
+
+authRoutes.post("/submit/contact/form", homeController.submitContactForm); // Get all testimonials
+
 export default authRoutes; // Export the router

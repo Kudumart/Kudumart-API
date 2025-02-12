@@ -38,6 +38,10 @@ module.exports = {
         type: Sequelize.TEXT,
         allowNull: true
       },
+      link: {
+        type: Sequelize.TEXT,
+        allowNull: true
+      },
       clicks: {
         type: Sequelize.INTEGER,
         allowNull: true,

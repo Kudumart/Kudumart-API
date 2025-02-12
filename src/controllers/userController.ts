@@ -31,6 +31,7 @@ import SubscriptionPlan from "../models/subscriptionplan";
 import VendorSubscription from "../models/vendorsubscription";
 import SubCategory from "../models/subcategory";
 import Admin from "../models/admin";
+import SaveProduct from "../models/saveproduct";
 
 export const logout = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -1943,5 +1944,95 @@ export const getPaymentDetails = async (req: Request, res: Response): Promise<vo
   } catch (error) {
     logger.error("Error fetching payment details:", error);
     res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const toggleSaveProduct = async (req: Request, res: Response): Promise<void> => {
+  const { productId } = req.body;
+  const userId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID from middleware
+  
+  try {
+      // Check if the product exists
+      const product = await Product.findOne({ where: { id: productId, status: "active" } });
+      if (!product) {
+          res.status(404).json({ message: "Product not found" });
+          return;
+      }
+
+      // Check if the product is already saved (wishlist)
+      const existingSavedProduct = await SaveProduct.findOne({
+          where: { userId, productId }
+      });
+
+      if (existingSavedProduct) {
+          // If exists, remove it (toggle)
+          await existingSavedProduct.destroy();
+          res.status(200).json({ message: "Product removed from your saved list" });
+      } else {
+          // Otherwise, add the product to the saved list
+          await SaveProduct.create({ userId, productId });
+          res.status(201).json({ message: "Product added to your saved list" });
+      }
+  } catch (error: any) {
+      console.error("Error toggling save product:", error);
+      res.status(500).json({ message: "An error occurred while processing the request." });
+  }
+};
+
+export const getSavedProducts = async (req: Request, res: Response): Promise<void> => {
+  const userId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID from middleware
+  
+  try {
+      // Fetch all saved products for the authenticated user
+      const savedProducts = await SaveProduct.findAll({
+          where: { userId },
+          include: [
+              {
+                  model: Product,
+                  as: "product", // Adjust the alias if necessary
+                  where: { status: "active" }, // Only include active products
+                  include: [
+                    {
+                        model: User,
+                        as: "vendor",
+                    },
+                    {
+                        model: Admin,
+                        as: "admin",
+                        attributes: ["id", "name", "email"],
+                    },
+                    {
+                        model: SubCategory,
+                        as: "sub_category",
+                        attributes: ["id", "name", "categoryId"],
+                    },
+                    {
+                        model: Store,
+                        as: "store",
+                        attributes: ["id", "name"],
+                        include: [
+                            {
+                                model: Currency,
+                                as: "currency",
+                                attributes: ["symbol"],
+                            },
+                        ],
+                    },
+                  ]
+              },
+          ],
+      });
+
+      // If no saved products are found
+      if (savedProducts.length === 0) {
+          res.status(404).json({ message: "No saved products found" });
+          return;
+      }
+
+      // Send the saved products in the response
+      res.status(200).json({ data: savedProducts });
+  } catch (error: any) {
+      console.error("Error fetching saved products:", error);
+      res.status(500).json({ message: "An error occurred while fetching saved products." });
   }
 };

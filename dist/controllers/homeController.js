@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAdverts = exports.getAuctionProductById = exports.getUpcomingAuctionProducts = exports.getStoreProducts = exports.getAllStores = exports.getProductById = exports.products = exports.getCategoriesWithSubcategories = exports.getCategorySubCategories = exports.getAllCategories = void 0;
+exports.submitContactForm = exports.getFaqCategoryWithFaqs = exports.getAllTestimonials = exports.getAdverts = exports.getAuctionProductById = exports.getUpcomingAuctionProducts = exports.getStoreProducts = exports.getAllStores = exports.getProductById = exports.products = exports.getCategoriesWithSubcategories = exports.getCategorySubCategories = exports.getAllCategories = void 0;
 const logger_1 = __importDefault(require("../middlewares/logger")); // Adjust the path to your logger.js
 const product_1 = __importDefault(require("../models/product"));
 const sequelize_1 = require("sequelize");
@@ -26,6 +26,10 @@ const auctionproduct_1 = __importDefault(require("../models/auctionproduct"));
 const currency_1 = __importDefault(require("../models/currency"));
 const admin_1 = __importDefault(require("../models/admin"));
 const advert_1 = __importDefault(require("../models/advert"));
+const testimonial_1 = __importDefault(require("../models/testimonial"));
+const faqcategory_1 = __importDefault(require("../models/faqcategory"));
+const faq_1 = __importDefault(require("../models/faq"));
+const contact_1 = __importDefault(require("../models/contact"));
 const getAllCategories = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const categories = yield category_1.default.findAll();
@@ -79,6 +83,7 @@ const products = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { country, storeId, minPrice, maxPrice, name, // Product name
     subCategoryName, // Subcategory name filter
     condition, // Product condition filter
+    categoryId, popular // Query parameter to sort by most viewed
      } = req.query;
     try {
         // Define the base where clause with the active status
@@ -104,6 +109,9 @@ const products = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         if (subCategoryName) {
             subCategoryWhereClause.name = { [sequelize_1.Op.like]: `%${subCategoryName}%` };
         }
+        if (categoryId) {
+            subCategoryWhereClause.categoryId = categoryId; // Filter by categoryId
+        }
         // Include the subCategory relation with name and id filtering
         const includeClause = [
             {
@@ -121,7 +129,7 @@ const products = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 where: Object.keys(subCategoryWhereClause).length > 0
                     ? subCategoryWhereClause
                     : undefined,
-                attributes: ["id", "name"],
+                attributes: ["id", "name", "categoryId"],
             },
             {
                 model: store_1.default,
@@ -130,15 +138,21 @@ const products = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                     {
                         model: currency_1.default,
                         as: "currency",
-                        attributes: ['symbol']
+                        attributes: ["symbol"],
                     },
-                ]
-            }
+                ],
+            },
         ];
+        // Determine sorting order dynamically
+        const orderClause = popular === "true"
+            ? [["views", "DESC"], [sequelize_1.Sequelize.literal("RAND()"), "ASC"]] // Sort by views first, then randomize
+            : [[sequelize_1.Sequelize.literal("RAND()"), "ASC"]]; // Default random sorting
         // Fetch active products with subcategory details
         const products = yield product_1.default.findAll({
             where: whereClause,
             include: includeClause,
+            order: orderClause, // Dynamic ordering
+            limit: 20, // Fetch top 20 products
         });
         res.status(200).json({ data: products });
     }
@@ -180,9 +194,9 @@ const getProductById = (req, res) => __awaiter(void 0, void 0, void 0, function*
                         {
                             model: currency_1.default,
                             as: "currency",
-                            attributes: ['symbol']
+                            attributes: ["symbol"],
                         },
-                    ]
+                    ],
                 },
                 {
                     model: subcategory_1.default,
@@ -191,31 +205,33 @@ const getProductById = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 },
             ],
         });
-        console.log(product);
         if (!product) {
             res.status(404).json({ message: "Product not found" });
             return;
         }
-        if (product && product.vendor) { // This should now return the associated User (vendor)
+        // Increment the view count by 1
+        yield product.increment("views", { by: 1 });
+        // Fetch vendor KYC verification status
+        if (product.vendor) {
             const kyc = yield kyc_1.default.findOne({ where: { vendorId: product.vendor.id } });
-            product.vendor.setDataValue('isVerified', kyc ? kyc.isVerified : false);
+            product.vendor.setDataValue("isVerified", kyc ? kyc.isVerified : false);
         }
-        // Fetch recommended products based on the same category
+        // Fetch recommended products based on the same subcategory
         const recommendedProducts = yield product_1.default.findAll({
             where: {
-                categoryId: product.categoryId,
-                id: { [sequelize_1.Op.ne]: product.id },
+                categoryId: product.categoryId, // Fetch products from the same subcategory
+                id: { [sequelize_1.Op.ne]: product.id }, // Exclude the currently viewed product
                 status: "active",
             },
             include: [
                 {
                     model: user_1.default,
                     as: "vendor",
-                    required: true, // Make sure the user is included in the result
+                    required: true, // Ensure the user is included
                 },
                 {
                     model: admin_1.default,
-                    as: "admin"
+                    as: "admin",
                 },
                 {
                     model: store_1.default,
@@ -224,9 +240,9 @@ const getProductById = (req, res) => __awaiter(void 0, void 0, void 0, function*
                         {
                             model: currency_1.default,
                             as: "currency",
-                            attributes: ['symbol']
+                            attributes: ["symbol"],
                         },
-                    ]
+                    ],
                 },
                 {
                     model: subcategory_1.default,
@@ -235,7 +251,7 @@ const getProductById = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 },
             ],
             limit: 10,
-            order: sequelize_1.Sequelize.fn('RAND'), // Randomize the order
+            order: sequelize_1.Sequelize.literal("RAND()"), // Randomize the order
         });
         // Send the product and recommended products in the response
         res.status(200).json({ data: product, recommendedProducts });
@@ -286,8 +302,8 @@ const getAllStores = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             message: "Stores fetched successfully",
             data: stores,
             pagination: {
-                total,
-                page: Number(page),
+                total, // Total number of matching records
+                page: Number(page), // Current page number
                 limit: Number(limit) // Number of items per page
             }
         });
@@ -504,10 +520,10 @@ const getAdverts = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         // Apply search query if provided
         if (search) {
             searchCondition[sequelize_1.Op.or] = [
-                { title: { [sequelize_1.Op.like]: `%${search}%` } },
+                { title: { [sequelize_1.Op.like]: `%${search}%` } }, // Search in advert title
                 { categoryId: { [sequelize_1.Op.like]: `%${search}%` } },
                 { productId: { [sequelize_1.Op.like]: `%${search}%` } },
-                { "$sub_category.name$": { [sequelize_1.Op.like]: `%${search}%` } },
+                { "$sub_category.name$": { [sequelize_1.Op.like]: `%${search}%` } }, // Search in category name
                 { "$product.name$": { [sequelize_1.Op.like]: `%${search}%` } }, // Search in product name
             ];
         }
@@ -515,6 +531,9 @@ const getAdverts = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         if (showOnHomePage !== undefined) {
             searchCondition.showOnHomePage = showOnHomePage === "true";
         }
+        const shuffle = "true";
+        // Determine sorting order
+        const orderClause = [[sequelize_1.Sequelize.literal("RAND()"), "ASC"]]; // Ensure valid format
         // Query adverts
         const { rows: adverts, count } = yield advert_1.default.findAndCountAll({
             where: searchCondition,
@@ -542,7 +561,7 @@ const getAdverts = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             ],
             limit: pageSize,
             offset: offset,
-            order: [["createdAt", "DESC"]],
+            order: orderClause,
         });
         res.status(200).json({
             message: "Adverts retrieved successfully.",
@@ -560,4 +579,63 @@ const getAdverts = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     }
 });
 exports.getAdverts = getAdverts;
+// Get all testimonials
+const getAllTestimonials = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const testimonials = yield testimonial_1.default.findAll();
+        res.status(200).json({ data: testimonials });
+    }
+    catch (error) {
+        logger_1.default.error(`Error retrieving testimonials: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while retrieving testimonials. Please try again later." });
+    }
+});
+exports.getAllTestimonials = getAllTestimonials;
+// Get FAQ Categories with its FAQs
+const getFaqCategoryWithFaqs = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const categories = yield faqcategory_1.default.findAll({
+            include: [
+                {
+                    model: faq_1.default,
+                    as: "faqs",
+                    attributes: ["id", "question", "answer"], // Select only required fields
+                },
+            ],
+        });
+        if (!categories) {
+            res.status(404).json({ message: "FAQ category not found" });
+            return;
+        }
+        res.status(200).json({ data: categories });
+    }
+    catch (error) {
+        logger_1.default.error(`Error fetching FAQ categories with faqs: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while fetching the FAQ category." });
+    }
+});
+exports.getFaqCategoryWithFaqs = getFaqCategoryWithFaqs;
+const submitContactForm = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { name, phoneNumber, email, message } = req.body;
+    try {
+        // Create a new contact entry in the database
+        const newContact = yield contact_1.default.create({
+            name,
+            phoneNumber,
+            email,
+            message,
+        });
+        res.status(201).json({
+            message: "Thank you for reaching out! Your message has been successfully submitted. We will get back to you as soon as possible.",
+            data: newContact,
+        });
+    }
+    catch (error) {
+        console.error("Error submitting contact form:", error);
+        res.status(500).json({
+            message: "An error occurred while submitting the contact form.",
+        });
+    }
+});
+exports.submitContactForm = submitContactForm;
 //# sourceMappingURL=homeController.js.map
