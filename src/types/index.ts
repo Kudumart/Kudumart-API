@@ -7,3 +7,41 @@ export interface AuthenticatedRequest extends Request {
   accountType?: string;
   user?: User; // Use your User type here
 }
+
+// Define ProductData interface
+export interface ProductData {
+  id: string;
+  vendorId: string;
+  storeId: string;
+  categoryId: string;
+  name: string;
+  sku: string;
+  condition: string;
+  description: string;
+  specification: string;
+  price: string;
+  discount_price: string;
+  image_url: string;
+  additional_images: string;
+  warranty: string;
+  return_policy: string;
+  seo_title: string;
+  meta_description: string;
+  keywords: string;
+  views: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  store: {
+    name: string;
+    currency: {
+      name: string;
+      symbol: string;
+    };
+  };
+  sub_category: {
+    id: string;
+    name: string;
+  };
+  [key: string]: any; // Allow additional properties
+}

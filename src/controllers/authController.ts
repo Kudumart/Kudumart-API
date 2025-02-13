@@ -8,7 +8,7 @@ import { sendMail } from "../services/mail.service";
 import { emailTemplates } from "../utils/messages";
 import JwtService from "../services/jwt.service";
 import logger from "../middlewares/logger"; // Adjust the path to your logger.js
-import { capitalizeFirstLetter } from "../utils/helpers";
+import { capitalizeFirstLetter, generateUniquePhoneNumber } from "../utils/helpers";
 import Admin from "../models/admin";
 import Role from "../models/role";
 import SubscriptionPlan from "../models/subscriptionplan";
@@ -123,7 +123,6 @@ export const vendorRegister = async (
       message: notificationMessage,
       type: notificationType,
     });
-
 
     // Return a success response
     res.status(200).json({
@@ -644,6 +643,47 @@ export const socialAuthCallback = async (req: Request, res: Response): Promise<v
 
     // Handle server errors
     res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const handleGoogleAuth = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { firstName, lastName, email, phoneNumber, accountType, providerId } = req.body;
+
+    if (!firstName || !lastName || !email || !accountType || !providerId) {
+      res.status(400).json({ message: "All fields are required." });
+      return;
+    }
+
+    if (!["Customer", "Vendor"].includes(accountType)) {
+      res.status(400).json({ message: "Invalid account type." });
+      return;
+    }
+
+    // Check if the user already exists
+    let user = await User.findOne({ where: { email } });
+
+    if (!user) {
+      // Create a new user
+      user = await User.create({
+        email,
+        firstName,
+        lastName,
+        accountType,
+        password: await generateUniquePhoneNumber(), // Generate unique phone number
+        phoneNumber: await generateUniquePhoneNumber(), // Generate unique phone number
+        googleId: providerId, // Storing provider ID as Google ID
+        email_verified_at: new Date(),
+      });
+    }
+
+    // Attach user to req object for next function
+    (req as any).user = user;
+
+    // Call socialAuthCallback after successful authentication
+    await socialAuthCallback(req, res);
+  } catch (error) {
+    res.status(500).json({ message: "An error occurred during authentication.", error });
   }
 };
 

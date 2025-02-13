@@ -1,19 +1,26 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.initModel = void 0;
-// models/notification.ts
+// models/ReviewProduct.ts
 const sequelize_1 = require("sequelize");
-class Notification extends sequelize_1.Model {
+class ReviewProduct extends sequelize_1.Model {
     // Association with User model
     static associate(models) {
+        // Define associations here
+        this.belongsTo(models.Product, {
+            as: 'product',
+            foreignKey: 'productId',
+            onDelete: 'RESTRICT',
+        });
         this.belongsTo(models.User, {
             as: 'user',
-            foreignKey: 'userId', // Ensure the Notification model has a 'userId' column
+            foreignKey: 'userId',
+            onDelete: 'RESTRICT'
         });
     }
 }
 const initModel = (sequelize) => {
-    Notification.init({
+    ReviewProduct.init({
         id: {
             type: sequelize_1.DataTypes.UUID,
             defaultValue: sequelize_1.DataTypes.UUIDV4,
@@ -24,30 +31,27 @@ const initModel = (sequelize) => {
             type: sequelize_1.DataTypes.UUID,
             allowNull: false,
         },
-        title: {
-            type: sequelize_1.DataTypes.STRING,
+        productId: {
+            type: sequelize_1.DataTypes.UUID,
             allowNull: false,
         },
-        message: {
-            type: sequelize_1.DataTypes.STRING,
+        rating: {
+            type: sequelize_1.DataTypes.INTEGER, // 1 to 5 stars
             allowNull: false,
+            validate: { min: 1, max: 5 }
         },
-        type: {
-            type: sequelize_1.DataTypes.STRING,
-            allowNull: false,
-        },
-        isRead: {
-            type: sequelize_1.DataTypes.BOOLEAN,
-            defaultValue: false,
+        comment: {
+            type: sequelize_1.DataTypes.TEXT,
+            allowNull: true,
         },
     }, {
         sequelize,
-        modelName: "Notification",
+        modelName: "ReviewProduct",
         timestamps: true,
         paranoid: false,
-        tableName: "notifications"
+        tableName: "review_products"
     });
 };
 exports.initModel = initModel;
-exports.default = Notification;
-//# sourceMappingURL=notification.js.map
+exports.default = ReviewProduct;
+//# sourceMappingURL=reviewproduct.js.map

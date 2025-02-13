@@ -32,11 +32,6 @@ const initModel = (sequelize: Sequelize) => {
       userId: {
         type: DataTypes.UUID,
         allowNull: false,
-        references: {
-          model: "users",
-          key: "id",
-        },
-        onDelete: "RESTRICT",
       },
       title: {
         type: DataTypes.STRING,

@@ -2,28 +2,29 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('contacts', {
+    await queryInterface.createTable('review_products', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         primaryKey: true,
         allowNull: false,
       },
-      name: {
-        type: Sequelize.STRING,
-        allowNull: true,
+      userId: {
+        type: Sequelize.UUID,
+        allowNull: false,
       },
-      phoneNumber: {
-        type: Sequelize.STRING,
-        allowNull: true
+      productId: {
+        type: Sequelize.UUID,
+        allowNull: false,
       },
-      email: {
-        type: Sequelize.STRING,
-        allowNull: true
+      rating: {
+        type: Sequelize.INTEGER, // 1 to 5 stars
+        allowNull: false,
+        validate: { min: 1, max: 5 }
       },
-      message: {
+      comment: {
         type: Sequelize.TEXT,
-        allowNull: true
+        allowNull: true,
       },
       createdAt: {
         allowNull: false,
@@ -36,6 +37,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('contacts');
+    await queryInterface.dropTable('review_products');
   }
 };

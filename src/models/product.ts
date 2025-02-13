@@ -3,6 +3,7 @@ import { Model, DataTypes, Sequelize } from 'sequelize';
 import User from './user';
 import Store from './store';
 import SubCategory from './subcategory';
+import ReviewProduct from './reviewproduct';
 
 class Product extends Model {
   public id!: string;
@@ -31,6 +32,7 @@ class Product extends Model {
 
   public store!: Store;
   public sub_category!: SubCategory;
+  public reviews!: ReviewProduct;
 
   static associate(models: any) {
     // Define associations here
@@ -52,6 +54,11 @@ class Product extends Model {
     this.belongsTo(models.SubCategory, {
       as: 'sub_category',
       foreignKey: 'categoryId',
+      onDelete: 'RESTRICT'
+    });
+    this.hasMany(models.ReviewProduct, {
+      as: 'reviews',
+      foreignKey: 'productId',
       onDelete: 'RESTRICT'
     });
   }

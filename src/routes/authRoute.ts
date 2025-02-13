@@ -25,6 +25,7 @@ authRoutes.get('/auth/facebook/callback', passport.authenticate('facebook', { se
 // Google Authentication
 authRoutes.get('/auth/google', authController.googleAuth);
 authRoutes.get('/auth/google/callback', passport.authenticate('google', { session: false }), authController.socialAuthCallback);
+authRoutes.post('/auth/google', authController.handleGoogleAuth);
 
 // Admin
 authRoutes.post("/auth/admin/login", loginValidationRules(), validate, authController.adminLogin);

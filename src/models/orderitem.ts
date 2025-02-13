@@ -9,6 +9,7 @@ class OrderItem extends Model {
   public product!: object; // JSON to accept product object
   public quantity!: number;
   public price!: number;
+  public status!: string;
   public createdAt?: Date;
   public updatedAt?: Date;
 
@@ -67,6 +68,11 @@ const initModel = (sequelize: Sequelize) => {
       price: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false,
+      },
+      status: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: "pending",
       },
     },
     {

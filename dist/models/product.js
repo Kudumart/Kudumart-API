@@ -26,6 +26,11 @@ class Product extends sequelize_1.Model {
             foreignKey: 'categoryId',
             onDelete: 'RESTRICT'
         });
+        this.hasMany(models.ReviewProduct, {
+            as: 'reviews',
+            foreignKey: 'productId',
+            onDelete: 'RESTRICT'
+        });
     }
 }
 const initModel = (sequelize) => {

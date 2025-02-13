@@ -78,9 +78,15 @@ userRoutes.patch("/mark/notification/as/read", authMiddleware_1.default, userCon
 // Order, OrderItem and Payment
 userRoutes.get("/orders", authMiddleware_1.default, userController.getAllOrders);
 userRoutes.get("/order/items", authMiddleware_1.default, userController.getAllOrderItems);
+userRoutes.post("/order/item/update/status", authMiddleware_1.default, userController.updateOrderStatus);
 userRoutes.get("/order/payment", authMiddleware_1.default, userController.getPaymentDetails);
 // Save Product
 userRoutes.post("/save/product", authMiddleware_1.default, userController.toggleSaveProduct);
 userRoutes.get("/saved/products", authMiddleware_1.default, userController.getSavedProducts);
+// add Review
+userRoutes.post("/add/review", authMiddleware_1.default, userController.addReview);
+userRoutes.put("/update/review", authMiddleware_1.default, userController.updateReview);
+userRoutes.get("/get/review", authMiddleware_1.default, userController.getProductReviews);
+userRoutes.get("/view/review", authMiddleware_1.default, userController.getSingleReview);
 exports.default = userRoutes;
 //# sourceMappingURL=userRoute.js.map

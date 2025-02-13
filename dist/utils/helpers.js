@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.shuffleArray = exports.verifyPayment = exports.checkAdvertLimit = exports.checkVendorAuctionProductLimit = exports.checkVendorProductLimit = exports.fetchAdminWithPermissions = exports.sendSMS = exports.generateOTP = void 0;
+exports.generateUniquePhoneNumber = exports.hasPurchasedProduct = exports.shuffleArray = exports.verifyPayment = exports.checkAdvertLimit = exports.checkVendorAuctionProductLimit = exports.checkVendorProductLimit = exports.fetchAdminWithPermissions = exports.sendSMS = exports.generateOTP = void 0;
 exports.capitalizeFirstLetter = capitalizeFirstLetter;
 // utils/helpers.ts
 const http_1 = __importDefault(require("http"));
@@ -24,8 +24,11 @@ const permission_1 = __importDefault(require("../models/permission"));
 const vendorsubscription_1 = __importDefault(require("../models/vendorsubscription"));
 const subscriptionplan_1 = __importDefault(require("../models/subscriptionplan"));
 const product_1 = __importDefault(require("../models/product"));
+const sequelize_1 = require("sequelize");
 const auctionproduct_1 = __importDefault(require("../models/auctionproduct"));
 const advert_1 = __importDefault(require("../models/advert"));
+const orderitem_1 = __importDefault(require("../models/orderitem"));
+const user_1 = __importDefault(require("../models/user"));
 // Function to generate a 6-digit OTP
 const generateOTP = () => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
@@ -254,4 +257,30 @@ const shuffleArray = (array) => {
     return array;
 };
 exports.shuffleArray = shuffleArray;
+const hasPurchasedProduct = (orderId, productId) => __awaiter(void 0, void 0, void 0, function* () {
+    const orderItem = yield orderitem_1.default.findOne({
+        where: {
+            orderId,
+            status: "delivered",
+            [sequelize_1.Op.and]: sequelize_1.Sequelize.literal(`JSON_UNQUOTE(JSON_EXTRACT(product, '$.id')) = '${productId}'`)
+        }
+    });
+    return !!orderItem; // Returns true if found, false otherwise
+});
+exports.hasPurchasedProduct = hasPurchasedProduct;
+const generateUniquePhoneNumber = () => __awaiter(void 0, void 0, void 0, function* () {
+    let phoneNumber;
+    let isUnique = false;
+    while (!isUnique) {
+        // Generate a random 10-digit number (US-style format)
+        phoneNumber = `+1${Math.floor(1000000000 + Math.random() * 9000000000)}`;
+        // Check if this phone number already exists in the database
+        const existingUser = yield user_1.default.findOne({ where: { phoneNumber } });
+        if (!existingUser) {
+            isUnique = true;
+        }
+    }
+    return phoneNumber;
+});
+exports.generateUniquePhoneNumber = generateUniquePhoneNumber;
 //# sourceMappingURL=helpers.js.map

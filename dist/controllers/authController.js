@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.adminLogin = exports.socialAuthCallback = exports.googleAuth = exports.resetPassword = exports.codeCheck = exports.forgetPassword = exports.resendVerificationEmail = exports.login = exports.verifyEmail = exports.customerRegister = exports.vendorRegister = exports.index = void 0;
+exports.adminLogin = exports.handleGoogleAuth = exports.socialAuthCallback = exports.googleAuth = exports.resetPassword = exports.codeCheck = exports.forgetPassword = exports.resendVerificationEmail = exports.login = exports.verifyEmail = exports.customerRegister = exports.vendorRegister = exports.index = void 0;
 const user_1 = __importDefault(require("../models/user"));
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const helpers_1 = require("../utils/helpers");
@@ -548,6 +548,42 @@ const socialAuthCallback = (req, res) => __awaiter(void 0, void 0, void 0, funct
     }
 });
 exports.socialAuthCallback = socialAuthCallback;
+const handleGoogleAuth = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { firstName, lastName, email, phoneNumber, accountType, providerId } = req.body;
+        if (!firstName || !lastName || !email || !accountType || !providerId) {
+            res.status(400).json({ message: "All fields are required." });
+            return;
+        }
+        if (!["Customer", "Vendor"].includes(accountType)) {
+            res.status(400).json({ message: "Invalid account type." });
+            return;
+        }
+        // Check if the user already exists
+        let user = yield user_1.default.findOne({ where: { email } });
+        if (!user) {
+            // Create a new user
+            user = yield user_1.default.create({
+                email,
+                firstName,
+                lastName,
+                accountType,
+                password: yield (0, helpers_2.generateUniquePhoneNumber)(), // Generate unique phone number
+                phoneNumber: yield (0, helpers_2.generateUniquePhoneNumber)(), // Generate unique phone number
+                googleId: providerId, // Storing provider ID as Google ID
+                email_verified_at: new Date(),
+            });
+        }
+        // Attach user to req object for next function
+        req.user = user;
+        // Call socialAuthCallback after successful authentication
+        yield (0, exports.socialAuthCallback)(req, res);
+    }
+    catch (error) {
+        res.status(500).json({ message: "An error occurred during authentication.", error });
+    }
+});
+exports.handleGoogleAuth = handleGoogleAuth;
 // Admin Login
 const adminLogin = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { email, password } = req.body;

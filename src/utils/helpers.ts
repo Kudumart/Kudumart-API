@@ -9,8 +9,12 @@ import VendorSubscription from '../models/vendorsubscription';
 import SubscriptionPlan from '../models/subscriptionplan';
 import Product from '../models/product';
 import logger from '../middlewares/logger';
+import { Op, Sequelize } from "sequelize";
 import AuctionProduct from '../models/auctionproduct';
 import Advert from '../models/advert';
+import OrderItem from '../models/orderitem';
+import Order from '../models/order';
+import User from '../models/user';
 
 interface PaystackResponse {
   status: boolean;
@@ -275,5 +279,36 @@ const shuffleArray = <T>(array: T[]): T[] => {
   return array;
 };
 
+const hasPurchasedProduct = async (orderId: string, productId: string) => {
+  const orderItem = await OrderItem.findOne({
+      where: {
+          orderId,
+          status: "delivered",
+          [Op.and]: Sequelize.literal(`JSON_UNQUOTE(JSON_EXTRACT(product, '$.id')) = '${productId}'`)
+      }
+  });
+
+  return !!orderItem; // Returns true if found, false otherwise
+};
+
+const generateUniquePhoneNumber = async () => {
+  let phoneNumber;
+  let isUnique = false;
+
+  while (!isUnique) {
+    // Generate a random 10-digit number (US-style format)
+    phoneNumber = `+1${Math.floor(1000000000 + Math.random() * 9000000000)}`;
+
+    // Check if this phone number already exists in the database
+    const existingUser = await User.findOne({ where: { phoneNumber } });
+
+    if (!existingUser) {
+      isUnique = true;
+    }
+  }
+
+  return phoneNumber;
+};
+
 // Export functions
-export { generateOTP, capitalizeFirstLetter, sendSMS, fetchAdminWithPermissions, checkVendorProductLimit, checkVendorAuctionProductLimit, checkAdvertLimit, verifyPayment, shuffleArray };
+export { generateOTP, capitalizeFirstLetter, sendSMS, fetchAdminWithPermissions, checkVendorProductLimit, checkVendorAuctionProductLimit, checkAdvertLimit, verifyPayment, shuffleArray, hasPurchasedProduct, generateUniquePhoneNumber };

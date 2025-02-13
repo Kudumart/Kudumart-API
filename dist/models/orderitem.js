@@ -56,6 +56,11 @@ const initModel = (sequelize) => {
             type: sequelize_1.DataTypes.DECIMAL(10, 2),
             allowNull: false,
         },
+        status: {
+            type: sequelize_1.DataTypes.STRING,
+            allowNull: false,
+            defaultValue: "pending",
+        },
     }, {
         sequelize,
         modelName: 'OrderItem',

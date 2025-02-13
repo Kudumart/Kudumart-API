@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getSavedProducts = exports.toggleSaveProduct = exports.getPaymentDetails = exports.getAllOrderItems = exports.getAllOrders = exports.userMarkNotificationAsRead = exports.getUserNotifications = exports.becomeVendor = exports.placeBid = exports.showInterest = exports.checkout = exports.getActivePaymentGateway = exports.clearCart = exports.getCartContents = exports.removeCartItem = exports.updateCartItem = exports.addItemToCart = exports.markAsReadHandler = exports.deleteMessageHandler = exports.saveMessage = exports.sendMessageHandler = exports.getAllConversationMessages = exports.getConversations = exports.updateUserNotificationSettings = exports.getUserNotificationSettings = exports.confirmPhoneNumberUpdate = exports.updateProfilePhoneNumber = exports.confirmEmailUpdate = exports.updateProfileEmail = exports.updatePassword = exports.updateProfilePhoto = exports.updateProfile = exports.profile = exports.logout = void 0;
+exports.getSingleReview = exports.getProductReviews = exports.updateReview = exports.addReview = exports.getSavedProducts = exports.toggleSaveProduct = exports.getPaymentDetails = exports.updateOrderStatus = exports.getAllOrderItems = exports.getAllOrders = exports.userMarkNotificationAsRead = exports.getUserNotifications = exports.becomeVendor = exports.placeBid = exports.showInterest = exports.checkout = exports.getActivePaymentGateway = exports.clearCart = exports.getCartContents = exports.removeCartItem = exports.updateCartItem = exports.addItemToCart = exports.markAsReadHandler = exports.deleteMessageHandler = exports.saveMessage = exports.sendMessageHandler = exports.getAllConversationMessages = exports.getConversations = exports.updateUserNotificationSettings = exports.getUserNotificationSettings = exports.confirmPhoneNumberUpdate = exports.updateProfilePhoneNumber = exports.confirmEmailUpdate = exports.updateProfileEmail = exports.updatePassword = exports.updateProfilePhoto = exports.updateProfile = exports.profile = exports.logout = void 0;
 const user_1 = __importDefault(require("../models/user"));
 const sequelize_1 = require("sequelize");
 const helpers_1 = require("../utils/helpers");
@@ -44,6 +44,7 @@ const vendorsubscription_1 = __importDefault(require("../models/vendorsubscripti
 const subcategory_1 = __importDefault(require("../models/subcategory"));
 const admin_1 = __importDefault(require("../models/admin"));
 const saveproduct_1 = __importDefault(require("../models/saveproduct"));
+const reviewproduct_1 = __importDefault(require("../models/reviewproduct"));
 const logout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Get the token from the request
@@ -1151,9 +1152,12 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 price: product.price,
             }, { transaction });
             // If it's a vendor 
-            if (vendor) {
-                yield vendor.update({ wallet: vendor.wallet + totalAmount }, { transaction });
-            }
+            // if (vendor) {
+            //   await vendor.update(
+            //     { wallet: (vendor.wallet as number) + totalAmount },
+            //     { transaction }
+            //   );    
+            // }
             // Update product inventory
             // await product.update(
             //   { quantity: product.quantity - cartItem.quantity },
@@ -1620,6 +1624,95 @@ const getAllOrderItems = (req, res) => __awaiter(void 0, void 0, void 0, functio
     }
 });
 exports.getAllOrderItems = getAllOrderItems;
+const updateOrderStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    const { status, orderItemId } = req.body;
+    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    if (!userId) {
+        res.status(400).json({ message: "User must be authenticated" });
+        return;
+    }
+    // Define allowed statuses
+    const allowedStatuses = ["pending", "processing", "shipped", "delivered", "cancelled"];
+    if (!allowedStatuses.includes(status)) {
+        res.status(400).json({ message: "Invalid order status provided." });
+        return;
+    }
+    // Start transaction
+    const transaction = yield sequelize_service_1.default.connection.transaction();
+    try {
+        // Find the order item
+        const order = yield orderitem_1.default.findOne({ where: { id: orderItemId }, transaction });
+        if (!order) {
+            yield transaction.rollback();
+            res.status(404).json({ message: "Order item not found." });
+            return;
+        }
+        // If the order is already delivered or cancelled, stop further processing
+        if (order.status === "delivered" || order.status === "cancelled") {
+            yield transaction.rollback();
+            res.status(400).json({
+                message: `Order is already ${order.status}. No further updates are allowed.`
+            });
+            return;
+        }
+        let productData = order.product;
+        // If product data is stored as a string, parse it
+        if (typeof order.product === "string") {
+            productData = JSON.parse(order.product);
+        }
+        // Extract vendorId safely
+        const vendorId = (_b = productData === null || productData === void 0 ? void 0 : productData.vendorId) !== null && _b !== void 0 ? _b : null;
+        if (!vendorId) {
+            yield transaction.rollback();
+            res.status(400).json({ message: "Vendor ID not found in product data." });
+            return;
+        }
+        // Update the order status
+        order.status = status;
+        yield order.save({ transaction });
+        // Check if vendorId exists in the User or Admin table
+        const vendor = yield user_1.default.findByPk(vendorId, { transaction });
+        const admin = yield admin_1.default.findByPk(vendorId, { transaction });
+        if (!vendor && !admin) {
+            yield transaction.rollback();
+            res.status(404).json({ message: "Product owner not found." });
+            return;
+        }
+        // If the order is delivered, add funds to the vendor's wallet
+        if (status === "delivered" && vendor) {
+            const price = Number(order.price);
+            vendor.wallet = (Number(vendor.wallet) + price);
+            yield vendor.save({ transaction });
+        }
+        // Send a notification to the vendor/admin
+        yield notification_1.default.create({
+            userId: userId,
+            title: "Order Status Updated",
+            message: `Your product has been marked as '${status}'.`,
+            type: "order_status_update",
+        }, { transaction });
+        // Send a notification to the vendor (who owns the product)
+        yield notification_1.default.create({
+            userId: vendorId,
+            title: "Order Status Updated",
+            message: `The status of the product '${productData === null || productData === void 0 ? void 0 : productData.name}' purchased from you has been updated to '${status}' by the customer.`,
+            type: "order_status_update",
+        }, { transaction });
+        // Commit transaction
+        yield transaction.commit();
+        res.status(200).json({
+            message: `Order status updated to '${status}' successfully.`,
+            data: order,
+        });
+    }
+    catch (error) {
+        yield transaction.rollback();
+        logger_1.default.error("Error updating order status:", error);
+        res.status(500).json({ message: "An error occurred while updating the order status." });
+    }
+});
+exports.updateOrderStatus = updateOrderStatus;
 const getPaymentDetails = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { orderId, page = 1, limit = 10 } = req.query;
     // Convert `page` and `limit` to numbers
@@ -1679,11 +1772,11 @@ const toggleSaveProduct = (req, res) => __awaiter(void 0, void 0, void 0, functi
         else {
             // Otherwise, add the product to the saved list
             yield saveproduct_1.default.create({ userId, productId });
-            res.status(201).json({ message: "Product added to your saved list" });
+            res.status(200).json({ message: "Product added to your saved list" });
         }
     }
     catch (error) {
-        console.error("Error toggling save product:", error);
+        logger_1.default.error("Error toggling save product:", error);
         res.status(500).json({ message: "An error occurred while processing the request." });
     }
 });
@@ -1740,9 +1833,155 @@ const getSavedProducts = (req, res) => __awaiter(void 0, void 0, void 0, functio
         res.status(200).json({ data: savedProducts });
     }
     catch (error) {
-        console.error("Error fetching saved products:", error);
+        logger_1.default.error("Error fetching saved products:", error);
         res.status(500).json({ message: "An error occurred while fetching saved products." });
     }
 });
 exports.getSavedProducts = getSavedProducts;
+const addReview = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const { orderId, productId, rating, comment } = req.body;
+    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID
+    if (!userId) {
+        res.status(401).json({ message: "Unauthorized: User ID is missing." });
+        return;
+    }
+    // Ensure rating is a valid number between 1 and 5
+    if (typeof rating !== "number" || isNaN(rating) || rating < 1 || rating > 5) {
+        res.status(400).json({ message: "Rating must be a numeric value between 1 and 5." });
+        return;
+    }
+    try {
+        // Check if user has purchased the product
+        const purchased = yield (0, helpers_2.hasPurchasedProduct)(orderId, productId);
+        if (!purchased) {
+            res.status(403).json({ message: "You can only review products that has been delivered." });
+            return;
+        }
+        // Check if the user already reviewed the product
+        const existingReview = yield reviewproduct_1.default.findOne({ where: { userId, productId } });
+        if (existingReview) {
+            res.status(400).json({ message: "You have already reviewed this product." });
+            return;
+        }
+        // Create the review
+        yield reviewproduct_1.default.create({ userId, productId, rating, comment });
+        res.status(200).json({ message: "Review submitted successfully." });
+    }
+    catch (error) {
+        logger_1.default.error("Error adding review:", error);
+        res.status(500).json({ message: "An error occurred while submitting the review." });
+    }
+});
+exports.addReview = addReview;
+const updateReview = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const { reviewId, rating, comment } = req.body;
+    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID
+    // Ensure rating is a valid number between 1 and 5
+    if (typeof rating !== "number" || isNaN(rating) || rating < 1 || rating > 5) {
+        res.status(400).json({ message: "Rating must be a numeric value between 1 and 5." });
+        return;
+    }
+    try {
+        // Find existing review
+        const review = yield reviewproduct_1.default.findOne({ where: { userId, id: reviewId } });
+        if (!review) {
+            res.status(404).json({ message: "Review not found." });
+            return;
+        }
+        // Update the review
+        yield review.update({ rating, comment });
+        res.status(200).json({ message: "Review updated successfully." });
+    }
+    catch (error) {
+        logger_1.default.error("Error updating review:", error);
+        res.status(500).json({ message: "An error occurred while updating the review." });
+    }
+});
+exports.updateReview = updateReview;
+const getProductReviews = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const { productId } = req.query; // Query parameter for productId
+    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID
+    try {
+        const whereClause = { userId }; // Default filter by user ID
+        if (productId) {
+            whereClause.productId = productId; // Add product filter if provided
+        }
+        const reviews = yield reviewproduct_1.default.findAll({
+            where: whereClause,
+            include: [
+                {
+                    model: user_1.default,
+                    as: "user",
+                    attributes: ["id", "firstName", "lastName", "email"]
+                }
+            ],
+        });
+        res.status(200).json({ data: reviews });
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching reviews:", error);
+        res.status(500).json({ message: "An error occurred while fetching reviews." });
+    }
+});
+exports.getProductReviews = getProductReviews;
+const getSingleReview = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const reviewId = req.query.reviewId;
+    try {
+        const review = yield reviewproduct_1.default.findOne({
+            where: { id: reviewId },
+            include: [
+                {
+                    model: user_1.default,
+                    as: "user",
+                    attributes: ["id", "firstName", "lastName", "email"]
+                },
+                {
+                    model: product_1.default,
+                    as: "product",
+                    include: [
+                        {
+                            model: user_1.default,
+                            as: "vendor",
+                        },
+                        {
+                            model: admin_1.default,
+                            as: "admin",
+                            attributes: ["id", "name", "email"],
+                        },
+                        {
+                            model: subcategory_1.default,
+                            as: "sub_category",
+                            attributes: ["id", "name", "categoryId"],
+                        },
+                        {
+                            model: store_1.default,
+                            as: "store",
+                            attributes: ["id", "name"],
+                            include: [
+                                {
+                                    model: currency_1.default,
+                                    as: "currency",
+                                    attributes: ["symbol"],
+                                },
+                            ],
+                        },
+                    ]
+                }
+            ],
+        });
+        if (!review) {
+            res.status(404).json({ message: "Review not found." });
+            return;
+        }
+        res.status(200).json({ data: review });
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching review:", error);
+        res.status(500).json({ message: "An error occurred while fetching the review." });
+    }
+});
+exports.getSingleReview = getSingleReview;
 //# sourceMappingURL=userController.js.map

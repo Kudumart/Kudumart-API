@@ -30,6 +30,7 @@ const testimonial_1 = __importDefault(require("../models/testimonial"));
 const faqcategory_1 = __importDefault(require("../models/faqcategory"));
 const faq_1 = __importDefault(require("../models/faq"));
 const contact_1 = __importDefault(require("../models/contact"));
+const reviewproduct_1 = __importDefault(require("../models/reviewproduct"));
 const getAllCategories = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const categories = yield category_1.default.findAll();
@@ -100,6 +101,12 @@ const products = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         }
         if (name) {
             whereClause.name = { [sequelize_1.Op.like]: `%${name}%` }; // Case-insensitive search for product name
+        }
+        if (name) {
+            const normalizedName = String(name).trim().replace(/\s+/g, " "); // Normalize spaces
+            whereClause[sequelize_1.Op.or] = [
+                { name: { [sequelize_1.Op.like]: `%${normalizedName}%` } } // Use LIKE query for product name search
+            ];
         }
         if (condition) {
             whereClause.condition = condition; // Filter by product condition
@@ -203,6 +210,17 @@ const getProductById = (req, res) => __awaiter(void 0, void 0, void 0, function*
                     as: "sub_category",
                     attributes: ["id", "name"],
                 },
+                {
+                    model: reviewproduct_1.default,
+                    as: "reviews",
+                    include: [
+                        {
+                            model: user_1.default,
+                            as: "user",
+                            attributes: ["id", "firstName", "lastName", "email"]
+                        }
+                    ],
+                }
             ],
         });
         if (!product) {
@@ -216,6 +234,15 @@ const getProductById = (req, res) => __awaiter(void 0, void 0, void 0, function*
             const kyc = yield kyc_1.default.findOne({ where: { vendorId: product.vendor.id } });
             product.vendor.setDataValue("isVerified", kyc ? kyc.isVerified : false);
         }
+        // ✅ Calculate Review Rating
+        const reviews = Array.isArray(product.reviews) ? product.reviews : [];
+        const totalReviews = reviews.length;
+        const averageRating = totalReviews > 0
+            ? (reviews.reduce((sum, review) => sum + Number(review.rating) || 0, 0) / totalReviews).toFixed(1)
+            : "0.0";
+        // Attach review data to the product
+        product.setDataValue("averageRating", parseFloat(averageRating));
+        product.setDataValue("totalReviews", totalReviews);
         // Fetch recommended products based on the same subcategory
         const recommendedProducts = yield product_1.default.findAll({
             where: {

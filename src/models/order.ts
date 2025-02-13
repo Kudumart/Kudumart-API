@@ -9,7 +9,6 @@ class Order extends Model {
   public trackingNumber!: string;
   public totalAmount!: number;
   public shippingAddress!: string;
-  public status!: string;
   public refId!: string; // Reference ID from payment
   public createdAt?: Date;
   public updatedAt?: Date;
@@ -63,11 +62,6 @@ const initModel = (sequelize: Sequelize) => {
       shippingAddress: {
         type: DataTypes.STRING,
         allowNull: false,
-      },
-      status: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        defaultValue: "pending",
       },
       refId: {
         type: DataTypes.STRING,

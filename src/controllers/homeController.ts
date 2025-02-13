@@ -20,6 +20,7 @@ import Testimonial from "../models/testimonial";
 import FaqCategory from "../models/faqcategory";
 import Faq from "../models/faq";
 import Contact from "../models/contact";
+import ReviewProduct from "../models/reviewproduct";
 
 export const getAllCategories = async (
     req: Request,
@@ -110,6 +111,13 @@ export const products = async (req: Request, res: Response): Promise<void> => {
         if (name) {
             whereClause.name = { [Op.like]: `%${name}%` }; // Case-insensitive search for product name
         }
+        if (name) {
+            const normalizedName = String(name).trim().replace(/\s+/g, " "); // Normalize spaces
+            whereClause[Op.or] = [
+                { name: { [Op.like]: `%${normalizedName}%` } } // Use LIKE query for product name search
+            ];
+        }
+        
         if (condition) {
             whereClause.condition = condition; // Filter by product condition
         }
@@ -221,6 +229,17 @@ export const getProductById = async (
                     as: "sub_category",
                     attributes: ["id", "name"],
                 },
+                {
+                    model: ReviewProduct,
+                    as: "reviews",
+                    include: [
+                        { 
+                          model: User, 
+                          as: "user",
+                          attributes: ["id", "firstName", "lastName", "email"] 
+                        }
+                    ],
+                }
             ],
         });
 
@@ -237,6 +256,17 @@ export const getProductById = async (
             const kyc = await KYC.findOne({ where: { vendorId: product.vendor.id } });
             product.vendor.setDataValue("isVerified", kyc ? kyc.isVerified : false);
         }
+
+        // ✅ Calculate Review Rating
+        const reviews: ReviewProduct[] = Array.isArray(product.reviews) ? product.reviews : [];
+        const totalReviews = reviews.length;
+        const averageRating = totalReviews > 0 
+            ? (reviews.reduce((sum, review) => sum + Number(review.rating) || 0, 0) / totalReviews).toFixed(1) 
+            : "0.0";
+
+        // Attach review data to the product
+        product.setDataValue("averageRating", parseFloat(averageRating));
+        product.setDataValue("totalReviews", totalReviews);
 
         // Fetch recommended products based on the same subcategory
         const recommendedProducts = await Product.findAll({

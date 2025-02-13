@@ -7,9 +7,9 @@ import { sendMail } from "../services/mail.service";
 import { emailTemplates } from "../utils/messages";
 import JwtService from "../services/jwt.service";
 import logger from "../middlewares/logger"; // Adjust the path to your logger.js
-import { capitalizeFirstLetter } from "../utils/helpers";
+import { capitalizeFirstLetter, hasPurchasedProduct } from "../utils/helpers";
 import OTP from "../models/otp";
-import { AuthenticatedRequest } from "../types/index";
+import { AuthenticatedRequest, ProductData } from "../types/index";
 import UserNotificationSetting from "../models/usernotificationsetting";
 import Message from "../models/message";
 import Product from "../models/product";
@@ -32,6 +32,7 @@ import VendorSubscription from "../models/vendorsubscription";
 import SubCategory from "../models/subcategory";
 import Admin from "../models/admin";
 import SaveProduct from "../models/saveproduct";
+import ReviewProduct from "../models/reviewproduct";
 
 export const logout = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -1354,12 +1355,12 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
       ); 
       
       // If it's a vendor 
-      if (vendor) {
-        await vendor.update(
-          { wallet: (vendor.wallet as number) + totalAmount },
-          { transaction }
-        );    
-      }
+      // if (vendor) {
+      //   await vendor.update(
+      //     { wallet: (vendor.wallet as number) + totalAmount },
+      //     { transaction }
+      //   );    
+      // }
 
       // Update product inventory
       // await product.update(
@@ -1907,6 +1908,114 @@ export const getAllOrderItems = async (req: Request, res: Response): Promise<voi
   }
 };
 
+export const updateOrderStatus = async (req: Request, res: Response): Promise<void> => {
+  const { status, orderItemId } = req.body;
+
+  const userId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID from middleware
+
+  if (!userId) {
+    res.status(400).json({ message: "User must be authenticated" });
+    return;
+  }
+
+  // Define allowed statuses
+  const allowedStatuses = ["pending", "processing", "shipped", "delivered", "cancelled"];
+
+  if (!allowedStatuses.includes(status)) {
+      res.status(400).json({ message: "Invalid order status provided." });
+      return;
+  }
+
+  // Start transaction
+  const transaction = await sequelizeService.connection!.transaction();
+
+  try {
+      // Find the order item
+      const order = await OrderItem.findOne({ where: { id: orderItemId }, transaction });
+
+      if (!order) {
+          await transaction.rollback();
+          res.status(404).json({ message: "Order item not found." });
+          return;
+      }
+
+      // If the order is already delivered or cancelled, stop further processing
+      if (order.status === "delivered" || order.status === "cancelled") {
+        await transaction.rollback();
+        res.status(400).json({
+          message: `Order is already ${order.status}. No further updates are allowed.`
+        });
+        return;
+      }
+
+      let productData: ProductData | null = order.product as ProductData;
+
+      // If product data is stored as a string, parse it
+      if (typeof order.product === "string") {
+          productData = JSON.parse(order.product) as ProductData;
+      }
+
+      // Extract vendorId safely
+      const vendorId = productData?.vendorId ?? null;
+
+      if (!vendorId) {
+          await transaction.rollback();
+          res.status(400).json({ message: "Vendor ID not found in product data." });
+          return;
+      }
+
+      // Update the order status
+      order.status = status;
+      await order.save({ transaction });
+
+      // Check if vendorId exists in the User or Admin table
+      const vendor = await User.findByPk(vendorId, { transaction });
+      const admin = await Admin.findByPk(vendorId, { transaction });
+
+      if (!vendor && !admin) {
+          await transaction.rollback();
+          res.status(404).json({ message: "Product owner not found." });
+          return;
+      }
+
+      // If the order is delivered, add funds to the vendor's wallet
+      if (status === "delivered" && vendor) {
+          const price = Number(order.price);
+          vendor.wallet = (Number(vendor.wallet) + price);
+          await vendor.save({ transaction });
+      }
+
+      // Send a notification to the vendor/admin
+      await Notification.create({
+          userId: userId,
+          title: "Order Status Updated",
+          message: `Your product has been marked as '${status}'.`,
+          type: "order_status_update",
+      }, { transaction });
+
+      // Send a notification to the vendor (who owns the product)
+      await Notification.create({
+        userId: vendorId,
+        title: "Order Status Updated",
+        message: `The status of the product '${productData?.name}' purchased from you has been updated to '${status}' by the customer.`,
+        type: "order_status_update",
+      }, { transaction });
+
+      // Commit transaction
+      await transaction.commit();
+
+      res.status(200).json({
+          message: `Order status updated to '${status}' successfully.`,
+          data: order,
+      });
+
+  } catch (error) {
+      await transaction.rollback();
+      logger.error("Error updating order status:", error);
+      res.status(500).json({ message: "An error occurred while updating the order status." });
+  }
+};
+
 export const getPaymentDetails = async (req: Request, res: Response): Promise<void> => {
   const { orderId, page = 1, limit = 10 } = req.query;
 
@@ -1971,10 +2080,10 @@ export const toggleSaveProduct = async (req: Request, res: Response): Promise<vo
       } else {
           // Otherwise, add the product to the saved list
           await SaveProduct.create({ userId, productId });
-          res.status(201).json({ message: "Product added to your saved list" });
+          res.status(200).json({ message: "Product added to your saved list" });
       }
   } catch (error: any) {
-      console.error("Error toggling save product:", error);
+      logger.error("Error toggling save product:", error);
       res.status(500).json({ message: "An error occurred while processing the request." });
   }
 };
@@ -2032,7 +2141,167 @@ export const getSavedProducts = async (req: Request, res: Response): Promise<voi
       // Send the saved products in the response
       res.status(200).json({ data: savedProducts });
   } catch (error: any) {
-      console.error("Error fetching saved products:", error);
+      logger.error("Error fetching saved products:", error);
       res.status(500).json({ message: "An error occurred while fetching saved products." });
+  }
+};
+
+export const addReview = async (req: Request, res: Response): Promise<void> => {
+  const { orderId, productId, rating, comment } = req.body;
+  const userId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID
+
+  if (!userId) {
+    res.status(401).json({ message: "Unauthorized: User ID is missing." });
+    return;
+  }
+
+  // Ensure rating is a valid number between 1 and 5
+  if (typeof rating !== "number" || isNaN(rating) || rating < 1 || rating > 5) {
+    res.status(400).json({ message: "Rating must be a numeric value between 1 and 5." });
+    return;
+  }
+
+  try {
+      // Check if user has purchased the product
+      const purchased = await hasPurchasedProduct(orderId, productId);
+      if (!purchased) {
+          res.status(403).json({ message: "You can only review products that has been delivered." });
+          return;
+      }
+
+      // Check if the user already reviewed the product
+      const existingReview = await ReviewProduct.findOne({ where: { userId, productId } });
+
+      if (existingReview) {
+          res.status(400).json({ message: "You have already reviewed this product." });
+          return;
+      }
+
+      // Create the review
+      await ReviewProduct.create({ userId, productId, rating, comment });
+
+      res.status(200).json({ message: "Review submitted successfully." });
+
+  } catch (error) {
+      logger.error("Error adding review:", error);
+      res.status(500).json({ message: "An error occurred while submitting the review." });
+  }
+};
+
+export const updateReview = async (req: Request, res: Response): Promise<void> => {
+  const { reviewId, rating, comment } = req.body;
+  const userId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID
+
+  // Ensure rating is a valid number between 1 and 5
+  if (typeof rating !== "number" || isNaN(rating) || rating < 1 || rating > 5) {
+    res.status(400).json({ message: "Rating must be a numeric value between 1 and 5." });
+    return;
+  }
+  
+  try {
+      // Find existing review
+      const review = await ReviewProduct.findOne({ where: { userId, id:reviewId } });
+
+      if (!review) {
+          res.status(404).json({ message: "Review not found." });
+          return;
+      }
+
+      // Update the review
+      await review.update({ rating, comment });
+
+      res.status(200).json({ message: "Review updated successfully." });
+
+  } catch (error) {
+      logger.error("Error updating review:", error);
+      res.status(500).json({ message: "An error occurred while updating the review." });
+  }
+};
+
+export const getProductReviews = async (req: Request, res: Response): Promise<void> => {
+  const { productId } = req.query; // Query parameter for productId
+  const userId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID
+
+  try {
+      const whereClause: any = { userId }; // Default filter by user ID
+
+      if (productId) {
+          whereClause.productId = productId; // Add product filter if provided
+      }
+
+      const reviews = await ReviewProduct.findAll({
+          where: whereClause,
+          include: [
+            { 
+              model: User, 
+              as: "user",
+              attributes: ["id", "firstName", "lastName", "email"] 
+            }
+          ],
+      });
+
+      res.status(200).json({ data: reviews });
+  } catch (error) {
+      logger.error("Error fetching reviews:", error);
+      res.status(500).json({ message: "An error occurred while fetching reviews." });
+  }
+};
+
+export const getSingleReview = async (req: Request, res: Response): Promise<void> => {
+  const reviewId = req.query.reviewId as string;
+
+  try {
+      const review = await ReviewProduct.findOne({
+          where: { id: reviewId },
+          include: [
+            { 
+              model: User, 
+              as: "user",
+              attributes: ["id", "firstName", "lastName", "email"] 
+            },
+            { 
+              model: Product, 
+              as: "product",
+              include: [
+                {
+                    model: User,
+                    as: "vendor",
+                },
+                {
+                    model: Admin,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
+                },
+                {
+                    model: SubCategory,
+                    as: "sub_category",
+                    attributes: ["id", "name", "categoryId"],
+                },
+                {
+                    model: Store,
+                    as: "store",
+                    attributes: ["id", "name"],
+                    include: [
+                        {
+                            model: Currency,
+                            as: "currency",
+                            attributes: ["symbol"],
+                        },
+                    ],
+                },
+              ]
+            }
+          ],
+      });
+
+      if (!review) {
+          res.status(404).json({ message: "Review not found." });
+          return;
+      }
+
+      res.status(200).json({ data: review });
+  } catch (error) {
+      logger.error("Error fetching review:", error);
+      res.status(500).json({ message: "An error occurred while fetching the review." });
   }
 };

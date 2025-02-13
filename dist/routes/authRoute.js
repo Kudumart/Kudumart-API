@@ -59,6 +59,7 @@ authRoutes.get('/auth/facebook/callback', passport_1.default.authenticate('faceb
 // Google Authentication
 authRoutes.get('/auth/google', authController.googleAuth);
 authRoutes.get('/auth/google/callback', passport_1.default.authenticate('google', { session: false }), authController.socialAuthCallback);
+authRoutes.post('/auth/google', authController.handleGoogleAuth);
 // Admin
 authRoutes.post("/auth/admin/login", (0, validations_1.loginValidationRules)(), validations_1.validate, authController.adminLogin);
 // Frontend

@@ -51,11 +51,6 @@ const initModel = (sequelize) => {
             type: sequelize_1.DataTypes.STRING,
             allowNull: false,
         },
-        status: {
-            type: sequelize_1.DataTypes.STRING,
-            allowNull: false,
-            defaultValue: "pending",
-        },
         refId: {
             type: sequelize_1.DataTypes.STRING,
             allowNull: false,

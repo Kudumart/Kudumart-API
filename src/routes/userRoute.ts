@@ -61,10 +61,17 @@ userRoutes.patch("/mark/notification/as/read", authMiddleware, userController.us
 // Order, OrderItem and Payment
 userRoutes.get("/orders", authMiddleware, userController.getAllOrders);
 userRoutes.get("/order/items", authMiddleware, userController.getAllOrderItems);
+userRoutes.post("/order/item/update/status", authMiddleware, userController.updateOrderStatus);
 userRoutes.get("/order/payment", authMiddleware, userController.getPaymentDetails);
 
 // Save Product
 userRoutes.post("/save/product", authMiddleware, userController.toggleSaveProduct);
 userRoutes.get("/saved/products", authMiddleware, userController.getSavedProducts);
+
+// add Review
+userRoutes.post("/add/review", authMiddleware, userController.addReview);
+userRoutes.put("/update/review", authMiddleware, userController.updateReview);
+userRoutes.get("/get/review", authMiddleware, userController.getProductReviews);
+userRoutes.get("/view/review", authMiddleware, userController.getSingleReview);
 
 export default userRoutes;
