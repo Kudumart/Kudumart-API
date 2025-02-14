@@ -38,6 +38,10 @@ import Testimonial from "../models/testimonial";
 import FaqCategory from "../models/faqcategory";
 import Faq from "../models/faq";
 import Contact  from "../models/contact"; // Adjust the path as needed
+import SaveProduct from "../models/saveproduct";
+import ReviewProduct from "../models/reviewproduct";
+import Job from "../models/job";
+import Applicant from "../models/applicant";
 
 // Extend the Express Request interface to include adminId and admin
 interface AuthenticatedRequest extends Request {
@@ -370,6 +374,19 @@ export const deleteSubAdmin = async (
         if (!subAdmin) {
             res.status(404).json({ message: "Sub-admin not found" });
             return;
+        }
+
+        const relatedTables = [
+            { name: "stores", model: Store, field: "vendorId" },
+        ];
+
+        // Check each related table
+        for (const table of relatedTables) {
+            const count = await table.model.count({ where: { [table.field]: subAdmin.id } });
+            if (count > 0) {
+                res.status(400).json({ message: `Cannot delete sub-admin because related records exist in ${table.name}` });
+                return;
+            }
         }
 
         await subAdmin.destroy();
@@ -889,6 +906,19 @@ export const deleteSubscriptionPlan = async (
             return;
         }
 
+        const relatedTables = [
+            { name: "vendor_subscriptions", model: VendorSubscription, field: "subscriptionPlanId" },
+        ];
+
+        // Check each related table
+        for (const table of relatedTables) {
+            const count = await table.model.count({ where: { [table.field]: plan.id } });
+            if (count > 0) {
+                res.status(400).json({ message: `Cannot delete subscription plan because related records exist in ${table.name}` });
+                return;
+            }
+        }
+
         // Attempt to delete the plan
         await plan.destroy();
         res
@@ -1048,6 +1078,19 @@ export const deleteCategory = async (
         if (!category) {
             res.status(404).json({ message: "Category not found" });
             return;
+        }
+
+        const relatedTables = [
+            { name: "sub_categories", model: SubCategory, field: "categoryId" },
+        ];
+
+        // Check each related table
+        for (const table of relatedTables) {
+            const count = await table.model.count({ where: { [table.field]: category.id } });
+            if (count > 0) {
+                res.status(400).json({ message: `Cannot delete category because related records exist in ${table.name}` });
+                return;
+            }
         }
 
         await category.destroy();
@@ -1217,6 +1260,23 @@ export const deleteSubCategory = async (
         if (!subCategory) {
             res.status(404).json({ message: "Sub-category not found" });
             return;
+        }
+
+        const relatedTables: { name: string; model: typeof Product | typeof AuctionProduct; field: string }[] = [
+            { name: "products", model: Product, field: "categoryId" },
+            { name: "auction_products", model: AuctionProduct, field: "categoryId" },
+        ];
+
+        // Check each related table
+        for (const table of relatedTables) {
+            const count = await (table.model as typeof Product).count({
+                where: { [table.field]: subCategory.id }
+            });
+
+            if (count > 0) {
+                res.status(400).json({ message: `Cannot delete product because related records exist in ${table.name}` });
+                return;
+            }
         }
 
         await subCategory.destroy();
@@ -1673,6 +1733,19 @@ export const deleteCurrency = async (
         if (!currency) {
             res.status(404).json({ message: "Currency not found" });
             return;
+        }
+
+        const relatedTables = [
+            { name: "store", model: Store, field: "currencyId" },
+        ];
+
+        // Check each related table
+        for (const table of relatedTables) {
+            const count = await table.model.count({ where: { [table.field]: currency.id } });
+            if (count > 0) {
+                res.status(400).json({ message: `Cannot delete currency because related records exist in ${table.name}` });
+                return;
+            }
         }
 
         await currency.destroy();
@@ -2162,6 +2235,24 @@ export const deleteGeneralProduct = async (
             return;
         }
 
+        const relatedTables: { name: string; model: typeof SaveProduct | typeof ReviewProduct | typeof Cart; field: string }[] = [
+            { name: "save_products", model: SaveProduct, field: "productId" },
+            { name: "review_products", model: ReviewProduct, field: "productId" },
+            { name: "carts", model: Cart, field: "productId" }
+        ];
+
+        // Check each related table
+        for (const table of relatedTables) {
+            const count = await (table.model as typeof SaveProduct).count({
+                where: { [table.field]: product.id }
+            });
+
+            if (count > 0) {
+                res.status(400).json({ message: `Cannot delete product because related records exist in ${table.name}` });
+                return;
+            }
+        }
+
         await product.destroy();
         res.status(200).json({
             message: "Product deleted successfully",
@@ -2437,6 +2528,22 @@ export const deleteGeneralAuctionProduct = async (
                 message: "Auction product already has bids, cannot be deleted.",
             });
             return;
+        }
+
+        const relatedTables: { name: string; model: typeof Bid; field: string }[] = [
+            { name: "bids", model: Bid, field: "auctionProductId" },
+        ];
+
+        // Check each related table
+        for (const table of relatedTables) {
+            const count = await (table.model as typeof Bid).count({
+                where: { [table.field]: auctionProduct.id }
+            });
+
+            if (count > 0) {
+                res.status(400).json({ message: `Cannot delete auction product because related records exist in ${table.name}` });
+                return;
+            }
         }
 
         // Delete the auction product
@@ -2889,8 +2996,23 @@ export const deleteStore = async (
             return;
         }
 
-        await AuctionProduct.destroy({ where: { storeId }, transaction });
-        await Product.destroy({ where: { storeId }, transaction });
+        const relatedTables: { name: string; model: typeof AuctionProduct | typeof Product; field: string }[] = [
+            { name: "auction_products", model: AuctionProduct, field: "storeId" },
+            { name: "products", model: Product, field: "storeId" }
+        ];
+
+        // Check each related table
+        for (const table of relatedTables) {
+            const count = await (table.model as typeof AuctionProduct).count({
+                where: { [table.field]: store.id }
+            });
+
+            if (count > 0) {
+                res.status(400).json({ message: `Cannot delete store because related records exist in ${table.name}` });
+                return;
+            }
+        }
+
         await store.destroy({ transaction });
 
         await transaction.commit();
@@ -3038,6 +3160,24 @@ export const deleteProduct = async (
         if (!product) {
             res.status(404).json({ message: "Product not found." });
             return;
+        }
+
+        const relatedTables: { name: string; model: typeof SaveProduct | typeof ReviewProduct | typeof Cart; field: string }[] = [
+            { name: "save_products", model: SaveProduct, field: "productId" },
+            { name: "review_products", model: ReviewProduct, field: "productId" },
+            { name: "carts", model: Cart, field: "productId" }
+        ];
+
+        // Check each related table
+        for (const table of relatedTables) {
+            const count = await (table.model as typeof SaveProduct).count({
+                where: { [table.field]: product.id }
+            });
+
+            if (count > 0) {
+                res.status(400).json({ message: `Cannot delete product because related records exist in ${table.name}` });
+                return;
+            }
         }
 
         await product.destroy();
@@ -3493,6 +3633,22 @@ export const deleteAuctionProduct = async (
             return;
         }
 
+        const relatedTables: { name: string; model: typeof Bid; field: string }[] = [
+            { name: "bids", model: Bid, field: "auctionProductId" },
+        ];
+
+        // Check each related table
+        for (const table of relatedTables) {
+            const count = await (table.model as typeof Bid).count({
+                where: { [table.field]: auctionProduct.id }
+            });
+
+            if (count > 0) {
+                res.status(400).json({ message: `Cannot delete auction product because related records exist in ${table.name}` });
+                return;
+            }
+        }
+
         // Delete the auction product
         await auctionProduct.destroy();
 
@@ -3740,7 +3896,7 @@ export const getTransactionsForAdmin = async (
             },
         });
     } catch (error: any) {
-        console.error(error);
+        logger.error(error);
         res.status(500).json({ message: "Failed to fetch transactions", error: error.message });
     }
 };
@@ -4414,7 +4570,9 @@ export const deleteFaqCategory = async (req: Request, res: Response): Promise<vo
             return;
         }
 
+        await category.faqs.destroy();
         await category.destroy();
+
         res.status(200).json({ message: "FAQ category deleted successfully" });
 
     } catch (error: any) {
@@ -4518,6 +4676,7 @@ export const deleteFaq = async (req: Request, res: Response): Promise<void> => {
         }
 
         await faq.destroy();
+
         res.status(200).json({ message: "FAQ deleted successfully" });
 
     } catch (error: any) {
@@ -4560,7 +4719,7 @@ export const getAllContacts = async (req: Request, res: Response): Promise<void>
         // Return the contact entries
         res.status(200).json({ data: contacts });
     } catch (error: any) {
-        console.error("Error fetching contacts:", error);
+        logger.error("Error fetching contacts:", error);
         res.status(500).json({
             message: "An error occurred while fetching contact entries.",
         });
@@ -4583,7 +4742,7 @@ export const getContactById = async (req: Request, res: Response): Promise<void>
         // Return the contact entry
         res.status(200).json({ data: contact });
     } catch (error: any) {
-        console.error("Error fetching contact:", error);
+        logger.error("Error fetching contact:", error);
         res.status(500).json({
             message: "An error occurred while fetching the contact entry.",
         });
@@ -4608,9 +4767,369 @@ export const deleteContactById = async (req: Request, res: Response): Promise<vo
         // Return success message
         res.status(200).json({ message: "Contact entry deleted successfully." });
     } catch (error: any) {
-        console.error("Error deleting contact:", error);
+        logger.error("Error deleting contact:", error);
         res.status(500).json({
             message: "An error occurred while deleting the contact entry.",
         });
     }
 };
+
+// JOB
+export const postJob = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+        const {
+            title,
+            workplaceType,
+            jobType,
+            location,
+            description,
+        } = req.body;
+
+        const adminId = req.admin?.id;
+
+        // Create the job
+        const newJob = await Job.create({
+            creatorId: adminId,
+            title,
+            slug: `${title.toLowerCase().replace(/ /g, "-")}-${uuidv4()}`,
+            workplaceType,
+            location,
+            jobType,
+            description,
+            status: "active",
+        });
+
+        res.status(200).json({
+            message: "Job posted successfully.",
+            data: newJob, // Optional: format with a resource transformer if needed
+        });
+    } catch (error: any) {
+        logger.error(error);
+        res.status(500).json({
+            message: "An error occurred while posting the job.",
+        });
+    }
+};
+
+export const getJobs = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { status, title } = req.query; // Expecting 'Draft', 'Active', or 'Closed' for status, and a string for title
+
+        const jobs = await Job.findAll({
+            where: {
+                ...(status && { status: { [Op.eq]: status } }), // Optional filtering by status
+                ...(title && { title: { [Op.like]: `%${title}%` } }), // Optional filtering by title (partial match)
+            },
+            order: [["createdAt", "DESC"]],
+        });
+
+        res.status(200).json({
+            message: "Jobs retrieved successfully.",
+            data: jobs, // Include a JobResource equivalent if needed
+        });
+    } catch (error: any) {
+        logger.error(error);
+        res.status(500).json({
+            message: "An error occurred while retrieving jobs.",
+        });
+    }
+};
+
+export const updateJob = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { jobId, title, workplaceType, jobType, location, description } = req.body;
+
+        if (!jobId) {
+            res.status(400).json({ message: "Job ID is required." });
+            return;
+        }
+
+        // Find the job
+        const job = await Job.findByPk(jobId);
+        if (!job) {
+            res.status(404).json({ message: "Job not found." });
+            return;
+        }
+
+        // Update job with new values or keep the old ones
+        await job.update({
+            title: title ?? job.title,
+            workplaceType: workplaceType ?? job.workplaceType,
+            jobType: jobType ?? job.jobType,
+            location: location ?? job.location,
+            description: description ?? job.description,
+        });
+
+        res.status(200).json({
+            message: "Job updated successfully.",
+            data: job,
+        });
+    } catch (error: any) {
+        logger.error(error);
+        res.status(500).json({
+            message: "An error occurred while updating the job.",
+        });
+    }
+};
+
+export const getJobById = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const jobId = req.query.jobId as string;
+
+        if (!jobId) {
+            res.status(400).json({ message: "Job ID is required." });
+            return;
+        }
+
+        // Find the job by ID
+        const job = await Job.findByPk(jobId);
+
+        if (!job) {
+            res.status(404).json({ message: "Job not found." });
+            return;
+        }
+
+        res.status(200).json({
+            message: "Job retrieved successfully.",
+            data: job,
+        });
+    } catch (error: any) {
+        logger.error(error);
+        res.status(500).json({
+            message: "An error occurred while retrieving the job.",
+        });
+    }
+};
+
+// CLOSE Job
+export const closeJob = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const jobId = req.query.jobId as string;
+
+        // Find the job
+        const job = await Job.findByPk(jobId);
+
+        if (!job) {
+            res.status(404).json({
+                message: "Job not found in our database.",
+            });
+            return;
+        }
+
+        // Update the job status to 'Closed'
+        job.status = "closed";
+        job.updatedAt = new Date();
+
+        await job.save();
+
+        res.status(200).json({
+            message: "Job closed successfully.",
+            data: job, // Replace with a JobResource equivalent if necessary
+        });
+    } catch (error: any) {
+        logger.error(error);
+        res.status(500).json({
+            message: "An error occurred while closing the job.",
+        });
+    }
+};
+
+// DELETE Job
+export const deleteJob = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const jobId = req.query.jobId as string;
+
+        // Find the job
+        const job = await Job.findByPk(jobId);
+
+        if (!job) {
+            res.status(404).json({
+                message: "Job not found in our database.",
+            });
+            return;
+        }
+
+        if (job.status !== "draft") {
+            res.status(400).json({
+                message: "Only draft jobs can be deleted.",
+            });
+            return;
+        }
+
+        // Delete the job
+        await job.destroy();
+
+        res.status(200).json({
+            message: "Job deleted successfully.",
+        });
+    } catch (error: any) {
+        logger.error(error);
+        res.status(500).json({
+            message: "An error occurred while deleting the job.",
+        });
+    }
+};
+
+export const getJobApplicants = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
+    try {
+        const jobId = req.query.jobId as string;
+
+        const job = await Job.findOne({ where: { id: jobId } });
+
+        if (!job) {
+            res.status(403).json({
+                message: "Job not found.",
+            });
+            return;
+        }
+
+        const applicants = await Applicant.findAll({
+            where: { jobId }
+        });
+
+        res.status(200).json({
+            message: "All applicants retrieved successfully.",
+            data: applicants,
+        });
+    } catch (error: any) {
+        logger.error(error);
+        res.status(500).json({ message: "Server error." });
+    }
+};
+
+export const viewApplicant = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
+    try {
+        const applicantId = req.query.applicantId as string;
+
+        const applicant = await Applicant.findByPk(applicantId, {
+            include: [
+                {
+                    model: Job,
+                    as: "job",
+                },
+            ],
+        });
+        if (!applicant) {
+            res.status(404).json({
+                message: "Not found in our database.",
+            });
+            return;
+        }
+
+        const job = await Job.findByPk(applicant.jobId);
+        if (!job) {
+            res.status(404).json({
+                message: "Job not found.",
+            });
+            return;
+        }
+
+        res.status(200).json({
+            message: "Applicant retrieved successfully.",
+            data: applicant,
+        });
+    } catch (error) {
+        logger.error(error);
+        res.status(500).json({ message: "Server error." });
+    }
+};
+
+export const repostJob = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+        const { jobId } = req.body;
+        
+        const adminId = req.admin?.id;
+
+        const job = await Job.findByPk(jobId);
+
+        if (!job) {
+            res.status(404).json({
+                message: "Job not found in our database.",
+            });
+            return;
+        }
+
+        if (!job.title) {
+            throw new Error("Job title cannot be null.");
+        }
+
+        const repost = await Job.create({
+            creatorId: adminId,
+            title: job.title,
+            slug: `${job.title.toLowerCase().replace(/\s+/g, "-")}-${Math.floor(
+                Math.random() * 10000
+            )}`,
+            company: job.company,
+            logo: job.logo,
+            workplaceType: job.workplaceType,
+            location: job.location,
+            jobType: job.jobType,
+            description: job.description,
+            status: "active",
+        });
+
+        res.status(200).json({
+            message: "Job reposted successfully.",
+            data: repost,
+        });
+    } catch (error) {
+        logger.error(error);
+        res.status(500).json({ message: "Server error." });
+    }
+};
+
+// export const downloadApplicantResume = async (
+//     req: Request,
+//     res: Response
+// ): Promise<void> => {
+//     try {
+//         const { applicantId } = req.body;
+
+//         const applicant = await Applicant.findByPk(applicantId);
+
+//         if (!applicant || !applicant.resume) {
+//             res.status(404).json({
+//                 message: "File damaged or not found.",
+//             });
+//             return;
+//         }
+
+//         const response = await fetch(applicant.resume);
+
+//         if (!response.ok) {
+
+//             if (response.status === 404) {
+//                 res
+//                     .status(404)
+//                     .json({
+//                         message: "Resume file not found. Please update the record.",
+//                     });
+//             } else {
+//                 res.status(500).json({ message: "Failed to download the resume." });
+//             }
+//             return;
+//         }
+
+//         const fileName = path.basename(applicant.resume);
+//         const localPath = path.join(__dirname, "../storage/resumes", fileName);
+
+//         const resumeContent = Buffer.from(await response.arrayBuffer());
+//         fs.writeFileSync(localPath, resumeContent);
+
+//         res.download(localPath, fileName, (err) => {
+//             if (err) {
+//                 logger.error(err);
+//             }
+//             fs.unlinkSync(localPath); // Delete file after download
+//         });
+//     } catch (error) {
+//         logger.error(error);
+//         res.status(500).json({ message: "Server error." });
+//     }
+// };

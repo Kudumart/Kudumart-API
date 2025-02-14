@@ -18,6 +18,7 @@ import {
     auctionProductValidation,
     createAdvertValidation,
     updateAdvertValidation,
+    postJobValidationRules,
     validate,
     updateAuctionProductValidation } from '../utils/validations'; // Import the service
 import checkPermission from '../middlewares/checkPermissionMiddleware';
@@ -180,5 +181,18 @@ adminRoutes.delete("/faq", adminAuthMiddleware, adminController.deleteFaq);
 adminRoutes.get("/contact/us/forms", adminAuthMiddleware, adminController.getAllContacts);
 adminRoutes.get("/contact/us/form",adminAuthMiddleware, adminController.getContactById);
 adminRoutes.delete("/contact/us/form", adminAuthMiddleware, adminController.deleteContactById);
+
+// Job
+adminRoutes.post('/job/post', adminAuthMiddleware, postJobValidationRules(), validate, adminController.postJob);
+adminRoutes.put('/job/update', adminAuthMiddleware, adminController.updateJob);
+adminRoutes.get('/jobs', adminAuthMiddleware, adminController.getJobs);
+adminRoutes.get('/job', adminAuthMiddleware, adminController.getJobById);
+adminRoutes.patch('/job/close', adminAuthMiddleware, adminController.closeJob);
+adminRoutes.delete('/job/delete', adminAuthMiddleware, adminController.deleteJob);
+
+adminRoutes.post('/job/repost', adminAuthMiddleware, adminController.repostJob);
+adminRoutes.get('/job/applicants', adminAuthMiddleware, adminController.getJobApplicants);
+adminRoutes.get('/job/view/applicant', adminAuthMiddleware, adminController.viewApplicant);
+// adminRoutes.post('/job/download/applicant/resume', adminAuthMiddleware, adminController.downloadApplicantResume);
 
 export default adminRoutes; // Export the router

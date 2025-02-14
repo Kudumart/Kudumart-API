@@ -10,7 +10,10 @@ class Currency extends Model {
 
   static associate(models: any) {
     // Define associations here
-
+    this.hasMany(models.Store, {
+      foreignKey: 'currencyId',
+      as: "store"
+    })
   }
 }
 

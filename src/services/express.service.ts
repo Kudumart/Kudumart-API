@@ -11,6 +11,7 @@ import apiRouter from '../routes/authRoute';
 import userRouter from '../routes/userRoute';
 import adminRouter from '../routes/adminRoute';
 import vendorRouter from '../routes/vendorRoute';
+import uploadRouter from '../routes/uploadRoute';
 import logger from '../middlewares/logger';
 
 dotenv.config();
@@ -36,11 +37,15 @@ const createExpressApp = () => {
     app.use(cookieParser());
     app.use(bodyParser.json());
 
+    // Serve uploaded images
+    app.use("/uploads", express.static(path.join(__dirname, "../../uploads")));
+
     // Use your routes
     app.use("/api", apiRouter);
     app.use("/api/user", userRouter);
     app.use("/api/vendor", vendorRouter);
     app.use("/api/admin", adminRouter);
+    app.use("/api/upload", uploadRouter);
 
     // 404 handler (this should come after routes)
     app.use((req, res) => {

@@ -10,6 +10,7 @@ class Advert extends Model {
   public description!: string;
   public media_url!: string;
   public link?: string;
+  public clicks?: string;
   public status?: "pending" | "approved" | "rejected";
   public adminNote?: string;
   public showOnHomepage?: boolean;

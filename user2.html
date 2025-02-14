@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User 2 - Chat</title>
+</head>
+<body>
+    <h2>User 2 - Chat</h2>
+
+    <label>User ID:</label>
+    <input type="text" id="userId" value="fd374dcd-ea9e-42e0-a264-fc05ab4a2463" readonly>
+    
+    <br><br>
+
+    <label>Receiver ID:</label>
+    <input type="text" id="receiverId" value="d76398b3-6c76-429d-a404-45d065f10916" readonly>
+
+    <label>Product ID:</label>
+    <input type="text" id="productId" value="317424ef-970d-4e17-baa0-316f79f7f5c4" placeholder="Enter product ID">
+
+    <label>Message:</label>
+    <input type="text" id="messageContent" value="I am user two" placeholder="Type your message">
+    
+    <button onclick="sendMessage()">Send Message</button>
+
+    <h3>Messages:</h3>
+    <ul id="messages"></ul>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        const SOCKET_SERVER_URL = "http://localhost:3000";
+        const socket = io(SOCKET_SERVER_URL, { transports: ["websocket"] });
+
+        function registerUser() {
+            const userId = document.getElementById("userId").value;
+            socket.emit("register", userId);
+            console.log("Registered user:", userId);
+        }
+
+        function sendMessage() {
+            const userId = document.getElementById("userId").value;
+            const receiverId = document.getElementById("receiverId").value;
+            const productId = document.getElementById("productId").value;
+            const content = document.getElementById("messageContent").value;
+
+            if (!userId || !receiverId || !productId || !content) {
+                alert("Please fill all fields before sending.");
+                return;
+            }
+
+            socket.emit("sendMessage", {
+                productId,
+                userId,
+                receiverId,
+                content,
+                fileUrl: ""
+            });
+
+            console.log(`${document.getElementById("userId").value} sent: ${content}`);
+        }
+
+        socket.on("connect", registerUser);
+
+        socket.on("receiveMessage", (message) => {
+            console.log("Received:", message);
+            const messagesList = document.getElementById("messages");
+            const listItem = document.createElement("li");
+            listItem.textContent = `From ${message.userId}: ${message.content}`;
+            messagesList.appendChild(listItem);
+        });
+
+    </script>
+</body>
+</html>

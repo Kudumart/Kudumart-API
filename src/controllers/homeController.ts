@@ -660,6 +660,64 @@ export const getAdverts = async (req: Request, res: Response): Promise<void> => 
     }
 };
 
+export const viewAdvert = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const advertId = req.query.advertId as string;
+
+        if (!advertId) {
+            res.status(400).json({ message: "Advert ID is required." });
+            return;
+        }
+
+        // Find the advert by ID
+        const advert = await Advert.findOne({
+            where: { id: advertId },
+            include: [
+                {
+                    model: User,
+                    as: "vendor",
+                    attributes: ["id", "firstName", "lastName", "email"],
+                },
+                {
+                    model: Admin,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
+                },
+                {
+                    model: SubCategory,
+                    as: "sub_category",
+                    attributes: ["id", "name"],
+                },
+                {
+                    model: Product,
+                    as: "product",
+                    attributes: ["id", "name"],
+                },
+            ],
+        });
+
+        if (!advert) {
+            res.status(404).json({ message: "Advert not found." });
+            return;
+        }
+
+        // Increment the `clicks` field by 1
+        await Advert.update(
+            { clicks: Sequelize.literal("clicks + 1") },
+            { where: { id: advertId } }
+        );
+
+        res.status(200).json({
+            message: "Advert retrieved successfully.",
+            data: advert,
+        });
+    } catch (error) {
+        logger.error("Error viewing advert:", error);
+        res.status(500).json({ message: "Failed to retrieve advert." });
+    }
+};
+
+
 // Get all testimonials
 export const getAllTestimonials = async (req: Request, res: Response): Promise<void> => {
     try {

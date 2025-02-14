@@ -954,6 +954,62 @@ export const updateAdvertValidation = () => {
   ];
 };
 
+export const postJobValidationRules = () => {
+  return [
+    check("title")
+      .not()
+      .isEmpty()
+      .withMessage("Title is required")
+      .isString()
+      .withMessage("Title must be a valid string"),
+
+    // check("company")
+    //   .not()
+    //   .isEmpty()
+    //   .withMessage("Company name is required")
+    //   .isString()
+    //   .withMessage("Company name must be a valid string"),
+
+    // check("logo")
+    //   .not()
+    //   .isEmpty()
+    //   .withMessage("Logo is required")
+    //   .isURL()
+    //   .withMessage("Logo must be a valid URL"),
+
+    check("workplaceType")
+      .not()
+      .isEmpty()
+      .withMessage("Workplace type is required")
+      .isIn(["remote", "on-site", "hybrid"])
+      .withMessage("Workplace type must be one of: Remote, On-site, Hybrid"),
+
+    check("location")
+      .not()
+      .isEmpty()
+      .withMessage("Location is required")
+      .isString()
+      .withMessage("Location must be a valid string"),
+
+    check("jobType")
+      .not()
+      .isEmpty()
+      .withMessage("Job type is required")
+      .isString()
+      .withMessage("Job type must be a valid string"),
+
+    check("description")
+      .not()
+      .isEmpty()
+      .withMessage("Description is required")
+      .isString()
+      .withMessage("Description must be a valid string")
+      .isLength({ min: 10 })
+      .withMessage("Description must contain at least 10 characters"),
+  ];
+};
+
+
 // Middleware to handle validation errors, sending only the first error
 export const validate = (
   req: Request,

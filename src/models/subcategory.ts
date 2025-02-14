@@ -14,6 +14,14 @@ class SubCategory extends Model {
       foreignKey: 'categoryId',
       as: 'category',
     });
+    this.hasMany(models.Product, {
+      foreignKey: 'categoryId',
+      as: "products"
+    });
+    this.hasMany(models.AuctionProduct, {
+      foreignKey: 'categoryId',
+      as: "auctionProducts"
+    });
   }
 }
 

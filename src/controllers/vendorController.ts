@@ -27,6 +27,8 @@ import Advert from "../models/advert";
 import BankInformation from "../models/bankinformation";
 import Cart from "../models/cart";
 import sequelizeService from "../services/sequelize.service";
+import SaveProduct from "../models/saveproduct";
+import ReviewProduct from "../models/reviewproduct";
 
 export const submitOrUpdateKYC = async (
     req: Request,
@@ -306,6 +308,23 @@ export const deleteStore = async (
             return;
         }
 
+        const relatedTables: { name: string; model: typeof AuctionProduct | typeof Product; field: string }[] = [
+            { name: "auction_products", model: AuctionProduct, field: "storeId" },
+            { name: "products", model: Product, field: "storeId" }
+        ];
+
+        // Check each related table
+        for (const table of relatedTables) {
+            const count = await (table.model as typeof AuctionProduct).count({
+                where: { [table.field]: store.id }
+            });
+
+            if (count > 0) {
+                res.status(400).json({ message: `Cannot delete store because related records exist in ${table.name}` });
+                return;
+            }
+        }
+
         await store.destroy();
         res.status(200).json({ message: "Store deleted successfully" });
     } catch (error) {
@@ -464,6 +483,24 @@ export const deleteProduct = async (
         if (!product) {
             res.status(404).json({ message: "Product not found." });
             return;
+        }
+
+        const relatedTables: { name: string; model: typeof SaveProduct | typeof ReviewProduct | typeof Cart; field: string }[] = [
+            { name: "save_products", model: SaveProduct, field: "productId" },
+            { name: "review_products", model: ReviewProduct, field: "productId" },
+            { name: "carts", model: Cart, field: "productId" }
+        ];
+
+        // Check each related table
+        for (const table of relatedTables) {
+            const count = await (table.model as typeof SaveProduct).count({
+                where: { [table.field]: product.id }
+            });
+
+            if (count > 0) {
+                res.status(400).json({ message: `Cannot delete product because related records exist in ${table.name}` });
+                return;
+            }
         }
 
         await product.destroy();
@@ -931,6 +968,22 @@ export const deleteAuctionProduct = async (
                 message: "Auction product already has bids, cannot be deleted.",
             });
             return;
+        }
+
+        const relatedTables: { name: string; model: typeof Bid; field: string }[] = [
+            { name: "bids", model: Bid, field: "auctionProductId" },
+        ];
+
+        // Check each related table
+        for (const table of relatedTables) {
+            const count = await (table.model as typeof Bid).count({
+                where: { [table.field]: auctionProduct.id }
+            });
+
+            if (count > 0) {
+                res.status(400).json({ message: `Cannot delete auction product because related records exist in ${table.name}` });
+                return;
+            }
         }
 
         // Delete the auction product

@@ -1,10 +1,13 @@
 // models/FaqCategory.ts
 import { Model, DataTypes, Sequelize } from "sequelize";
+import Faq from "./faq";
 
 class FaqCategory extends Model {
   public name!: string;
   public updatedAt!: Date;
   public deletedAt!: Date | null;
+
+  public faqs!: Faq;
 
   // Association with User model
   static associate(models: any) {

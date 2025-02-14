@@ -42,6 +42,7 @@ authRoutes.get("/auction/products", homeController.getUpcomingAuctionProducts);
 authRoutes.get('/auction/product', homeController.getAuctionProductById); // Fetch a single product by ID
 
 authRoutes.get('/adverts', homeController.getAdverts);
+authRoutes.get('/advert', homeController.viewAdvert);
 
 authRoutes.get("/testimonials", homeController.getAllTestimonials); // Get all testimonials
 
