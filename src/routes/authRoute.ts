@@ -50,4 +50,8 @@ authRoutes.get("/faq/categories/with/faqs", homeController.getFaqCategoryWithFaq
 
 authRoutes.post("/submit/contact/form", homeController.submitContactForm); // Get all testimonials
 
+authRoutes.get("/fetch/jobs", homeController.fetchJobs);
+authRoutes.get("/view/job", homeController.viewJob);
+authRoutes.post('/apply/job', homeController.applyJob);
+
 export default authRoutes; // Export the router

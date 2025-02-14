@@ -73,8 +73,12 @@ authRoutes.get('/store/products', homeController.getStoreProducts); // Fetch a s
 authRoutes.get("/auction/products", homeController.getUpcomingAuctionProducts);
 authRoutes.get('/auction/product', homeController.getAuctionProductById); // Fetch a single product by ID
 authRoutes.get('/adverts', homeController.getAdverts);
+authRoutes.get('/advert', homeController.viewAdvert);
 authRoutes.get("/testimonials", homeController.getAllTestimonials); // Get all testimonials
 authRoutes.get("/faq/categories/with/faqs", homeController.getFaqCategoryWithFaqs);
 authRoutes.post("/submit/contact/form", homeController.submitContactForm); // Get all testimonials
+authRoutes.get("/fetch/jobs", homeController.fetchJobs);
+authRoutes.get("/view/job", homeController.viewJob);
+authRoutes.post('/apply/job', homeController.applyJob);
 exports.default = authRoutes; // Export the router
 //# sourceMappingURL=authRoute.js.map

@@ -12,7 +12,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.submitContactForm = exports.getFaqCategoryWithFaqs = exports.getAllTestimonials = exports.getAdverts = exports.getAuctionProductById = exports.getUpcomingAuctionProducts = exports.getStoreProducts = exports.getAllStores = exports.getProductById = exports.products = exports.getCategoriesWithSubcategories = exports.getCategorySubCategories = exports.getAllCategories = void 0;
+exports.applyJob = exports.viewJob = exports.fetchJobs = exports.submitContactForm = exports.getFaqCategoryWithFaqs = exports.getAllTestimonials = exports.viewAdvert = exports.getAdverts = exports.getAuctionProductById = exports.getUpcomingAuctionProducts = exports.getStoreProducts = exports.getAllStores = exports.getProductById = exports.products = exports.getCategoriesWithSubcategories = exports.getCategorySubCategories = exports.getAllCategories = void 0;
+const mail_service_1 = require("../services/mail.service");
+const messages_1 = require("../utils/messages");
 const logger_1 = __importDefault(require("../middlewares/logger")); // Adjust the path to your logger.js
 const product_1 = __importDefault(require("../models/product"));
 const sequelize_1 = require("sequelize");
@@ -31,6 +33,9 @@ const faqcategory_1 = __importDefault(require("../models/faqcategory"));
 const faq_1 = __importDefault(require("../models/faq"));
 const contact_1 = __importDefault(require("../models/contact"));
 const reviewproduct_1 = __importDefault(require("../models/reviewproduct"));
+const job_1 = __importDefault(require("../models/job"));
+const sequelize_service_1 = __importDefault(require("../services/sequelize.service"));
+const applicant_1 = __importDefault(require("../models/applicant"));
 const getAllCategories = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const categories = yield category_1.default.findAll();
@@ -606,6 +611,56 @@ const getAdverts = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     }
 });
 exports.getAdverts = getAdverts;
+const viewAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const advertId = req.query.advertId;
+        if (!advertId) {
+            res.status(400).json({ message: "Advert ID is required." });
+            return;
+        }
+        // Find the advert by ID
+        const advert = yield advert_1.default.findOne({
+            where: { id: advertId },
+            include: [
+                {
+                    model: user_1.default,
+                    as: "vendor",
+                    attributes: ["id", "firstName", "lastName", "email"],
+                },
+                {
+                    model: admin_1.default,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
+                },
+                {
+                    model: subcategory_1.default,
+                    as: "sub_category",
+                    attributes: ["id", "name"],
+                },
+                {
+                    model: product_1.default,
+                    as: "product",
+                    attributes: ["id", "name"],
+                },
+            ],
+        });
+        if (!advert) {
+            res.status(404).json({ message: "Advert not found." });
+            return;
+        }
+        // Increment the `clicks` field by 1
+        yield advert_1.default.update({ clicks: sequelize_1.Sequelize.literal("clicks + 1") }, { where: { id: advertId } });
+        res.status(200).json({
+            message: "Advert retrieved successfully.",
+            data: advert,
+        });
+    }
+    catch (error) {
+        logger_1.default.error("Error viewing advert:", error);
+        res.status(500).json({ message: "Failed to retrieve advert." });
+    }
+});
+exports.viewAdvert = viewAdvert;
 // Get all testimonials
 const getAllTestimonials = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -665,4 +720,98 @@ const submitContactForm = (req, res) => __awaiter(void 0, void 0, void 0, functi
     }
 });
 exports.submitContactForm = submitContactForm;
+const fetchJobs = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { keyword, limit } = req.query;
+        const jobLimit = limit ? parseInt(limit, 10) || 20 : 20;
+        const jobs = yield (0, helpers_1.getJobsBySearch)(keyword, jobLimit);
+        res.status(200).json({
+            message: 'All jobs retrieved successfully.',
+            data: jobs,
+        });
+    }
+    catch (error) {
+        logger_1.default.error(error);
+        res.status(500).json({ message: error.message });
+    }
+});
+exports.fetchJobs = fetchJobs;
+const viewJob = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const jobId = req.query.jobId;
+        const job = yield job_1.default.findByPk(jobId);
+        if (!job) {
+            res.status(404).json({
+                message: 'Not found in our database.',
+            });
+            return;
+        }
+        // Ensure `views` is not null before incrementing
+        job.views = ((_a = job.views) !== null && _a !== void 0 ? _a : 0) + 1;
+        yield job.save();
+        res.status(200).json({
+            message: 'Job retrieved successfully.',
+            data: job,
+        });
+    }
+    catch (error) {
+        logger_1.default.error(error);
+        res.status(500).json({ message: error.message });
+    }
+});
+exports.viewJob = viewJob;
+const applyJob = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    // Start transaction
+    const transaction = yield sequelize_service_1.default.connection.transaction();
+    try {
+        const { jobId, name, emailAddress, phoneNumber, resumeType, resume } = req.body;
+        // Validation: Ensure resumeType is required and must be "pdf"
+        if (!resumeType || resumeType.toLowerCase() !== "pdf") {
+            res.status(400).json({ message: "Invalid resume type. Only PDF is allowed." });
+            return;
+        }
+        const job = yield job_1.default.findByPk(jobId);
+        if (!job) {
+            res.status(404).json({ message: 'Job not found in our database.' });
+            return;
+        }
+        const existingApplication = yield applicant_1.default.findOne({ where: { emailAddress, jobId } });
+        if (existingApplication) {
+            res.status(400).json({ message: 'You have already applied for this job.' });
+            return;
+        }
+        const status = job.status === 'active' ? 'applied' : 'in-progress';
+        const application = yield applicant_1.default.create({
+            jobId,
+            name,
+            emailAddress,
+            phoneNumber,
+            resumeType,
+            resume,
+            status,
+        }, { transaction });
+        const jobOwner = yield admin_1.default.findByPk(job.creatorId);
+        if (!jobOwner) {
+            throw new Error('User or job owner not found.');
+        }
+        // Prepare emails
+        const applicantMessage = messages_1.emailTemplates.applicantNotify(job, application);
+        const jobOwnerMessage = messages_1.emailTemplates.jobOwnerMailData(job, jobOwner, application);
+        // Send emails
+        yield (0, mail_service_1.sendMail)(emailAddress, `${process.env.APP_NAME} - Application Confirmation`, applicantMessage);
+        yield (0, mail_service_1.sendMail)(jobOwner.email, `${process.env.APP_NAME} - New Job Application Received`, jobOwnerMessage);
+        yield transaction.commit();
+        res.status(200).json({
+            message: `Your application has been successfully sent to ${process.env.APP_NAME}.`,
+            data: application,
+        });
+    }
+    catch (error) {
+        yield transaction.rollback();
+        logger_1.default.error('Error in applyJob:', error);
+        res.status(500).json({ message: "Error in applying job." });
+    }
+});
+exports.applyJob = applyJob;
 //# sourceMappingURL=homeController.js.map

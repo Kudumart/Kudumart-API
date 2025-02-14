@@ -26,8 +26,18 @@ class Product extends sequelize_1.Model {
             foreignKey: 'categoryId',
             onDelete: 'RESTRICT'
         });
+        this.hasMany(models.SaveProduct, {
+            as: 'savedProducts',
+            foreignKey: 'productId',
+            onDelete: 'RESTRICT'
+        });
         this.hasMany(models.ReviewProduct, {
             as: 'reviews',
+            foreignKey: 'productId',
+            onDelete: 'RESTRICT'
+        });
+        this.hasMany(models.Cart, {
+            as: 'carts',
             foreignKey: 'productId',
             onDelete: 'RESTRICT'
         });

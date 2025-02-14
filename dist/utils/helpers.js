@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateUniquePhoneNumber = exports.hasPurchasedProduct = exports.shuffleArray = exports.verifyPayment = exports.checkAdvertLimit = exports.checkVendorAuctionProductLimit = exports.checkVendorProductLimit = exports.fetchAdminWithPermissions = exports.sendSMS = exports.generateOTP = void 0;
+exports.getJobsBySearch = exports.generateUniquePhoneNumber = exports.hasPurchasedProduct = exports.shuffleArray = exports.verifyPayment = exports.checkAdvertLimit = exports.checkVendorAuctionProductLimit = exports.checkVendorProductLimit = exports.fetchAdminWithPermissions = exports.sendSMS = exports.generateOTP = void 0;
 exports.capitalizeFirstLetter = capitalizeFirstLetter;
 // utils/helpers.ts
 const http_1 = __importDefault(require("http"));
@@ -29,6 +29,7 @@ const auctionproduct_1 = __importDefault(require("../models/auctionproduct"));
 const advert_1 = __importDefault(require("../models/advert"));
 const orderitem_1 = __importDefault(require("../models/orderitem"));
 const user_1 = __importDefault(require("../models/user"));
+const job_1 = __importDefault(require("../models/job"));
 // Function to generate a 6-digit OTP
 const generateOTP = () => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
@@ -283,4 +284,22 @@ const generateUniquePhoneNumber = () => __awaiter(void 0, void 0, void 0, functi
     return phoneNumber;
 });
 exports.generateUniquePhoneNumber = generateUniquePhoneNumber;
+const getJobsBySearch = (searchTerm, number) => __awaiter(void 0, void 0, void 0, function* () {
+    const where = { status: 'active' };
+    if (searchTerm) {
+        const searchRegex = { [sequelize_1.Op.iLike]: `%${searchTerm}%` }; // Use Sequelize's Op.iLike for case-insensitive search.
+        where[sequelize_1.Op.or] = [
+            { title: searchRegex },
+            { workplace_type: searchRegex },
+            { job_type: searchRegex },
+            { location: searchRegex },
+        ];
+    }
+    return yield job_1.default.findAll({
+        where,
+        order: [['createdAt', 'DESC']], // Sort by createdAt in descending order.
+        limit: number, // Limit the number of results.
+    });
+});
+exports.getJobsBySearch = getJobsBySearch;
 //# sourceMappingURL=helpers.js.map

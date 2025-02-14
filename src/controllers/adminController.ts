@@ -37,17 +37,22 @@ import Cart from "../models/cart";
 import Testimonial from "../models/testimonial";
 import FaqCategory from "../models/faqcategory";
 import Faq from "../models/faq";
-import Contact  from "../models/contact"; // Adjust the path as needed
+import Contact from "../models/contact"; // Adjust the path as needed
 import SaveProduct from "../models/saveproduct";
 import ReviewProduct from "../models/reviewproduct";
 import Job from "../models/job";
 import Applicant from "../models/applicant";
+import path from "path";
+import fs from "fs";
 
 // Extend the Express Request interface to include adminId and admin
 interface AuthenticatedRequest extends Request {
     adminId?: string;
     admin?: Admin; // This is the instance type of the Admin model
 }
+
+// Define the upload directory
+const uploadDir = path.join(__dirname, "../../uploads");
 
 export const logout = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -876,7 +881,7 @@ export const updateSubscriptionPlan = async (
         plan.allowsAuction = allowsAuction;
         plan.auctionProductLimit = auctionProductLimit;
         plan.maxAds = maxAds;
-        plan.adsDurationDays =adsDurationDays; 
+        plan.adsDurationDays = adsDurationDays;
         await plan.save();
 
         res.status(200).json({ message: "Subscription plan updated successfully" });
@@ -2267,46 +2272,46 @@ export const unpublishProduct = async (req: Request, res: Response): Promise<voi
     const productId = req.query.productId as string;
 
     try {
-      // Find the product by ID
-      const product = await Product.findByPk(productId, { include: [{ model: User, as: "vendor" }] });
-      if (!product) {
-        res.status(404).json({ message: "Product not found" });
-        return;
-      }
-  
-      // Check if the product is already unpublished
-      if (product.status === 'inactive') {
-        res.status(400).json({ message: "Product is already unpublished" });
-        return;
-      }
-  
-      // Update product status to inactive
-      product.status = 'inactive';
-      await product.save();
+        // Find the product by ID
+        const product = await Product.findByPk(productId, { include: [{ model: User, as: "vendor" }] });
+        if (!product) {
+            res.status(404).json({ message: "Product not found" });
+            return;
+        }
 
-      // Remove the product from all carts
-      await Cart.destroy({ where: { productId } });
-  
-      // Notify the vendor
-      const notificationTitle = "Product Unpublished";
-      const notificationMessage = `Your product "${product.name}" has been unpublished by an admin. Please review your listing.`;
-      const notificationType = "product_unpublished";
-  
-      await Notification.create({
-        userId: product.vendorId,
-        title: notificationTitle,
-        message: notificationMessage,
-        type: notificationType,
-      });
-  
-      res.status(200).json({ message: "Product unpublished successfully" });
-  
+        // Check if the product is already unpublished
+        if (product.status === 'inactive') {
+            res.status(400).json({ message: "Product is already unpublished" });
+            return;
+        }
+
+        // Update product status to inactive
+        product.status = 'inactive';
+        await product.save();
+
+        // Remove the product from all carts
+        await Cart.destroy({ where: { productId } });
+
+        // Notify the vendor
+        const notificationTitle = "Product Unpublished";
+        const notificationMessage = `Your product "${product.name}" has been unpublished by an admin. Please review your listing.`;
+        const notificationType = "product_unpublished";
+
+        await Notification.create({
+            userId: product.vendorId,
+            title: notificationTitle,
+            message: notificationMessage,
+            type: notificationType,
+        });
+
+        res.status(200).json({ message: "Product unpublished successfully" });
+
     } catch (error: any) {
-      logger.error("Error unpublishing product:", error);
-      res.status(500).json({ message: "Server error" });
+        logger.error("Error unpublishing product:", error);
+        res.status(500).json({ message: "Server error" });
     }
 };
-  
+
 export const publishProduct = async (req: Request, res: Response): Promise<void> => {
     const productId = req.query.productId as string;
 
@@ -3195,7 +3200,7 @@ export const fetchProducts = async (
     res: Response
 ): Promise<void> => {
     const adminId = req.admin?.id;
-    
+
     const { name, sku, status, condition, categoryName } = req.query;
 
     try {
@@ -3942,7 +3947,7 @@ export const createAdvert = async (req: AuthenticatedRequest, res: Response): Pr
             return;
         }
 
-        if(productId) {
+        if (productId) {
             const productExists = await Product.findByPk(productId);
 
             if (!productExists) {
@@ -3988,7 +3993,7 @@ export const updateAdvert = async (req: Request, res: Response): Promise<void> =
             return;
         }
 
-        if(productId) {
+        if (productId) {
             const productExists = await Product.findByPk(productId);
 
             if (!productExists) {
@@ -4098,7 +4103,7 @@ export const viewAdvert = async (req: Request, res: Response): Promise<void> => 
     try {
         const advert = await Advert.findByPk(advertId, {
             include: [
-                { model: Product, as: "product"},
+                { model: Product, as: "product" },
                 { model: SubCategory, as: "sub_category" },
             ],
         });
@@ -4232,7 +4237,7 @@ export const viewGeneralAdvert = async (req: Request, res: Response): Promise<vo
                     as: "admin",
                     attributes: ["id", "name", "email"],
                 },
-                { model: Product, as: "product"},
+                { model: Product, as: "product" },
                 { model: SubCategory, as: "sub_category" },
             ],
         });
@@ -4294,7 +4299,7 @@ export const approveOrRejectAdvert = async (req: Request, res: Response): Promis
         await Notification.create({
             userId: advert.userId, // Notify the advert owner
             title: `Your advert has been ${status}`,
-            message: status === "approved" 
+            message: status === "approved"
                 ? "Your advert has been approved and is now live."
                 : `Your advert was rejected. Reason: ${adminNote}`,
             type: "advert_status",
@@ -4597,8 +4602,10 @@ export const createFaq = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        const newFaq = await Faq.create({ faqCategoryId: 
-            categoryId, question, answer });
+        const newFaq = await Faq.create({
+            faqCategoryId:
+                categoryId, question, answer
+        });
 
         res.status(200).json({ message: "FAQ created successfully", data: newFaq });
 
@@ -4652,8 +4659,10 @@ export const updateFaq = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        await faq.update({ faqCategoryId: 
-            categoryId, question, answer });
+        await faq.update({
+            faqCategoryId:
+                categoryId, question, answer
+        });
 
         res.status(200).json({ message: "FAQ updated successfully", data: faq });
 
@@ -4820,12 +4829,28 @@ export const getJobs = async (req: Request, res: Response): Promise<void> => {
                 ...(status && { status: { [Op.eq]: status } }), // Optional filtering by status
                 ...(title && { title: { [Op.like]: `%${title}%` } }), // Optional filtering by title (partial match)
             },
+            attributes: {
+                include: [
+                    [
+                        Sequelize.fn("COUNT", Sequelize.col("Applicants.id")),
+                        "applicantCount"
+                    ],
+                ],
+            },
+            include: [
+                {
+                    model: Applicant,
+                    as: "applicants",
+                    attributes: [], // We don't need applicant details, just the count
+                },
+            ],
+            group: ["Job.id"], // Group by job ID to avoid duplicate rows
             order: [["createdAt", "DESC"]],
         });
 
         res.status(200).json({
             message: "Jobs retrieved successfully.",
-            data: jobs, // Include a JobResource equivalent if needed
+            data: jobs,
         });
     } catch (error: any) {
         logger.error(error);
@@ -4956,14 +4981,27 @@ export const deleteJob = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        // Delete the job
-        await job.destroy();
+        // Start transaction to ensure both deletions happen together
+        const transaction = await sequelizeService.connection!.transaction();
 
-        res.status(200).json({
-            message: "Job deleted successfully.",
-        });
+        try {
+            // Delete all applicants related to this job
+            await Applicant.destroy({ where: { jobId }, transaction });
+
+            // Delete the job
+            await job.destroy({ transaction });
+
+            await transaction.commit(); // Commit changes
+
+            res.status(200).json({
+                message: "Job and related applicants deleted successfully.",
+            });
+        } catch (error) {
+            await transaction.rollback(); // Revert changes if an error occurs
+            throw error;
+        }
     } catch (error: any) {
-        logger.error(error);
+        logger.error("Error deleting job:", error);
         res.status(500).json({
             message: "An error occurred while deleting the job.",
         });
@@ -5043,7 +5081,7 @@ export const viewApplicant = async (
 export const repostJob = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
         const { jobId } = req.body;
-        
+
         const adminId = req.admin?.id;
 
         const job = await Job.findByPk(jobId);
@@ -5084,52 +5122,57 @@ export const repostJob = async (req: AuthenticatedRequest, res: Response): Promi
     }
 };
 
-// export const downloadApplicantResume = async (
-//     req: Request,
-//     res: Response
-// ): Promise<void> => {
-//     try {
-//         const { applicantId } = req.body;
+export const downloadApplicantResume = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
+    try {
+        const applicantId = req.query.applicantId as string;
 
-//         const applicant = await Applicant.findByPk(applicantId);
+        const applicant = await Applicant.findByPk(applicantId);
 
-//         if (!applicant || !applicant.resume) {
-//             res.status(404).json({
-//                 message: "File damaged or not found.",
-//             });
-//             return;
-//         }
+        if (!applicant || !applicant.resume) {
+            res.status(404).json({
+                message: "File damaged or not found.",
+            });
+            return;
+        }
 
-//         const response = await fetch(applicant.resume);
+        const filename = applicant.resume;
 
-//         if (!response.ok) {
+        if (!filename) {
+            res.status(400).json({ message: "Filename is required" });
+            return;
+        }
 
-//             if (response.status === 404) {
-//                 res
-//                     .status(404)
-//                     .json({
-//                         message: "Resume file not found. Please update the record.",
-//                     });
-//             } else {
-//                 res.status(500).json({ message: "Failed to download the resume." });
-//             }
-//             return;
-//         }
+        const storedFilename = applicant.resume; // The file stored in DB
+        const applicantName = applicant.name.replace(/\s+/g, "_"); // Convert name to safe format (replace spaces)
 
-//         const fileName = path.basename(applicant.resume);
-//         const localPath = path.join(__dirname, "../storage/resumes", fileName);
+        if (!storedFilename) {
+            res.status(400).json({ message: "Filename is required" });
+            return;
+        }
 
-//         const resumeContent = Buffer.from(await response.arrayBuffer());
-//         fs.writeFileSync(localPath, resumeContent);
+        const cleanFilename = path.basename(filename);
+        const filePath = path.join(uploadDir, cleanFilename);
 
-//         res.download(localPath, fileName, (err) => {
-//             if (err) {
-//                 logger.error(err);
-//             }
-//             fs.unlinkSync(localPath); // Delete file after download
-//         });
-//     } catch (error) {
-//         logger.error(error);
-//         res.status(500).json({ message: "Server error." });
-//     }
-// };
+        // Check if the file exists
+        if (!fs.existsSync(filePath)) {
+            res.status(404).json({ message: "File not found" });
+            return;
+        }
+
+        // Rename file when sending for download
+        const newFilename = `${applicantName}_Resume.pdf`;
+
+        res.download(filePath, newFilename, (err) => {
+            if (err) {
+                logger.error("Error downloading file:", err);
+                res.status(500).json({ message: "Error downloading file" });
+            }
+        });
+    } catch (error) {
+        logger.error("Error in downloadFile:", error);
+        res.status(500).json({ message: "An error occurred while downloading the file" });
+    }
+};

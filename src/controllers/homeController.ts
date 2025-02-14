@@ -11,7 +11,7 @@ import Category from "../models/category";
 import User from "../models/user";
 import Store from "../models/store";
 import KYC from "../models/kyc";
-import { shuffleArray } from "../utils/helpers";
+import { shuffleArray, getJobsBySearch } from "../utils/helpers";
 import AuctionProduct from "../models/auctionproduct";
 import Currency from "../models/currency";
 import Admin from "../models/admin";
@@ -21,6 +21,9 @@ import FaqCategory from "../models/faqcategory";
 import Faq from "../models/faq";
 import Contact from "../models/contact";
 import ReviewProduct from "../models/reviewproduct";
+import Job from "../models/job";
+import sequelizeService from "../services/sequelize.service";
+import Applicant from "../models/applicant";
 
 export const getAllCategories = async (
     req: Request,
@@ -117,7 +120,7 @@ export const products = async (req: Request, res: Response): Promise<void> => {
                 { name: { [Op.like]: `%${normalizedName}%` } } // Use LIKE query for product name search
             ];
         }
-        
+
         if (condition) {
             whereClause.condition = condition; // Filter by product condition
         }
@@ -166,8 +169,8 @@ export const products = async (req: Request, res: Response): Promise<void> => {
 
         // Determine sorting order dynamically
         const orderClause: Order = popular === "true"
-        ? [["views", "DESC"], [Sequelize.literal("RAND()"), "ASC"]] // Sort by views first, then randomize
-        : [[Sequelize.literal("RAND()"), "ASC"]]; // Default random sorting
+            ? [["views", "DESC"], [Sequelize.literal("RAND()"), "ASC"]] // Sort by views first, then randomize
+            : [[Sequelize.literal("RAND()"), "ASC"]]; // Default random sorting
 
         // Fetch active products with subcategory details
         const products = await Product.findAll({
@@ -233,10 +236,10 @@ export const getProductById = async (
                     model: ReviewProduct,
                     as: "reviews",
                     include: [
-                        { 
-                          model: User, 
-                          as: "user",
-                          attributes: ["id", "firstName", "lastName", "email"] 
+                        {
+                            model: User,
+                            as: "user",
+                            attributes: ["id", "firstName", "lastName", "email"]
                         }
                     ],
                 }
@@ -260,8 +263,8 @@ export const getProductById = async (
         // ✅ Calculate Review Rating
         const reviews: ReviewProduct[] = Array.isArray(product.reviews) ? product.reviews : [];
         const totalReviews = reviews.length;
-        const averageRating = totalReviews > 0 
-            ? (reviews.reduce((sum, review) => sum + Number(review.rating) || 0, 0) / totalReviews).toFixed(1) 
+        const averageRating = totalReviews > 0
+            ? (reviews.reduce((sum, review) => sum + Number(review.rating) || 0, 0) / totalReviews).toFixed(1)
             : "0.0";
 
         // Attach review data to the product
@@ -599,7 +602,7 @@ export const getAdverts = async (req: Request, res: Response): Promise<void> => 
             searchCondition[Op.or] = [
                 { title: { [Op.like]: `%${search}%` } }, // Search in advert title
                 { categoryId: { [Op.like]: `%${search}%` } },
-                { productId: { [Op.like]: `%${search}%` } },          
+                { productId: { [Op.like]: `%${search}%` } },
                 { "$sub_category.name$": { [Op.like]: `%${search}%` } }, // Search in category name
                 { "$product.name$": { [Op.like]: `%${search}%` } }, // Search in product name
             ];
@@ -778,5 +781,108 @@ export const submitContactForm = async (req: Request, res: Response): Promise<vo
         res.status(500).json({
             message: "An error occurred while submitting the contact form.",
         });
+    }
+};
+
+export const fetchJobs = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { keyword, limit } = req.query;
+        const jobLimit = limit ? parseInt(limit as string, 10) || 20 : 20;
+        const jobs = await getJobsBySearch(keyword as string, jobLimit);
+
+        res.status(200).json({
+            message: 'All jobs retrieved successfully.',
+            data: jobs,
+        });
+    } catch (error: any) {
+        logger.error(error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+export const viewJob = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const jobId = req.query.jobId as string;
+
+        const job = await Job.findByPk(jobId);
+        if (!job) {
+            res.status(404).json({
+                message: 'Not found in our database.',
+            });
+            return;
+        }
+
+        // Ensure `views` is not null before incrementing
+        job.views = (job.views ?? 0) + 1;
+        await job.save();
+
+        res.status(200).json({
+            message: 'Job retrieved successfully.',
+            data: job,
+        });
+    } catch (error: any) {
+        logger.error(error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+export const applyJob = async (req: Request, res: Response): Promise<void> => {
+    // Start transaction
+    const transaction = await sequelizeService.connection!.transaction();
+
+    try {
+        const { jobId, name, emailAddress, phoneNumber, resumeType, resume } = req.body;
+
+        // Validation: Ensure resumeType is required and must be "pdf"
+        if (!resumeType || resumeType.toLowerCase() !== "pdf") {
+            res.status(400).json({ message: "Invalid resume type. Only PDF is allowed." });
+            return;
+        }
+
+        const job = await Job.findByPk(jobId);
+        if (!job) {
+            res.status(404).json({ message: 'Job not found in our database.' });
+            return;
+        }
+
+        const existingApplication = await Applicant.findOne({ where: { emailAddress, jobId } });
+        if (existingApplication) {
+            res.status(400).json({ message: 'You have already applied for this job.' });
+            return;
+        }
+
+        const status = job.status === 'active' ? 'applied' : 'in-progress';
+        const application = await Applicant.create({
+            jobId,
+            name,
+            emailAddress,
+            phoneNumber,
+            resumeType,
+            resume,
+            status,
+        }, { transaction });
+
+        const jobOwner = await Admin.findByPk(job.creatorId);
+        if (!jobOwner) {
+            throw new Error('User or job owner not found.');
+        }
+
+        // Prepare emails
+        const applicantMessage = emailTemplates.applicantNotify(job, application);
+        const jobOwnerMessage = emailTemplates.jobOwnerMailData(job, jobOwner, application);
+
+        // Send emails
+        await sendMail(emailAddress, `${process.env.APP_NAME} - Application Confirmation`, applicantMessage);
+        await sendMail(jobOwner.email, `${process.env.APP_NAME} - New Job Application Received`, jobOwnerMessage);
+
+        await transaction.commit();
+        res.status(200).json({
+            message: `Your application has been successfully sent to ${process.env.APP_NAME}.`,
+            data: application,
+        });
+    } catch (error: any) {
+        await transaction.rollback();
+        logger.error('Error in applyJob:', error);
+        res.status(500).json({ message: "Error in applying job." });
     }
 };

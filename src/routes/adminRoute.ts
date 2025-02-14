@@ -193,6 +193,6 @@ adminRoutes.delete('/job/delete', adminAuthMiddleware, adminController.deleteJob
 adminRoutes.post('/job/repost', adminAuthMiddleware, adminController.repostJob);
 adminRoutes.get('/job/applicants', adminAuthMiddleware, adminController.getJobApplicants);
 adminRoutes.get('/job/view/applicant', adminAuthMiddleware, adminController.viewApplicant);
-// adminRoutes.post('/job/download/applicant/resume', adminAuthMiddleware, adminController.downloadApplicantResume);
+adminRoutes.get('/job/download/applicant/resume', adminController.downloadApplicantResume);
 
 export default adminRoutes; // Export the router

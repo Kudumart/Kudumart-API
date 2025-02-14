@@ -16,6 +16,7 @@ const authRoute_1 = __importDefault(require("../routes/authRoute"));
 const userRoute_1 = __importDefault(require("../routes/userRoute"));
 const adminRoute_1 = __importDefault(require("../routes/adminRoute"));
 const vendorRoute_1 = __importDefault(require("../routes/vendorRoute"));
+const uploadRoute_1 = __importDefault(require("../routes/uploadRoute"));
 const logger_1 = __importDefault(require("../middlewares/logger"));
 dotenv_1.default.config();
 const createExpressApp = () => {
@@ -34,11 +35,14 @@ const createExpressApp = () => {
     app.use((0, compression_1.default)());
     app.use((0, cookie_parser_1.default)());
     app.use(body_parser_1.default.json());
+    // Serve uploaded images
+    app.use("/uploads", express_1.default.static(path_1.default.join(__dirname, "../../uploads")));
     // Use your routes
     app.use("/api", authRoute_1.default);
     app.use("/api/user", userRoute_1.default);
     app.use("/api/vendor", vendorRoute_1.default);
     app.use("/api/admin", adminRoute_1.default);
+    app.use("/api/upload", uploadRoute_1.default);
     // 404 handler (this should come after routes)
     app.use((req, res) => {
         logger_1.default.error(`404 error for path: ${req.path}`);

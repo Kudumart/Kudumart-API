@@ -7,6 +7,7 @@ import apiRouter from "./routes/authRoute"; // Import your routes here
 import { configureSocket } from "./services/socket.service";
 import './config/passportConfig'; // Import Password Configuration
 import passport from "passport";
+import runSubscriptionCron from "./job/subscriptionCron"; // Import the cron job
 
 dotenv.config();
 

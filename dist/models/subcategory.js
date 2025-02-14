@@ -9,6 +9,14 @@ class SubCategory extends sequelize_1.Model {
             foreignKey: 'categoryId',
             as: 'category',
         });
+        this.hasMany(models.Product, {
+            foreignKey: 'categoryId',
+            as: "products"
+        });
+        this.hasMany(models.AuctionProduct, {
+            foreignKey: 'categoryId',
+            as: "auctionProducts"
+        });
     }
 }
 const initModel = (sequelize) => {

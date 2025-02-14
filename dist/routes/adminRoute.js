@@ -176,5 +176,16 @@ adminRoutes.delete("/faq", adminAuthMiddleware_1.default, adminController.delete
 adminRoutes.get("/contact/us/forms", adminAuthMiddleware_1.default, adminController.getAllContacts);
 adminRoutes.get("/contact/us/form", adminAuthMiddleware_1.default, adminController.getContactById);
 adminRoutes.delete("/contact/us/form", adminAuthMiddleware_1.default, adminController.deleteContactById);
+// Job
+adminRoutes.post('/job/post', adminAuthMiddleware_1.default, (0, validations_1.postJobValidationRules)(), validations_1.validate, adminController.postJob);
+adminRoutes.put('/job/update', adminAuthMiddleware_1.default, adminController.updateJob);
+adminRoutes.get('/jobs', adminAuthMiddleware_1.default, adminController.getJobs);
+adminRoutes.get('/job', adminAuthMiddleware_1.default, adminController.getJobById);
+adminRoutes.patch('/job/close', adminAuthMiddleware_1.default, adminController.closeJob);
+adminRoutes.delete('/job/delete', adminAuthMiddleware_1.default, adminController.deleteJob);
+adminRoutes.post('/job/repost', adminAuthMiddleware_1.default, adminController.repostJob);
+adminRoutes.get('/job/applicants', adminAuthMiddleware_1.default, adminController.getJobApplicants);
+adminRoutes.get('/job/view/applicant', adminAuthMiddleware_1.default, adminController.viewApplicant);
+adminRoutes.get('/job/download/applicant/resume', adminController.downloadApplicantResume);
 exports.default = adminRoutes; // Export the router
 //# sourceMappingURL=adminRoute.js.map

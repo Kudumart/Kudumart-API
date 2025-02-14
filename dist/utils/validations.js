@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validate = exports.updateAdvertValidation = exports.createAdvertValidation = exports.validateShowInterest = exports.validateUpdateCartItem = exports.validateAddItemToCart = exports.validatePlaceBid = exports.validateSendMessage = exports.validatePaymentGateway = exports.updateAuctionProductValidation = exports.auctionProductValidation = exports.updateProductValidation = exports.addProductValidation = exports.updateStoreValidation = exports.createStoreValidation = exports.validateKYCNotification = exports.kycValidationRules = exports.updateSubscriptionPlanValidationRules = exports.createSubscriptionPlanValidationRules = exports.updateSubAdminValidationRules = exports.createSubAdminValidationRules = exports.adminUpdateProfileValidationRules = exports.confirmProfilePhoneNumberValidationRules = exports.updateProfilePhoneNumberValidationRules = exports.confirmProfileEmailValidationRules = exports.updateProfileEmailValidationRules = exports.updatePasswordValidationRules = exports.resetPasswordValidationRules = exports.forgotPasswordValidationRules = exports.resendVerificationValidationRules = exports.loginValidationRules = exports.verificationValidationRules = exports.registrationValidationRules = void 0;
+exports.validate = exports.postJobValidationRules = exports.updateAdvertValidation = exports.createAdvertValidation = exports.validateShowInterest = exports.validateUpdateCartItem = exports.validateAddItemToCart = exports.validatePlaceBid = exports.validateSendMessage = exports.validatePaymentGateway = exports.updateAuctionProductValidation = exports.auctionProductValidation = exports.updateProductValidation = exports.addProductValidation = exports.updateStoreValidation = exports.createStoreValidation = exports.validateKYCNotification = exports.kycValidationRules = exports.updateSubscriptionPlanValidationRules = exports.createSubscriptionPlanValidationRules = exports.updateSubAdminValidationRules = exports.createSubAdminValidationRules = exports.adminUpdateProfileValidationRules = exports.confirmProfilePhoneNumberValidationRules = exports.updateProfilePhoneNumberValidationRules = exports.confirmProfileEmailValidationRules = exports.updateProfileEmailValidationRules = exports.updatePasswordValidationRules = exports.resetPasswordValidationRules = exports.forgotPasswordValidationRules = exports.resendVerificationValidationRules = exports.loginValidationRules = exports.verificationValidationRules = exports.registrationValidationRules = void 0;
 const express_validator_1 = require("express-validator");
 // Validation rules for different functionalities
 // Registration validation rules
@@ -871,6 +871,55 @@ const updateAdvertValidation = () => {
     ];
 };
 exports.updateAdvertValidation = updateAdvertValidation;
+const postJobValidationRules = () => {
+    return [
+        (0, express_validator_1.check)("title")
+            .not()
+            .isEmpty()
+            .withMessage("Title is required")
+            .isString()
+            .withMessage("Title must be a valid string"),
+        // check("company")
+        //   .not()
+        //   .isEmpty()
+        //   .withMessage("Company name is required")
+        //   .isString()
+        //   .withMessage("Company name must be a valid string"),
+        // check("logo")
+        //   .not()
+        //   .isEmpty()
+        //   .withMessage("Logo is required")
+        //   .isURL()
+        //   .withMessage("Logo must be a valid URL"),
+        (0, express_validator_1.check)("workplaceType")
+            .not()
+            .isEmpty()
+            .withMessage("Workplace type is required")
+            .isIn(["remote", "on-site", "hybrid"])
+            .withMessage("Workplace type must be one of: Remote, On-site, Hybrid"),
+        (0, express_validator_1.check)("location")
+            .not()
+            .isEmpty()
+            .withMessage("Location is required")
+            .isString()
+            .withMessage("Location must be a valid string"),
+        (0, express_validator_1.check)("jobType")
+            .not()
+            .isEmpty()
+            .withMessage("Job type is required")
+            .isString()
+            .withMessage("Job type must be a valid string"),
+        (0, express_validator_1.check)("description")
+            .not()
+            .isEmpty()
+            .withMessage("Description is required")
+            .isString()
+            .withMessage("Description must be a valid string")
+            .isLength({ min: 10 })
+            .withMessage("Description must contain at least 10 characters"),
+    ];
+};
+exports.postJobValidationRules = postJobValidationRules;
 // Middleware to handle validation errors, sending only the first error
 const validate = (req, res, next) => {
     const errors = (0, express_validator_1.validationResult)(req);

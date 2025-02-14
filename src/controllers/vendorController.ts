@@ -1220,22 +1220,26 @@ export const subscribe = async (req: Request, res: Response): Promise<void> => {
     const transaction = await sequelizeService.connection!.transaction();
 
     try {
-        // Step 1: Check for active subscription
+        // Step 1: Fetch Active Subscription
         const activeSubscription = await VendorSubscription.findOne({
             where: { vendorId, isActive: true },
-            include: [{
-                model: SubscriptionPlan,
-                as: "subscriptionPlans",
-                attributes: ["id", "name"],
-            }],
-            transaction, // Use the same transaction
-            lock: true, // Prevents concurrent modifications
+            transaction,
+            lock: true, // Prevent concurrent modifications
         });
 
         const startDate = new Date();
         const endDate = new Date();
 
-        // Step 2: Function to handle payment (wallet or external)
+        // Step 2: Fetch New Subscription Plan
+        const subscriptionPlan = await SubscriptionPlan.findByPk(subscriptionPlanId, { transaction });
+
+        if (!subscriptionPlan) {
+            await transaction.rollback();
+            res.status(404).json({ message: "Subscription plan not found." });
+            return;
+        }
+
+        // Step 3: Function to Handle Payment (Wallet or External)
         const handleTransaction = async (amount: number) => {
             if (isWallet) {
                 const vendor = await User.findByPk(vendorId, { transaction, lock: true });
@@ -1284,102 +1288,41 @@ export const subscribe = async (req: Request, res: Response): Promise<void> => {
             return true;
         };
 
+        // Step 4: Process Payment
+        const transactionSuccess = await handleTransaction(subscriptionPlan.price);
+        if (!transactionSuccess) return;
+
+        endDate.setMonth(startDate.getMonth() + subscriptionPlan.duration);
+
+        // Step 5: If user already has an active plan, deactivate it
         if (activeSubscription) {
-            const activePlan = activeSubscription.subscriptionPlans;
-
-            if (!activePlan) {
-                await transaction.rollback();
-                res.status(400).json({ message: "No subscription plan found for the vendor." });
-                return;
-            }
-
-            if (activePlan.name === "Free Plan") {
-                const subscriptionPlan = await SubscriptionPlan.findByPk(subscriptionPlanId, { transaction });
-
-                if (!subscriptionPlan) {
-                    await transaction.rollback();
-                    res.status(404).json({ message: "Subscription plan not found." });
-                    return;
-                }
-
-                const transactionSuccess = await handleTransaction(subscriptionPlan.price);
-                if (!transactionSuccess) return;
-
-                endDate.setMonth(startDate.getMonth() + subscriptionPlan.duration);
-
-                await activeSubscription.update({ isActive: false }, { transaction });
-
-                const newSubscription = await VendorSubscription.create({
-                    vendorId,
-                    subscriptionPlanId,
-                    startDate,
-                    endDate,
-                    isActive: true,
-                }, { transaction });
-
-                await Notification.create({
-                    userId: vendorId,
-                    title: "Subscription",
-                    message: `You have successfully subscribed to the ${subscriptionPlan.name} plan.`,
-                    type: "subscription",
-                    isRead: false,
-                }, { transaction });
-
-                await transaction.commit(); // Commit all changes
-
-                res.status(200).json({
-                    message: "Subscribed to new plan successfully",
-                    subscription: newSubscription,
-                });
-            } else {
-                await Notification.create({
-                    userId: vendorId,
-                    title: "Subscription",
-                    message: "You already have an active non-free subscription.",
-                    type: "subscription",
-                    isRead: false,
-                }, { transaction });
-
-                await transaction.rollback();
-                res.status(400).json({ message: "You already have an active non-free subscription." });
-            }
-        } else {
-            const subscriptionPlan = await SubscriptionPlan.findByPk(subscriptionPlanId, { transaction });
-
-            if (!subscriptionPlan) {
-                await transaction.rollback();
-                res.status(404).json({ message: "Subscription plan not found." });
-                return;
-            }
-
-            const transactionSuccess = await handleTransaction(subscriptionPlan.price);
-            if (!transactionSuccess) return;
-
-            endDate.setMonth(startDate.getMonth() + subscriptionPlan.duration);
-
-            const newSubscription = await VendorSubscription.create({
-                vendorId,
-                subscriptionPlanId,
-                startDate,
-                endDate,
-                isActive: true,
-            }, { transaction });
-
-            await Notification.create({
-                userId: vendorId,
-                title: "Subscription",
-                message: `You have successfully subscribed to the ${subscriptionPlan.name} plan.`,
-                type: "subscription",
-                isRead: false,
-            }, { transaction });
-
-            await transaction.commit(); // Commit all changes
-
-            res.status(200).json({
-                message: "Subscribed to plan successfully",
-                subscription: newSubscription,
-            });
+            await activeSubscription.update({ isActive: false }, { transaction });
         }
+
+        // Step 6: Create New Subscription
+        const newSubscription = await VendorSubscription.create({
+            vendorId,
+            subscriptionPlanId,
+            startDate,
+            endDate,
+            isActive: true,
+        }, { transaction });
+
+        // Step 7: Send Notification
+        await Notification.create({
+            userId: vendorId,
+            title: "Subscription",
+            message: `You have successfully switched to the ${subscriptionPlan.name} plan.`,
+            type: "subscription",
+            isRead: false,
+        }, { transaction });
+
+        await transaction.commit(); // Commit all changes
+
+        res.status(200).json({
+            message: "Switched to new subscription plan successfully",
+            subscription: newSubscription,
+        });
     } catch (error) {
         await transaction.rollback(); // Rollback changes on error
         logger.error("Error subscribing vendor:", error);

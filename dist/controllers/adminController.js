@@ -25,7 +25,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getGeneralProducts = exports.viewGeneralStore = exports.getGeneralStores = exports.viewUser = exports.toggleUserStatus = exports.getAllVendors = exports.getAllCustomers = exports.deleteCurrency = exports.getAllCurrencies = exports.updateCurrency = exports.addCurrency = exports.setPaymentGatewayActive = exports.getAllPaymentGateways = exports.deletePaymentGateway = exports.updatePaymentGateway = exports.createPaymentGateway = exports.approveOrRejectKYC = exports.getAllKYC = exports.getAllSubCategories = exports.deleteSubCategory = exports.updateSubCategory = exports.createSubCategory = exports.getCategoriesWithSubCategories = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getAllCategories = exports.deleteSubscriptionPlan = exports.updateSubscriptionPlan = exports.createSubscriptionPlan = exports.getAllSubscriptionPlans = exports.deletePermission = exports.updatePermission = exports.getPermissions = exports.createPermission = exports.deletePermissionFromRole = exports.assignPermissionToRole = exports.viewRolePermissions = exports.updateRole = exports.getRoles = exports.createRole = exports.resendLoginDetailsSubAdmin = exports.deleteSubAdmin = exports.deactivateOrActivateSubAdmin = exports.updateSubAdmin = exports.createSubAdmin = exports.subAdmins = exports.updatePassword = exports.updateProfile = exports.logout = void 0;
 exports.deleteFaqCategory = exports.updateFaqCategory = exports.getFaqCategory = exports.getAllFaqCategories = exports.createFaqCategory = exports.deleteTestimonial = exports.getTestimonial = exports.getAllTestimonials = exports.updateTestimonial = exports.createTestimonial = exports.getOrderItemsInfo = exports.getOrderItems = exports.approveOrRejectAdvert = exports.viewGeneralAdvert = exports.getGeneralAdverts = exports.deleteAdvert = exports.viewAdvert = exports.getAdverts = exports.updateAdvert = exports.createAdvert = exports.activeProducts = exports.getTransactionsForAdmin = exports.viewAuctionProduct = exports.fetchAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.getStore = exports.getAllSubscribers = exports.getGeneralPaymentDetails = exports.getAllGeneralOrderItems = exports.getAllGeneralOrders = exports.deleteGeneralAuctionProduct = exports.viewGeneralAuctionProduct = exports.getGeneralAuctionProducts = exports.publishProduct = exports.unpublishProduct = exports.deleteGeneralProduct = exports.viewGeneralProduct = void 0;
-exports.deleteContactById = exports.getContactById = exports.getAllContacts = exports.deleteFaq = exports.updateFaq = exports.getFaq = exports.getAllFaqs = exports.createFaq = void 0;
+exports.downloadApplicantResume = exports.repostJob = exports.viewApplicant = exports.getJobApplicants = exports.deleteJob = exports.closeJob = exports.getJobById = exports.updateJob = exports.getJobs = exports.postJob = exports.deleteContactById = exports.getContactById = exports.getAllContacts = exports.deleteFaq = exports.updateFaq = exports.getFaq = exports.getAllFaqs = exports.createFaq = void 0;
 const sequelize_1 = require("sequelize");
 const uuid_1 = require("uuid");
 const mail_service_1 = require("../services/mail.service");
@@ -61,6 +61,14 @@ const testimonial_1 = __importDefault(require("../models/testimonial"));
 const faqcategory_1 = __importDefault(require("../models/faqcategory"));
 const faq_1 = __importDefault(require("../models/faq"));
 const contact_1 = __importDefault(require("../models/contact")); // Adjust the path as needed
+const saveproduct_1 = __importDefault(require("../models/saveproduct"));
+const reviewproduct_1 = __importDefault(require("../models/reviewproduct"));
+const job_1 = __importDefault(require("../models/job"));
+const applicant_1 = __importDefault(require("../models/applicant"));
+const path_1 = __importDefault(require("path"));
+const fs_1 = __importDefault(require("fs"));
+// Define the upload directory
+const uploadDir = path_1.default.join(__dirname, "../../uploads");
 const logout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Get the token from the request
@@ -329,6 +337,17 @@ const deleteSubAdmin = (req, res) => __awaiter(void 0, void 0, void 0, function*
         if (!subAdmin) {
             res.status(404).json({ message: "Sub-admin not found" });
             return;
+        }
+        const relatedTables = [
+            { name: "stores", model: store_1.default, field: "vendorId" },
+        ];
+        // Check each related table
+        for (const table of relatedTables) {
+            const count = yield table.model.count({ where: { [table.field]: subAdmin.id } });
+            if (count > 0) {
+                res.status(400).json({ message: `Cannot delete sub-admin because related records exist in ${table.name}` });
+                return;
+            }
         }
         yield subAdmin.destroy();
         res.status(200).json({ message: "Sub-admin deleted successfully" });
@@ -732,6 +751,17 @@ const deleteSubscriptionPlan = (req, res) => __awaiter(void 0, void 0, void 0, f
             res.status(400).json({ message: "The Free Plan cannot be deleted." });
             return;
         }
+        const relatedTables = [
+            { name: "vendor_subscriptions", model: vendorsubscription_1.default, field: "subscriptionPlanId" },
+        ];
+        // Check each related table
+        for (const table of relatedTables) {
+            const count = yield table.model.count({ where: { [table.field]: plan.id } });
+            if (count > 0) {
+                res.status(400).json({ message: `Cannot delete subscription plan because related records exist in ${table.name}` });
+                return;
+            }
+        }
         // Attempt to delete the plan
         yield plan.destroy();
         res
@@ -864,6 +894,17 @@ const deleteCategory = (req, res) => __awaiter(void 0, void 0, void 0, function*
         if (!category) {
             res.status(404).json({ message: "Category not found" });
             return;
+        }
+        const relatedTables = [
+            { name: "sub_categories", model: subcategory_1.default, field: "categoryId" },
+        ];
+        // Check each related table
+        for (const table of relatedTables) {
+            const count = yield table.model.count({ where: { [table.field]: category.id } });
+            if (count > 0) {
+                res.status(400).json({ message: `Cannot delete category because related records exist in ${table.name}` });
+                return;
+            }
         }
         yield category.destroy();
         res.status(200).json({ message: "Category deleted successfully" });
@@ -1009,6 +1050,20 @@ const deleteSubCategory = (req, res) => __awaiter(void 0, void 0, void 0, functi
         if (!subCategory) {
             res.status(404).json({ message: "Sub-category not found" });
             return;
+        }
+        const relatedTables = [
+            { name: "products", model: product_1.default, field: "categoryId" },
+            { name: "auction_products", model: auctionproduct_1.default, field: "categoryId" },
+        ];
+        // Check each related table
+        for (const table of relatedTables) {
+            const count = yield table.model.count({
+                where: { [table.field]: subCategory.id }
+            });
+            if (count > 0) {
+                res.status(400).json({ message: `Cannot delete product because related records exist in ${table.name}` });
+                return;
+            }
         }
         yield subCategory.destroy();
         res.status(200).json({ message: "Sub-category deleted successfully" });
@@ -1376,6 +1431,17 @@ const deleteCurrency = (req, res) => __awaiter(void 0, void 0, void 0, function*
         if (!currency) {
             res.status(404).json({ message: "Currency not found" });
             return;
+        }
+        const relatedTables = [
+            { name: "store", model: store_1.default, field: "currencyId" },
+        ];
+        // Check each related table
+        for (const table of relatedTables) {
+            const count = yield table.model.count({ where: { [table.field]: currency.id } });
+            if (count > 0) {
+                res.status(400).json({ message: `Cannot delete currency because related records exist in ${table.name}` });
+                return;
+            }
         }
         yield currency.destroy();
         res.status(200).json({ message: "Currency deleted successfully" });
@@ -1805,6 +1871,21 @@ const deleteGeneralProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
             res.status(404).json({ message: "Product not found." });
             return;
         }
+        const relatedTables = [
+            { name: "save_products", model: saveproduct_1.default, field: "productId" },
+            { name: "review_products", model: reviewproduct_1.default, field: "productId" },
+            { name: "carts", model: cart_1.default, field: "productId" }
+        ];
+        // Check each related table
+        for (const table of relatedTables) {
+            const count = yield table.model.count({
+                where: { [table.field]: product.id }
+            });
+            if (count > 0) {
+                res.status(400).json({ message: `Cannot delete product because related records exist in ${table.name}` });
+                return;
+            }
+        }
         yield product.destroy();
         res.status(200).json({
             message: "Product deleted successfully",
@@ -2040,6 +2121,19 @@ const deleteGeneralAuctionProduct = (req, res) => __awaiter(void 0, void 0, void
                 message: "Auction product already has bids, cannot be deleted.",
             });
             return;
+        }
+        const relatedTables = [
+            { name: "bids", model: bid_1.default, field: "auctionProductId" },
+        ];
+        // Check each related table
+        for (const table of relatedTables) {
+            const count = yield table.model.count({
+                where: { [table.field]: auctionProduct.id }
+            });
+            if (count > 0) {
+                res.status(400).json({ message: `Cannot delete auction product because related records exist in ${table.name}` });
+                return;
+            }
         }
         // Delete the auction product
         yield auctionProduct.destroy();
@@ -2436,8 +2530,20 @@ const deleteStore = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             res.status(404).json({ message: "Store not found" });
             return;
         }
-        yield auctionproduct_1.default.destroy({ where: { storeId }, transaction });
-        yield product_1.default.destroy({ where: { storeId }, transaction });
+        const relatedTables = [
+            { name: "auction_products", model: auctionproduct_1.default, field: "storeId" },
+            { name: "products", model: product_1.default, field: "storeId" }
+        ];
+        // Check each related table
+        for (const table of relatedTables) {
+            const count = yield table.model.count({
+                where: { [table.field]: store.id }
+            });
+            if (count > 0) {
+                res.status(400).json({ message: `Cannot delete store because related records exist in ${table.name}` });
+                return;
+            }
+        }
         yield store.destroy({ transaction });
         yield transaction.commit();
         res.status(200).json({ message: "Store and all associations deleted successfully" });
@@ -2558,6 +2664,21 @@ const deleteProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         if (!product) {
             res.status(404).json({ message: "Product not found." });
             return;
+        }
+        const relatedTables = [
+            { name: "save_products", model: saveproduct_1.default, field: "productId" },
+            { name: "review_products", model: reviewproduct_1.default, field: "productId" },
+            { name: "carts", model: cart_1.default, field: "productId" }
+        ];
+        // Check each related table
+        for (const table of relatedTables) {
+            const count = yield table.model.count({
+                where: { [table.field]: product.id }
+            });
+            if (count > 0) {
+                res.status(400).json({ message: `Cannot delete product because related records exist in ${table.name}` });
+                return;
+            }
         }
         yield product.destroy();
         res.status(200).json({
@@ -2918,6 +3039,19 @@ const deleteAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
             });
             return;
         }
+        const relatedTables = [
+            { name: "bids", model: bid_1.default, field: "auctionProductId" },
+        ];
+        // Check each related table
+        for (const table of relatedTables) {
+            const count = yield table.model.count({
+                where: { [table.field]: auctionProduct.id }
+            });
+            if (count > 0) {
+                res.status(400).json({ message: `Cannot delete auction product because related records exist in ${table.name}` });
+                return;
+            }
+        }
         // Delete the auction product
         yield auctionProduct.destroy();
         res.status(200).json({ message: "Auction product deleted successfully." });
@@ -3123,7 +3257,7 @@ const getTransactionsForAdmin = (req, res) => __awaiter(void 0, void 0, void 0, 
         });
     }
     catch (error) {
-        console.error(error);
+        logger_1.default.error(error);
         res.status(500).json({ message: "Failed to fetch transactions", error: error.message });
     }
 });
@@ -3724,6 +3858,7 @@ const deleteFaqCategory = (req, res) => __awaiter(void 0, void 0, void 0, functi
             res.status(404).json({ message: "FAQ category not found" });
             return;
         }
+        yield category.faqs.destroy();
         yield category.destroy();
         res.status(200).json({ message: "FAQ category deleted successfully" });
     }
@@ -3746,7 +3881,9 @@ const createFaq = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             res.status(404).json({ message: "FAQ category not found" });
             return;
         }
-        const newFaq = yield faq_1.default.create({ faqCategoryId: categoryId, question, answer });
+        const newFaq = yield faq_1.default.create({
+            faqCategoryId: categoryId, question, answer
+        });
         res.status(200).json({ message: "FAQ created successfully", data: newFaq });
     }
     catch (error) {
@@ -3793,7 +3930,9 @@ const updateFaq = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             res.status(404).json({ message: "FAQ not found" });
             return;
         }
-        yield faq.update({ faqCategoryId: categoryId, question, answer });
+        yield faq.update({
+            faqCategoryId: categoryId, question, answer
+        });
         res.status(200).json({ message: "FAQ updated successfully", data: faq });
     }
     catch (error) {
@@ -3849,7 +3988,7 @@ const getAllContacts = (req, res) => __awaiter(void 0, void 0, void 0, function*
         res.status(200).json({ data: contacts });
     }
     catch (error) {
-        console.error("Error fetching contacts:", error);
+        logger_1.default.error("Error fetching contacts:", error);
         res.status(500).json({
             message: "An error occurred while fetching contact entries.",
         });
@@ -3870,7 +4009,7 @@ const getContactById = (req, res) => __awaiter(void 0, void 0, void 0, function*
         res.status(200).json({ data: contact });
     }
     catch (error) {
-        console.error("Error fetching contact:", error);
+        logger_1.default.error("Error fetching contact:", error);
         res.status(500).json({
             message: "An error occurred while fetching the contact entry.",
         });
@@ -3892,11 +4031,349 @@ const deleteContactById = (req, res) => __awaiter(void 0, void 0, void 0, functi
         res.status(200).json({ message: "Contact entry deleted successfully." });
     }
     catch (error) {
-        console.error("Error deleting contact:", error);
+        logger_1.default.error("Error deleting contact:", error);
         res.status(500).json({
             message: "An error occurred while deleting the contact entry.",
         });
     }
 });
 exports.deleteContactById = deleteContactById;
+// JOB
+const postJob = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const { title, workplaceType, jobType, location, description, } = req.body;
+        const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+        // Create the job
+        const newJob = yield job_1.default.create({
+            creatorId: adminId,
+            title,
+            slug: `${title.toLowerCase().replace(/ /g, "-")}-${(0, uuid_1.v4)()}`,
+            workplaceType,
+            location,
+            jobType,
+            description,
+            status: "active",
+        });
+        res.status(200).json({
+            message: "Job posted successfully.",
+            data: newJob, // Optional: format with a resource transformer if needed
+        });
+    }
+    catch (error) {
+        logger_1.default.error(error);
+        res.status(500).json({
+            message: "An error occurred while posting the job.",
+        });
+    }
+});
+exports.postJob = postJob;
+const getJobs = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { status, title } = req.query; // Expecting 'Draft', 'Active', or 'Closed' for status, and a string for title
+        const jobs = yield job_1.default.findAll({
+            where: Object.assign(Object.assign({}, (status && { status: { [sequelize_1.Op.eq]: status } })), (title && { title: { [sequelize_1.Op.like]: `%${title}%` } })),
+            attributes: {
+                include: [
+                    [
+                        sequelize_1.Sequelize.fn("COUNT", sequelize_1.Sequelize.col("Applicants.id")),
+                        "applicantCount"
+                    ],
+                ],
+            },
+            include: [
+                {
+                    model: applicant_1.default,
+                    as: "applicants",
+                    attributes: [], // We don't need applicant details, just the count
+                },
+            ],
+            group: ["Job.id"], // Group by job ID to avoid duplicate rows
+            order: [["createdAt", "DESC"]],
+        });
+        res.status(200).json({
+            message: "Jobs retrieved successfully.",
+            data: jobs,
+        });
+    }
+    catch (error) {
+        logger_1.default.error(error);
+        res.status(500).json({
+            message: "An error occurred while retrieving jobs.",
+        });
+    }
+});
+exports.getJobs = getJobs;
+const updateJob = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { jobId, title, workplaceType, jobType, location, description } = req.body;
+        if (!jobId) {
+            res.status(400).json({ message: "Job ID is required." });
+            return;
+        }
+        // Find the job
+        const job = yield job_1.default.findByPk(jobId);
+        if (!job) {
+            res.status(404).json({ message: "Job not found." });
+            return;
+        }
+        // Update job with new values or keep the old ones
+        yield job.update({
+            title: title !== null && title !== void 0 ? title : job.title,
+            workplaceType: workplaceType !== null && workplaceType !== void 0 ? workplaceType : job.workplaceType,
+            jobType: jobType !== null && jobType !== void 0 ? jobType : job.jobType,
+            location: location !== null && location !== void 0 ? location : job.location,
+            description: description !== null && description !== void 0 ? description : job.description,
+        });
+        res.status(200).json({
+            message: "Job updated successfully.",
+            data: job,
+        });
+    }
+    catch (error) {
+        logger_1.default.error(error);
+        res.status(500).json({
+            message: "An error occurred while updating the job.",
+        });
+    }
+});
+exports.updateJob = updateJob;
+const getJobById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const jobId = req.query.jobId;
+        if (!jobId) {
+            res.status(400).json({ message: "Job ID is required." });
+            return;
+        }
+        // Find the job by ID
+        const job = yield job_1.default.findByPk(jobId);
+        if (!job) {
+            res.status(404).json({ message: "Job not found." });
+            return;
+        }
+        res.status(200).json({
+            message: "Job retrieved successfully.",
+            data: job,
+        });
+    }
+    catch (error) {
+        logger_1.default.error(error);
+        res.status(500).json({
+            message: "An error occurred while retrieving the job.",
+        });
+    }
+});
+exports.getJobById = getJobById;
+// CLOSE Job
+const closeJob = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const jobId = req.query.jobId;
+        // Find the job
+        const job = yield job_1.default.findByPk(jobId);
+        if (!job) {
+            res.status(404).json({
+                message: "Job not found in our database.",
+            });
+            return;
+        }
+        // Update the job status to 'Closed'
+        job.status = "closed";
+        job.updatedAt = new Date();
+        yield job.save();
+        res.status(200).json({
+            message: "Job closed successfully.",
+            data: job, // Replace with a JobResource equivalent if necessary
+        });
+    }
+    catch (error) {
+        logger_1.default.error(error);
+        res.status(500).json({
+            message: "An error occurred while closing the job.",
+        });
+    }
+});
+exports.closeJob = closeJob;
+// DELETE Job
+const deleteJob = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const jobId = req.query.jobId;
+        // Find the job
+        const job = yield job_1.default.findByPk(jobId);
+        if (!job) {
+            res.status(404).json({
+                message: "Job not found in our database.",
+            });
+            return;
+        }
+        if (job.status !== "draft") {
+            res.status(400).json({
+                message: "Only draft jobs can be deleted.",
+            });
+            return;
+        }
+        // Start transaction to ensure both deletions happen together
+        const transaction = yield sequelize_service_1.default.connection.transaction();
+        try {
+            // Delete all applicants related to this job
+            yield applicant_1.default.destroy({ where: { jobId }, transaction });
+            // Delete the job
+            yield job.destroy({ transaction });
+            yield transaction.commit(); // Commit changes
+            res.status(200).json({
+                message: "Job and related applicants deleted successfully.",
+            });
+        }
+        catch (error) {
+            yield transaction.rollback(); // Revert changes if an error occurs
+            throw error;
+        }
+    }
+    catch (error) {
+        logger_1.default.error("Error deleting job:", error);
+        res.status(500).json({
+            message: "An error occurred while deleting the job.",
+        });
+    }
+});
+exports.deleteJob = deleteJob;
+const getJobApplicants = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const jobId = req.query.jobId;
+        const job = yield job_1.default.findOne({ where: { id: jobId } });
+        if (!job) {
+            res.status(403).json({
+                message: "Job not found.",
+            });
+            return;
+        }
+        const applicants = yield applicant_1.default.findAll({
+            where: { jobId }
+        });
+        res.status(200).json({
+            message: "All applicants retrieved successfully.",
+            data: applicants,
+        });
+    }
+    catch (error) {
+        logger_1.default.error(error);
+        res.status(500).json({ message: "Server error." });
+    }
+});
+exports.getJobApplicants = getJobApplicants;
+const viewApplicant = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const applicantId = req.query.applicantId;
+        const applicant = yield applicant_1.default.findByPk(applicantId, {
+            include: [
+                {
+                    model: job_1.default,
+                    as: "job",
+                },
+            ],
+        });
+        if (!applicant) {
+            res.status(404).json({
+                message: "Not found in our database.",
+            });
+            return;
+        }
+        const job = yield job_1.default.findByPk(applicant.jobId);
+        if (!job) {
+            res.status(404).json({
+                message: "Job not found.",
+            });
+            return;
+        }
+        res.status(200).json({
+            message: "Applicant retrieved successfully.",
+            data: applicant,
+        });
+    }
+    catch (error) {
+        logger_1.default.error(error);
+        res.status(500).json({ message: "Server error." });
+    }
+});
+exports.viewApplicant = viewApplicant;
+const repostJob = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const { jobId } = req.body;
+        const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+        const job = yield job_1.default.findByPk(jobId);
+        if (!job) {
+            res.status(404).json({
+                message: "Job not found in our database.",
+            });
+            return;
+        }
+        if (!job.title) {
+            throw new Error("Job title cannot be null.");
+        }
+        const repost = yield job_1.default.create({
+            creatorId: adminId,
+            title: job.title,
+            slug: `${job.title.toLowerCase().replace(/\s+/g, "-")}-${Math.floor(Math.random() * 10000)}`,
+            company: job.company,
+            logo: job.logo,
+            workplaceType: job.workplaceType,
+            location: job.location,
+            jobType: job.jobType,
+            description: job.description,
+            status: "active",
+        });
+        res.status(200).json({
+            message: "Job reposted successfully.",
+            data: repost,
+        });
+    }
+    catch (error) {
+        logger_1.default.error(error);
+        res.status(500).json({ message: "Server error." });
+    }
+});
+exports.repostJob = repostJob;
+const downloadApplicantResume = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const applicantId = req.query.applicantId;
+        const applicant = yield applicant_1.default.findByPk(applicantId);
+        if (!applicant || !applicant.resume) {
+            res.status(404).json({
+                message: "File damaged or not found.",
+            });
+            return;
+        }
+        const filename = applicant.resume;
+        if (!filename) {
+            res.status(400).json({ message: "Filename is required" });
+            return;
+        }
+        const storedFilename = applicant.resume; // The file stored in DB
+        const applicantName = applicant.name.replace(/\s+/g, "_"); // Convert name to safe format (replace spaces)
+        if (!storedFilename) {
+            res.status(400).json({ message: "Filename is required" });
+            return;
+        }
+        const cleanFilename = path_1.default.basename(filename);
+        const filePath = path_1.default.join(uploadDir, cleanFilename);
+        // Check if the file exists
+        if (!fs_1.default.existsSync(filePath)) {
+            res.status(404).json({ message: "File not found" });
+            return;
+        }
+        // Rename file when sending for download
+        const newFilename = `${applicantName}_Resume.pdf`;
+        res.download(filePath, newFilename, (err) => {
+            if (err) {
+                logger_1.default.error("Error downloading file:", err);
+                res.status(500).json({ message: "Error downloading file" });
+            }
+        });
+    }
+    catch (error) {
+        logger_1.default.error("Error in downloadFile:", error);
+        res.status(500).json({ message: "An error occurred while downloading the file" });
+    }
+});
+exports.downloadApplicantResume = downloadApplicantResume;
 //# sourceMappingURL=adminController.js.map

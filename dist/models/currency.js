@@ -6,6 +6,10 @@ const sequelize_1 = require("sequelize");
 class Currency extends sequelize_1.Model {
     static associate(models) {
         // Define associations here
+        this.hasMany(models.Store, {
+            foreignKey: 'currencyId',
+            as: "store"
+        });
     }
 }
 const initModel = (sequelize) => {

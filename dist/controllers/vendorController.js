@@ -48,6 +48,8 @@ const advert_1 = __importDefault(require("../models/advert"));
 const bankinformation_1 = __importDefault(require("../models/bankinformation"));
 const cart_1 = __importDefault(require("../models/cart"));
 const sequelize_service_1 = __importDefault(require("../services/sequelize.service"));
+const saveproduct_1 = __importDefault(require("../models/saveproduct"));
+const reviewproduct_1 = __importDefault(require("../models/reviewproduct"));
 const submitOrUpdateKYC = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
@@ -290,6 +292,20 @@ const deleteStore = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             res.status(404).json({ message: "Store not found" });
             return;
         }
+        const relatedTables = [
+            { name: "auction_products", model: auctionproduct_1.default, field: "storeId" },
+            { name: "products", model: product_1.default, field: "storeId" }
+        ];
+        // Check each related table
+        for (const table of relatedTables) {
+            const count = yield table.model.count({
+                where: { [table.field]: store.id }
+            });
+            if (count > 0) {
+                res.status(400).json({ message: `Cannot delete store because related records exist in ${table.name}` });
+                return;
+            }
+        }
         yield store.destroy();
         res.status(200).json({ message: "Store deleted successfully" });
     }
@@ -421,6 +437,21 @@ const deleteProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         if (!product) {
             res.status(404).json({ message: "Product not found." });
             return;
+        }
+        const relatedTables = [
+            { name: "save_products", model: saveproduct_1.default, field: "productId" },
+            { name: "review_products", model: reviewproduct_1.default, field: "productId" },
+            { name: "carts", model: cart_1.default, field: "productId" }
+        ];
+        // Check each related table
+        for (const table of relatedTables) {
+            const count = yield table.model.count({
+                where: { [table.field]: product.id }
+            });
+            if (count > 0) {
+                res.status(400).json({ message: `Cannot delete product because related records exist in ${table.name}` });
+                return;
+            }
         }
         yield product.destroy();
         res.status(200).json({
@@ -792,6 +823,19 @@ const deleteAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
             });
             return;
         }
+        const relatedTables = [
+            { name: "bids", model: bid_1.default, field: "auctionProductId" },
+        ];
+        // Check each related table
+        for (const table of relatedTables) {
+            const count = yield table.model.count({
+                where: { [table.field]: auctionProduct.id }
+            });
+            if (count > 0) {
+                res.status(400).json({ message: `Cannot delete auction product because related records exist in ${table.name}` });
+                return;
+            }
+        }
         // Delete the auction product
         yield auctionProduct.destroy();
         res.status(200).json({ message: "Auction product deleted successfully." });
@@ -993,20 +1037,22 @@ const subscribe = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
     const transaction = yield sequelize_service_1.default.connection.transaction();
     try {
-        // Step 1: Check for active subscription
+        // Step 1: Fetch Active Subscription
         const activeSubscription = yield vendorsubscription_1.default.findOne({
             where: { vendorId, isActive: true },
-            include: [{
-                    model: subscriptionplan_1.default,
-                    as: "subscriptionPlans",
-                    attributes: ["id", "name"],
-                }],
-            transaction, // Use the same transaction
-            lock: true, // Prevents concurrent modifications
+            transaction,
+            lock: true, // Prevent concurrent modifications
         });
         const startDate = new Date();
         const endDate = new Date();
-        // Step 2: Function to handle payment (wallet or external)
+        // Step 2: Fetch New Subscription Plan
+        const subscriptionPlan = yield subscriptionplan_1.default.findByPk(subscriptionPlanId, { transaction });
+        if (!subscriptionPlan) {
+            yield transaction.rollback();
+            res.status(404).json({ message: "Subscription plan not found." });
+            return;
+        }
+        // Step 3: Function to Handle Payment (Wallet or External)
         const handleTransaction = (amount) => __awaiter(void 0, void 0, void 0, function* () {
             if (isWallet) {
                 const vendor = yield user_1.default.findByPk(vendorId, { transaction, lock: true });
@@ -1048,88 +1094,36 @@ const subscribe = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             }, { transaction });
             return true;
         });
+        // Step 4: Process Payment
+        const transactionSuccess = yield handleTransaction(subscriptionPlan.price);
+        if (!transactionSuccess)
+            return;
+        endDate.setMonth(startDate.getMonth() + subscriptionPlan.duration);
+        // Step 5: If user already has an active plan, deactivate it
         if (activeSubscription) {
-            const activePlan = activeSubscription.subscriptionPlans;
-            if (!activePlan) {
-                yield transaction.rollback();
-                res.status(400).json({ message: "No subscription plan found for the vendor." });
-                return;
-            }
-            if (activePlan.name === "Free Plan") {
-                const subscriptionPlan = yield subscriptionplan_1.default.findByPk(subscriptionPlanId, { transaction });
-                if (!subscriptionPlan) {
-                    yield transaction.rollback();
-                    res.status(404).json({ message: "Subscription plan not found." });
-                    return;
-                }
-                const transactionSuccess = yield handleTransaction(subscriptionPlan.price);
-                if (!transactionSuccess)
-                    return;
-                endDate.setMonth(startDate.getMonth() + subscriptionPlan.duration);
-                yield activeSubscription.update({ isActive: false }, { transaction });
-                const newSubscription = yield vendorsubscription_1.default.create({
-                    vendorId,
-                    subscriptionPlanId,
-                    startDate,
-                    endDate,
-                    isActive: true,
-                }, { transaction });
-                yield notification_1.default.create({
-                    userId: vendorId,
-                    title: "Subscription",
-                    message: `You have successfully subscribed to the ${subscriptionPlan.name} plan.`,
-                    type: "subscription",
-                    isRead: false,
-                }, { transaction });
-                yield transaction.commit(); // Commit all changes
-                res.status(200).json({
-                    message: "Subscribed to new plan successfully",
-                    subscription: newSubscription,
-                });
-            }
-            else {
-                yield notification_1.default.create({
-                    userId: vendorId,
-                    title: "Subscription",
-                    message: "You already have an active non-free subscription.",
-                    type: "subscription",
-                    isRead: false,
-                }, { transaction });
-                yield transaction.rollback();
-                res.status(400).json({ message: "You already have an active non-free subscription." });
-            }
+            yield activeSubscription.update({ isActive: false }, { transaction });
         }
-        else {
-            const subscriptionPlan = yield subscriptionplan_1.default.findByPk(subscriptionPlanId, { transaction });
-            if (!subscriptionPlan) {
-                yield transaction.rollback();
-                res.status(404).json({ message: "Subscription plan not found." });
-                return;
-            }
-            const transactionSuccess = yield handleTransaction(subscriptionPlan.price);
-            if (!transactionSuccess)
-                return;
-            endDate.setMonth(startDate.getMonth() + subscriptionPlan.duration);
-            const newSubscription = yield vendorsubscription_1.default.create({
-                vendorId,
-                subscriptionPlanId,
-                startDate,
-                endDate,
-                isActive: true,
-            }, { transaction });
-            yield notification_1.default.create({
-                userId: vendorId,
-                title: "Subscription",
-                message: `You have successfully subscribed to the ${subscriptionPlan.name} plan.`,
-                type: "subscription",
-                isRead: false,
-            }, { transaction });
-            yield transaction.commit(); // Commit all changes
-            res.status(200).json({
-                message: "Subscribed to plan successfully",
-                subscription: newSubscription,
-            });
-        }
+        // Step 6: Create New Subscription
+        const newSubscription = yield vendorsubscription_1.default.create({
+            vendorId,
+            subscriptionPlanId,
+            startDate,
+            endDate,
+            isActive: true,
+        }, { transaction });
+        // Step 7: Send Notification
+        yield notification_1.default.create({
+            userId: vendorId,
+            title: "Subscription",
+            message: `You have successfully switched to the ${subscriptionPlan.name} plan.`,
+            type: "subscription",
+            isRead: false,
+        }, { transaction });
+        yield transaction.commit(); // Commit all changes
+        res.status(200).json({
+            message: "Switched to new subscription plan successfully",
+            subscription: newSubscription,
+        });
     }
     catch (error) {
         yield transaction.rollback(); // Rollback changes on error

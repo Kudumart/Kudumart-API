@@ -15,6 +15,7 @@ import Advert from '../models/advert';
 import OrderItem from '../models/orderitem';
 import Order from '../models/order';
 import User from '../models/user';
+import Job from '../models/job';
 
 interface PaystackResponse {
   status: boolean;
@@ -310,5 +311,25 @@ const generateUniquePhoneNumber = async () => {
   return phoneNumber;
 };
 
+const getJobsBySearch = async (searchTerm: string, number: number) => {
+  const where: any = { status: 'active' };
+
+  if (searchTerm) {
+      const searchRegex = { [Op.iLike]: `%${searchTerm}%` }; // Use Sequelize's Op.iLike for case-insensitive search.
+      where[Op.or] = [
+          { title: searchRegex },
+          { workplace_type: searchRegex },
+          { job_type: searchRegex },
+          { location: searchRegex },
+      ];
+  }
+
+  return await Job.findAll({
+      where,
+      order: [['createdAt', 'DESC']], // Sort by createdAt in descending order.
+      limit: number, // Limit the number of results.
+  });
+};
+
 // Export functions
-export { generateOTP, capitalizeFirstLetter, sendSMS, fetchAdminWithPermissions, checkVendorProductLimit, checkVendorAuctionProductLimit, checkAdvertLimit, verifyPayment, shuffleArray, hasPurchasedProduct, generateUniquePhoneNumber };
+export { generateOTP, capitalizeFirstLetter, sendSMS, fetchAdminWithPermissions, checkVendorProductLimit, checkVendorAuctionProductLimit, checkAdvertLimit, verifyPayment, shuffleArray, hasPurchasedProduct, generateUniquePhoneNumber, getJobsBySearch };

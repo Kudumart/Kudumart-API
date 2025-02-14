@@ -18,25 +18,67 @@ export const upload = multer({
     storage: storage,
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
     fileFilter: (req: Request, file, cb) => {
-        // Allowed image MIME types (added GIF, BMP, TIFF)
-        const allowedTypes = [
-            "image/jpeg", 
-            "image/png", 
-            "image/webp", 
-            "image/gif", 
-            "image/bmp", 
+        const allowedImageTypes = [
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/gif",
+            "image/bmp",
             "image/tiff",
-            "image/svg+xml" // SVG is also an image
+            "image/svg+xml",
         ];
+        const allowedPdfType = "application/pdf";
 
-        if (allowedTypes.includes(file.mimetype)) {
-            cb(null, true); // ✅ Allow file upload
+        if (allowedImageTypes.includes(file.mimetype) || file.mimetype === allowedPdfType) {
+            cb(null, true); // ✅ Allow upload
         } else {
-            cb(null, false); // ✅ Reject file
-            (req as any).fileValidationError = "Only images (JPG, PNG, WEBP, GIF, BMP, TIFF, SVG) are allowed";
+            cb(null, false); // ❌ Reject file
+            (req as any).fileValidationError = "Only images (JPG, PNG, WEBP, GIF, BMP, TIFF, SVG) and PDFs are allowed.";
         }
-    }
+    },
 });
+
+// Upload and process file (image or PDF)
+export const uploadFile = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // If the validation fails
+        if ((req as any).fileValidationError) {
+            res.status(400).json({ message: (req as any).fileValidationError });
+            return;
+        }
+
+        if (!req.file) {
+            res.status(400).json({ message: "No file uploaded" });
+            return;
+        }
+
+        let filename = `${process.env.APP_NAME?.toLowerCase()}-${Date.now()}`;
+        let filePath: string;
+
+        if (req.file.mimetype === "application/pdf") {
+            // Handle PDF file
+            filename += ".pdf";
+            filePath = path.join(uploadDir, filename);
+            await fs.promises.writeFile(filePath, req.file.buffer);
+        } else {
+            // Handle image file (convert to WebP)
+            filename += ".webp";
+            filePath = path.join(uploadDir, filename);
+
+            await sharp(req.file.buffer)
+                .resize({ width: 800 }) // Resize width to 800px
+                .webp({ quality: 20 }) // Compress to lowest quality
+                .toFile(filePath);
+        }
+
+        const fileUrl = `${req.protocol}://${req.get("host")}/uploads/${filename}`;
+
+        res.json({ message: "File uploaded successfully", data: fileUrl });
+    } catch (error) {
+        logger.error(error);
+        res.status(500).json({ message: "Error processing file" });
+    }
+};
 
 // Function to delete an image
 export const deleteImage = (filename: string): Promise<void> => {
@@ -53,38 +95,6 @@ export const deleteImage = (filename: string): Promise<void> => {
             }
         });
     });
-};
-
-// Upload and process image
-export const uploadImage = async (req: Request, res: Response): Promise<void> => {
-    try {
-        // If the validation fails
-        if ((req as any).fileValidationError) {
-            res.status(400).json({ message: (req as any).fileValidationError });
-            return;
-        }
-
-        if (!req.file) {
-            res.status(400).json({ message: "No file uploaded" });
-            return;
-        }
-
-        const filename = `${process.env.APP_NAME?.toLowerCase()}-${Date.now()}.webp`;
-        const filePath = path.join(uploadDir, filename);
-
-        // Compress & convert to WebP
-        await sharp(req.file.buffer)
-            .resize({ width: 800 }) // Resize width to 800px
-            .webp({ quality: 20 }) // Compress to lowest quality
-            .toFile(filePath);
-
-        const fileUrl = `${req.protocol}://${req.get("host")}/uploads/${filename}`;
-
-        res.json({ message: "Image uploaded successfully", data: fileUrl });
-    } catch (error) {
-        logger.error(error);
-        res.status(500).json({ message: "Error processing image" });
-    }
 };
 
 // Example: Delete image by filename
