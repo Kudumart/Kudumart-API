@@ -49,6 +49,9 @@ sequelizeService.init()
 // Create and start the HTTP server
 const port = process.env.SERVER_PORT || 3000; // Get the port from the environment variables
 
+// Start the cron job
+runSubscriptionCron();
+
 server.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);
 });

@@ -10,9 +10,10 @@ import Notification from "../models/notification";
 
 const runSubscriptionCron = () => {
     cron.schedule("0 0 * * *", async () => {
+        logger.info('Welcome to kudumart cron job');
         try {
-            const today = new Date();
-            const nextWeek = new Date();
+            const today = new Date(new Date().toISOString()); // Ensures UTC
+            const nextWeek = new Date(new Date().toISOString()); // Ensures UTC
             nextWeek.setDate(today.getDate() + 7);
 
             // Handle Expired Subscriptions

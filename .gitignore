@@ -3,3 +3,5 @@ package-lock.json
 .env
 logs/
 uploads/
+user1.html
+user2.html

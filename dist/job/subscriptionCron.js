@@ -20,9 +20,10 @@ const subscriptionplan_1 = __importDefault(require("../models/subscriptionplan")
 const notification_1 = __importDefault(require("../models/notification"));
 const runSubscriptionCron = () => {
     node_cron_1.default.schedule("0 0 * * *", () => __awaiter(void 0, void 0, void 0, function* () {
+        logger_1.default.info('Welcome to kudumart cron job');
         try {
-            const today = new Date();
-            const nextWeek = new Date();
+            const today = new Date(new Date().toISOString()); // Ensures UTC
+            const nextWeek = new Date(new Date().toISOString()); // Ensures UTC
             nextWeek.setDate(today.getDate() + 7);
             // Handle Expired Subscriptions
             const expiredSubscriptions = yield vendorsubscription_1.default.findAll({

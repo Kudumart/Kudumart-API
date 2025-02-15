@@ -22,6 +22,7 @@ const authRoute_1 = __importDefault(require("./routes/authRoute")); // Import yo
 const socket_service_1 = require("./services/socket.service");
 require("./config/passportConfig"); // Import Password Configuration
 const passport_1 = __importDefault(require("passport"));
+const subscriptionCron_1 = __importDefault(require("./job/subscriptionCron")); // Import the cron job
 dotenv_1.default.config();
 // Initialize the Express app
 const app = (0, express_service_1.default)();
@@ -52,6 +53,8 @@ sequelize_service_1.default.init()
     .catch((error) => console.error("Error connecting to the database:", error));
 // Create and start the HTTP server
 const port = process.env.SERVER_PORT || 3000; // Get the port from the environment variables
+// Start the cron job
+(0, subscriptionCron_1.default)();
 server.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);
 });
