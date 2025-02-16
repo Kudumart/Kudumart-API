@@ -29,6 +29,9 @@ import Cart from "../models/cart";
 import sequelizeService from "../services/sequelize.service";
 import SaveProduct from "../models/saveproduct";
 import ReviewProduct from "../models/reviewproduct";
+import Withdrawal from "../models/withdrawal";
+import Admin from "../models/admin";
+import Role from "../models/role";
 
 export const submitOrUpdateKYC = async (
     req: Request,
@@ -1770,10 +1773,10 @@ export const addBankInformation = async (req: Request, res: Response): Promise<v
         const vendor = await User.findByPk(vendorId);
 
         if (!vendor) {
-        res.status(404).json({ message: "Owner not found" });
-        return;
+            res.status(404).json({ message: "Owner not found" });
+            return;
         }
-        
+
         // If it's a vendor, ensure they are verified
         if (vendor && !vendor.isVerified) {
             res.status(400).json({
@@ -1894,5 +1897,262 @@ export const deleteBankInformation = async (req: Request, res: Response): Promis
     } catch (error: any) {
         logger.error("Error deleting bank information:", error);
         res.status(500).json({ message: "Server error" });
+    }
+};
+
+// Request Withdrawal
+export const requestWithdrawal = async (req: Request, res: Response): Promise<void> => {
+    const vendorId = (req as AuthenticatedRequest).user?.id as string;
+
+    const transaction = await sequelizeService.connection!.transaction();
+
+    try {
+        const vendor = await User.findByPk(vendorId, { transaction });
+
+        if (!vendor || vendor.dollarWallet === undefined || vendor.wallet === undefined) {
+            await transaction.rollback();
+            res.status(404).json({ message: "Vendor not found or wallet not initialized" });
+            return;
+        }
+
+        const { bankInformationId, amount, currency } = req.body;
+
+        const bankInformation = await BankInformation.findOne({
+            where: { id: bankInformationId, vendorId },
+            transaction,
+        });
+
+        if (!bankInformation) {
+            await transaction.rollback();
+            res.status(404).json({ message: "Bank information not found" });
+            return;
+        }
+
+        // Validate sufficient funds
+        if (currency === "USD" && (vendor.dollarWallet ?? 0) < amount) {
+            await transaction.rollback();
+            res.status(400).json({ message: "Insufficient USD balance" });
+            return;
+        }
+        if (currency !== "USD" && (vendor.wallet ?? 0) < amount) {
+            await transaction.rollback();
+            res.status(400).json({ message: "Insufficient local currency balance" });
+            return;
+        }
+
+        // Deduct balance from wallet
+        if (currency === "USD") {
+            vendor.dollarWallet = (vendor.dollarWallet ?? 0) - amount;
+        } else {
+            vendor.wallet = (vendor.wallet ?? 0) - amount;
+        }
+        await vendor.save({ transaction });
+
+        // Create withdrawal request
+        const withdrawal = await Withdrawal.create(
+            {
+                vendorId,
+                bankInformation, // Store only the ID instead of full object
+                amount,
+                currency,
+                status: "pending", // Set default status
+            },
+            { transaction }
+        );
+
+        // Vendor Notification
+        await Notification.create(
+            {
+                userId: vendorId,
+                title: "Withdrawal Request Submitted",
+                type: "withdrawal_request",
+                message: `Your withdrawal request of ${currency} ${amount} is under review.`,
+            },
+            { transaction }
+        );
+
+        // Find superadmin users
+        const adminUsers = await Admin.findAll({
+            include: [
+                {
+                    model: Role,
+                    as: "role",
+                    where: { name: "superadmin" },
+                    attributes: [],
+                },
+            ],
+            transaction,
+        });
+
+        // Notify Admins
+        for (const admin of adminUsers) {
+            await Notification.create(
+                {
+                    userId: admin.id,
+                    title: "New Withdrawal Request",
+                    type: "withdrawal_request",
+                    message: `Vendor ${vendor.firstName} ${vendor.lastName} requested a withdrawal of ${currency} ${amount}.`,
+                },
+                { transaction }
+            );
+        }
+
+        await transaction.commit(); // Commit transaction
+        res.status(200).json({ message: "Withdrawal request submitted", withdrawal });
+    } catch (error) {
+        await transaction.rollback(); // Rollback changes on error
+        logger.error("Error processing withdrawal:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const getWithdrawals = async (req: Request, res: Response): Promise<void> => {
+    const vendorId = (req as AuthenticatedRequest).user?.id as string;
+
+    try {
+        const { status } = req.query; // Optional filter by status
+
+        const whereClause: any = { vendorId };
+        if (status) {
+            whereClause.status = status;
+        }
+
+        const withdrawals = await Withdrawal.findAll({
+            where: whereClause,
+            order: [["createdAt", "DESC"]], // Latest withdrawals first
+        });
+
+        res.status(200).json({ message: "Withdrawals fetched successfully", data: withdrawals });
+    } catch (error) {
+        logger.error("Error fetching withdrawals:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const updateWithdrawal = async (req: Request, res: Response): Promise<void> => {
+    const vendorId = (req as AuthenticatedRequest).user?.id as string;
+    const transaction = await sequelizeService.connection!.transaction();
+
+    try {
+        const { withdrawalId, bankInformationId } = req.body;
+
+        const withdrawal = await Withdrawal.findByPk(withdrawalId, { transaction });
+        if (!withdrawal) {
+            await transaction.rollback();
+            res.status(404).json({ message: "Withdrawal request not found" });
+            return;
+        }
+
+        const bankInformation = await BankInformation.findOne({
+            where: { id: bankInformationId, vendorId },
+            transaction,
+        });
+        if (!bankInformation) {
+            await transaction.rollback();
+            res.status(404).json({ message: "Bank information not found" });
+            return;
+        }
+
+        if (withdrawal.status !== "rejected") {
+            await transaction.rollback();
+            res.status(400).json({ message: "Only rejected withdrawals can be updated" });
+            return;
+        }
+
+        // Find vendor
+        const vendor = await User.findByPk(vendorId, { transaction });
+        if (!vendor) {
+            await transaction.rollback();
+            res.status(404).json({ message: "Vendor not found" });
+            return;
+        }
+
+        // Deduct withdrawal amount from the vendor's wallet
+        const withdrawalAmount = Number(withdrawal.amount); // Ensure it's a number
+
+        if (withdrawal.currency === "USD") {
+            if ((Number(vendor.dollarWallet ?? 0)) < withdrawalAmount) {
+                await transaction.rollback();
+                res.status(400).json({ message: "Insufficient funds in dollar wallet." });
+                return;
+            }
+            vendor.dollarWallet = (Number(vendor.dollarWallet ?? 0)) - withdrawalAmount;
+        } else {
+            if ((Number(vendor.wallet ?? 0)) < withdrawalAmount) {
+                await transaction.rollback();
+                res.status(400).json({ message: "Insufficient funds in wallet." });
+                return;
+            }
+            vendor.wallet = (Number(vendor.wallet ?? 0)) - withdrawalAmount;
+        }
+
+        await vendor.save({ transaction });
+        // Update withdrawal
+        withdrawal.bankInformation = bankInformation;
+        withdrawal.status = "pending"; // Reset status to pending for re-evaluation
+        await withdrawal.save({ transaction });
+
+        // Vendor Notification
+        await Notification.create(
+            {
+                userId: vendorId,
+                title: "Withdrawal Request Updated",
+                type: "withdrawal_update",
+                message: `Your withdrawal request has been updated and is under review again.`,
+            },
+            { transaction }
+        );
+
+        // Find superadmin users
+        const adminUsers = await Admin.findAll({
+            include: [
+                {
+                    model: Role,
+                    as: "role",
+                    where: { name: "superadmin" },
+                    attributes: [],
+                },
+            ],
+            transaction,
+        });
+
+        // Notify Admins
+        for (const admin of adminUsers) {
+            await Notification.create(
+                {
+                    userId: admin.id,
+                    title: "Updated Withdrawal Request",
+                    type: "withdrawal_update",
+                    message: `Vendor ${vendorId} has updated a previously rejected withdrawal request.`,
+                },
+                { transaction }
+            );
+        }
+
+        await transaction.commit(); // Commit transaction
+        res.status(200).json({ message: `Withdrawal successfully updated.`, data: withdrawal });
+    } catch (error) {
+        await transaction.rollback(); // Rollback changes on error
+        logger.error("Error updating withdrawal status:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const getWithdrawalById = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const id = req.query.id as string;
+
+        // Find withdrawal with associated BankInformation and Vendor details
+        const withdrawal = await Withdrawal.findByPk(id);
+
+        if (!withdrawal) {
+            res.status(404).json({ message: "Withdrawal not found" });
+            return;
+        }
+
+        res.status(200).json({ message: "Withdrawal retrieved successfully", data: withdrawal });
+    } catch (error) {
+        logger.error("Error retrieving withdrawal:", error);
+        res.status(500).json({ message: "Internal server error" });
     }
 };

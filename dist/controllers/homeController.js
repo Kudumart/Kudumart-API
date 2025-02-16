@@ -89,8 +89,8 @@ const products = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { country, storeId, minPrice, maxPrice, name, // Product name
     subCategoryName, // Subcategory name filter
     condition, // Product condition filter
-    categoryId, popular // Query parameter to sort by most viewed
-     } = req.query;
+    categoryId, popular, // Query parameter to sort by most viewed
+    symbol } = req.query;
     try {
         // Define the base where clause with the active status
         const whereClause = { status: "active" };
@@ -103,9 +103,6 @@ const products = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         }
         if (maxPrice) {
             whereClause.price = Object.assign(Object.assign({}, whereClause.price), { [sequelize_1.Op.lte]: Number(maxPrice) });
-        }
-        if (name) {
-            whereClause.name = { [sequelize_1.Op.like]: `%${name}%` }; // Case-insensitive search for product name
         }
         if (name) {
             const normalizedName = String(name).trim().replace(/\s+/g, " "); // Normalize spaces
@@ -150,11 +147,15 @@ const products = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                     {
                         model: currency_1.default,
                         as: "currency",
-                        attributes: ["symbol"],
+                        attributes: ["id", "symbol"],
                     },
                 ],
             },
         ];
+        // **Apply the currency symbol filter separately**
+        if (symbol) {
+            whereClause["$store.currency.symbol$"] = symbol;
+        }
         // Determine sorting order dynamically
         const orderClause = popular === "true"
             ? [["views", "DESC"], [sequelize_1.Sequelize.literal("RAND()"), "ASC"]] // Sort by views first, then randomize
@@ -165,6 +166,7 @@ const products = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             include: includeClause,
             order: orderClause, // Dynamic ordering
             limit: 20, // Fetch top 20 products
+            subQuery: false, // Ensures the currency filter is applied correctly
         });
         res.status(200).json({ data: products });
     }

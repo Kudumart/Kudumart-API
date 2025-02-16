@@ -966,6 +966,13 @@ export const addItemToCart = async (
     const { vendorId, name } = product;
     const productCurrency = product.store.currency;
 
+    // Ensure product currency is either $, #, or ₦
+    const allowedCurrencies = ["$", "#", "₦"];
+    if (!allowedCurrencies.includes(productCurrency.symbol)) {
+      res.status(400).json({ message: `Only products with currencies ${allowedCurrencies.join(", ")} are allowed.` });
+      return;
+    }
+
     // Check if vendorId exists in the User table (Vendor)
     const vendor = await User.findByPk(vendorId);
 
@@ -976,7 +983,7 @@ export const addItemToCart = async (
       res.status(404).json({ message: "Owner not found" });
       return;
     }
-    
+
     // If it's a vendor, ensure they are verified
     if (vendor && !vendor.isVerified) {
       res.status(400).json({
@@ -1025,8 +1032,10 @@ export const addItemToCart = async (
         existingCurrency.name !== productCurrency.name ||
         existingCurrency.symbol !== productCurrency.symbol
       ) {
-        // Clear the cart if the currency doesn't match
-        await Cart.destroy({ where: { userId } });
+        res.status(400).json({
+          message: `Your cart contains products in ${existingCurrency.name}. Please clear your cart before adding items in ${productCurrency.name}.`,
+        });
+        return;
       }
     }
 
@@ -1179,26 +1188,29 @@ export const clearCart = async (
 
 }
 
-export const getActivePaymentGateway = async (req: Request, res: Response): Promise<void> => {
+export const getActivePaymentGateways = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Query for an active payment gateway
-    const paymentGateway = await PaymentGateway.findOne({
-      where: { isActive: true }, // Assumes 'status' is a field in your model
+    // Query for active payment gateways (only Paystack and Stripe)
+    const paymentGateways = await PaymentGateway.findAll({
+      where: {
+        isActive: true,
+        name: ["paystack", "stripe"], // Assuming 'name' is the field for gateway names
+      },
     });
 
-    if (!paymentGateway) {
-      res.status(404).json({ message: "No active payment gateway found" });
+    if (!paymentGateways.length) {
+      res.status(404).json({ message: "No active payment gateways found" });
       return;
     }
 
     res.status(200).json({
-      message: "Active payment gateway fetched successfully",
-      data: paymentGateway,
+      message: "Active payment gateways fetched successfully",
+      data: paymentGateways,
     });
   } catch (error: any) {
-    logger.error("Error fetching active payment gateway:", error);
+    logger.error("Error fetching active payment gateways:", error);
     res.status(500).json({
-      message: "An error occurred while fetching the active payment gateway",
+      message: "An error occurred while fetching the active payment gateways",
     });
   }
 };
@@ -1310,12 +1322,12 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
           {
             model: Store,
             as: 'store',
-            attributes: [ "name" ],
+            attributes: ["name"],
             include: [
               {
                 model: Currency,
                 as: 'currency',
-                attributes: [ "name", "symbol" ]
+                attributes: ["name", "symbol"]
               },
             ],
           },
@@ -1326,7 +1338,7 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
           },
         ],
       });
-      
+
       if (!product) {
         throw new Error(`Product with ID ${cartItem.product.id} not found.`);
       }
@@ -1336,7 +1348,7 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 
       // Check if vendorId exists in the Admin table
       const admin = await Admin.findByPk(product.vendorId);
-  
+
       if (!vendor && !admin) {
         res.status(404).json({ message: "Owner not found" });
         return;
@@ -1352,8 +1364,40 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
           price: product.price,
         },
         { transaction }
-      ); 
-      
+      );
+
+      if (vendor) {
+        await Notification.create({
+          userId: vendor.id,
+          title: "New Order Received",
+          type: "new_order",
+          message: `You have received a new order (TRACKING NO: ${order.trackingNumber}) for your product.`,
+        });
+
+        const message = emailTemplates.newOrderNotification(vendor, order);
+
+        await sendMail(
+          vendor.email,
+          `${process.env.APP_NAME} - New Order Received`,
+          message
+        );
+      } else if (admin) {
+        await Notification.create({
+          userId: admin.id,
+          title: "New Order Received",
+          type: "new_order",
+          message: `A new order (TRACKING NO: ${order.trackingNumber}) has been placed.`,
+        });
+
+        const message = emailTemplates.newOrderAdminNotification(admin, order);
+
+        await sendMail(
+          admin.email,
+          `${process.env.APP_NAME} - New Order Received`,
+          message
+        );
+      }
+
       // If it's a vendor 
       // if (vendor) {
       //   await vendor.update(
@@ -1383,12 +1427,36 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
       { transaction }
     );
 
-
     // Clear user's cart
     await Cart.destroy({ where: { userId }, transaction });
 
+    // Notify the Buyer
+    await Notification.create({
+      userId,
+      title: "Order Confirmation",
+      type: "order_confirmation",
+      message: `Your order (TRACKING NO: ${order.trackingNumber}) has been successfully placed.`,
+    }, { transaction });
+
+    const user = await User.findByPk(userId, { transaction }); // Add transaction scope
+    if (!user) {
+      throw new Error(`User not found.`);
+    }
+
     // Commit the transaction
     await transaction.commit();
+
+    // Send mail (outside of transaction)
+    const message = emailTemplates.orderConfirmationNotification(user, order);
+    try {
+      await sendMail(
+        user.email,
+        `${process.env.APP_NAME} - Order Confirmation`,
+        message
+      );
+    } catch (emailError) {
+      logger.error("Error sending email:", emailError);
+    }
 
     res.status(200).json({
       message: "Checkout successful"
@@ -1397,6 +1465,221 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
     await transaction.rollback();
     logger.error("Error during checkout:", error);
     res.status(500).json({ message: error.message || "Checkout failed" });
+  }
+};
+
+export const checkoutDollar = async (req: Request, res: Response): Promise<void> => {
+  const userId = (req as AuthenticatedRequest).user?.id;
+  const { refId, shippingAddress } = req.body;
+
+  if (!userId) {
+    res.status(400).json({ message: "User must be authenticated" });
+    return;
+  }
+
+  if (!refId) {
+    res.status(400).json({ message: "Payment reference ID is required" });
+    return;
+  }
+
+  if (!shippingAddress) {
+    res.status(400).json({ message: "Shipping address is required" });
+    return;
+  }
+
+  const transaction = await sequelizeService.connection!.transaction();
+
+  try {
+    // Fetch cart items
+    const cartItems = await Cart.findAll({
+      where: { userId },
+      include: [{ model: Product, as: "product", attributes: ["id", "name", "price", "vendorId"] }],
+    });
+
+    if (!cartItems || cartItems.length === 0) {
+      res.status(400).json({ message: "Cart is empty" });
+      return;
+    }
+
+    // Calculate total price
+    let totalAmount = 0;
+    const vendorOrders: { [key: string]: OrderItem[] } = {}; // Stores vendor-specific order items
+
+    for (const cartItem of cartItems) {
+      const product = cartItem.product;
+      if (!product) throw new Error(`Product with ID ${cartItem.productId} not found`);
+
+      const productInfo = await Product.findByPk(cartItem.productId, {
+        include: [
+          {
+            model: Store,
+            as: 'store',
+            attributes: ["name"],
+            include: [
+              {
+                model: Currency,
+                as: 'currency',
+                attributes: ["name", "symbol"]
+              },
+            ],
+          },
+          {
+            model: SubCategory,
+            as: "sub_category",
+            attributes: ["id", "name"],
+          },
+        ],
+      });
+
+      if (!productInfo) {
+        throw new Error(`Product with ID ${cartItem.productId} not found.`);
+      }
+
+      totalAmount += product.price * cartItem.quantity;
+
+      // Organize order items by vendor
+      if (!vendorOrders[product.vendorId]) {
+        vendorOrders[product.vendorId] = [];
+      }
+      vendorOrders[product.vendorId].push({
+        vendorId: product.vendorId,
+        product: productInfo,
+        quantity: cartItem.quantity,
+        price: product.price,
+      } as unknown as OrderItem);
+    }
+
+    // Create a single order for the buyer
+    const order = await Order.create(
+      {
+        userId,
+        totalAmount,
+        refId,
+        shippingAddress,
+        status: "pending",
+      },
+      { transaction }
+    );
+
+    // Process order items per vendor
+    for (const vendorId in vendorOrders) {
+      const vendorOrderItems = vendorOrders[vendorId];
+
+      for (const item of vendorOrderItems) {
+        await OrderItem.create(
+          {
+            vendorId: item.vendorId,
+            orderId: order.id,
+            product: item.product,
+            quantity: item.quantity,
+            price: item.price,
+          },
+          { transaction }
+        );
+      }
+    }
+
+    // Save payment details
+    await Payment.create(
+      {
+        orderId: order.id,
+        refId,
+        amount: totalAmount,
+        currency: "USD",
+        status: "success",
+        channel: "Stripe",
+        paymentDate: new Date(),
+      },
+      { transaction }
+    );
+
+    // Clear cart
+    await Cart.destroy({ where: { userId }, transaction });
+
+    // **Send Notifications**
+
+    const user = await User.findByPk(userId, { transaction }); // Add transaction scope
+    if (!user) {
+      throw new Error(`User not found.`);
+    }
+
+    // Notify the Buyer
+    await Notification.create({
+      userId,
+      title: "Order Confirmation",
+      type: "order_confirmation",
+      message: `Your order (TRACKING NO: ${order.trackingNumber}) has been successfully placed.`,
+    }, { transaction });
+
+    // Notify Each Vendor/Admin
+    for (const vendorId in vendorOrders) {
+      try {
+        const vendor = await User.findByPk(vendorId);
+        const admin = await Admin.findByPk(vendorId);
+
+        if (!vendor && !admin) {
+          res.status(404).json({ message: "Owner not found" });
+          return;
+        }
+
+        if (vendor) {
+          await Notification.create({
+            userId: vendor.id,
+            title: "New Order Received",
+            type: "new_order",
+            message: `You have received a new order (TRACKING NO: ${order.trackingNumber}) for your product.`,
+          }, { transaction });
+
+          const message = emailTemplates.newOrderNotification(vendor, order);
+
+          await sendMail(
+            vendor.email,
+            `${process.env.APP_NAME} - New Order Received`,
+            message
+          );
+        } else if (admin) {
+          await Notification.create({
+            userId: admin.id,
+            title: "New Order Received",
+            type: "new_order",
+            message: `A new order (TRACKING NO: ${order.trackingNumber}) has been placed for your product.`,
+          }, { transaction });
+
+          const message = emailTemplates.newOrderAdminNotification(admin, order);
+
+          await sendMail(
+            admin.email,
+            `${process.env.APP_NAME} - New Order Received`,
+            message
+          );
+        }
+      } catch (notificationError) {
+        logger.error(`Failed to notify vendor ${vendorId}:`, notificationError);
+      }
+    }
+
+    // Commit transaction
+    await transaction.commit();
+
+    // Send mail (outside of transaction)
+    const message = emailTemplates.orderConfirmationNotification(user, order);
+    try {
+      await sendMail(
+        user.email,
+        `${process.env.APP_NAME} - Order Confirmation`,
+        message
+      );
+    } catch (emailError) {
+      logger.error("Error sending email:", emailError);
+    }
+
+    res.status(200).json({
+      message: "Checkout successful",
+    });
+  } catch (error: any) {
+    await transaction.rollback();
+    logger.error("Error during checkout:", error);
+    res.status(500).json({ message: "Checkout failed" });
   }
 };
 
@@ -1922,97 +2205,111 @@ export const updateOrderStatus = async (req: Request, res: Response): Promise<vo
   const allowedStatuses = ["pending", "processing", "shipped", "delivered", "cancelled"];
 
   if (!allowedStatuses.includes(status)) {
-      res.status(400).json({ message: "Invalid order status provided." });
-      return;
+    res.status(400).json({ message: "Invalid order status provided." });
+    return;
   }
 
   // Start transaction
   const transaction = await sequelizeService.connection!.transaction();
 
   try {
-      // Find the order item
-      const order = await OrderItem.findOne({ where: { id: orderItemId }, transaction });
+    // Find the order item
+    const order = await OrderItem.findOne({ where: { id: orderItemId }, transaction });
 
-      if (!order) {
-          await transaction.rollback();
-          res.status(404).json({ message: "Order item not found." });
-          return;
-      }
+    if (!order) {
+      await transaction.rollback();
+      res.status(404).json({ message: "Order item not found." });
+      return;
+    }
 
-      // If the order is already delivered or cancelled, stop further processing
-      if (order.status === "delivered" || order.status === "cancelled") {
-        await transaction.rollback();
-        res.status(400).json({
-          message: `Order is already ${order.status}. No further updates are allowed.`
-        });
-        return;
-      }
-
-      let productData: ProductData | null = order.product as ProductData;
-
-      // If product data is stored as a string, parse it
-      if (typeof order.product === "string") {
-          productData = JSON.parse(order.product) as ProductData;
-      }
-
-      // Extract vendorId safely
-      const vendorId = productData?.vendorId ?? null;
-
-      if (!vendorId) {
-          await transaction.rollback();
-          res.status(400).json({ message: "Vendor ID not found in product data." });
-          return;
-      }
-
-      // Update the order status
-      order.status = status;
-      await order.save({ transaction });
-
-      // Check if vendorId exists in the User or Admin table
-      const vendor = await User.findByPk(vendorId, { transaction });
-      const admin = await Admin.findByPk(vendorId, { transaction });
-
-      if (!vendor && !admin) {
-          await transaction.rollback();
-          res.status(404).json({ message: "Product owner not found." });
-          return;
-      }
-
-      // If the order is delivered, add funds to the vendor's wallet
-      if (status === "delivered" && vendor) {
-          const price = Number(order.price);
-          vendor.wallet = (Number(vendor.wallet) + price);
-          await vendor.save({ transaction });
-      }
-
-      // Send a notification to the vendor/admin
-      await Notification.create({
-          userId: userId,
-          title: "Order Status Updated",
-          message: `Your product has been marked as '${status}'.`,
-          type: "order_status_update",
-      }, { transaction });
-
-      // Send a notification to the vendor (who owns the product)
-      await Notification.create({
-        userId: vendorId,
-        title: "Order Status Updated",
-        message: `The status of the product '${productData?.name}' purchased from you has been updated to '${status}' by the customer.`,
-        type: "order_status_update",
-      }, { transaction });
-
-      // Commit transaction
-      await transaction.commit();
-
-      res.status(200).json({
-          message: `Order status updated to '${status}' successfully.`,
-          data: order,
+    // If the order is already delivered or cancelled, stop further processing
+    if (order.status === "delivered" || order.status === "cancelled") {
+      await transaction.rollback();
+      res.status(400).json({
+        message: `Order is already ${order.status}. No further updates are allowed.`
       });
+      return;
+    }
+
+    let productData: ProductData | null = order.product as ProductData;
+
+    // If product data is stored as a string, parse it
+    if (typeof order.product === "string") {
+      productData = JSON.parse(order.product) as ProductData;
+    }
+
+    // Extract vendorId safely
+    const vendorId = productData?.vendorId ?? null;
+    const currencySymbol = productData?.store?.currency?.symbol ?? null;
+
+    if (!vendorId) {
+      await transaction.rollback();
+      res.status(400).json({ message: "Vendor ID not found in product data." });
+      return;
+    }
+
+    if (!currencySymbol) {
+      await transaction.rollback();
+      res.status(400).json({ message: "Currency not found in product data." });
+      return;
+    }
+
+    // Update the order status
+    order.status = status;
+    await order.save({ transaction });
+
+    // Check if vendorId exists in the User or Admin table
+    const vendor = await User.findByPk(vendorId, { transaction });
+    const admin = await Admin.findByPk(vendorId, { transaction });
+
+    if (!vendor && !admin) {
+      await transaction.rollback();
+      res.status(404).json({ message: "Product owner not found." });
+      return;
+    }
+
+    // If the order is delivered, add funds to the vendor's wallet
+    if ((status === "delivered" && currencySymbol === "#" && vendor) || (status === "delivered" && currencySymbol === "₦" && vendor)) {
+      const price = Number(order.price);
+      vendor.wallet = (Number(vendor.wallet) + price);
+      await vendor.save({ transaction });
+    }
+
+    // If the order is delivered and the currency is USD, add funds to the vendor's wallet
+    if (status === "delivered" && currencySymbol === "$" && vendor) {
+      const price = Number(order.price);
+      vendor.dollarWallet = (Number(vendor.dollarWallet) + price);
+      await vendor.save({ transaction });
+    }
+
+    // Send a notification to the vendor/admin
+    await Notification.create({
+      userId: userId,
+      title: "Order Status Updated",
+      message: `Your product has been marked as '${status}'.`,
+      type: "order_status_update",
+    }, { transaction });
+
+    // Send a notification to the vendor (who owns the product)
+    await Notification.create({
+      userId: vendorId,
+      title: "Order Status Updated",
+      message: `The status of the product '${productData?.name}' purchased from you has been updated to '${status}' by the customer.`,
+      type: "order_status_update",
+    }, { transaction });
+
+    // Commit transaction
+    await transaction.commit();
+
+    res.status(200).json({
+      message: `Order status updated to '${status}' successfully.`,
+      data: order,
+    });
 
   } catch (error) {
-      await transaction.rollback();
-      logger.error("Error updating order status:", error);
-      res.status(500).json({ message: "An error occurred while updating the order status." });
+    await transaction.rollback();
+    logger.error("Error updating order status:", error);
+    res.status(500).json({ message: "An error occurred while updating the order status." });
   }
 };
 
@@ -2059,90 +2356,90 @@ export const getPaymentDetails = async (req: Request, res: Response): Promise<vo
 export const toggleSaveProduct = async (req: Request, res: Response): Promise<void> => {
   const { productId } = req.body;
   const userId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID from middleware
-  
+
   try {
-      // Check if the product exists
-      const product = await Product.findOne({ where: { id: productId, status: "active" } });
-      if (!product) {
-          res.status(404).json({ message: "Product not found" });
-          return;
-      }
+    // Check if the product exists
+    const product = await Product.findOne({ where: { id: productId, status: "active" } });
+    if (!product) {
+      res.status(404).json({ message: "Product not found" });
+      return;
+    }
 
-      // Check if the product is already saved (wishlist)
-      const existingSavedProduct = await SaveProduct.findOne({
-          where: { userId, productId }
-      });
+    // Check if the product is already saved (wishlist)
+    const existingSavedProduct = await SaveProduct.findOne({
+      where: { userId, productId }
+    });
 
-      if (existingSavedProduct) {
-          // If exists, remove it (toggle)
-          await existingSavedProduct.destroy();
-          res.status(200).json({ message: "Product removed from your saved list" });
-      } else {
-          // Otherwise, add the product to the saved list
-          await SaveProduct.create({ userId, productId });
-          res.status(200).json({ message: "Product added to your saved list" });
-      }
+    if (existingSavedProduct) {
+      // If exists, remove it (toggle)
+      await existingSavedProduct.destroy();
+      res.status(200).json({ message: "Product removed from your saved list" });
+    } else {
+      // Otherwise, add the product to the saved list
+      await SaveProduct.create({ userId, productId });
+      res.status(200).json({ message: "Product added to your saved list" });
+    }
   } catch (error: any) {
-      logger.error("Error toggling save product:", error);
-      res.status(500).json({ message: "An error occurred while processing the request." });
+    logger.error("Error toggling save product:", error);
+    res.status(500).json({ message: "An error occurred while processing the request." });
   }
 };
 
 export const getSavedProducts = async (req: Request, res: Response): Promise<void> => {
   const userId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID from middleware
-  
+
   try {
-      // Fetch all saved products for the authenticated user
-      const savedProducts = await SaveProduct.findAll({
-          where: { userId },
+    // Fetch all saved products for the authenticated user
+    const savedProducts = await SaveProduct.findAll({
+      where: { userId },
+      include: [
+        {
+          model: Product,
+          as: "product", // Adjust the alias if necessary
+          where: { status: "active" }, // Only include active products
           include: [
-              {
-                  model: Product,
-                  as: "product", // Adjust the alias if necessary
-                  where: { status: "active" }, // Only include active products
-                  include: [
-                    {
-                        model: User,
-                        as: "vendor",
-                    },
-                    {
-                        model: Admin,
-                        as: "admin",
-                        attributes: ["id", "name", "email"],
-                    },
-                    {
-                        model: SubCategory,
-                        as: "sub_category",
-                        attributes: ["id", "name", "categoryId"],
-                    },
-                    {
-                        model: Store,
-                        as: "store",
-                        attributes: ["id", "name"],
-                        include: [
-                            {
-                                model: Currency,
-                                as: "currency",
-                                attributes: ["symbol"],
-                            },
-                        ],
-                    },
-                  ]
-              },
-          ],
-      });
+            {
+              model: User,
+              as: "vendor",
+            },
+            {
+              model: Admin,
+              as: "admin",
+              attributes: ["id", "name", "email"],
+            },
+            {
+              model: SubCategory,
+              as: "sub_category",
+              attributes: ["id", "name", "categoryId"],
+            },
+            {
+              model: Store,
+              as: "store",
+              attributes: ["id", "name"],
+              include: [
+                {
+                  model: Currency,
+                  as: "currency",
+                  attributes: ["symbol"],
+                },
+              ],
+            },
+          ]
+        },
+      ],
+    });
 
-      // If no saved products are found
-      if (savedProducts.length === 0) {
-          res.status(404).json({ message: "No saved products found" });
-          return;
-      }
+    // If no saved products are found
+    if (savedProducts.length === 0) {
+      res.status(404).json({ message: "No saved products found" });
+      return;
+    }
 
-      // Send the saved products in the response
-      res.status(200).json({ data: savedProducts });
+    // Send the saved products in the response
+    res.status(200).json({ data: savedProducts });
   } catch (error: any) {
-      logger.error("Error fetching saved products:", error);
-      res.status(500).json({ message: "An error occurred while fetching saved products." });
+    logger.error("Error fetching saved products:", error);
+    res.status(500).json({ message: "An error occurred while fetching saved products." });
   }
 };
 
@@ -2162,29 +2459,29 @@ export const addReview = async (req: Request, res: Response): Promise<void> => {
   }
 
   try {
-      // Check if user has purchased the product
-      const purchased = await hasPurchasedProduct(orderId, productId);
-      if (!purchased) {
-          res.status(403).json({ message: "You can only review products that has been delivered." });
-          return;
-      }
+    // Check if user has purchased the product
+    const purchased = await hasPurchasedProduct(orderId, productId);
+    if (!purchased) {
+      res.status(403).json({ message: "You can only review products that has been delivered." });
+      return;
+    }
 
-      // Check if the user already reviewed the product
-      const existingReview = await ReviewProduct.findOne({ where: { userId, productId } });
+    // Check if the user already reviewed the product
+    const existingReview = await ReviewProduct.findOne({ where: { userId, productId } });
 
-      if (existingReview) {
-          res.status(400).json({ message: "You have already reviewed this product." });
-          return;
-      }
+    if (existingReview) {
+      res.status(400).json({ message: "You have already reviewed this product." });
+      return;
+    }
 
-      // Create the review
-      await ReviewProduct.create({ userId, productId, rating, comment });
+    // Create the review
+    await ReviewProduct.create({ userId, productId, rating, comment });
 
-      res.status(200).json({ message: "Review submitted successfully." });
+    res.status(200).json({ message: "Review submitted successfully." });
 
   } catch (error) {
-      logger.error("Error adding review:", error);
-      res.status(500).json({ message: "An error occurred while submitting the review." });
+    logger.error("Error adding review:", error);
+    res.status(500).json({ message: "An error occurred while submitting the review." });
   }
 };
 
@@ -2197,24 +2494,24 @@ export const updateReview = async (req: Request, res: Response): Promise<void> =
     res.status(400).json({ message: "Rating must be a numeric value between 1 and 5." });
     return;
   }
-  
+
   try {
-      // Find existing review
-      const review = await ReviewProduct.findOne({ where: { userId, id:reviewId } });
+    // Find existing review
+    const review = await ReviewProduct.findOne({ where: { userId, id: reviewId } });
 
-      if (!review) {
-          res.status(404).json({ message: "Review not found." });
-          return;
-      }
+    if (!review) {
+      res.status(404).json({ message: "Review not found." });
+      return;
+    }
 
-      // Update the review
-      await review.update({ rating, comment });
+    // Update the review
+    await review.update({ rating, comment });
 
-      res.status(200).json({ message: "Review updated successfully." });
+    res.status(200).json({ message: "Review updated successfully." });
 
   } catch (error) {
-      logger.error("Error updating review:", error);
-      res.status(500).json({ message: "An error occurred while updating the review." });
+    logger.error("Error updating review:", error);
+    res.status(500).json({ message: "An error occurred while updating the review." });
   }
 };
 
@@ -2223,27 +2520,27 @@ export const getProductReviews = async (req: Request, res: Response): Promise<vo
   const userId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID
 
   try {
-      const whereClause: any = { userId }; // Default filter by user ID
+    const whereClause: any = { userId }; // Default filter by user ID
 
-      if (productId) {
-          whereClause.productId = productId; // Add product filter if provided
-      }
+    if (productId) {
+      whereClause.productId = productId; // Add product filter if provided
+    }
 
-      const reviews = await ReviewProduct.findAll({
-          where: whereClause,
-          include: [
-            { 
-              model: User, 
-              as: "user",
-              attributes: ["id", "firstName", "lastName", "email"] 
-            }
-          ],
-      });
+    const reviews = await ReviewProduct.findAll({
+      where: whereClause,
+      include: [
+        {
+          model: User,
+          as: "user",
+          attributes: ["id", "firstName", "lastName", "email"]
+        }
+      ],
+    });
 
-      res.status(200).json({ data: reviews });
+    res.status(200).json({ data: reviews });
   } catch (error) {
-      logger.error("Error fetching reviews:", error);
-      res.status(500).json({ message: "An error occurred while fetching reviews." });
+    logger.error("Error fetching reviews:", error);
+    res.status(500).json({ message: "An error occurred while fetching reviews." });
   }
 };
 
@@ -2251,57 +2548,57 @@ export const getSingleReview = async (req: Request, res: Response): Promise<void
   const reviewId = req.query.reviewId as string;
 
   try {
-      const review = await ReviewProduct.findOne({
-          where: { id: reviewId },
+    const review = await ReviewProduct.findOne({
+      where: { id: reviewId },
+      include: [
+        {
+          model: User,
+          as: "user",
+          attributes: ["id", "firstName", "lastName", "email"]
+        },
+        {
+          model: Product,
+          as: "product",
           include: [
-            { 
-              model: User, 
-              as: "user",
-              attributes: ["id", "firstName", "lastName", "email"] 
+            {
+              model: User,
+              as: "vendor",
             },
-            { 
-              model: Product, 
-              as: "product",
+            {
+              model: Admin,
+              as: "admin",
+              attributes: ["id", "name", "email"],
+            },
+            {
+              model: SubCategory,
+              as: "sub_category",
+              attributes: ["id", "name", "categoryId"],
+            },
+            {
+              model: Store,
+              as: "store",
+              attributes: ["id", "name"],
               include: [
                 {
-                    model: User,
-                    as: "vendor",
+                  model: Currency,
+                  as: "currency",
+                  attributes: ["symbol"],
                 },
-                {
-                    model: Admin,
-                    as: "admin",
-                    attributes: ["id", "name", "email"],
-                },
-                {
-                    model: SubCategory,
-                    as: "sub_category",
-                    attributes: ["id", "name", "categoryId"],
-                },
-                {
-                    model: Store,
-                    as: "store",
-                    attributes: ["id", "name"],
-                    include: [
-                        {
-                            model: Currency,
-                            as: "currency",
-                            attributes: ["symbol"],
-                        },
-                    ],
-                },
-              ]
-            }
-          ],
-      });
+              ],
+            },
+          ]
+        }
+      ],
+    });
 
-      if (!review) {
-          res.status(404).json({ message: "Review not found." });
-          return;
-      }
+    if (!review) {
+      res.status(404).json({ message: "Review not found." });
+      return;
+    }
 
-      res.status(200).json({ data: review });
+    res.status(200).json({ data: review });
   } catch (error) {
-      logger.error("Error fetching review:", error);
-      res.status(500).json({ message: "An error occurred while fetching the review." });
+    logger.error("Error fetching review:", error);
+    res.status(500).json({ message: "An error occurred while fetching the review." });
   }
 };

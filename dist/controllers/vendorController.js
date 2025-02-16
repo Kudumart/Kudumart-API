@@ -23,7 +23,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteBankInformation = exports.getSingleBankInformation = exports.getBankInformation = exports.updateBankInformation = exports.addBankInformation = exports.deleteAdvert = exports.viewAdvert = exports.getAdverts = exports.updateAdvert = exports.createAdvert = exports.activeProducts = exports.getOrderItemsInfo = exports.getVendorOrderItems = exports.getAllSubCategories = exports.getAllCurrencies = exports.verifyCAC = exports.subscribe = exports.subscriptionPlans = exports.viewAuctionProduct = exports.fetchVendorAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchVendorProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.viewStore = exports.getStore = exports.getKYC = exports.submitOrUpdateKYC = void 0;
+exports.getWithdrawalById = exports.updateWithdrawal = exports.getWithdrawals = exports.requestWithdrawal = exports.deleteBankInformation = exports.getSingleBankInformation = exports.getBankInformation = exports.updateBankInformation = exports.addBankInformation = exports.deleteAdvert = exports.viewAdvert = exports.getAdverts = exports.updateAdvert = exports.createAdvert = exports.activeProducts = exports.getOrderItemsInfo = exports.getVendorOrderItems = exports.getAllSubCategories = exports.getAllCurrencies = exports.verifyCAC = exports.subscribe = exports.subscriptionPlans = exports.viewAuctionProduct = exports.fetchVendorAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchVendorProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.viewStore = exports.getStore = exports.getKYC = exports.submitOrUpdateKYC = void 0;
 const user_1 = __importDefault(require("../models/user"));
 const uuid_1 = require("uuid");
 const sequelize_1 = require("sequelize");
@@ -50,6 +50,9 @@ const cart_1 = __importDefault(require("../models/cart"));
 const sequelize_service_1 = __importDefault(require("../services/sequelize.service"));
 const saveproduct_1 = __importDefault(require("../models/saveproduct"));
 const reviewproduct_1 = __importDefault(require("../models/reviewproduct"));
+const withdrawal_1 = __importDefault(require("../models/withdrawal"));
+const admin_1 = __importDefault(require("../models/admin"));
+const role_1 = __importDefault(require("../models/role"));
 const submitOrUpdateKYC = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
@@ -1635,4 +1638,223 @@ const deleteBankInformation = (req, res) => __awaiter(void 0, void 0, void 0, fu
     }
 });
 exports.deleteBankInformation = deleteBankInformation;
+// Request Withdrawal
+const requestWithdrawal = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c, _d, _e;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+    const transaction = yield sequelize_service_1.default.connection.transaction();
+    try {
+        const vendor = yield user_1.default.findByPk(vendorId, { transaction });
+        if (!vendor || vendor.dollarWallet === undefined || vendor.wallet === undefined) {
+            yield transaction.rollback();
+            res.status(404).json({ message: "Vendor not found or wallet not initialized" });
+            return;
+        }
+        const { bankInformationId, amount, currency } = req.body;
+        const bankInformation = yield bankinformation_1.default.findOne({
+            where: { id: bankInformationId, vendorId },
+            transaction,
+        });
+        if (!bankInformation) {
+            yield transaction.rollback();
+            res.status(404).json({ message: "Bank information not found" });
+            return;
+        }
+        // Validate sufficient funds
+        if (currency === "USD" && ((_b = vendor.dollarWallet) !== null && _b !== void 0 ? _b : 0) < amount) {
+            yield transaction.rollback();
+            res.status(400).json({ message: "Insufficient USD balance" });
+            return;
+        }
+        if (currency !== "USD" && ((_c = vendor.wallet) !== null && _c !== void 0 ? _c : 0) < amount) {
+            yield transaction.rollback();
+            res.status(400).json({ message: "Insufficient local currency balance" });
+            return;
+        }
+        // Deduct balance from wallet
+        if (currency === "USD") {
+            vendor.dollarWallet = ((_d = vendor.dollarWallet) !== null && _d !== void 0 ? _d : 0) - amount;
+        }
+        else {
+            vendor.wallet = ((_e = vendor.wallet) !== null && _e !== void 0 ? _e : 0) - amount;
+        }
+        yield vendor.save({ transaction });
+        // Create withdrawal request
+        const withdrawal = yield withdrawal_1.default.create({
+            vendorId,
+            bankInformation, // Store only the ID instead of full object
+            amount,
+            currency,
+            status: "pending", // Set default status
+        }, { transaction });
+        // Vendor Notification
+        yield notification_1.default.create({
+            userId: vendorId,
+            title: "Withdrawal Request Submitted",
+            type: "withdrawal_request",
+            message: `Your withdrawal request of ${currency} ${amount} is under review.`,
+        }, { transaction });
+        // Find superadmin users
+        const adminUsers = yield admin_1.default.findAll({
+            include: [
+                {
+                    model: role_1.default,
+                    as: "role",
+                    where: { name: "superadmin" },
+                    attributes: [],
+                },
+            ],
+            transaction,
+        });
+        // Notify Admins
+        for (const admin of adminUsers) {
+            yield notification_1.default.create({
+                userId: admin.id,
+                title: "New Withdrawal Request",
+                type: "withdrawal_request",
+                message: `Vendor ${vendor.firstName} ${vendor.lastName} requested a withdrawal of ${currency} ${amount}.`,
+            }, { transaction });
+        }
+        yield transaction.commit(); // Commit transaction
+        res.status(200).json({ message: "Withdrawal request submitted", withdrawal });
+    }
+    catch (error) {
+        yield transaction.rollback(); // Rollback changes on error
+        logger_1.default.error("Error processing withdrawal:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+exports.requestWithdrawal = requestWithdrawal;
+const getWithdrawals = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+    try {
+        const { status } = req.query; // Optional filter by status
+        const whereClause = { vendorId };
+        if (status) {
+            whereClause.status = status;
+        }
+        const withdrawals = yield withdrawal_1.default.findAll({
+            where: whereClause,
+            order: [["createdAt", "DESC"]], // Latest withdrawals first
+        });
+        res.status(200).json({ message: "Withdrawals fetched successfully", data: withdrawals });
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching withdrawals:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+exports.getWithdrawals = getWithdrawals;
+const updateWithdrawal = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c, _d, _e;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+    const transaction = yield sequelize_service_1.default.connection.transaction();
+    try {
+        const { withdrawalId, bankInformationId } = req.body;
+        const withdrawal = yield withdrawal_1.default.findByPk(withdrawalId, { transaction });
+        if (!withdrawal) {
+            yield transaction.rollback();
+            res.status(404).json({ message: "Withdrawal request not found" });
+            return;
+        }
+        const bankInformation = yield bankinformation_1.default.findOne({
+            where: { id: bankInformationId, vendorId },
+            transaction,
+        });
+        if (!bankInformation) {
+            yield transaction.rollback();
+            res.status(404).json({ message: "Bank information not found" });
+            return;
+        }
+        if (withdrawal.status !== "rejected") {
+            yield transaction.rollback();
+            res.status(400).json({ message: "Only rejected withdrawals can be updated" });
+            return;
+        }
+        // Find vendor
+        const vendor = yield user_1.default.findByPk(vendorId, { transaction });
+        if (!vendor) {
+            yield transaction.rollback();
+            res.status(404).json({ message: "Vendor not found" });
+            return;
+        }
+        // Deduct withdrawal amount from the vendor's wallet
+        const withdrawalAmount = Number(withdrawal.amount); // Ensure it's a number
+        if (withdrawal.currency === "USD") {
+            if ((Number((_b = vendor.dollarWallet) !== null && _b !== void 0 ? _b : 0)) < withdrawalAmount) {
+                yield transaction.rollback();
+                res.status(400).json({ message: "Insufficient funds in dollar wallet." });
+                return;
+            }
+            vendor.dollarWallet = (Number((_c = vendor.dollarWallet) !== null && _c !== void 0 ? _c : 0)) - withdrawalAmount;
+        }
+        else {
+            if ((Number((_d = vendor.wallet) !== null && _d !== void 0 ? _d : 0)) < withdrawalAmount) {
+                yield transaction.rollback();
+                res.status(400).json({ message: "Insufficient funds in wallet." });
+                return;
+            }
+            vendor.wallet = (Number((_e = vendor.wallet) !== null && _e !== void 0 ? _e : 0)) - withdrawalAmount;
+        }
+        yield vendor.save({ transaction });
+        // Update withdrawal
+        withdrawal.bankInformation = bankInformation;
+        withdrawal.status = "pending"; // Reset status to pending for re-evaluation
+        yield withdrawal.save({ transaction });
+        // Vendor Notification
+        yield notification_1.default.create({
+            userId: vendorId,
+            title: "Withdrawal Request Updated",
+            type: "withdrawal_update",
+            message: `Your withdrawal request has been updated and is under review again.`,
+        }, { transaction });
+        // Find superadmin users
+        const adminUsers = yield admin_1.default.findAll({
+            include: [
+                {
+                    model: role_1.default,
+                    as: "role",
+                    where: { name: "superadmin" },
+                    attributes: [],
+                },
+            ],
+            transaction,
+        });
+        // Notify Admins
+        for (const admin of adminUsers) {
+            yield notification_1.default.create({
+                userId: admin.id,
+                title: "Updated Withdrawal Request",
+                type: "withdrawal_update",
+                message: `Vendor ${vendorId} has updated a previously rejected withdrawal request.`,
+            }, { transaction });
+        }
+        yield transaction.commit(); // Commit transaction
+        res.status(200).json({ message: `Withdrawal successfully updated.`, data: withdrawal });
+    }
+    catch (error) {
+        yield transaction.rollback(); // Rollback changes on error
+        logger_1.default.error("Error updating withdrawal status:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+exports.updateWithdrawal = updateWithdrawal;
+const getWithdrawalById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const id = req.query.id;
+        // Find withdrawal with associated BankInformation and Vendor details
+        const withdrawal = yield withdrawal_1.default.findByPk(id);
+        if (!withdrawal) {
+            res.status(404).json({ message: "Withdrawal not found" });
+            return;
+        }
+        res.status(200).json({ message: "Withdrawal retrieved successfully", data: withdrawal });
+    }
+    catch (error) {
+        logger_1.default.error("Error retrieving withdrawal:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+exports.getWithdrawalById = getWithdrawalById;
 //# sourceMappingURL=vendorController.js.map

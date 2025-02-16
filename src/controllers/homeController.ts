@@ -94,7 +94,8 @@ export const products = async (req: Request, res: Response): Promise<void> => {
         subCategoryName, // Subcategory name filter
         condition, // Product condition filter
         categoryId,
-        popular // Query parameter to sort by most viewed
+        popular, // Query parameter to sort by most viewed
+        symbol
     } = req.query;
 
     try {
@@ -110,9 +111,6 @@ export const products = async (req: Request, res: Response): Promise<void> => {
         }
         if (maxPrice) {
             whereClause.price = { ...whereClause.price, [Op.lte]: Number(maxPrice) };
-        }
-        if (name) {
-            whereClause.name = { [Op.like]: `%${name}%` }; // Case-insensitive search for product name
         }
         if (name) {
             const normalizedName = String(name).trim().replace(/\s+/g, " "); // Normalize spaces
@@ -161,11 +159,16 @@ export const products = async (req: Request, res: Response): Promise<void> => {
                     {
                         model: Currency,
                         as: "currency",
-                        attributes: ["symbol"],
+                        attributes: ["id", "symbol"],
                     },
                 ],
             },
         ];
+
+        // **Apply the currency symbol filter separately**
+        if (symbol) {
+            whereClause["$store.currency.symbol$"] = symbol;
+        }
 
         // Determine sorting order dynamically
         const orderClause: Order = popular === "true"
@@ -178,6 +181,7 @@ export const products = async (req: Request, res: Response): Promise<void> => {
             include: includeClause,
             order: orderClause, // Dynamic ordering
             limit: 20, // Fetch top 20 products
+            subQuery: false, // Ensures the currency filter is applied correctly
         });
 
         res.status(200).json({ data: products });

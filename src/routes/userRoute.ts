@@ -38,8 +38,10 @@ userRoutes.delete("/cart/remove", authMiddleware, userController.removeCartItem)
 userRoutes.get("/cart", authMiddleware, userController.getCartContents);
 userRoutes.delete("/cart/clear", authMiddleware, userController.clearCart);
 
-userRoutes.get("/payment/gateway", authMiddleware, userController.getActivePaymentGateway);
+userRoutes.get("/payment/gateway", authMiddleware, userController.getActivePaymentGateways);
 userRoutes.post("/checkout", authMiddleware, userController.checkout);
+userRoutes.post("/checkout/dollar", authMiddleware, userController.checkoutDollar);
+
 
 // Conversation and Message
 userRoutes.get('/conversations', authMiddleware, userController.getConversations);

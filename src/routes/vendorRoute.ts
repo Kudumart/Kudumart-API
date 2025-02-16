@@ -72,4 +72,10 @@ vendorRoutes.get("/bank/informations", authMiddleware, vendorController.getBankI
 vendorRoutes.get("/bank/information", authMiddleware, vendorController.getSingleBankInformation);
 vendorRoutes.delete("/bank/information", authMiddleware, vendorController.deleteBankInformation);
 
+// Withdrawals
+vendorRoutes.post("/withdrawal", authMiddleware, vendorController.requestWithdrawal);
+vendorRoutes.put("/withdrawal", authMiddleware, vendorController.updateWithdrawal);
+vendorRoutes.get("/withdrawals", authMiddleware, vendorController.getWithdrawals);
+vendorRoutes.get("/withdrawal", authMiddleware, vendorController.getWithdrawalById);
+
 export default vendorRoutes;

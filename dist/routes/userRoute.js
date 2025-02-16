@@ -60,8 +60,9 @@ userRoutes.put("/cart/update", authMiddleware_1.default, (0, validations_1.valid
 userRoutes.delete("/cart/remove", authMiddleware_1.default, userController.removeCartItem);
 userRoutes.get("/cart", authMiddleware_1.default, userController.getCartContents);
 userRoutes.delete("/cart/clear", authMiddleware_1.default, userController.clearCart);
-userRoutes.get("/payment/gateway", authMiddleware_1.default, userController.getActivePaymentGateway);
+userRoutes.get("/payment/gateway", authMiddleware_1.default, userController.getActivePaymentGateways);
 userRoutes.post("/checkout", authMiddleware_1.default, userController.checkout);
+userRoutes.post("/checkout/dollar", authMiddleware_1.default, userController.checkoutDollar);
 // Conversation and Message
 userRoutes.get('/conversations', authMiddleware_1.default, userController.getConversations);
 userRoutes.get('/messages', authMiddleware_1.default, userController.getAllConversationMessages);

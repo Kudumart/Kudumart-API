@@ -44,6 +44,7 @@ import Job from "../models/job";
 import Applicant from "../models/applicant";
 import path from "path";
 import fs from "fs";
+import Withdrawal from "../models/withdrawal";
 
 // Extend the Express Request interface to include adminId and admin
 interface AuthenticatedRequest extends Request {
@@ -1425,6 +1426,15 @@ export const createPaymentGateway = async (
 ): Promise<void> => {
     const { name, publicKey, secretKey } = req.body;
 
+    // Allow only Paystack and Stripe
+    const allowedGateways = ["paystack", "stripe"];
+    if (!allowedGateways.includes(name.toLowerCase())) {
+        res.status(400).json({
+            message: "Invalid payment gateway. Only 'Paystack' and 'Stripe' are allowed.",
+        });
+        return;
+    }
+    
     try {
         // Check if any payment gateway is active
         const activeGateway = await PaymentGateway.findOne({
@@ -1459,6 +1469,15 @@ export const updatePaymentGateway = async (
     res: Response
 ): Promise<void> => {
     const { id, name, publicKey, secretKey } = req.body;
+
+    // Allow only Paystack and Stripe
+    const allowedGateways = ["paystack", "stripe"];
+    if (!allowedGateways.includes(name.toLowerCase())) {
+        res.status(400).json({
+            message: "Invalid payment gateway. Only 'Paystack' and 'Stripe' are allowed.",
+        });
+        return;
+    }
 
     try {
         const paymentGateway = await PaymentGateway.findByPk(id);
@@ -1576,10 +1595,10 @@ export const setPaymentGatewayActive = async (
             return;
         }
 
-        // Set all other active gateways to false
+        // Deactivate only other active gateways with the same name
         await PaymentGateway.update(
             { isActive: false },
-            { where: { isActive: true } }
+            { where: { isActive: true, name: paymentGateway.name } }
         );
 
         // Set the specified gateway as active
@@ -1601,57 +1620,60 @@ export const setPaymentGatewayActive = async (
 export const addCurrency = async (
     req: Request,
     res: Response
-): Promise<void> => {
+  ): Promise<void> => {
     const { name, symbol } = req.body;
-
+    const allowedSymbols = ["$", "#", "₦"];
+  
     if (!name || typeof name !== "string") {
-        res.status(400).json({ message: "Name is required and must be a string." });
+      res.status(400).json({ message: "Name is required and must be a string." });
+      return;
     }
     if (!symbol || typeof symbol !== "string") {
-        res
-            .status(400)
-            .json({ message: "Symbol is required and must be a string." });
+      res.status(400).json({ message: "Symbol is required and must be a string." });
+      return;
     }
-
+  
+    // Validate if symbol is in allowed list
+    if (!allowedSymbols.includes(symbol)) {
+      res.status(400).json({ message: `Currency symbol must be one of: ${allowedSymbols.join(", ")}` });
+      return;
+    }
+  
     try {
-        // Check for existing currency with matching name or symbol (case-insensitive)
-        const existingCurrency = await Currency.findOne({
-            where: {
-                [Op.or]: [
-                    Sequelize.where(
-                        Sequelize.fn("LOWER", Sequelize.col("name")),
-                        name.toLowerCase()
-                    ),
-                    Sequelize.where(
-                        Sequelize.fn("LOWER", Sequelize.col("symbol")),
-                        symbol.toLowerCase()
-                    ),
-                ],
-            },
-        });
-
-        if (existingCurrency) {
-            res
-                .status(400)
-                .json({
-                    message: "Currency with the same name or symbol already exists.",
-                });
-            return;
-        }
-
-        const currency = await Currency.create({ name, symbol });
-        res.status(200).json({ message: "Currency added successfully", currency });
+      const existingCurrency = await Currency.findOne({
+        where: {
+          [Op.or]: [
+            Sequelize.where(
+              Sequelize.fn("LOWER", Sequelize.col("name")),
+              name.toLowerCase()
+            ),
+            Sequelize.where(
+              Sequelize.fn("LOWER", Sequelize.col("symbol")),
+              symbol.toLowerCase()
+            ),
+          ],
+        },
+      });
+  
+      if (existingCurrency) {
+        res.status(400).json({ message: "Currency with the same name or symbol already exists." });
+        return;
+      }
+  
+      const currency = await Currency.create({ name, symbol });
+      res.status(200).json({ message: "Currency added successfully", currency });
     } catch (error) {
-        logger.error("Error adding currency:", error);
-        res.status(500).json({ message: "Failed to add currency" });
+      logger.error("Error adding currency:", error);
+      res.status(500).json({ message: "Failed to add currency" });
     }
-};
+};  
 
 export const updateCurrency = async (
     req: Request,
     res: Response
 ): Promise<void> => {
     const { currencyId, name, symbol } = req.body;
+    const allowedSymbols = ["$", "#", "₦"]; // Allowed symbols
 
     // Validate inputs
     if (!currencyId) {
@@ -1664,6 +1686,14 @@ export const updateCurrency = async (
     }
     if (symbol && typeof symbol !== "string") {
         res.status(400).json({ message: "Symbol must be a string." });
+        return;
+    }
+
+    // Ensure symbol is within allowed values
+    if (symbol && !allowedSymbols.includes(symbol)) {
+        res.status(400).json({
+            message: `Currency symbol must be one of: ${allowedSymbols.join(", ")}`,
+        });
         return;
     }
 
@@ -5174,5 +5204,134 @@ export const downloadApplicantResume = async (
     } catch (error) {
         logger.error("Error in downloadFile:", error);
         res.status(500).json({ message: "An error occurred while downloading the file" });
+    }
+};
+
+// Update withdrawal status (Admin action)
+export const updateWithdrawalStatus = async (req: Request, res: Response): Promise<void> => {
+    const transaction = await sequelizeService.connection!.transaction();
+
+    try {
+        const { id, status, paymentReceipt, note } = req.body; // Ensure 'note' is provided for rejection
+
+        // Find withdrawal request
+        const withdrawal = await Withdrawal.findByPk(id, { transaction });
+        if (!withdrawal) {
+            await transaction.rollback();
+            res.status(404).json({ message: "Withdrawal not found" });
+            return;
+        }
+
+        // Find the vendor
+        const vendor = await User.findByPk(withdrawal.vendorId, { transaction });
+        if (!vendor) {
+            await transaction.rollback();
+            res.status(404).json({ message: "Vendor not found" });
+            return;
+        }
+
+        // If already approved, return a message with no further action
+        if (withdrawal.status === "approved") {
+            await transaction.commit();
+            res.status(200).json({ message: "Withdrawal has already been approved. No further action is required." });
+            return;
+        }
+
+        // If status is "rejected", ensure a note is provided
+        if (status === "rejected" && !note) {
+            await transaction.rollback();
+            res.status(400).json({ message: "Rejection note is required" });
+            return;
+        }
+
+        // If rejected, refund money to the appropriate wallet
+        if (status === "rejected") {
+            const refundAmount = Number(withdrawal.amount); // Ensure it's a number
+
+            if (withdrawal.currency === "USD") {
+                vendor.dollarWallet = (Number(vendor.dollarWallet ?? 0)) + refundAmount;
+            } else {
+                vendor.wallet = (Number(vendor.wallet ?? 0)) + refundAmount;
+            }
+            
+            await vendor.save({ transaction });
+        }
+        // Update withdrawal status
+        withdrawal.status = status;
+        withdrawal.paymentReceipt = paymentReceipt || withdrawal.paymentReceipt; // Update if provided
+        withdrawal.note = note || withdrawal.note; // Store rejection note
+        await withdrawal.save({ transaction });
+
+        // Notify Vendor
+        await Notification.create(
+            {
+                userId: vendor.id,
+                title: `Withdrawal ${status === "approved" ? "Approved" : "Rejected"}`,
+                type: "withdrawal_status",
+                message: status === "approved"
+                    ? `Your withdrawal request of ${withdrawal.currency} ${withdrawal.amount} has been approved.`
+                    : `Your withdrawal request of ${withdrawal.currency} ${withdrawal.amount} was rejected. Reason: ${note}.`,
+            },
+            { transaction }
+        );
+
+        await transaction.commit(); // Commit transaction
+        res.status(200).json({ message: `Withdrawal ${status}`, withdrawal });
+    } catch (error) {
+        await transaction.rollback(); // Rollback on error
+        logger.error("Error updating withdrawal:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const getWithdrawals = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { status } = req.query; // Optional filter by status
+  
+      const whereClause: any = {};
+      if (status) {
+        whereClause.status = status;
+      }
+  
+      const withdrawals = await Withdrawal.findAll({
+        where: whereClause,
+        include: [
+            { model: User, as: "vendor", attributes: ['id', 'firstName', 'lastName', 'email'] }
+        ],
+        order: [["createdAt", "DESC"]], // Latest withdrawals first
+      });
+  
+      res.status(200).json({ message: "Withdrawals fetched successfully", data: withdrawals });
+    } catch (error) {
+      logger.error("Error fetching withdrawals:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+export const getWithdrawalById = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const id = req.query.id as string;
+
+        // Find withdrawal with associated Vendor details
+        const withdrawal = await Withdrawal.findOne({
+            where: { id },  // Correct placement of the ID filter
+            include: [
+                {
+                    model: User,
+                    as: "vendor",
+                    attributes: ['id', 'firstName', 'lastName', 'email']
+                }
+            ]
+        });
+
+        if (!withdrawal) {
+            res.status(404).json({ message: "Withdrawal not found" });
+            return;
+        }
+
+        res.status(200).json({ message: "Withdrawal retrieved successfully", data: withdrawal });
+    } catch (error) {
+        logger.error("Error retrieving withdrawal:", error);
+        res.status(500).json({ message: "Internal server error" });
     }
 };

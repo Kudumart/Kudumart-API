@@ -5,7 +5,7 @@ class Testimonial extends Model {
   public name?: string;
   public position!: string;
   public photo?: string;
-  public message?: string
+  public message?: string;
   public updatedAt!: Date;
   public deletedAt!: Date | null;
 

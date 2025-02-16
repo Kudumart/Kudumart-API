@@ -25,7 +25,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getGeneralProducts = exports.viewGeneralStore = exports.getGeneralStores = exports.viewUser = exports.toggleUserStatus = exports.getAllVendors = exports.getAllCustomers = exports.deleteCurrency = exports.getAllCurrencies = exports.updateCurrency = exports.addCurrency = exports.setPaymentGatewayActive = exports.getAllPaymentGateways = exports.deletePaymentGateway = exports.updatePaymentGateway = exports.createPaymentGateway = exports.approveOrRejectKYC = exports.getAllKYC = exports.getAllSubCategories = exports.deleteSubCategory = exports.updateSubCategory = exports.createSubCategory = exports.getCategoriesWithSubCategories = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getAllCategories = exports.deleteSubscriptionPlan = exports.updateSubscriptionPlan = exports.createSubscriptionPlan = exports.getAllSubscriptionPlans = exports.deletePermission = exports.updatePermission = exports.getPermissions = exports.createPermission = exports.deletePermissionFromRole = exports.assignPermissionToRole = exports.viewRolePermissions = exports.updateRole = exports.getRoles = exports.createRole = exports.resendLoginDetailsSubAdmin = exports.deleteSubAdmin = exports.deactivateOrActivateSubAdmin = exports.updateSubAdmin = exports.createSubAdmin = exports.subAdmins = exports.updatePassword = exports.updateProfile = exports.logout = void 0;
 exports.deleteFaqCategory = exports.updateFaqCategory = exports.getFaqCategory = exports.getAllFaqCategories = exports.createFaqCategory = exports.deleteTestimonial = exports.getTestimonial = exports.getAllTestimonials = exports.updateTestimonial = exports.createTestimonial = exports.getOrderItemsInfo = exports.getOrderItems = exports.approveOrRejectAdvert = exports.viewGeneralAdvert = exports.getGeneralAdverts = exports.deleteAdvert = exports.viewAdvert = exports.getAdverts = exports.updateAdvert = exports.createAdvert = exports.activeProducts = exports.getTransactionsForAdmin = exports.viewAuctionProduct = exports.fetchAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.getStore = exports.getAllSubscribers = exports.getGeneralPaymentDetails = exports.getAllGeneralOrderItems = exports.getAllGeneralOrders = exports.deleteGeneralAuctionProduct = exports.viewGeneralAuctionProduct = exports.getGeneralAuctionProducts = exports.publishProduct = exports.unpublishProduct = exports.deleteGeneralProduct = exports.viewGeneralProduct = void 0;
-exports.downloadApplicantResume = exports.repostJob = exports.viewApplicant = exports.getJobApplicants = exports.deleteJob = exports.closeJob = exports.getJobById = exports.updateJob = exports.getJobs = exports.postJob = exports.deleteContactById = exports.getContactById = exports.getAllContacts = exports.deleteFaq = exports.updateFaq = exports.getFaq = exports.getAllFaqs = exports.createFaq = void 0;
+exports.getWithdrawalById = exports.getWithdrawals = exports.updateWithdrawalStatus = exports.downloadApplicantResume = exports.repostJob = exports.viewApplicant = exports.getJobApplicants = exports.deleteJob = exports.closeJob = exports.getJobById = exports.updateJob = exports.getJobs = exports.postJob = exports.deleteContactById = exports.getContactById = exports.getAllContacts = exports.deleteFaq = exports.updateFaq = exports.getFaq = exports.getAllFaqs = exports.createFaq = void 0;
 const sequelize_1 = require("sequelize");
 const uuid_1 = require("uuid");
 const mail_service_1 = require("../services/mail.service");
@@ -67,6 +67,7 @@ const job_1 = __importDefault(require("../models/job"));
 const applicant_1 = __importDefault(require("../models/applicant"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
+const withdrawal_1 = __importDefault(require("../models/withdrawal"));
 // Define the upload directory
 const uploadDir = path_1.default.join(__dirname, "../../uploads");
 const logout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -1182,6 +1183,14 @@ exports.approveOrRejectKYC = approveOrRejectKYC;
 // Payment Gateway
 const createPaymentGateway = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { name, publicKey, secretKey } = req.body;
+    // Allow only Paystack and Stripe
+    const allowedGateways = ["paystack", "stripe"];
+    if (!allowedGateways.includes(name.toLowerCase())) {
+        res.status(400).json({
+            message: "Invalid payment gateway. Only 'Paystack' and 'Stripe' are allowed.",
+        });
+        return;
+    }
     try {
         // Check if any payment gateway is active
         const activeGateway = yield paymentgateway_1.default.findOne({
@@ -1210,6 +1219,14 @@ const createPaymentGateway = (req, res) => __awaiter(void 0, void 0, void 0, fun
 exports.createPaymentGateway = createPaymentGateway;
 const updatePaymentGateway = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { id, name, publicKey, secretKey } = req.body;
+    // Allow only Paystack and Stripe
+    const allowedGateways = ["paystack", "stripe"];
+    if (!allowedGateways.includes(name.toLowerCase())) {
+        res.status(400).json({
+            message: "Invalid payment gateway. Only 'Paystack' and 'Stripe' are allowed.",
+        });
+        return;
+    }
     try {
         const paymentGateway = yield paymentgateway_1.default.findByPk(id);
         if (!paymentGateway) {
@@ -1307,8 +1324,8 @@ const setPaymentGatewayActive = (req, res) => __awaiter(void 0, void 0, void 0, 
             res.status(200).json({ message: "Payment Gateway is already active." });
             return;
         }
-        // Set all other active gateways to false
-        yield paymentgateway_1.default.update({ isActive: false }, { where: { isActive: true } });
+        // Deactivate only other active gateways with the same name
+        yield paymentgateway_1.default.update({ isActive: false }, { where: { isActive: true, name: paymentGateway.name } });
         // Set the specified gateway as active
         yield paymentGateway.update({ isActive: true });
         res.status(200).json({
@@ -1326,16 +1343,21 @@ exports.setPaymentGatewayActive = setPaymentGatewayActive;
 // Currency
 const addCurrency = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { name, symbol } = req.body;
+    const allowedSymbols = ["$", "#", "₦"];
     if (!name || typeof name !== "string") {
         res.status(400).json({ message: "Name is required and must be a string." });
+        return;
     }
     if (!symbol || typeof symbol !== "string") {
-        res
-            .status(400)
-            .json({ message: "Symbol is required and must be a string." });
+        res.status(400).json({ message: "Symbol is required and must be a string." });
+        return;
+    }
+    // Validate if symbol is in allowed list
+    if (!allowedSymbols.includes(symbol)) {
+        res.status(400).json({ message: `Currency symbol must be one of: ${allowedSymbols.join(", ")}` });
+        return;
     }
     try {
-        // Check for existing currency with matching name or symbol (case-insensitive)
         const existingCurrency = yield currency_1.default.findOne({
             where: {
                 [sequelize_1.Op.or]: [
@@ -1345,11 +1367,7 @@ const addCurrency = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             },
         });
         if (existingCurrency) {
-            res
-                .status(400)
-                .json({
-                message: "Currency with the same name or symbol already exists.",
-            });
+            res.status(400).json({ message: "Currency with the same name or symbol already exists." });
             return;
         }
         const currency = yield currency_1.default.create({ name, symbol });
@@ -1363,6 +1381,7 @@ const addCurrency = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 exports.addCurrency = addCurrency;
 const updateCurrency = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { currencyId, name, symbol } = req.body;
+    const allowedSymbols = ["$", "#", "₦"]; // Allowed symbols
     // Validate inputs
     if (!currencyId) {
         res.status(400).json({ message: "Currency ID is required." });
@@ -1374,6 +1393,13 @@ const updateCurrency = (req, res) => __awaiter(void 0, void 0, void 0, function*
     }
     if (symbol && typeof symbol !== "string") {
         res.status(400).json({ message: "Symbol must be a string." });
+        return;
+    }
+    // Ensure symbol is within allowed values
+    if (symbol && !allowedSymbols.includes(symbol)) {
+        res.status(400).json({
+            message: `Currency symbol must be one of: ${allowedSymbols.join(", ")}`,
+        });
         return;
     }
     try {
@@ -4376,4 +4402,119 @@ const downloadApplicantResume = (req, res) => __awaiter(void 0, void 0, void 0, 
     }
 });
 exports.downloadApplicantResume = downloadApplicantResume;
+// Update withdrawal status (Admin action)
+const updateWithdrawalStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    const transaction = yield sequelize_service_1.default.connection.transaction();
+    try {
+        const { id, status, paymentReceipt, note } = req.body; // Ensure 'note' is provided for rejection
+        // Find withdrawal request
+        const withdrawal = yield withdrawal_1.default.findByPk(id, { transaction });
+        if (!withdrawal) {
+            yield transaction.rollback();
+            res.status(404).json({ message: "Withdrawal not found" });
+            return;
+        }
+        // Find the vendor
+        const vendor = yield user_1.default.findByPk(withdrawal.vendorId, { transaction });
+        if (!vendor) {
+            yield transaction.rollback();
+            res.status(404).json({ message: "Vendor not found" });
+            return;
+        }
+        // If already approved, return a message with no further action
+        if (withdrawal.status === "approved") {
+            yield transaction.commit();
+            res.status(200).json({ message: "Withdrawal has already been approved. No further action is required." });
+            return;
+        }
+        // If status is "rejected", ensure a note is provided
+        if (status === "rejected" && !note) {
+            yield transaction.rollback();
+            res.status(400).json({ message: "Rejection note is required" });
+            return;
+        }
+        // If rejected, refund money to the appropriate wallet
+        if (status === "rejected") {
+            const refundAmount = Number(withdrawal.amount); // Ensure it's a number
+            if (withdrawal.currency === "USD") {
+                vendor.dollarWallet = (Number((_a = vendor.dollarWallet) !== null && _a !== void 0 ? _a : 0)) + refundAmount;
+            }
+            else {
+                vendor.wallet = (Number((_b = vendor.wallet) !== null && _b !== void 0 ? _b : 0)) + refundAmount;
+            }
+            yield vendor.save({ transaction });
+        }
+        // Update withdrawal status
+        withdrawal.status = status;
+        withdrawal.paymentReceipt = paymentReceipt || withdrawal.paymentReceipt; // Update if provided
+        withdrawal.note = note || withdrawal.note; // Store rejection note
+        yield withdrawal.save({ transaction });
+        // Notify Vendor
+        yield notification_1.default.create({
+            userId: vendor.id,
+            title: `Withdrawal ${status === "approved" ? "Approved" : "Rejected"}`,
+            type: "withdrawal_status",
+            message: status === "approved"
+                ? `Your withdrawal request of ${withdrawal.currency} ${withdrawal.amount} has been approved.`
+                : `Your withdrawal request of ${withdrawal.currency} ${withdrawal.amount} was rejected. Reason: ${note}.`,
+        }, { transaction });
+        yield transaction.commit(); // Commit transaction
+        res.status(200).json({ message: `Withdrawal ${status}`, withdrawal });
+    }
+    catch (error) {
+        yield transaction.rollback(); // Rollback on error
+        logger_1.default.error("Error updating withdrawal:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+exports.updateWithdrawalStatus = updateWithdrawalStatus;
+const getWithdrawals = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { status } = req.query; // Optional filter by status
+        const whereClause = {};
+        if (status) {
+            whereClause.status = status;
+        }
+        const withdrawals = yield withdrawal_1.default.findAll({
+            where: whereClause,
+            include: [
+                { model: user_1.default, as: "vendor", attributes: ['id', 'firstName', 'lastName', 'email'] }
+            ],
+            order: [["createdAt", "DESC"]], // Latest withdrawals first
+        });
+        res.status(200).json({ message: "Withdrawals fetched successfully", data: withdrawals });
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching withdrawals:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+exports.getWithdrawals = getWithdrawals;
+const getWithdrawalById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const id = req.query.id;
+        // Find withdrawal with associated Vendor details
+        const withdrawal = yield withdrawal_1.default.findOne({
+            where: { id }, // Correct placement of the ID filter
+            include: [
+                {
+                    model: user_1.default,
+                    as: "vendor",
+                    attributes: ['id', 'firstName', 'lastName', 'email']
+                }
+            ]
+        });
+        if (!withdrawal) {
+            res.status(404).json({ message: "Withdrawal not found" });
+            return;
+        }
+        res.status(200).json({ message: "Withdrawal retrieved successfully", data: withdrawal });
+    }
+    catch (error) {
+        logger_1.default.error("Error retrieving withdrawal:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+exports.getWithdrawalById = getWithdrawalById;
 //# sourceMappingURL=adminController.js.map

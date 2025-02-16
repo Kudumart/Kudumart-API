@@ -23,6 +23,7 @@ class User extends Model {
   public location?: Location; // This will be serialized as JSON
   public photo?: string;
   public wallet?: number;
+  public dollarWallet?: number;
   public accountType?: string;
   public status?: "active" | "inactive";
   public isVerified?: boolean;
@@ -102,6 +103,7 @@ const initModel = (sequelize: Sequelize) => {
       location: DataTypes.JSON,
       photo: DataTypes.TEXT,
       wallet: DataTypes.DECIMAL(20, 2),
+      dollarWallet: DataTypes.DECIMAL(20, 2),
       facebookId: DataTypes.STRING,
       googleId: DataTypes.STRING,
       accountType: DataTypes.ENUM('Vendor', 'Customer'),
