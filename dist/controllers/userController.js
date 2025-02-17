@@ -1482,6 +1482,20 @@ const placeBid = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { auctionProductId, bidAmount } = req.body;
         const bidderId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+        // Check if the user has an interest in the auction product
+        const existingInterest = yield showinterest_1.default.findOne({
+            where: {
+                userId: bidderId,
+                auctionProductId,
+                status: "confirmed",
+            },
+        });
+        if (!existingInterest) {
+            res.status(403).json({
+                message: "You must show interest in this auction before placing a bid.",
+            });
+            return;
+        }
         // Fetch the auction product
         const auctionProduct = yield auctionproduct_1.default.findOne({
             where: {
@@ -1524,7 +1538,7 @@ const placeBid = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             : startingPrice;
         if (isNaN(minAcceptableBid)) {
             logger_1.default.error("Invalid minimum acceptable bid calculation.");
-            res.status(500).json({ message: "An error occurred while calculating the bid amount." });
+            res.status(500).json({ message: "Invalid minimum acceptable bid calculation." });
             return;
         }
         if (bidAmount < minAcceptableBid) {
