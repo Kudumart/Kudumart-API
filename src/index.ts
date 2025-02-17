@@ -8,6 +8,7 @@ import { configureSocket } from "./services/socket.service";
 import './config/passportConfig'; // Import Password Configuration
 import passport from "passport";
 import runSubscriptionCron from "./job/subscriptionCron"; // Import the cron job
+import auctionStatusUpdate from "./job/auctionStatusUpdate"; // Import the cron job
 
 dotenv.config();
 
@@ -51,6 +52,7 @@ const port = process.env.SERVER_PORT || 3000; // Get the port from the environme
 
 // Start the cron job
 runSubscriptionCron();
+auctionStatusUpdate();
 
 server.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);

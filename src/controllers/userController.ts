@@ -1770,6 +1770,22 @@ export const placeBid = async (req: Request, res: Response): Promise<void> => {
     const { auctionProductId, bidAmount } = req.body;
     const bidderId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID from middleware
 
+    // Check if the user has an interest in the auction product
+    const existingInterest = await ShowInterest.findOne({
+      where: {
+        userId: bidderId,
+        auctionProductId,
+        status: "confirmed",
+      },
+    });
+
+    if (!existingInterest) {
+      res.status(403).json({
+        message: "You must show interest in this auction before placing a bid.",
+      });
+      return;
+    }
+    
     // Fetch the auction product
     const auctionProduct = await AuctionProduct.findOne({
       where: {
@@ -1817,7 +1833,7 @@ export const placeBid = async (req: Request, res: Response): Promise<void> => {
 
     if (isNaN(minAcceptableBid)) {
       logger.error("Invalid minimum acceptable bid calculation.");
-      res.status(500).json({ message: "An error occurred while calculating the bid amount." });
+      res.status(500).json({ message: "Invalid minimum acceptable bid calculation." });
       return;
     }
 
