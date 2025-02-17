@@ -25,6 +25,14 @@ const createExpressApp = () => {
         credentials: true,
     }));
 
+    // **Force HTTPS Middleware**
+    app.use((req, res, next) => {
+        if (req.headers["x-forwarded-proto"] !== "https") {
+            return res.redirect("https://" + req.headers.host + req.url);
+        }
+        next();
+    });
+
     // Serve static files from the public directory
     app.use(express.static(path.join(__dirname, "../public")));
 
