@@ -4605,7 +4605,9 @@ export const deleteFaqCategory = async (req: Request, res: Response): Promise<vo
             return;
         }
 
-        await category.faqs.destroy();
+        // Use transaction for safe deletion
+
+        await Faq.destroy({ where: { faqCategoryId: id }});
         await category.destroy();
 
         res.status(200).json({ message: "FAQ category deleted successfully" });
