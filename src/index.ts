@@ -29,6 +29,8 @@ app.use(passport.initialize());
 
 app.use("/api", apiRouter); // Mount the router to /api
 
+app.set("trust proxy", true);
+
 // Configure Socket.IO
 configureSocket(io);
 

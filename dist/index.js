@@ -38,6 +38,7 @@ const io = new socket_io_1.Server(server, {
 exports.io = io;
 app.use(passport_1.default.initialize());
 app.use("/api", authRoute_1.default); // Mount the router to /api
+app.set("trust proxy", true);
 // Configure Socket.IO
 (0, socket_service_1.configureSocket)(io);
 // Initialize and sync Sequelize

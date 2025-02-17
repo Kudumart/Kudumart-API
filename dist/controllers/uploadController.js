@@ -78,7 +78,8 @@ const uploadFile = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                 .webp({ quality: 20 }) // Compress to lowest quality
                 .toFile(filePath);
         }
-        const fileUrl = `${req.protocol}://${req.get("host")}/uploads/${filename}`;
+        const protocol = req.headers["x-forwarded-proto"] || req.protocol;
+        const fileUrl = `${protocol}://${req.get("host")}/uploads/${filename}`;
         res.json({ message: "File uploaded successfully", data: fileUrl });
     }
     catch (error) {
