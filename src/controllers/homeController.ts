@@ -24,6 +24,7 @@ import ReviewProduct from "../models/reviewproduct";
 import Job from "../models/job";
 import sequelizeService from "../services/sequelize.service";
 import Applicant from "../models/applicant";
+import Banner from "../models/banner";
 
 export const getAllCategories = async (
     req: Request,
@@ -724,7 +725,6 @@ export const viewAdvert = async (req: Request, res: Response): Promise<void> => 
     }
 };
 
-
 // Get all testimonials
 export const getAllTestimonials = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -888,5 +888,17 @@ export const applyJob = async (req: Request, res: Response): Promise<void> => {
         await transaction.rollback();
         logger.error('Error in applyJob:', error);
         res.status(500).json({ message: "Error in applying job." });
+    }
+};
+
+// Get all banners
+export const getAllBanners = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const banners = await Banner.findAll();
+        res.status(200).json({ data: banners });
+
+    } catch (error: any) {
+        logger.error(`Error retrieving banners: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while retrieving banners. Please try again later." });
     }
 };

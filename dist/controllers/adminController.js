@@ -25,7 +25,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getGeneralProducts = exports.viewGeneralStore = exports.getGeneralStores = exports.viewUser = exports.toggleUserStatus = exports.getAllVendors = exports.getAllCustomers = exports.deleteCurrency = exports.getAllCurrencies = exports.updateCurrency = exports.addCurrency = exports.setPaymentGatewayActive = exports.getAllPaymentGateways = exports.deletePaymentGateway = exports.updatePaymentGateway = exports.createPaymentGateway = exports.approveOrRejectKYC = exports.getAllKYC = exports.getAllSubCategories = exports.deleteSubCategory = exports.updateSubCategory = exports.createSubCategory = exports.getCategoriesWithSubCategories = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getAllCategories = exports.deleteSubscriptionPlan = exports.updateSubscriptionPlan = exports.createSubscriptionPlan = exports.getAllSubscriptionPlans = exports.deletePermission = exports.updatePermission = exports.getPermissions = exports.createPermission = exports.deletePermissionFromRole = exports.assignPermissionToRole = exports.viewRolePermissions = exports.updateRole = exports.getRoles = exports.createRole = exports.resendLoginDetailsSubAdmin = exports.deleteSubAdmin = exports.deactivateOrActivateSubAdmin = exports.updateSubAdmin = exports.createSubAdmin = exports.subAdmins = exports.updatePassword = exports.updateProfile = exports.logout = void 0;
 exports.deleteFaqCategory = exports.updateFaqCategory = exports.getFaqCategory = exports.getAllFaqCategories = exports.createFaqCategory = exports.deleteTestimonial = exports.getTestimonial = exports.getAllTestimonials = exports.updateTestimonial = exports.createTestimonial = exports.getOrderItemsInfo = exports.getOrderItems = exports.approveOrRejectAdvert = exports.viewGeneralAdvert = exports.getGeneralAdverts = exports.deleteAdvert = exports.viewAdvert = exports.getAdverts = exports.updateAdvert = exports.createAdvert = exports.activeProducts = exports.getTransactionsForAdmin = exports.viewAuctionProduct = exports.fetchAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.getStore = exports.getAllSubscribers = exports.getGeneralPaymentDetails = exports.getAllGeneralOrderItems = exports.getAllGeneralOrders = exports.deleteGeneralAuctionProduct = exports.viewGeneralAuctionProduct = exports.getGeneralAuctionProducts = exports.publishProduct = exports.unpublishProduct = exports.deleteGeneralProduct = exports.viewGeneralProduct = void 0;
-exports.getWithdrawalById = exports.getWithdrawals = exports.updateWithdrawalStatus = exports.downloadApplicantResume = exports.repostJob = exports.viewApplicant = exports.getJobApplicants = exports.deleteJob = exports.closeJob = exports.getJobById = exports.updateJob = exports.getJobs = exports.postJob = exports.deleteContactById = exports.getContactById = exports.getAllContacts = exports.deleteFaq = exports.updateFaq = exports.getFaq = exports.getAllFaqs = exports.createFaq = void 0;
+exports.deleteBanner = exports.getBanner = exports.getAllBanners = exports.updateBanner = exports.createBanner = exports.getWithdrawalById = exports.getWithdrawals = exports.updateWithdrawalStatus = exports.downloadApplicantResume = exports.repostJob = exports.viewApplicant = exports.getJobApplicants = exports.deleteJob = exports.closeJob = exports.getJobById = exports.updateJob = exports.getJobs = exports.postJob = exports.deleteContactById = exports.getContactById = exports.getAllContacts = exports.deleteFaq = exports.updateFaq = exports.getFaq = exports.getAllFaqs = exports.createFaq = void 0;
 const sequelize_1 = require("sequelize");
 const uuid_1 = require("uuid");
 const mail_service_1 = require("../services/mail.service");
@@ -68,6 +68,7 @@ const applicant_1 = __importDefault(require("../models/applicant"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const withdrawal_1 = __importDefault(require("../models/withdrawal"));
+const banner_1 = __importDefault(require("../models/banner"));
 // Define the upload directory
 const uploadDir = path_1.default.join(__dirname, "../../uploads");
 const logout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -4518,4 +4519,89 @@ const getWithdrawalById = (req, res) => __awaiter(void 0, void 0, void 0, functi
     }
 });
 exports.getWithdrawalById = getWithdrawalById;
+// Create a Banner
+const createBanner = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { image } = req.body;
+    try {
+        if (!image) {
+            res.status(400).json({ message: "Image is required" });
+            return;
+        }
+        const newBanner = yield banner_1.default.create({ image });
+        res.status(200).json({
+            message: "Banner created successfully",
+            data: newBanner,
+        });
+    }
+    catch (error) {
+        logger_1.default.error(`Error creating banner: ${error.message}`);
+        res.status(500).json({ message: "An unexpected error occurred while creating the banner. Please try again later." });
+    }
+});
+exports.createBanner = createBanner;
+// Update a banner
+const updateBanner = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { id, image } = req.body;
+    try {
+        const banner = yield banner_1.default.findByPk(id);
+        if (!banner) {
+            res.status(404).json({ message: "Banner not found" });
+            return;
+        }
+        yield banner.update({ image });
+        res.status(200).json({ message: "Banner updated successfully", data: banner });
+    }
+    catch (error) {
+        logger_1.default.error(`Error updating banner ID ${id}: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while updating the banner. Please try again later." });
+    }
+});
+exports.updateBanner = updateBanner;
+// Get all banners
+const getAllBanners = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const banners = yield banner_1.default.findAll();
+        res.status(200).json({ data: banners });
+    }
+    catch (error) {
+        logger_1.default.error(`Error retrieving banners: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while retrieving banners. Please try again later." });
+    }
+});
+exports.getAllBanners = getAllBanners;
+// Get a single banner
+const getBanner = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const id = req.query.id;
+    try {
+        const banner = yield banner_1.default.findByPk(id);
+        if (!banner) {
+            res.status(404).json({ message: "Banner not found" });
+            return;
+        }
+        res.status(200).json({ data: banner });
+    }
+    catch (error) {
+        logger_1.default.error(`Error fetching banner ID ${id}: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while fetching the banner. Please try again later." });
+    }
+});
+exports.getBanner = getBanner;
+// Delete a banner
+const deleteBanner = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const id = req.query.id;
+    try {
+        const banner = yield banner_1.default.findByPk(id);
+        if (!banner) {
+            res.status(404).json({ message: "Banner not found" });
+            return;
+        }
+        yield banner.destroy();
+        res.status(200).json({ message: "Banner deleted successfully" });
+    }
+    catch (error) {
+        logger_1.default.error(`Error deleting banner ID ${id}: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while deleting the banner. Please try again later." });
+    }
+});
+exports.deleteBanner = deleteBanner;
 //# sourceMappingURL=adminController.js.map

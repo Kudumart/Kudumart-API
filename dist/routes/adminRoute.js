@@ -191,5 +191,11 @@ adminRoutes.get('/job/download/applicant/resume', adminAuthMiddleware_1.default,
 adminRoutes.post("/withdrawal/update/status", adminAuthMiddleware_1.default, adminController.updateWithdrawalStatus);
 adminRoutes.get("/withdrawals", adminAuthMiddleware_1.default, adminController.getWithdrawals);
 adminRoutes.get("/withdrawal", adminAuthMiddleware_1.default, adminController.getWithdrawalById);
+// BANNER Routes
+adminRoutes.post("/banner", adminAuthMiddleware_1.default, adminController.createBanner);
+adminRoutes.get("/banners", adminAuthMiddleware_1.default, adminController.getAllBanners);
+adminRoutes.get("/banner", adminAuthMiddleware_1.default, adminController.getBanner);
+adminRoutes.put("/banner", adminAuthMiddleware_1.default, adminController.updateBanner);
+adminRoutes.delete("/banner", adminAuthMiddleware_1.default, adminController.deleteBanner);
 exports.default = adminRoutes; // Export the router
 //# sourceMappingURL=adminRoute.js.map

@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.applyJob = exports.viewJob = exports.fetchJobs = exports.submitContactForm = exports.getFaqCategoryWithFaqs = exports.getAllTestimonials = exports.viewAdvert = exports.getAdverts = exports.getAuctionProductById = exports.getUpcomingAuctionProducts = exports.getStoreProducts = exports.getAllStores = exports.getProductById = exports.products = exports.getCategoriesWithSubcategories = exports.getCategorySubCategories = exports.getAllCategories = void 0;
+exports.getAllBanners = exports.applyJob = exports.viewJob = exports.fetchJobs = exports.submitContactForm = exports.getFaqCategoryWithFaqs = exports.getAllTestimonials = exports.viewAdvert = exports.getAdverts = exports.getAuctionProductById = exports.getUpcomingAuctionProducts = exports.getStoreProducts = exports.getAllStores = exports.getProductById = exports.products = exports.getCategoriesWithSubcategories = exports.getCategorySubCategories = exports.getAllCategories = void 0;
 const mail_service_1 = require("../services/mail.service");
 const messages_1 = require("../utils/messages");
 const logger_1 = __importDefault(require("../middlewares/logger")); // Adjust the path to your logger.js
@@ -36,6 +36,7 @@ const reviewproduct_1 = __importDefault(require("../models/reviewproduct"));
 const job_1 = __importDefault(require("../models/job"));
 const sequelize_service_1 = __importDefault(require("../services/sequelize.service"));
 const applicant_1 = __importDefault(require("../models/applicant"));
+const banner_1 = __importDefault(require("../models/banner"));
 const getAllCategories = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const categories = yield category_1.default.findAll();
@@ -816,4 +817,16 @@ const applyJob = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
 });
 exports.applyJob = applyJob;
+// Get all banners
+const getAllBanners = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const banners = yield banner_1.default.findAll();
+        res.status(200).json({ data: banners });
+    }
+    catch (error) {
+        logger_1.default.error(`Error retrieving banners: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while retrieving banners. Please try again later." });
+    }
+});
+exports.getAllBanners = getAllBanners;
 //# sourceMappingURL=homeController.js.map

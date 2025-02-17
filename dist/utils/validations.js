@@ -463,7 +463,7 @@ const addProductValidation = () => {
             // Ensure each item in the array is a valid URL
             array.forEach((url) => {
                 if (typeof url !== "string" ||
-                    !url.match(/^(http|https):\/\/[^ "]+$/)) {
+                    !url.match(/^(https):\/\/[^ "]+$/)) {
                     throw new Error("Each item in additional images must be a valid URL.");
                 }
             });
@@ -539,7 +539,7 @@ const updateProductValidation = () => {
             // Ensure each item in the array is a valid URL
             array.forEach((url) => {
                 if (typeof url !== "string" ||
-                    !url.match(/^(http|https):\/\/[^ "]+$/)) {
+                    !url.match(/^(https):\/\/[^ "]+$/)) {
                     throw new Error("Each item in additional images must be a valid URL.");
                 }
             });
@@ -623,7 +623,7 @@ const auctionProductValidation = () => {
             // Ensure each item in the array is a valid URL
             array.forEach((url) => {
                 if (typeof url !== "string" ||
-                    !url.match(/^(http|https):\/\/[^ "]+$/)) {
+                    !url.match(/^(https):\/\/[^ "]+$/)) {
                     throw new Error("Each item in additional images must be a valid URL.");
                 }
             });
@@ -686,7 +686,7 @@ const updateAuctionProductValidation = () => {
             // Ensure each item in the array is a valid URL
             array.forEach((url) => {
                 if (typeof url !== "string" ||
-                    !url.match(/^(http|https):\/\/[^ "]+$/)) {
+                    !url.match(/^(https):\/\/[^ "]+$/)) {
                     throw new Error("Each item in additional images must be a valid URL.");
                 }
             });

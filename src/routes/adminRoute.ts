@@ -200,4 +200,11 @@ adminRoutes.post("/withdrawal/update/status", adminAuthMiddleware, adminControll
 adminRoutes.get("/withdrawals", adminAuthMiddleware, adminController.getWithdrawals);
 adminRoutes.get("/withdrawal", adminAuthMiddleware, adminController.getWithdrawalById);
 
+// BANNER Routes
+adminRoutes.post("/banner", adminAuthMiddleware, adminController.createBanner);
+adminRoutes.get("/banners", adminAuthMiddleware, adminController.getAllBanners);
+adminRoutes.get("/banner",adminAuthMiddleware, adminController.getBanner);
+adminRoutes.put("/banner", adminAuthMiddleware, adminController.updateBanner);
+adminRoutes.delete("/banner", adminAuthMiddleware, adminController.deleteBanner);
+
 export default adminRoutes; // Export the router

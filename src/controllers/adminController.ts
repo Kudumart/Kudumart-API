@@ -45,6 +45,7 @@ import Applicant from "../models/applicant";
 import path from "path";
 import fs from "fs";
 import Withdrawal from "../models/withdrawal";
+import Banner from "../models/banner";
 
 // Extend the Express Request interface to include adminId and admin
 interface AuthenticatedRequest extends Request {
@@ -5334,5 +5335,103 @@ export const getWithdrawalById = async (req: Request, res: Response): Promise<vo
     } catch (error) {
         logger.error("Error retrieving withdrawal:", error);
         res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+// Create a Banner
+export const createBanner = async (req: Request, res: Response): Promise<void> => {
+    const { image } = req.body;
+
+    try {
+        if (!image) {
+            res.status(400).json({ message: "Image is required" });
+            return;
+        }
+
+        const newBanner = await Banner.create({ image });
+
+        res.status(200).json({
+            message: "Banner created successfully",
+            data: newBanner,
+        });
+
+    } catch (error: any) {
+        logger.error(`Error creating banner: ${error.message}`);
+        res.status(500).json({ message: "An unexpected error occurred while creating the banner. Please try again later." });
+    }
+};
+
+// Update a banner
+export const updateBanner = async (req: Request, res: Response): Promise<void> => {
+    const { id, image } = req.body;
+
+    try {
+        const banner = await Banner.findByPk(id);
+
+        if (!banner) {
+            res.status(404).json({ message: "Banner not found" });
+            return;
+        }
+
+        await banner.update({ image });
+
+        res.status(200).json({ message: "Banner updated successfully", data: banner });
+
+    } catch (error: any) {
+        logger.error(`Error updating banner ID ${id}: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while updating the banner. Please try again later." });
+    }
+};
+
+// Get all banners
+export const getAllBanners = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const banners = await Banner.findAll();
+        res.status(200).json({ data: banners });
+
+    } catch (error: any) {
+        logger.error(`Error retrieving banners: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while retrieving banners. Please try again later." });
+    }
+};
+
+// Get a single banner
+export const getBanner = async (req: Request, res: Response): Promise<void> => {
+    const id = req.query.id as string;
+
+    try {
+        const banner = await Banner.findByPk(id);
+
+        if (!banner) {
+            res.status(404).json({ message: "Banner not found" });
+            return;
+        }
+
+        res.status(200).json({ data: banner });
+
+    } catch (error: any) {
+        logger.error(`Error fetching banner ID ${id}: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while fetching the banner. Please try again later." });
+    }
+};
+
+// Delete a banner
+export const deleteBanner = async (req: Request, res: Response): Promise<void> => {
+    const id = req.query.id as string;
+
+    try {
+        const banner = await Banner.findByPk(id);
+
+        if (!banner) {
+            res.status(404).json({ message: "Banner not found" });
+            return;
+        }
+
+        await banner.destroy();
+        res.status(200).json({ message: "Banner deleted successfully" });
+
+    } catch (error: any) {
+        logger.error(`Error deleting banner ID ${id}: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while deleting the banner. Please try again later." });
     }
 };

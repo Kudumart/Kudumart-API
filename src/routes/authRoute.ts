@@ -54,4 +54,6 @@ authRoutes.get("/fetch/jobs", homeController.fetchJobs);
 authRoutes.get("/view/job", homeController.viewJob);
 authRoutes.post('/apply/job', homeController.applyJob);
 
+authRoutes.get("/banners", homeController.getAllBanners); // Get all banners
+
 export default authRoutes; // Export the router

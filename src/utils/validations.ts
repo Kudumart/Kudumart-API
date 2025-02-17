@@ -501,7 +501,7 @@ export const addProductValidation = () => {
         array.forEach((url: string) => {
           if (
             typeof url !== "string" ||
-            !url.match(/^(http|https):\/\/[^ "]+$/)
+            !url.match(/^(https):\/\/[^ "]+$/)
           ) {
             throw new Error(
               "Each item in additional images must be a valid URL."
@@ -585,7 +585,7 @@ export const updateProductValidation = () => {
         array.forEach((url: string) => {
           if (
             typeof url !== "string" ||
-            !url.match(/^(http|https):\/\/[^ "]+$/)
+            !url.match(/^(https):\/\/[^ "]+$/)
           ) {
             throw new Error(
               "Each item in additional images must be a valid URL."
@@ -681,7 +681,7 @@ export const auctionProductValidation = () => {
         array.forEach((url: string) => {
           if (
             typeof url !== "string" ||
-            !url.match(/^(http|https):\/\/[^ "]+$/)
+            !url.match(/^(https):\/\/[^ "]+$/)
           ) {
             throw new Error(
               "Each item in additional images must be a valid URL."
@@ -756,7 +756,7 @@ export const updateAuctionProductValidation = () => {
         array.forEach((url: string) => {
           if (
             typeof url !== "string" ||
-            !url.match(/^(http|https):\/\/[^ "]+$/)
+            !url.match(/^(https):\/\/[^ "]+$/)
           ) {
             throw new Error(
               "Each item in additional images must be a valid URL."
