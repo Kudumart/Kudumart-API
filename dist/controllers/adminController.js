@@ -3884,7 +3884,7 @@ const deleteFaqCategory = (req, res) => __awaiter(void 0, void 0, void 0, functi
             res.status(404).json({ message: "FAQ category not found" });
             return;
         }
-        // Use transaction for safe deletion
+        // Deletion
         yield faq_1.default.destroy({ where: { faqCategoryId: id } });
         yield category.destroy();
         res.status(200).json({ message: "FAQ category deleted successfully" });
@@ -3970,7 +3970,7 @@ const updateFaq = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 exports.updateFaq = updateFaq;
 // Delete an FAQ
 const deleteFaq = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { id } = req.params;
+    const id = req.query.id;
     try {
         const faq = yield faq_1.default.findByPk(id);
         if (!faq) {

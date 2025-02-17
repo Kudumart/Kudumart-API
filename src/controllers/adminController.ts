@@ -4605,8 +4605,7 @@ export const deleteFaqCategory = async (req: Request, res: Response): Promise<vo
             return;
         }
 
-        // Use transaction for safe deletion
-
+        // Deletion
         await Faq.destroy({ where: { faqCategoryId: id }});
         await category.destroy();
 
@@ -4706,7 +4705,7 @@ export const updateFaq = async (req: Request, res: Response): Promise<void> => {
 
 // Delete an FAQ
 export const deleteFaq = async (req: Request, res: Response): Promise<void> => {
-    const { id } = req.params;
+    const id = req.query.id as string ;
 
     try {
         const faq = await Faq.findByPk(id);
