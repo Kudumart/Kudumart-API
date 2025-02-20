@@ -4104,7 +4104,7 @@ const getJobs = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             attributes: {
                 include: [
                     [
-                        sequelize_1.Sequelize.fn("COUNT", sequelize_1.Sequelize.col("Applicants.id")),
+                        sequelize_1.Sequelize.fn("COUNT", sequelize_1.Sequelize.col("applicants.id")),
                         "applicantCount"
                     ],
                 ],

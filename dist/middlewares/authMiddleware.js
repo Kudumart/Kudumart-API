@@ -26,7 +26,7 @@ const authMiddleware = (req, res, next) => __awaiter(void 0, void 0, void 0, fun
         }
         if (jwt_service_1.default.jwtIsTokenBlacklisted(token)) {
             res
-                .status(403)
+                .status(401)
                 .json({ message: "Token is blacklisted. Please log in again." });
             return;
         }

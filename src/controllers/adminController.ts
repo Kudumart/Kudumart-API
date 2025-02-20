@@ -4864,7 +4864,7 @@ export const getJobs = async (req: Request, res: Response): Promise<void> => {
             attributes: {
                 include: [
                     [
-                        Sequelize.fn("COUNT", Sequelize.col("Applicants.id")),
+                        Sequelize.fn("COUNT", Sequelize.col("applicants.id")),
                         "applicantCount"
                     ],
                 ],

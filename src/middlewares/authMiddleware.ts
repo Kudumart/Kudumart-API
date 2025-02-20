@@ -27,7 +27,7 @@ const authMiddleware = async (
 
     if (JwtService.jwtIsTokenBlacklisted(token)) {
       res
-        .status(403)
+        .status(401)
         .json({ message: "Token is blacklisted. Please log in again." });
       return;
     }

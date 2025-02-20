@@ -28,7 +28,7 @@ const adminAuthMiddleware = (req, res, next) => __awaiter(void 0, void 0, void 0
         }
         // Check if the token is blacklisted
         if (jwt_service_1.default.jwtIsTokenBlacklisted(token)) {
-            res.status(403).json({ message: "Token is blacklisted. Please log in again." });
+            res.status(401).json({ message: "Token is blacklisted. Please log in again." });
             return;
         }
         // Verify the token and decode the payload
