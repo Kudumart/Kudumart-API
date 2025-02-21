@@ -448,23 +448,43 @@ export const getStoreProducts = async (req: Request, res: Response): Promise<voi
     }
 };
 
-// Function to get all upcoming auction products with search functionality
-export const getUpcomingAuctionProducts = async (req: Request, res: Response): Promise<void> => {
+// Function to get all auction products with search functionality
+export const getAuctionProducts = async (req: Request, res: Response): Promise<void> => {
     const {
         storeId,
         name, // Product name
         subCategoryName, // Subcategory name filter
         condition, // Product condition filter
+        auctionStatus, // 'upcoming' or 'ongoing'
+        startDate, // Filter by today's date
         limit = 10, // Default to 10 results if not specified
         offset = 0, // Default to 0 offset (start from the beginning)
     } = req.query;
 
     try {
+        // Get today's date (start of the day)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
         // Build the search criteria dynamically
-        const whereConditions: any = {
-            auctionStatus: 'upcoming',
-            startDate: { [Op.gte]: new Date() }, // Ensure start date is in the future
-        };
+        const whereConditions: any = {};
+
+        // Filter by auction status
+        if (auctionStatus === 'upcoming') {
+            whereConditions.auctionStatus = 'upcoming';
+            whereConditions.startDate = { [Op.gte]: new Date() }; // Ensure start date is in the future
+        } else if (auctionStatus === 'ongoing') {
+            whereConditions.auctionStatus = 'ongoing';
+            whereConditions.startDate = { [Op.lte]: new Date() }; // Ensure start date is in the past or today
+        }
+
+        // Filter by today's startDate if provided
+        if (startDate === 'today') {
+            whereConditions.startDate = {
+                [Op.gte]: today,
+                [Op.lt]: new Date(today.getTime() + 24 * 60 * 60 * 1000), // Less than tomorrow
+            };
+        }
 
         // Add search filters to the where condition
         if (name) {
@@ -480,7 +500,7 @@ export const getUpcomingAuctionProducts = async (req: Request, res: Response): P
             whereConditions.storeId = storeId; // Filter by store ID if provided
         }
 
-        // Fetch upcoming auction products based on conditions
+        // Fetch auction products based on conditions
         const products = await AuctionProduct.findAll({
             where: whereConditions,
             include: [
@@ -519,8 +539,8 @@ export const getUpcomingAuctionProducts = async (req: Request, res: Response): P
         // Return the results as JSON response
         res.json({ data: products });
     } catch (error) {
-        logger.error("Error fetching upcoming auction products:", error);
-        res.status(500).json({ message: "Could not fetch upcoming auction products." });
+        logger.error("Error fetching auction products:", error);
+        res.status(500).json({ message: "Could not fetch auction products." });
     }
 };
 

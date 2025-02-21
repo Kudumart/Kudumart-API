@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAllBanners = exports.applyJob = exports.viewJob = exports.fetchJobs = exports.submitContactForm = exports.getFaqCategoryWithFaqs = exports.getAllTestimonials = exports.viewAdvert = exports.getAdverts = exports.getAuctionProductById = exports.getUpcomingAuctionProducts = exports.getStoreProducts = exports.getAllStores = exports.getProductById = exports.products = exports.getCategoriesWithSubcategories = exports.getCategorySubCategories = exports.getAllCategories = void 0;
+exports.getAllBanners = exports.applyJob = exports.viewJob = exports.fetchJobs = exports.submitContactForm = exports.getFaqCategoryWithFaqs = exports.getAllTestimonials = exports.viewAdvert = exports.getAdverts = exports.getAuctionProductById = exports.getAuctionProducts = exports.getStoreProducts = exports.getAllStores = exports.getProductById = exports.products = exports.getCategoriesWithSubcategories = exports.getCategorySubCategories = exports.getAllCategories = void 0;
 const mail_service_1 = require("../services/mail.service");
 const messages_1 = require("../utils/messages");
 const logger_1 = __importDefault(require("../middlewares/logger")); // Adjust the path to your logger.js
@@ -412,20 +412,38 @@ const getStoreProducts = (req, res) => __awaiter(void 0, void 0, void 0, functio
     }
 });
 exports.getStoreProducts = getStoreProducts;
-// Function to get all upcoming auction products with search functionality
-const getUpcomingAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+// Function to get all auction products with search functionality
+const getAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { storeId, name, // Product name
     subCategoryName, // Subcategory name filter
     condition, // Product condition filter
+    auctionStatus, // 'upcoming' or 'ongoing'
+    startDate, // Filter by today's date
     limit = 10, // Default to 10 results if not specified
     offset = 0, // Default to 0 offset (start from the beginning)
      } = req.query;
     try {
+        // Get today's date (start of the day)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
         // Build the search criteria dynamically
-        const whereConditions = {
-            auctionStatus: 'upcoming',
-            startDate: { [sequelize_1.Op.gte]: new Date() }, // Ensure start date is in the future
-        };
+        const whereConditions = {};
+        // Filter by auction status
+        if (auctionStatus === 'upcoming') {
+            whereConditions.auctionStatus = 'upcoming';
+            whereConditions.startDate = { [sequelize_1.Op.gte]: new Date() }; // Ensure start date is in the future
+        }
+        else if (auctionStatus === 'ongoing') {
+            whereConditions.auctionStatus = 'ongoing';
+            whereConditions.startDate = { [sequelize_1.Op.lte]: new Date() }; // Ensure start date is in the past or today
+        }
+        // Filter by today's startDate if provided
+        if (startDate === 'today') {
+            whereConditions.startDate = {
+                [sequelize_1.Op.gte]: today,
+                [sequelize_1.Op.lt]: new Date(today.getTime() + 24 * 60 * 60 * 1000), // Less than tomorrow
+            };
+        }
         // Add search filters to the where condition
         if (name) {
             whereConditions.name = { [sequelize_1.Op.like]: `%${name}%` }; // Search by product name
@@ -439,7 +457,7 @@ const getUpcomingAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 
         if (storeId) {
             whereConditions.storeId = storeId; // Filter by store ID if provided
         }
-        // Fetch upcoming auction products based on conditions
+        // Fetch auction products based on conditions
         const products = yield auctionproduct_1.default.findAll({
             where: whereConditions,
             include: [
@@ -478,11 +496,11 @@ const getUpcomingAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 
         res.json({ data: products });
     }
     catch (error) {
-        logger_1.default.error("Error fetching upcoming auction products:", error);
-        res.status(500).json({ message: "Could not fetch upcoming auction products." });
+        logger_1.default.error("Error fetching auction products:", error);
+        res.status(500).json({ message: "Could not fetch auction products." });
     }
 });
-exports.getUpcomingAuctionProducts = getUpcomingAuctionProducts;
+exports.getAuctionProducts = getAuctionProducts;
 // Get Auction Product By ID or SKU with Recommended Products
 const getAuctionProductById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { auctionproductId } = req.query;
