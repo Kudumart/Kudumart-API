@@ -71,6 +71,7 @@ userRoutes.delete('/messages', authMiddleware_1.default, userController.deleteMe
 userRoutes.patch('/mark/message/read', authMiddleware_1.default, userController.markAsReadHandler);
 // Bid
 userRoutes.post('/auction/interest', authMiddleware_1.default, (0, validations_1.validateShowInterest)(), validations_1.validate, userController.showInterest);
+userRoutes.get('/auction/products/interest', authMiddleware_1.default, userController.getAllAuctionProductsInterest);
 userRoutes.post('/place/bid', authMiddleware_1.default, (0, validations_1.validatePlaceBid)(), validations_1.validate, userController.placeBid);
 userRoutes.post("/become/vendor", authMiddleware_1.default, userController.becomeVendor);
 // Notification

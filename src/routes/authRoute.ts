@@ -4,6 +4,7 @@ import passport from 'passport';
 import * as authController from '../controllers/authController';
 import * as homeController from '../controllers/homeController';
 import { registrationValidationRules, verificationValidationRules, loginValidationRules, resendVerificationValidationRules, forgotPasswordValidationRules, resetPasswordValidationRules, validate } from '../utils/validations'; // Import the service
+import authMiddleware from '../middlewares/authMiddleware';
 
 const authRoutes = Router();
 
@@ -39,7 +40,7 @@ authRoutes.get('/product', homeController.getProductById); // Fetch a single pro
 authRoutes.get("/stores", homeController.getAllStores);
 authRoutes.get('/store/products', homeController.getStoreProducts); // Fetch a single product by ID
 authRoutes.get("/auction/products", homeController.getAuctionProducts);
-authRoutes.get('/auction/product', homeController.getAuctionProductById); // Fetch a single product by ID
+authRoutes.get('/auction/product', authMiddleware, homeController.getAuctionProductById); // Fetch a single product by ID
 
 authRoutes.get('/adverts', homeController.getAdverts);
 authRoutes.get('/advert', homeController.viewAdvert);

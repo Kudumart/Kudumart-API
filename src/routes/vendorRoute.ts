@@ -44,6 +44,7 @@ vendorRoutes.put("/auction/products", authMiddleware, authorizeVendor, updateAuc
 vendorRoutes.delete("/auction/products", authMiddleware, authorizeVendor, vendorController.deleteAuctionProduct);
 vendorRoutes.patch("/auction/products", authMiddleware, authorizeVendor, vendorController.cancelAuctionProduct);
 vendorRoutes.get("/auction/product", authMiddleware, authorizeVendor, vendorController.viewAuctionProduct);
+vendorRoutes.get("/auction/product/bidders", authMiddleware, authorizeVendor, vendorController.getAllBidsByAuctionProductId);
 
 // Subscription
 vendorRoutes.get("/subscription/plans", authMiddleware, authorizeVendor, vendorController.subscriptionPlans);

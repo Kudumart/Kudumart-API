@@ -54,6 +54,12 @@ export const configureSocket = (io: Server) => {
             }
         );
 
+        // Let users join an auction room
+        socket.on("joinAuction", (auctionProductId) => {
+            socket.join(auctionProductId);
+            console.log(`User ${socket.id} joined auction ${auctionProductId}`);
+        });
+
         // Listen for events from the client
         socket.on("newBid", (data) => {
             console.log("Received new bid:", data);

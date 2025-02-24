@@ -42,6 +42,7 @@ const passport_1 = __importDefault(require("passport"));
 const authController = __importStar(require("../controllers/authController"));
 const homeController = __importStar(require("../controllers/homeController"));
 const validations_1 = require("../utils/validations"); // Import the service
+const authMiddleware_1 = __importDefault(require("../middlewares/authMiddleware"));
 const authRoutes = (0, express_1.Router)();
 // Auth routes
 authRoutes.get("/", authController.index);
@@ -71,7 +72,7 @@ authRoutes.get('/product', homeController.getProductById); // Fetch a single pro
 authRoutes.get("/stores", homeController.getAllStores);
 authRoutes.get('/store/products', homeController.getStoreProducts); // Fetch a single product by ID
 authRoutes.get("/auction/products", homeController.getAuctionProducts);
-authRoutes.get('/auction/product', homeController.getAuctionProductById); // Fetch a single product by ID
+authRoutes.get('/auction/product', authMiddleware_1.default, homeController.getAuctionProductById); // Fetch a single product by ID
 authRoutes.get('/adverts', homeController.getAdverts);
 authRoutes.get('/advert', homeController.viewAdvert);
 authRoutes.get("/testimonials", homeController.getAllTestimonials); // Get all testimonials

@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getSingleReview = exports.getProductReviews = exports.updateReview = exports.addReview = exports.getSavedProducts = exports.toggleSaveProduct = exports.getPaymentDetails = exports.updateOrderStatus = exports.getAllOrderItems = exports.getAllOrders = exports.userMarkNotificationAsRead = exports.getUserNotifications = exports.becomeVendor = exports.placeBid = exports.showInterest = exports.checkoutDollar = exports.checkout = exports.getActivePaymentGateways = exports.clearCart = exports.getCartContents = exports.removeCartItem = exports.updateCartItem = exports.addItemToCart = exports.markAsReadHandler = exports.deleteMessageHandler = exports.saveMessage = exports.sendMessageHandler = exports.getAllConversationMessages = exports.getConversations = exports.updateUserNotificationSettings = exports.getUserNotificationSettings = exports.confirmPhoneNumberUpdate = exports.updateProfilePhoneNumber = exports.confirmEmailUpdate = exports.updateProfileEmail = exports.updatePassword = exports.updateProfilePhoto = exports.updateProfile = exports.profile = exports.logout = void 0;
+exports.getSingleReview = exports.getProductReviews = exports.updateReview = exports.addReview = exports.getSavedProducts = exports.toggleSaveProduct = exports.getPaymentDetails = exports.updateOrderStatus = exports.getAllOrderItems = exports.getAllOrders = exports.userMarkNotificationAsRead = exports.getUserNotifications = exports.becomeVendor = exports.placeBid = exports.getAllAuctionProductsInterest = exports.showInterest = exports.checkoutDollar = exports.checkout = exports.getActivePaymentGateways = exports.clearCart = exports.getCartContents = exports.removeCartItem = exports.updateCartItem = exports.addItemToCart = exports.markAsReadHandler = exports.deleteMessageHandler = exports.saveMessage = exports.sendMessageHandler = exports.getAllConversationMessages = exports.getConversations = exports.updateUserNotificationSettings = exports.getUserNotificationSettings = exports.confirmPhoneNumberUpdate = exports.updateProfilePhoneNumber = exports.confirmEmailUpdate = exports.updateProfileEmail = exports.updatePassword = exports.updateProfilePhoto = exports.updateProfile = exports.profile = exports.logout = void 0;
 const user_1 = __importDefault(require("../models/user"));
 const sequelize_1 = require("sequelize");
 const helpers_1 = require("../utils/helpers");
@@ -1477,6 +1477,65 @@ const showInterest = (req, res) => __awaiter(void 0, void 0, void 0, function* (
     }
 });
 exports.showInterest = showInterest;
+const getAllAuctionProductsInterest = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get authenticated user ID
+        if (!userId) {
+            res.status(401).json({ message: "Unauthorized: User not authenticated." });
+            return;
+        }
+        // Fetch all interests for the authenticated user
+        const userAuctionProductInterests = yield showinterest_1.default.findAll({
+            where: { userId }, // Filter by authenticated user ID
+            include: [
+                {
+                    model: auctionproduct_1.default,
+                    as: "auctionProduct",
+                    include: [
+                        {
+                            model: user_1.default,
+                            as: "vendor"
+                        },
+                        {
+                            model: admin_1.default,
+                            as: "admin",
+                            attributes: ["id", "name", "email"],
+                        },
+                        {
+                            model: store_1.default,
+                            as: "store",
+                            attributes: ['name'],
+                            include: [
+                                {
+                                    model: currency_1.default,
+                                    as: "currency",
+                                    attributes: ['symbol']
+                                },
+                            ]
+                        },
+                        {
+                            model: subcategory_1.default,
+                            as: "sub_category",
+                            attributes: ["id", "name"],
+                        },
+                    ],
+                },
+            ],
+        });
+        res.status(200).json({
+            message: "User auction product interests retrieved successfully.",
+            data: userAuctionProductInterests,
+        });
+    }
+    catch (error) {
+        logger_1.default.error("Error retrieving user auction product interests:", error);
+        res.status(500).json({
+            message: error.message || "An error occurred while retrieving interests.",
+        });
+    }
+});
+exports.getAllAuctionProductsInterest = getAllAuctionProductsInterest;
 const placeBid = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
     try {

@@ -1765,6 +1765,66 @@ export const showInterest = async (req: Request, res: Response): Promise<void> =
   }
 };
 
+export const getAllAuctionProductsInterest = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as AuthenticatedRequest).user?.id; // Get authenticated user ID
+
+    if (!userId) {
+      res.status(401).json({ message: "Unauthorized: User not authenticated." });
+      return;
+    }
+
+    // Fetch all interests for the authenticated user
+    const userAuctionProductInterests = await ShowInterest.findAll({
+      where: { userId }, // Filter by authenticated user ID
+      include: [
+        {
+          model: AuctionProduct,
+          as: "auctionProduct",
+          include: [
+            {
+                model: User,
+                as: "vendor"
+            },
+            {
+                model: Admin,
+                as: "admin",
+                attributes: ["id", "name", "email"],
+            },
+            {
+                model: Store,
+                as: "store",
+                attributes: ['name'],
+                include: [
+                    {
+                        model: Currency,
+                        as: "currency",
+                        attributes: ['symbol']
+                    },
+                ]
+            },
+            {
+                model: SubCategory,
+                as: "sub_category",
+                attributes: ["id", "name"],
+            },
+          ],
+        },
+      ],
+    });
+
+    res.status(200).json({
+      message: "User auction product interests retrieved successfully.",
+      data: userAuctionProductInterests,
+    });
+  } catch (error: any) {
+    logger.error("Error retrieving user auction product interests:", error);
+    res.status(500).json({
+      message: error.message || "An error occurred while retrieving interests.",
+    });
+  }
+};
+
 export const placeBid = async (req: Request, res: Response): Promise<void> => {
   try {
     const { auctionProductId, bidAmount } = req.body;

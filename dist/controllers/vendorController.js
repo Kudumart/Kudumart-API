@@ -23,7 +23,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getWithdrawalById = exports.updateWithdrawal = exports.getWithdrawals = exports.requestWithdrawal = exports.deleteBankInformation = exports.getSingleBankInformation = exports.getBankInformation = exports.updateBankInformation = exports.addBankInformation = exports.deleteAdvert = exports.viewAdvert = exports.getAdverts = exports.updateAdvert = exports.createAdvert = exports.activeProducts = exports.getOrderItemsInfo = exports.getVendorOrderItems = exports.getAllSubCategories = exports.getAllCurrencies = exports.verifyCAC = exports.subscribe = exports.subscriptionPlans = exports.viewAuctionProduct = exports.fetchVendorAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchVendorProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.viewStore = exports.getStore = exports.getKYC = exports.submitOrUpdateKYC = void 0;
+exports.getWithdrawalById = exports.updateWithdrawal = exports.getWithdrawals = exports.requestWithdrawal = exports.deleteBankInformation = exports.getSingleBankInformation = exports.getBankInformation = exports.updateBankInformation = exports.addBankInformation = exports.deleteAdvert = exports.viewAdvert = exports.getAdverts = exports.updateAdvert = exports.createAdvert = exports.activeProducts = exports.getOrderItemsInfo = exports.getVendorOrderItems = exports.getAllSubCategories = exports.getAllCurrencies = exports.verifyCAC = exports.subscribe = exports.subscriptionPlans = exports.getAllBidsByAuctionProductId = exports.viewAuctionProduct = exports.fetchVendorAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchVendorProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.viewStore = exports.getStore = exports.getKYC = exports.submitOrUpdateKYC = void 0;
 const user_1 = __importDefault(require("../models/user"));
 const uuid_1 = require("uuid");
 const sequelize_1 = require("sequelize");
@@ -994,6 +994,37 @@ const viewAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, funct
     }
 });
 exports.viewAuctionProduct = viewAuctionProduct;
+const getAllBidsByAuctionProductId = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { auctionProductId } = req.query; // Get auctionProductId from request params
+        if (!auctionProductId) {
+            res.status(400).json({ message: "Auction Product ID is required." });
+            return;
+        }
+        // Fetch all bids for the given auctionProductId
+        const bids = yield bid_1.default.findAll({
+            where: { auctionProductId },
+            include: [
+                {
+                    model: user_1.default,
+                    as: "user",
+                },
+            ],
+            order: [["createdAt", "DESC"]], // Order bids from newest to oldest
+        });
+        res.status(200).json({
+            message: "Bids retrieved successfully.",
+            data: bids,
+        });
+    }
+    catch (error) {
+        logger_1.default.error("Error retrieving bids:", error);
+        res.status(500).json({
+            message: error.message || "An error occurred while retrieving bids.",
+        });
+    }
+});
+exports.getAllBidsByAuctionProductId = getAllBidsByAuctionProductId;
 // Subscription
 const subscriptionPlans = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;

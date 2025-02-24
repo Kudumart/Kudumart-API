@@ -37,6 +37,7 @@ const job_1 = __importDefault(require("../models/job"));
 const sequelize_service_1 = __importDefault(require("../services/sequelize.service"));
 const applicant_1 = __importDefault(require("../models/applicant"));
 const banner_1 = __importDefault(require("../models/banner"));
+const showinterest_1 = __importDefault(require("../models/showinterest"));
 const getAllCategories = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const categories = yield category_1.default.findAll();
@@ -503,12 +504,13 @@ const getAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 0, funct
 exports.getAuctionProducts = getAuctionProducts;
 // Get Auction Product By ID or SKU with Recommended Products
 const getAuctionProductById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { auctionproductId } = req.query;
+    var _a;
+    const { auctionproductId } = req.query; // Ensure userId is passed in the request
+    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get the authenticated user's ID
     try {
         // Fetch the main product by ID or SKU
         const product = yield auctionproduct_1.default.findOne({
             where: {
-                auctionStatus: "upcoming",
                 [sequelize_1.Op.or]: [
                     { id: auctionproductId },
                     { SKU: auctionproductId }, // Replace 'SKU' with the actual SKU column name if different
@@ -546,12 +548,21 @@ const getAuctionProductById = (req, res) => __awaiter(void 0, void 0, void 0, fu
             res.status(404).json({ message: "Product not found" });
             return;
         }
-        if (product && product.vendor) { // This should now return the associated User (vendor)
+        if (product && product.vendor) {
             const kyc = yield kyc_1.default.findOne({ where: { vendorId: product.vendor.id } });
             product.vendor.setDataValue('isVerified', kyc ? kyc.isVerified : false);
         }
+        // Check if the user has shown interest in this auction product
+        const interest = yield showinterest_1.default.findOne({
+            where: {
+                userId,
+                auctionProductId: product.id,
+            },
+        });
+        // Attach interest field dynamically
+        const productWithInterest = Object.assign(Object.assign({}, product.toJSON()), { interest: !!interest });
         // Send the product and recommended products in the response
-        res.status(200).json({ data: product });
+        res.status(200).json({ data: productWithInterest });
     }
     catch (error) {
         logger_1.default.error("Error fetching product:", error);

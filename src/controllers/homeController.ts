@@ -25,6 +25,8 @@ import Job from "../models/job";
 import sequelizeService from "../services/sequelize.service";
 import Applicant from "../models/applicant";
 import Banner from "../models/banner";
+import { AuthenticatedRequest } from "../types/index";
+import ShowInterest from "../models/showinterest";
 
 export const getAllCategories = async (
     req: Request,
@@ -549,13 +551,13 @@ export const getAuctionProductById = async (
     req: Request,
     res: Response
 ): Promise<void> => {
-    const { auctionproductId } = req.query;
+    const { auctionproductId } = req.query; // Ensure userId is passed in the request
+    const userId = (req as AuthenticatedRequest).user?.id; // Get the authenticated user's ID
 
     try {
         // Fetch the main product by ID or SKU
         const product = await AuctionProduct.findOne({
             where: {
-                auctionStatus: "upcoming",
                 [Op.or]: [
                     { id: auctionproductId },
                     { SKU: auctionproductId }, // Replace 'SKU' with the actual SKU column name if different
@@ -595,13 +597,27 @@ export const getAuctionProductById = async (
             return;
         }
 
-        if (product && product.vendor) { // This should now return the associated User (vendor)
+        if (product && product.vendor) {
             const kyc = await KYC.findOne({ where: { vendorId: product.vendor.id } });
             product.vendor.setDataValue('isVerified', kyc ? kyc.isVerified : false);
         }
 
+        // Check if the user has shown interest in this auction product
+        const interest = await ShowInterest.findOne({
+            where: {
+                userId,
+                auctionProductId: product.id,
+            },
+        });
+
+        // Attach interest field dynamically
+        const productWithInterest = {
+            ...product.toJSON(),
+            interest: !!interest, // true if interest exists, false otherwise
+        };
+
         // Send the product and recommended products in the response
-        res.status(200).json({ data: product });
+        res.status(200).json({ data: productWithInterest });
     } catch (error: any) {
         logger.error("Error fetching product:", error);
         res.status(500).json({

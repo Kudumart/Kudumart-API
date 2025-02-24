@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Auction</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+
+    <h2>Auction for Product ID: <span id="auctionProductId">12345</span></h2>
+    <h3>Current Bid: $<span id="currentBid">0</span></h3>
+
+    <input type="number" id="bidAmount" placeholder="Enter bid amount">
+    <button onclick="placeBid()">Place Bid</button>
+
+    <h1>Auction Status</h1>
+    <p id="auctionStatus">Ongoing...</p>
+    <h2>Winner: <span id="winnerName">TBD</span></h2>
+    <h3>Winning Bid: $<span id="winningBid">0</span></h3>
+
+    <script>
+        const auctionProductId = "8f6750c3-55e6-46bb-a04d-319e76d98406"; // Replace with actual auction product ID
+        const socket = io("http://localhost:3000"); // Replace with your backend WebSocket server URL
+
+        // Join the auction room
+        socket.emit("joinAuction", auctionProductId);
+
+        // Listen for new bids
+        socket.on("newBid", (data) => {
+            console.log("New bid received:", data);
+            document.getElementById("currentBid").innerText = data.bidAmount;
+        });
+
+        // Listen for the auctionEnded event
+        socket.on("auctionEnded", (data) => {
+            console.log("Auction ended:", data);
+
+            // Update UI with winner details
+            document.getElementById("auctionStatus").innerText = "Auction Ended 🚫";
+            document.getElementById("winnerName").innerText = data.winner ? `${data.winner.firstName} ${data.winner.lastName}` : "No Winner";
+            document.getElementById("winningBid").innerText = data.winningBid;
+        });
+
+    </script>
+
+</body>
+</html>
