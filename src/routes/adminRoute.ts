@@ -119,6 +119,7 @@ adminRoutes.put("/auction/products", adminAuthMiddleware, updateAuctionProductVa
 adminRoutes.delete("/auction/products", adminAuthMiddleware, adminController.deleteAuctionProduct);
 adminRoutes.patch("/auction/products", adminAuthMiddleware, adminController.cancelAuctionProduct);
 adminRoutes.get("/auction/product", adminAuthMiddleware, adminController.viewAuctionProduct);
+adminRoutes.get("/auction/product/bidders", adminAuthMiddleware, adminController.getAllBidsByAuctionProductId);
 
 // Orders
 adminRoutes.get("/order/items", adminAuthMiddleware, adminController.getOrderItems);
@@ -135,6 +136,7 @@ adminRoutes.put("/general/product/publish", adminAuthMiddleware, adminController
 adminRoutes.get("/general/auction/products", adminAuthMiddleware, adminController.getGeneralAuctionProducts);
 adminRoutes.get("/general/auction/product/view", adminAuthMiddleware, adminController.viewGeneralAuctionProduct);
 adminRoutes.delete("/general/auction/product/delete", adminAuthMiddleware, adminController.deleteGeneralAuctionProduct);
+adminRoutes.get("/general/auction/product/bidders", adminAuthMiddleware, adminController.getAllBiddersByAuctionProductId);
 adminRoutes.get("/general/orders", adminAuthMiddleware, adminController.getAllGeneralOrders);
 adminRoutes.get("/general/order/items", adminAuthMiddleware, adminController.getAllGeneralOrderItems);
 adminRoutes.get("/general/order/payment", adminAuthMiddleware, adminController.getGeneralPaymentDetails);

@@ -57,7 +57,7 @@ module.exports = {
         allowNull: false,
       },
       bidIncrement: {
-        type: Sequelize.DECIMAL(5, 2), // Percentage stored as decimal, e.g., 5.00 for 5%
+        type: Sequelize.DECIMAL(5, 2),
         allowNull: true,
       },
       maxBidsPerUser: {

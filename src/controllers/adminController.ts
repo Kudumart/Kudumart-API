@@ -2603,6 +2603,43 @@ export const deleteGeneralAuctionProduct = async (
     }
 };
 
+export const getAllBiddersByAuctionProductId = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { auctionProductId } = req.query; // Get auctionProductId from request params
+
+        if (!auctionProductId) {
+            res.status(400).json({ message: "Auction Product ID is required." });
+            return;
+        }
+
+        // Fetch all bids for the given auctionProductId
+        const bids = await Bid.findAll({
+            where: { auctionProductId },
+            include: [
+                {
+                    model: User,
+                    as: "user",
+                },
+                {
+                    model: AuctionProduct,
+                    as: 'auctionProduct'
+                }
+            ],
+            order: [["createdAt", "DESC"]], // Order bids from newest to oldest
+        });
+
+        res.status(200).json({
+        message: "Bids retrieved successfully.",
+        data: bids,
+        });
+    } catch (error: any) {
+        logger.error("Error retrieving bids:", error);
+        res.status(500).json({
+        message: error.message || "An error occurred while retrieving bids.",
+        });
+    }
+};
+
 export const getAllGeneralOrders = async (req: Request, res: Response): Promise<void> => {
     const { trackingNumber, page, limit } = req.query; // Only track by tracking number, no pagination
 
@@ -3866,6 +3903,44 @@ export const viewAuctionProduct = async (
         res.status(500).json({ message: "Failed to fetch product" });
     }
 };
+
+export const getAllBidsByAuctionProductId = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { auctionProductId } = req.query; // Get auctionProductId from request params
+
+        if (!auctionProductId) {
+            res.status(400).json({ message: "Auction Product ID is required." });
+            return;
+        }
+
+        // Fetch all bids for the given auctionProductId
+        const bids = await Bid.findAll({
+            where: { auctionProductId },
+            include: [
+                {
+                    model: User,
+                    as: "user",
+                },
+                {
+                    model: AuctionProduct,
+                    as: 'auctionProduct'
+                }
+            ],
+            order: [["createdAt", "DESC"]], // Order bids from newest to oldest
+        });
+
+        res.status(200).json({
+        message: "Bids retrieved successfully.",
+        data: bids,
+        });
+    } catch (error: any) {
+        logger.error("Error retrieving bids:", error);
+        res.status(500).json({
+        message: error.message || "An error occurred while retrieving bids.",
+        });
+    }
+};
+
 
 export const getTransactionsForAdmin = async (
     req: Request,
