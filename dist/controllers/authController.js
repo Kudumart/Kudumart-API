@@ -312,7 +312,7 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         // Successful login
         res.status(200).json({
             message: "Login successful",
-            data: Object.assign(Object.assign({}, user.toJSON()), { token })
+            data: Object.assign(Object.assign({}, user.toJSON()), { location: typeof user.location === "string" ? JSON.parse(user.location) : user.location, token })
         });
     }
     catch (error) {

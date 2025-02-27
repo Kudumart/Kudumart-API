@@ -112,11 +112,11 @@ const initModel = (sequelize: Sequelize) => {
         allowNull: false,
       },
       price: {
-        type: DataTypes.DECIMAL(10, 2),
+        type: DataTypes.DECIMAL(20, 2),
         allowNull: false,
       },
       bidIncrement: {
-        type: DataTypes.DECIMAL(5, 2),
+        type: DataTypes.DECIMAL(29, 2),
         allowNull: true,
       },
       maxBidsPerUser: {
@@ -124,7 +124,7 @@ const initModel = (sequelize: Sequelize) => {
         allowNull: true,
       },
       participantsInterestFee: {
-        type: DataTypes.DECIMAL(10, 2),
+        type: DataTypes.DECIMAL(20, 2),
         allowNull: false,
       },
       startDate: {

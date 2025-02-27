@@ -24,8 +24,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getGeneralProducts = exports.viewGeneralStore = exports.getGeneralStores = exports.viewUser = exports.toggleUserStatus = exports.getAllVendors = exports.getAllCustomers = exports.deleteCurrency = exports.getAllCurrencies = exports.updateCurrency = exports.addCurrency = exports.setPaymentGatewayActive = exports.getAllPaymentGateways = exports.deletePaymentGateway = exports.updatePaymentGateway = exports.createPaymentGateway = exports.approveOrRejectKYC = exports.getAllKYC = exports.getAllSubCategories = exports.deleteSubCategory = exports.updateSubCategory = exports.createSubCategory = exports.getCategoriesWithSubCategories = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getAllCategories = exports.deleteSubscriptionPlan = exports.updateSubscriptionPlan = exports.createSubscriptionPlan = exports.getAllSubscriptionPlans = exports.deletePermission = exports.updatePermission = exports.getPermissions = exports.createPermission = exports.deletePermissionFromRole = exports.assignPermissionToRole = exports.viewRolePermissions = exports.updateRole = exports.getRoles = exports.createRole = exports.resendLoginDetailsSubAdmin = exports.deleteSubAdmin = exports.deactivateOrActivateSubAdmin = exports.updateSubAdmin = exports.createSubAdmin = exports.subAdmins = exports.updatePassword = exports.updateProfile = exports.logout = void 0;
-exports.deleteFaqCategory = exports.updateFaqCategory = exports.getFaqCategory = exports.getAllFaqCategories = exports.createFaqCategory = exports.deleteTestimonial = exports.getTestimonial = exports.getAllTestimonials = exports.updateTestimonial = exports.createTestimonial = exports.getOrderItemsInfo = exports.getOrderItems = exports.approveOrRejectAdvert = exports.viewGeneralAdvert = exports.getGeneralAdverts = exports.deleteAdvert = exports.viewAdvert = exports.getAdverts = exports.updateAdvert = exports.createAdvert = exports.activeProducts = exports.getTransactionsForAdmin = exports.viewAuctionProduct = exports.fetchAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.getStore = exports.getAllSubscribers = exports.getGeneralPaymentDetails = exports.getAllGeneralOrderItems = exports.getAllGeneralOrders = exports.deleteGeneralAuctionProduct = exports.viewGeneralAuctionProduct = exports.getGeneralAuctionProducts = exports.publishProduct = exports.unpublishProduct = exports.deleteGeneralProduct = exports.viewGeneralProduct = void 0;
-exports.deleteBanner = exports.getBanner = exports.getAllBanners = exports.updateBanner = exports.createBanner = exports.getWithdrawalById = exports.getWithdrawals = exports.updateWithdrawalStatus = exports.downloadApplicantResume = exports.repostJob = exports.viewApplicant = exports.getJobApplicants = exports.deleteJob = exports.closeJob = exports.getJobById = exports.updateJob = exports.getJobs = exports.postJob = exports.deleteContactById = exports.getContactById = exports.getAllContacts = exports.deleteFaq = exports.updateFaq = exports.getFaq = exports.getAllFaqs = exports.createFaq = void 0;
+exports.getFaqCategory = exports.getAllFaqCategories = exports.createFaqCategory = exports.deleteTestimonial = exports.getTestimonial = exports.getAllTestimonials = exports.updateTestimonial = exports.createTestimonial = exports.getOrderItemsInfo = exports.getOrderItems = exports.approveOrRejectAdvert = exports.viewGeneralAdvert = exports.getGeneralAdverts = exports.deleteAdvert = exports.viewAdvert = exports.getAdverts = exports.updateAdvert = exports.createAdvert = exports.activeProducts = exports.getTransactionsForAdmin = exports.getAllBidsByAuctionProductId = exports.viewAuctionProduct = exports.fetchAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.getStore = exports.getAllSubscribers = exports.getGeneralPaymentDetails = exports.getAllGeneralOrderItems = exports.getAllGeneralOrders = exports.getAllBiddersByAuctionProductId = exports.deleteGeneralAuctionProduct = exports.viewGeneralAuctionProduct = exports.getGeneralAuctionProducts = exports.publishProduct = exports.unpublishProduct = exports.deleteGeneralProduct = exports.viewGeneralProduct = void 0;
+exports.deleteBanner = exports.getBanner = exports.getAllBanners = exports.updateBanner = exports.createBanner = exports.getWithdrawalById = exports.getWithdrawals = exports.updateWithdrawalStatus = exports.downloadApplicantResume = exports.repostJob = exports.viewApplicant = exports.getJobApplicants = exports.deleteJob = exports.closeJob = exports.getJobById = exports.updateJob = exports.getJobs = exports.postJob = exports.deleteContactById = exports.getContactById = exports.getAllContacts = exports.deleteFaq = exports.updateFaq = exports.getFaq = exports.getAllFaqs = exports.createFaq = exports.deleteFaqCategory = exports.updateFaqCategory = void 0;
 const sequelize_1 = require("sequelize");
 const uuid_1 = require("uuid");
 const mail_service_1 = require("../services/mail.service");
@@ -2182,6 +2182,41 @@ const deleteGeneralAuctionProduct = (req, res) => __awaiter(void 0, void 0, void
     }
 });
 exports.deleteGeneralAuctionProduct = deleteGeneralAuctionProduct;
+const getAllBiddersByAuctionProductId = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { auctionProductId } = req.query; // Get auctionProductId from request params
+        if (!auctionProductId) {
+            res.status(400).json({ message: "Auction Product ID is required." });
+            return;
+        }
+        // Fetch all bids for the given auctionProductId
+        const bids = yield bid_1.default.findAll({
+            where: { auctionProductId },
+            include: [
+                {
+                    model: user_1.default,
+                    as: "user",
+                },
+                {
+                    model: auctionproduct_1.default,
+                    as: 'auctionProduct'
+                }
+            ],
+            order: [["createdAt", "DESC"]], // Order bids from newest to oldest
+        });
+        res.status(200).json({
+            message: "Bids retrieved successfully.",
+            data: bids,
+        });
+    }
+    catch (error) {
+        logger_1.default.error("Error retrieving bids:", error);
+        res.status(500).json({
+            message: error.message || "An error occurred while retrieving bids.",
+        });
+    }
+});
+exports.getAllBiddersByAuctionProductId = getAllBiddersByAuctionProductId;
 const getAllGeneralOrders = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { trackingNumber, page, limit } = req.query; // Only track by tracking number, no pagination
     try {
@@ -3234,6 +3269,41 @@ const viewAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, funct
     }
 });
 exports.viewAuctionProduct = viewAuctionProduct;
+const getAllBidsByAuctionProductId = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { auctionProductId } = req.query; // Get auctionProductId from request params
+        if (!auctionProductId) {
+            res.status(400).json({ message: "Auction Product ID is required." });
+            return;
+        }
+        // Fetch all bids for the given auctionProductId
+        const bids = yield bid_1.default.findAll({
+            where: { auctionProductId },
+            include: [
+                {
+                    model: user_1.default,
+                    as: "user",
+                },
+                {
+                    model: auctionproduct_1.default,
+                    as: 'auctionProduct'
+                }
+            ],
+            order: [["createdAt", "DESC"]], // Order bids from newest to oldest
+        });
+        res.status(200).json({
+            message: "Bids retrieved successfully.",
+            data: bids,
+        });
+    }
+    catch (error) {
+        logger_1.default.error("Error retrieving bids:", error);
+        res.status(500).json({
+            message: error.message || "An error occurred while retrieving bids.",
+        });
+    }
+});
+exports.getAllBidsByAuctionProductId = getAllBidsByAuctionProductId;
 const getTransactionsForAdmin = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { transactionType, refId, status, userName, page, limit } = req.query;
     try {

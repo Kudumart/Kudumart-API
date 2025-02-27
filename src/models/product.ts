@@ -127,11 +127,11 @@ const initModel = (sequelize: Sequelize) => {
         allowNull: true,
       },
       price: {
-        type: DataTypes.DECIMAL(10, 2),
+        type: DataTypes.DECIMAL(20, 2),
         allowNull: false,
       },
       discount_price: {
-        type: DataTypes.DECIMAL(10, 2),
+        type: DataTypes.DECIMAL(20, 2),
         allowNull: true,
       },
       image_url: {

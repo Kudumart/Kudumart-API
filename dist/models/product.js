@@ -95,11 +95,11 @@ const initModel = (sequelize) => {
             allowNull: true,
         },
         price: {
-            type: sequelize_1.DataTypes.DECIMAL(10, 2),
+            type: sequelize_1.DataTypes.DECIMAL(20, 2),
             allowNull: false,
         },
         discount_price: {
-            type: sequelize_1.DataTypes.DECIMAL(10, 2),
+            type: sequelize_1.DataTypes.DECIMAL(20, 2),
             allowNull: true,
         },
         image_url: {
