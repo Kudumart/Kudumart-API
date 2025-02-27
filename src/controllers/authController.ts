@@ -359,6 +359,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       message: "Login successful",
       data: {
         ...user.toJSON(),
+        location: typeof user.location === "string" ? JSON.parse(user.location) : user.location,
         token
       }
     });
