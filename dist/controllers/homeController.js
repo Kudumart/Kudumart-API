@@ -128,9 +128,13 @@ const products = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             {
                 model: user_1.default,
                 as: "vendor",
-                attributes: {
-                    include: ['isVerified'], // Explicitly include virtual field
-                }
+                include: [
+                    {
+                        model: kyc_1.default,
+                        as: "kyc",
+                        attributes: ["isVerified"], // Fetch isVerified from KYC
+                    },
+                ],
             },
             {
                 model: admin_1.default,

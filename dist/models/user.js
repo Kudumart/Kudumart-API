@@ -134,10 +134,12 @@ const initModel = (sequelize) => {
                 userInstance.setDataValue('isVerified', false); // Set as false if no KYC record exists
             }
         });
+        // If the result is an array of users (e.g., when using includes in a query), set for each one
         if (Array.isArray(user)) {
-            yield Promise.all(user.map(setVerificationStatus));
+            yield Promise.all(user.map((userInstance) => setVerificationStatus(userInstance)));
         }
         else {
+            // For a single user, directly update the status
             yield setVerificationStatus(user);
         }
     }));

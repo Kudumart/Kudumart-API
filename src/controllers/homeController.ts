@@ -140,9 +140,13 @@ export const products = async (req: Request, res: Response): Promise<void> => {
             {
                 model: User,
                 as: "vendor",
-                attributes: {
-                    include: ['isVerified'], // Explicitly include virtual field
-                }            
+                include: [
+                    {
+                        model: KYC,
+                        as: "kyc",
+                        attributes: ["isVerified"], // Fetch isVerified from KYC
+                    },
+                ],          
             },
             {
                 model: Admin,

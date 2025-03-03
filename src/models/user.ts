@@ -151,10 +151,12 @@ const initModel = (sequelize: Sequelize) => {
       }
     };
   
+    // If the result is an array of users (e.g., when using includes in a query), set for each one
     if (Array.isArray(user)) {
-        await Promise.all(user.map(setVerificationStatus));
+      await Promise.all(user.map((userInstance: User) => setVerificationStatus(userInstance)));
     } else {
-        await setVerificationStatus(user);
+      // For a single user, directly update the status
+      await setVerificationStatus(user);
     }
   });
   
