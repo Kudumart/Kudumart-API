@@ -31,6 +31,7 @@ exports.upload = (0, multer_1.default)({
     fileFilter: (req, file, cb) => {
         const allowedImageTypes = [
             "image/jpeg",
+            "image/jpg",
             "image/png",
             "image/webp",
             "image/gif",
