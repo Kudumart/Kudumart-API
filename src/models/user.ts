@@ -134,7 +134,7 @@ const initModel = (sequelize: Sequelize) => {
   );
 
   // After finding a user, set the isVerified status
-  User.addHook("beforeFind", async (user: any) => {
+  User.addHook("afterFind", async (user: any) => {
     // If no user is found, exit early
     if (!user) return;
   
