@@ -29,6 +29,7 @@ class User extends Model {
   public isVerified?: boolean;
   public createdAt?: Date;
   public updatedAt?: Date;
+  public kyc?: KYC | null;
 
   // Method to hash the password before saving
   static async hashPassword(password: string): Promise<string> {
@@ -100,7 +101,14 @@ const initModel = (sequelize: Sequelize) => {
         allowNull: false, // Enforce phone number requirement
       },
       dateOfBirth: DataTypes.STRING,
-      location: DataTypes.JSON,
+      location: {
+        type: DataTypes.JSON,
+        defaultValue: [], // Ensures it's an array by default
+        get() {
+          const value = this.getDataValue('location');
+          return typeof value === 'string' ? JSON.parse(value) : value;
+        }
+      },
       photo: DataTypes.TEXT,
       wallet: DataTypes.DECIMAL(20, 2),
       dollarWallet: DataTypes.DECIMAL(20, 2),

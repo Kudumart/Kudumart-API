@@ -37,6 +37,11 @@ const initModel = (sequelize: Sequelize) => {
       bankInformation: {
         type: DataTypes.JSON,
         allowNull: false,
+        defaultValue: [], // Ensures it's an array by default
+        get() {
+          const value = this.getDataValue('bankInformation');
+          return typeof value === 'string' ? JSON.parse(value) : value;
+        }
       },
       amount: {
         type: DataTypes.DECIMAL(20, 2),

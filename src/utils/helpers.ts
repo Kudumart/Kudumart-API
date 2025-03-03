@@ -164,11 +164,18 @@ const checkVendorAuctionProductLimit = async (vendorId: string): Promise<{ statu
     }
 
     const auctionProductLimit = subscriptionPlan.auctionProductLimit;
+    const allowAuctionProduct = subscriptionPlan.allowsAuction;
+
+    // Handle the case where allowAuctionProduct is false
+    if (!allowAuctionProduct) {  
+      return { status: false, message: 'Your subscription plan does not allow auctions.' };
+    }
 
     // Handle the case where auctionProductLimit is null
-    if (auctionProductLimit === null) {
+    if (auctionProductLimit === null) {  
       return { status: false, message: 'Your subscription plan does not define a limit for auction products.' };
     }
+    
 
     // Count the number of products already created by the vendor
     const auctionProductCount = await AuctionProduct.count({

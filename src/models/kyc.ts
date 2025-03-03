@@ -81,6 +81,11 @@ const initModel = (sequelize: Sequelize) => {
       idVerification: {
         type: DataTypes.JSON, // This could be a URL to the uploaded document
         allowNull: true,
+        defaultValue: [], // Ensures it's an array by default
+        get() {
+          const value = this.getDataValue('idVerification');
+          return typeof value === 'string' ? JSON.parse(value) : value;
+        }
       },
       adminNote: {
         type: DataTypes.TEXT, // This field is for admin's notes or remarks

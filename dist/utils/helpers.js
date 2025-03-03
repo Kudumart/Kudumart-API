@@ -156,6 +156,11 @@ const checkVendorAuctionProductLimit = (vendorId) => __awaiter(void 0, void 0, v
             return { status: false, message: 'Subscription plan not found.' };
         }
         const auctionProductLimit = subscriptionPlan.auctionProductLimit;
+        const allowAuctionProduct = subscriptionPlan.allowsAuction;
+        // Handle the case where allowAuctionProduct is false
+        if (!allowAuctionProduct) {
+            return { status: false, message: 'Your subscription plan does not allow auctions.' };
+        }
         // Handle the case where auctionProductLimit is null
         if (auctionProductLimit === null) {
             return { status: false, message: 'Your subscription plan does not define a limit for auction products.' };

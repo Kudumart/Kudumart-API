@@ -177,7 +177,16 @@ const products = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             limit: 20, // Fetch top 20 products
             subQuery: false, // Ensures the currency filter is applied correctly
         });
-        res.status(200).json({ data: products });
+        // ✅ **Transform the response to include `isVerified`**
+        const formattedProducts = products.map((product) => {
+            let vendorData = product.vendor ? product.vendor.toJSON() : null;
+            if (vendorData) {
+                vendorData.isVerified = vendorData.kyc ? vendorData.kyc.isVerified : false;
+                delete vendorData.kyc; // Remove nested kyc object if unnecessary
+            }
+            return Object.assign(Object.assign({}, product.toJSON()), { vendor: vendorData !== null && vendorData !== void 0 ? vendorData : null });
+        });
+        res.status(200).json({ data: formattedProducts });
     }
     catch (error) {
         logger_1.default.error("Error fetching products:", error);
@@ -471,7 +480,14 @@ const getAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 0, funct
             include: [
                 {
                     model: user_1.default,
-                    as: "vendor"
+                    as: "vendor",
+                    include: [
+                        {
+                            model: kyc_1.default,
+                            as: "kyc",
+                            attributes: ["isVerified"], // Fetch isVerified from KYC
+                        },
+                    ],
                 },
                 {
                     model: admin_1.default,
@@ -499,6 +515,15 @@ const getAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 0, funct
             limit: Number(limit),
             offset: Number(offset),
             order: [["startDate", "ASC"]], // Sort by start date (ascending)
+        });
+        // ✅ **Transform the response to include `isVerified`**
+        const formattedProducts = products.map((product) => {
+            let vendorData = product.vendor ? product.vendor.toJSON() : null;
+            if (vendorData) {
+                vendorData.isVerified = vendorData.kyc ? vendorData.kyc.isVerified : false;
+                delete vendorData.kyc; // Remove nested kyc object if unnecessary
+            }
+            return Object.assign(Object.assign({}, product.toJSON()), { vendor: vendorData !== null && vendorData !== void 0 ? vendorData : null });
         });
         // Return the results as JSON response
         res.json({ data: products });

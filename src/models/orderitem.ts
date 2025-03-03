@@ -60,6 +60,11 @@ const initModel = (sequelize: Sequelize) => {
       product: {
         type: DataTypes.JSON,
         allowNull: false,
+        defaultValue: [], // Ensures it's an array by default
+        get() {
+          const value = this.getDataValue('product');
+          return typeof value === 'string' ? JSON.parse(value) : value;
+        }
       },
       quantity: {
         type: DataTypes.INTEGER,

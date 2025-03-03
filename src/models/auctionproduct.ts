@@ -110,6 +110,11 @@ const initModel = (sequelize: Sequelize) => {
       specification: {
         type: DataTypes.JSON,
         allowNull: false,
+        defaultValue: [], // Ensures it's an array by default
+        get() {
+          const value = this.getDataValue('specification');
+          return typeof value === 'string' ? JSON.parse(value) : value;
+        }
       },
       price: {
         type: DataTypes.DECIMAL(20, 2),
@@ -142,6 +147,11 @@ const initModel = (sequelize: Sequelize) => {
       additionalImages: {
         type: DataTypes.JSON,
         allowNull: true,
+        defaultValue: [], // Ensures it's an array by default
+        get() {
+          const value = this.getDataValue('additionalImages');
+          return typeof value === 'string' ? JSON.parse(value) : value;
+        }
       },
       auctionStatus: {
         type: DataTypes.ENUM('upcoming', 'ongoing', 'cancelled', 'ended'),

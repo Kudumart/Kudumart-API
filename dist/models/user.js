@@ -87,7 +87,14 @@ const initModel = (sequelize) => {
             allowNull: false, // Enforce phone number requirement
         },
         dateOfBirth: sequelize_1.DataTypes.STRING,
-        location: sequelize_1.DataTypes.JSON,
+        location: {
+            type: sequelize_1.DataTypes.JSON,
+            defaultValue: [], // Ensures it's an array by default
+            get() {
+                const value = this.getDataValue('location');
+                return typeof value === 'string' ? JSON.parse(value) : value;
+            }
+        },
         photo: sequelize_1.DataTypes.TEXT,
         wallet: sequelize_1.DataTypes.DECIMAL(20, 2),
         dollarWallet: sequelize_1.DataTypes.DECIMAL(20, 2),

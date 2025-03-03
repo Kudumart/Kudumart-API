@@ -55,15 +55,30 @@ const initModel = (sequelize) => {
         },
         location: {
             type: sequelize_1.DataTypes.JSON,
-            allowNull: true // Address or general location
+            allowNull: true, // Address or general location
+            defaultValue: [], // Ensures it's an array by default
+            get() {
+                const value = this.getDataValue('location');
+                return typeof value === 'string' ? JSON.parse(value) : value;
+            }
         },
         businessHours: {
             type: sequelize_1.DataTypes.JSON, // Example: { "Monday-Friday": "9am - 6pm", "Saturday": "10am - 4pm" }
-            allowNull: true
+            allowNull: true,
+            defaultValue: [], // Ensures it's an array by default
+            get() {
+                const value = this.getDataValue('businessHours');
+                return typeof value === 'string' ? JSON.parse(value) : value;
+            }
         },
         deliveryOptions: {
             type: sequelize_1.DataTypes.JSON, // Example: { "Standard": "5-7 days", "Express": "2-3 days" }
-            allowNull: true
+            allowNull: true,
+            defaultValue: [], // Ensures it's an array by default
+            get() {
+                const value = this.getDataValue('deliveryOptions');
+                return typeof value === 'string' ? JSON.parse(value) : value;
+            }
         },
         tipsOnFinding: {
             type: sequelize_1.DataTypes.TEXT, // Any tips for finding the store, e.g., "Near Central Mall, second floor"
