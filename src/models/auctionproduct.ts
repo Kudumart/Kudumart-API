@@ -12,7 +12,7 @@ class AuctionProduct extends Model {
   public sku!: string;
   public condition!: 'brand_new' | 'fairly_used' | 'fairly_foreign' | 'refurbished';
   public description!: string;
-  public specification!: object;
+  public specification!: string;
   public price!: number;
   public bidIncrement?: number; // Percentage
   public maxBidsPerUser?: number;
@@ -108,13 +108,13 @@ const initModel = (sequelize: Sequelize) => {
         allowNull: false,
       },
       specification: {
-        type: DataTypes.JSON,
+        type: DataTypes.TEXT,
         allowNull: false,
-        defaultValue: [], // Ensures it's an array by default
-        get() {
-          const value = this.getDataValue('specification');
-          return typeof value === 'string' ? JSON.parse(value) : value;
-        }
+        // defaultValue: [], // Ensures it's an array by default
+        // get() {
+        //   const value = this.getDataValue('specification');
+        //   return typeof value === 'string' ? JSON.parse(value) : value;
+        // }
       },
       price: {
         type: DataTypes.DECIMAL(20, 2),

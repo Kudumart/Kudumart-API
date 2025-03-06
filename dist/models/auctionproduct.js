@@ -81,13 +81,13 @@ const initModel = (sequelize) => {
             allowNull: false,
         },
         specification: {
-            type: sequelize_1.DataTypes.JSON,
+            type: sequelize_1.DataTypes.TEXT,
             allowNull: false,
-            defaultValue: [], // Ensures it's an array by default
-            get() {
-                const value = this.getDataValue('specification');
-                return typeof value === 'string' ? JSON.parse(value) : value;
-            }
+            // defaultValue: [], // Ensures it's an array by default
+            // get() {
+            //   const value = this.getDataValue('specification');
+            //   return typeof value === 'string' ? JSON.parse(value) : value;
+            // }
         },
         price: {
             type: sequelize_1.DataTypes.DECIMAL(20, 2),
