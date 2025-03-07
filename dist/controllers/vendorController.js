@@ -399,11 +399,11 @@ const updateProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     try {
         // Use the utility function to check the product limit
-        const { status, message } = yield (0, helpers_1.checkVendorProductLimit)(vendorId);
-        if (!status) {
-            res.status(403).json({ message });
-            return;
-        }
+        // const { status, message } = await checkVendorProductLimit(vendorId);
+        // if (!status) {
+        //     res.status(403).json({ message });
+        //     return;
+        // }
         const product = yield product_1.default.findOne({
             where: {
                 [sequelize_1.Op.or]: [{ id: productId }, { sku: productId }],
@@ -711,11 +711,11 @@ const updateAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
     const { auctionProductId, storeId, categoryId, name, condition, description, specification, price, bidIncrement, maxBidsPerUser, participantsInterestFee, startDate, endDate, image, additionalImages, } = req.body;
     try {
         // Use the utility function to check the product limit
-        const { status, message } = yield (0, helpers_1.checkVendorAuctionProductLimit)(vendorId);
-        if (!status) {
-            res.status(403).json({ message });
-            return;
-        }
+        // const { status, message } = await checkVendorAuctionProductLimit(vendorId);
+        // if (!status) {
+        //     res.status(403).json({ message });
+        //     return;
+        // }
         // Find the auction product by ID
         const auctionProduct = yield auctionproduct_1.default.findOne({
             where: {

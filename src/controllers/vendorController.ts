@@ -437,12 +437,12 @@ export const updateProduct = async (
 
     try {
         // Use the utility function to check the product limit
-        const { status, message } = await checkVendorProductLimit(vendorId);
+        // const { status, message } = await checkVendorProductLimit(vendorId);
 
-        if (!status) {
-            res.status(403).json({ message });
-            return;
-        }
+        // if (!status) {
+        //     res.status(403).json({ message });
+        //     return;
+        // }
 
         const product = await Product.findOne({
             where: {
@@ -840,12 +840,12 @@ export const updateAuctionProduct = async (
 
     try {
         // Use the utility function to check the product limit
-        const { status, message } = await checkVendorAuctionProductLimit(vendorId);
+        // const { status, message } = await checkVendorAuctionProductLimit(vendorId);
 
-        if (!status) {
-            res.status(403).json({ message });
-            return;
-        }
+        // if (!status) {
+        //     res.status(403).json({ message });
+        //     return;
+        // }
 
         // Find the auction product by ID
         const auctionProduct = await AuctionProduct.findOne({
