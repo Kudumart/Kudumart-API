@@ -90,6 +90,7 @@ export const getCategoriesWithSubcategories = async (
 export const products = async (req: Request, res: Response): Promise<void> => {
     const {
         country,
+        productId,
         storeId,
         minPrice,
         maxPrice,
@@ -106,6 +107,12 @@ export const products = async (req: Request, res: Response): Promise<void> => {
         const whereClause: any = { status: "active" };
 
         // Additional filters based on query parameters
+        if (productId) {
+            whereClause[Op.or] = [
+                { id: productId },
+                { sku: productId }
+            ];
+        }
         if (storeId) {
             whereClause.storeId = storeId;
         }
@@ -475,6 +482,7 @@ export const getStoreProducts = async (req: Request, res: Response): Promise<voi
 // Function to get all auction products with search functionality
 export const getAuctionProducts = async (req: Request, res: Response): Promise<void> => {
     const {
+        productId,
         storeId,
         name, // Product name
         subCategoryName, // Subcategory name filter
@@ -511,6 +519,12 @@ export const getAuctionProducts = async (req: Request, res: Response): Promise<v
         }
 
         // Add search filters to the where condition
+        if (productId) {
+            whereConditions[Op.or] = [
+                { id: productId },
+                { sku: productId }
+            ];
+        }
         if (name) {
             whereConditions.name = { [Op.like]: `%${name}%` }; // Search by product name
         }

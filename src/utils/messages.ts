@@ -3045,8 +3045,9 @@ export const emailTemplates = {
         itemsHtml += `<h4>Product Details</h4><ul>`;
 
         for (const item of vendorOrders[vendorId]) {
-        const product = item.product as { name: string; price: number };
-        itemsHtml += `<li><strong>Product:</strong> ${product.name} </li>
+        const product = item.product as { sku: string; name: string; price: number };
+        itemsHtml += `<li><strong>Product ID:</strong> ${product.sku} </li>
+            <li><strong>Product:</strong> ${product.name} </li>
             <li><strong>Quantity:</strong> ${item.quantity} </li>
             <li><strong>Price:</strong> ${currency}${Number(item.price).toFixed(2)}</li>`;
         }

@@ -4462,6 +4462,50 @@ export const getOrderItems = async (req: AuthenticatedRequest, res: Response): P
     }
 };
 
+export const viewOrderItem = async (req: Request, res: Response): Promise<void> => {
+    const { orderItemId } = req.query;
+  
+    try {
+      // Query for a single order item and required associations
+      const orderItem = await OrderItem.findOne({
+        where: { id: orderItemId },
+        include: [
+          {
+            model: Order,
+            as: "order",
+            include: [
+              {
+                model: User,
+                as: "user",
+                attributes: ["id", "firstName", "lastName", "email", "phoneNumber"], // Include user details
+              },
+            ],
+          },
+        ],
+      });
+  
+      // If order item is not found
+      if (!orderItem) {
+        res.status(404).json({ message: "Order item not found" });
+        return;
+      }
+  
+      // Convert Sequelize model to plain object and add computed field
+      const formattedOrderItem = {
+        ...orderItem.get(), // Convert to plain object
+        totalPrice: orderItem.quantity * orderItem.price, // Compute total price
+      };
+  
+      res.status(200).json({
+        message: "Order item retrieved successfully",
+        data: formattedOrderItem,
+      });
+    } catch (error) {
+      logger.error("Error fetching order item:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+};
+
 export const getOrderItemsInfo = async (req: Request, res: Response): Promise<void> => {
     const orderId = req.query.orderId as string;
 

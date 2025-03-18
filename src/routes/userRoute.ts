@@ -64,6 +64,7 @@ userRoutes.patch("/mark/notification/as/read", authMiddleware, userController.us
 // Order, OrderItem and Payment
 userRoutes.get("/orders", authMiddleware, userController.getAllOrders);
 userRoutes.get("/order/items", authMiddleware, userController.getAllOrderItems);
+userRoutes.get("/order/item", authMiddleware, userController.viewOrderItem);
 userRoutes.post("/order/item/update/status", authMiddleware, userController.updateOrderStatus);
 userRoutes.get("/order/payment", authMiddleware, userController.getPaymentDetails);
 
