@@ -126,7 +126,9 @@ adminRoutes.get("/auction/product", adminAuthMiddleware_1.default, adminControll
 adminRoutes.get("/auction/product/bidders", adminAuthMiddleware_1.default, adminController.getAllBidsByAuctionProductId);
 // Orders
 adminRoutes.get("/order/items", adminAuthMiddleware_1.default, adminController.getOrderItems);
+adminRoutes.get("/order/item", adminAuthMiddleware_1.default, adminController.viewOrderItem);
 adminRoutes.get("/order/item/details", adminAuthMiddleware_1.default, adminController.getOrderItemsInfo);
+adminRoutes.post("/order/item/update/status", adminAuthMiddleware_1.default, adminController.updateOrderStatus);
 //General Store | Product | Auction Products | Adverts
 adminRoutes.get("/general/stores", adminAuthMiddleware_1.default, adminController.getGeneralStores);
 adminRoutes.get("/general/store/view", adminAuthMiddleware_1.default, adminController.viewGeneralStore);

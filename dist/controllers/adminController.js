@@ -24,8 +24,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getGeneralProducts = exports.viewGeneralStore = exports.getGeneralStores = exports.viewUser = exports.toggleUserStatus = exports.getAllVendors = exports.getAllCustomers = exports.deleteCurrency = exports.getAllCurrencies = exports.updateCurrency = exports.addCurrency = exports.setPaymentGatewayActive = exports.getAllPaymentGateways = exports.deletePaymentGateway = exports.updatePaymentGateway = exports.createPaymentGateway = exports.approveOrRejectKYC = exports.getAllKYC = exports.getAllSubCategories = exports.deleteSubCategory = exports.updateSubCategory = exports.createSubCategory = exports.getCategoriesWithSubCategories = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getAllCategories = exports.deleteSubscriptionPlan = exports.updateSubscriptionPlan = exports.createSubscriptionPlan = exports.getAllSubscriptionPlans = exports.deletePermission = exports.updatePermission = exports.getPermissions = exports.createPermission = exports.deletePermissionFromRole = exports.assignPermissionToRole = exports.viewRolePermissions = exports.updateRole = exports.getRoles = exports.createRole = exports.resendLoginDetailsSubAdmin = exports.deleteSubAdmin = exports.deactivateOrActivateSubAdmin = exports.updateSubAdmin = exports.createSubAdmin = exports.subAdmins = exports.updatePassword = exports.updateProfile = exports.logout = void 0;
-exports.getFaqCategory = exports.getAllFaqCategories = exports.createFaqCategory = exports.deleteTestimonial = exports.getTestimonial = exports.getAllTestimonials = exports.updateTestimonial = exports.createTestimonial = exports.getOrderItemsInfo = exports.getOrderItems = exports.approveOrRejectAdvert = exports.viewGeneralAdvert = exports.getGeneralAdverts = exports.deleteAdvert = exports.viewAdvert = exports.getAdverts = exports.updateAdvert = exports.createAdvert = exports.activeProducts = exports.getTransactionsForAdmin = exports.getAllBidsByAuctionProductId = exports.viewAuctionProduct = exports.fetchAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.getStore = exports.getAllSubscribers = exports.getGeneralPaymentDetails = exports.getAllGeneralOrderItems = exports.getAllGeneralOrders = exports.getAllBiddersByAuctionProductId = exports.deleteGeneralAuctionProduct = exports.viewGeneralAuctionProduct = exports.getGeneralAuctionProducts = exports.publishProduct = exports.unpublishProduct = exports.deleteGeneralProduct = exports.viewGeneralProduct = void 0;
-exports.deleteBanner = exports.getBanner = exports.getAllBanners = exports.updateBanner = exports.createBanner = exports.getWithdrawalById = exports.getWithdrawals = exports.updateWithdrawalStatus = exports.downloadApplicantResume = exports.repostJob = exports.viewApplicant = exports.getJobApplicants = exports.deleteJob = exports.closeJob = exports.getJobById = exports.updateJob = exports.getJobs = exports.postJob = exports.deleteContactById = exports.getContactById = exports.getAllContacts = exports.deleteFaq = exports.updateFaq = exports.getFaq = exports.getAllFaqs = exports.createFaq = exports.deleteFaqCategory = exports.updateFaqCategory = void 0;
+exports.createFaqCategory = exports.deleteTestimonial = exports.getTestimonial = exports.getAllTestimonials = exports.updateTestimonial = exports.createTestimonial = exports.updateOrderStatus = exports.getOrderItemsInfo = exports.viewOrderItem = exports.getOrderItems = exports.approveOrRejectAdvert = exports.viewGeneralAdvert = exports.getGeneralAdverts = exports.deleteAdvert = exports.viewAdvert = exports.getAdverts = exports.updateAdvert = exports.createAdvert = exports.activeProducts = exports.getTransactionsForAdmin = exports.getAllBidsByAuctionProductId = exports.viewAuctionProduct = exports.fetchAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.getStore = exports.getAllSubscribers = exports.getGeneralPaymentDetails = exports.getAllGeneralOrderItems = exports.getAllGeneralOrders = exports.getAllBiddersByAuctionProductId = exports.deleteGeneralAuctionProduct = exports.viewGeneralAuctionProduct = exports.getGeneralAuctionProducts = exports.publishProduct = exports.unpublishProduct = exports.deleteGeneralProduct = exports.viewGeneralProduct = void 0;
+exports.deleteBanner = exports.getBanner = exports.getAllBanners = exports.updateBanner = exports.createBanner = exports.getWithdrawalById = exports.getWithdrawals = exports.updateWithdrawalStatus = exports.downloadApplicantResume = exports.repostJob = exports.viewApplicant = exports.getJobApplicants = exports.deleteJob = exports.closeJob = exports.getJobById = exports.updateJob = exports.getJobs = exports.postJob = exports.deleteContactById = exports.getContactById = exports.getAllContacts = exports.deleteFaq = exports.updateFaq = exports.getFaq = exports.getAllFaqs = exports.createFaq = exports.deleteFaqCategory = exports.updateFaqCategory = exports.getFaqCategory = exports.getAllFaqCategories = void 0;
 const sequelize_1 = require("sequelize");
 const uuid_1 = require("uuid");
 const mail_service_1 = require("../services/mail.service");
@@ -3734,6 +3734,19 @@ const getOrderItems = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         // Fetch OrderItems related to the vendor
         const orderItems = yield orderitem_1.default.findAll({
             where: { vendorId: adminId },
+            include: [
+                {
+                    model: order_1.default,
+                    as: "order",
+                    include: [
+                        {
+                            model: user_1.default,
+                            as: "user",
+                            attributes: ["id", "firstName", "lastName", "email", "phoneNumber"], // Include user details
+                        },
+                    ]
+                }
+            ],
             order: [["createdAt", "DESC"]], // Sort by most recent
         });
         if (!orderItems || orderItems.length === 0) {
@@ -3750,6 +3763,44 @@ const getOrderItems = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
 });
 exports.getOrderItems = getOrderItems;
+const viewOrderItem = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { orderItemId } = req.query;
+    try {
+        // Query for a single order item and required associations
+        const orderItem = yield orderitem_1.default.findOne({
+            where: { id: orderItemId },
+            include: [
+                {
+                    model: order_1.default,
+                    as: "order",
+                    include: [
+                        {
+                            model: user_1.default,
+                            as: "user",
+                            attributes: ["id", "firstName", "lastName", "email", "phoneNumber"], // Include user details
+                        },
+                    ],
+                },
+            ],
+        });
+        // If order item is not found
+        if (!orderItem) {
+            res.status(404).json({ message: "Order item not found" });
+            return;
+        }
+        // Convert Sequelize model to plain object and add computed field
+        const formattedOrderItem = Object.assign(Object.assign({}, orderItem.get()), { totalPrice: orderItem.quantity * orderItem.price });
+        res.status(200).json({
+            message: "Order item retrieved successfully",
+            data: formattedOrderItem,
+        });
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching order item:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+exports.viewOrderItem = viewOrderItem;
 const getOrderItemsInfo = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const orderId = req.query.orderId;
     try {
@@ -3775,6 +3826,113 @@ const getOrderItemsInfo = (req, res) => __awaiter(void 0, void 0, void 0, functi
     }
 });
 exports.getOrderItemsInfo = getOrderItemsInfo;
+const updateOrderStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c, _d, _e;
+    const { status, orderItemId } = req.body;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    if (!adminId) {
+        res.status(400).json({ message: "Admin must be authenticated" });
+        return;
+    }
+    // Define allowed statuses
+    const allowedStatuses = ["pending", "processing", "shipped", "delivered", "cancelled"];
+    if (!allowedStatuses.includes(status)) {
+        res.status(400).json({ message: "Invalid order status provided." });
+        return;
+    }
+    // Start transaction
+    const transaction = yield sequelize_service_1.default.connection.transaction();
+    try {
+        // Find the order item
+        const order = yield orderitem_1.default.findOne({ where: { id: orderItemId }, transaction });
+        if (!order) {
+            yield transaction.rollback();
+            res.status(404).json({ message: "Order item not found." });
+            return;
+        }
+        const mainOrder = yield order_1.default.findOne({ where: { id: order.orderId } });
+        if (!mainOrder) {
+            yield transaction.rollback();
+            res.status(404).json({ message: "Buyer information not found." });
+            return;
+        }
+        // If the order is already delivered or cancelled, stop further processing
+        if (order.status === "delivered" || order.status === "cancelled") {
+            yield transaction.rollback();
+            res.status(400).json({
+                message: `Order is already ${order.status}. No further updates are allowed.`
+            });
+            return;
+        }
+        let productData = order.product;
+        // If product data is stored as a string, parse it
+        if (typeof order.product === "string") {
+            productData = JSON.parse(order.product);
+        }
+        // Extract vendorId safely
+        const vendorId = (_b = productData === null || productData === void 0 ? void 0 : productData.vendorId) !== null && _b !== void 0 ? _b : null;
+        const currencySymbol = (_e = (_d = (_c = productData === null || productData === void 0 ? void 0 : productData.store) === null || _c === void 0 ? void 0 : _c.currency) === null || _d === void 0 ? void 0 : _d.symbol) !== null && _e !== void 0 ? _e : null;
+        if (!vendorId) {
+            yield transaction.rollback();
+            res.status(400).json({ message: "Vendor ID not found in product data." });
+            return;
+        }
+        if (!currencySymbol) {
+            yield transaction.rollback();
+            res.status(400).json({ message: "Currency not found in product data." });
+            return;
+        }
+        // Update the order status
+        order.status = status;
+        yield order.save({ transaction });
+        // Check if vendorId exists in the User or Admin table
+        const vendor = yield user_1.default.findByPk(vendorId, { transaction });
+        const admin = yield admin_1.default.findByPk(vendorId, { transaction });
+        if (!vendor && !admin) {
+            yield transaction.rollback();
+            res.status(404).json({ message: "Product owner not found." });
+            return;
+        }
+        // If the order is delivered, add funds to the vendor's wallet
+        if ((status === "delivered" && currencySymbol === "#" && vendor) || (status === "delivered" && currencySymbol === "₦" && vendor)) {
+            const price = Number(order.price);
+            vendor.wallet = (Number(vendor.wallet) + price);
+            yield vendor.save({ transaction });
+        }
+        // If the order is delivered and the currency is USD, add funds to the vendor's wallet
+        if (status === "delivered" && currencySymbol === "$" && vendor) {
+            const price = Number(order.price);
+            vendor.dollarWallet = (Number(vendor.dollarWallet) + price);
+            yield vendor.save({ transaction });
+        }
+        // Send a notification to the buyer
+        yield notification_1.default.create({
+            userId: mainOrder.userId,
+            title: "Order Status Updated",
+            message: `Your product has been marked as '${status}'.`,
+            type: "order_status_update",
+        }, { transaction });
+        // Send a notification to the vendor/admin (who owns the product)
+        yield notification_1.default.create({
+            userId: adminId,
+            title: "Order Status Updated",
+            message: `The status of the product '${productData === null || productData === void 0 ? void 0 : productData.name}' purchased from you has been updated to '${status}'.`,
+            type: "order_status_update",
+        }, { transaction });
+        // Commit transaction
+        yield transaction.commit();
+        res.status(200).json({
+            message: `Order status updated to '${status}' successfully.`,
+            data: order,
+        });
+    }
+    catch (error) {
+        yield transaction.rollback();
+        logger_1.default.error("Error updating order status:", error);
+        res.status(500).json({ message: "An error occurred while updating the order status." });
+    }
+});
+exports.updateOrderStatus = updateOrderStatus;
 // Create a testimonial
 const createTestimonial = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { name, position, photo, message } = req.body;

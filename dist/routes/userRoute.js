@@ -80,6 +80,7 @@ userRoutes.patch("/mark/notification/as/read", authMiddleware_1.default, userCon
 // Order, OrderItem and Payment
 userRoutes.get("/orders", authMiddleware_1.default, userController.getAllOrders);
 userRoutes.get("/order/items", authMiddleware_1.default, userController.getAllOrderItems);
+userRoutes.get("/order/item", authMiddleware_1.default, userController.viewOrderItem);
 userRoutes.post("/order/item/update/status", authMiddleware_1.default, userController.updateOrderStatus);
 userRoutes.get("/order/payment", authMiddleware_1.default, userController.getPaymentDetails);
 // Save Product

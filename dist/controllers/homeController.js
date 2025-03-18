@@ -88,7 +88,7 @@ const getCategoriesWithSubcategories = (req, res) => __awaiter(void 0, void 0, v
 });
 exports.getCategoriesWithSubcategories = getCategoriesWithSubcategories;
 const products = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { country, storeId, minPrice, maxPrice, name, // Product name
+    const { country, productId, storeId, minPrice, maxPrice, name, // Product name
     subCategoryName, // Subcategory name filter
     condition, // Product condition filter
     categoryId, popular, // Query parameter to sort by most viewed
@@ -97,6 +97,12 @@ const products = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         // Define the base where clause with the active status
         const whereClause = { status: "active" };
         // Additional filters based on query parameters
+        if (productId) {
+            whereClause[sequelize_1.Op.or] = [
+                { id: productId },
+                { sku: productId }
+            ];
+        }
         if (storeId) {
             whereClause.storeId = storeId;
         }
@@ -431,7 +437,7 @@ const getStoreProducts = (req, res) => __awaiter(void 0, void 0, void 0, functio
 exports.getStoreProducts = getStoreProducts;
 // Function to get all auction products with search functionality
 const getAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { storeId, name, // Product name
+    const { productId, storeId, name, // Product name
     subCategoryName, // Subcategory name filter
     condition, // Product condition filter
     auctionStatus, // 'upcoming' or 'ongoing'
@@ -462,6 +468,12 @@ const getAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 0, funct
             };
         }
         // Add search filters to the where condition
+        if (productId) {
+            whereConditions[sequelize_1.Op.or] = [
+                { id: productId },
+                { sku: productId }
+            ];
+        }
         if (name) {
             whereConditions.name = { [sequelize_1.Op.like]: `%${name}%` }; // Search by product name
         }

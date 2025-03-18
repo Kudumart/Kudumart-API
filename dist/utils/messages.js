@@ -2980,8 +2980,21 @@ exports.emailTemplates = {
     </html>
     `;
     },
-    orderConfirmationNotification: (user, order) => {
+    orderConfirmationNotification: (user, order, vendorOrders, currency) => {
         const logoUrl = process.env.LOGO_URL;
+        let itemsHtml = "";
+        // Loop through vendors and their items
+        for (const vendorId in vendorOrders) {
+            itemsHtml += `<h4>Product Details</h4><ul>`;
+            for (const item of vendorOrders[vendorId]) {
+                const product = item.product;
+                itemsHtml += `<li><strong>Product ID:</strong> ${product.sku} </li>
+            <li><strong>Product:</strong> ${product.name} </li>
+            <li><strong>Quantity:</strong> ${item.quantity} </li>
+            <li><strong>Price:</strong> ${currency}${Number(item.price).toFixed(2)}</li>`;
+            }
+            itemsHtml += `</ul>`;
+        }
         return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
@@ -3168,6 +3181,7 @@ exports.emailTemplates = {
                                 <h2>Order Confirmation</h2>
                                 <p>Hi ${user.firstName} ${user.lastName},</p>
                                 <p>Thank you for your purchase! Your order TRACKING NO is <strong>${order.trackingNumber}</strong>.</p>
+                                ${itemsHtml}
                                 <p>We are processing your order and will notify you once it has been shipped.</p>
                                 <p>For any questions, feel free to contact our support team.</p>
                                 <p>Best regards,<br> The ${process.env.APP_NAME} Team.</p>

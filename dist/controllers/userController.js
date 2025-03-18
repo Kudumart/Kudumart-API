@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getSingleReview = exports.getProductReviews = exports.updateReview = exports.addReview = exports.getSavedProducts = exports.toggleSaveProduct = exports.getPaymentDetails = exports.updateOrderStatus = exports.getAllOrderItems = exports.getAllOrders = exports.userMarkNotificationAsRead = exports.getUserNotifications = exports.becomeVendor = exports.placeBid = exports.getAllAuctionProductsInterest = exports.showInterest = exports.checkoutDollar = exports.checkout = exports.getActivePaymentGateways = exports.clearCart = exports.getCartContents = exports.removeCartItem = exports.updateCartItem = exports.addItemToCart = exports.markAsReadHandler = exports.deleteMessageHandler = exports.saveMessage = exports.sendMessageHandler = exports.getAllConversationMessages = exports.getConversations = exports.updateUserNotificationSettings = exports.getUserNotificationSettings = exports.confirmPhoneNumberUpdate = exports.updateProfilePhoneNumber = exports.confirmEmailUpdate = exports.updateProfileEmail = exports.updatePassword = exports.updateProfilePhoto = exports.updateProfile = exports.profile = exports.logout = void 0;
+exports.getSingleReview = exports.getProductReviews = exports.updateReview = exports.addReview = exports.getSavedProducts = exports.toggleSaveProduct = exports.getPaymentDetails = exports.updateOrderStatus = exports.viewOrderItem = exports.getAllOrderItems = exports.getAllOrders = exports.userMarkNotificationAsRead = exports.getUserNotifications = exports.becomeVendor = exports.placeBid = exports.getAllAuctionProductsInterest = exports.showInterest = exports.checkoutDollar = exports.checkout = exports.getActivePaymentGateways = exports.clearCart = exports.getCartContents = exports.removeCartItem = exports.updateCartItem = exports.addItemToCart = exports.markAsReadHandler = exports.deleteMessageHandler = exports.saveMessage = exports.sendMessageHandler = exports.getAllConversationMessages = exports.getConversations = exports.updateUserNotificationSettings = exports.getUserNotificationSettings = exports.confirmPhoneNumberUpdate = exports.updateProfilePhoneNumber = exports.confirmEmailUpdate = exports.updateProfileEmail = exports.updatePassword = exports.updateProfilePhoto = exports.updateProfile = exports.profile = exports.logout = void 0;
 const user_1 = __importDefault(require("../models/user"));
 const sequelize_1 = require("sequelize");
 const helpers_1 = require("../utils/helpers");
@@ -1058,6 +1058,7 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         return;
     }
     const transaction = yield sequelize_service_1.default.connection.transaction();
+    let transactionCommitted = false;
     try {
         // Fetch active Paystack secret key from PaymentGateway model
         const paymentGateway = yield paymentgateway_1.default.findOne({
@@ -1205,6 +1206,31 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             channel: paymentData.channel,
             paymentDate: paymentData.transaction_date,
         }, { transaction });
+        const groupedVendorOrders = {};
+        cartItems.forEach(cartItem => {
+            if (!cartItem.product) {
+                console.error(`❌ Product not found for cart item with ID ${cartItem.id}`);
+                throw new Error(`Product not found for cart item with ID ${cartItem.id}`);
+            }
+            const vendorId = cartItem.product.vendorId;
+            if (!groupedVendorOrders[vendorId]) {
+                groupedVendorOrders[vendorId] = [];
+            }
+            groupedVendorOrders[vendorId].push({
+                vendorId: vendorId,
+                orderId: order.id, // Ensure orderId is included
+                product: {
+                    id: cartItem.product.id,
+                    sku: cartItem.product.sku,
+                    name: cartItem.product.name,
+                    price: cartItem.product.price,
+                }, // Ensure product is an object
+                quantity: cartItem.quantity,
+                price: cartItem.product.price,
+                status: "pending", // Default status (if required)
+                createdAt: new Date(), // Ensure timestamps if needed
+            });
+        });
         // Clear user's cart
         yield cart_1.default.destroy({ where: { userId }, transaction });
         // Notify the Buyer
@@ -1220,8 +1246,9 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         }
         // Commit the transaction
         yield transaction.commit();
+        transactionCommitted = true; // Mark as committed
         // Send mail (outside of transaction)
-        const message = messages_1.emailTemplates.orderConfirmationNotification(user, order);
+        const message = messages_1.emailTemplates.orderConfirmationNotification(user, order, groupedVendorOrders, '₦');
         try {
             yield (0, mail_service_1.sendMail)(user.email, `${process.env.APP_NAME} - Order Confirmation`, message);
         }
@@ -1233,7 +1260,9 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         });
     }
     catch (error) {
-        yield transaction.rollback();
+        if (!transactionCommitted) {
+            yield transaction.rollback();
+        }
         logger_1.default.error("Error during checkout:", error);
         res.status(500).json({ message: error.message || "Checkout failed" });
     }
@@ -1256,6 +1285,7 @@ const checkoutDollar = (req, res) => __awaiter(void 0, void 0, void 0, function*
         return;
     }
     const transaction = yield sequelize_service_1.default.connection.transaction();
+    let transactionCommitted = false;
     try {
         // Fetch cart items
         const cartItems = yield cart_1.default.findAll({
@@ -1354,6 +1384,9 @@ const checkoutDollar = (req, res) => __awaiter(void 0, void 0, void 0, function*
             type: "order_confirmation",
             message: `Your order (TRACKING NO: ${order.trackingNumber}) has been successfully placed.`,
         }, { transaction });
+        // Commit transaction before sending notifications
+        yield transaction.commit();
+        transactionCommitted = true; // Mark as committed
         // Notify Each Vendor/Admin
         for (const vendorId in vendorOrders) {
             try {
@@ -1369,7 +1402,7 @@ const checkoutDollar = (req, res) => __awaiter(void 0, void 0, void 0, function*
                         title: "New Order Received",
                         type: "new_order",
                         message: `You have received a new order (TRACKING NO: ${order.trackingNumber}) for your product.`,
-                    }, { transaction });
+                    });
                     const message = messages_1.emailTemplates.newOrderNotification(vendor, order);
                     yield (0, mail_service_1.sendMail)(vendor.email, `${process.env.APP_NAME} - New Order Received`, message);
                 }
@@ -1379,7 +1412,7 @@ const checkoutDollar = (req, res) => __awaiter(void 0, void 0, void 0, function*
                         title: "New Order Received",
                         type: "new_order",
                         message: `A new order (TRACKING NO: ${order.trackingNumber}) has been placed for your product.`,
-                    }, { transaction });
+                    });
                     const message = messages_1.emailTemplates.newOrderAdminNotification(admin, order);
                     yield (0, mail_service_1.sendMail)(admin.email, `${process.env.APP_NAME} - New Order Received`, message);
                 }
@@ -1388,10 +1421,8 @@ const checkoutDollar = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 logger_1.default.error(`Failed to notify vendor ${vendorId}:`, notificationError);
             }
         }
-        // Commit transaction
-        yield transaction.commit();
         // Send mail (outside of transaction)
-        const message = messages_1.emailTemplates.orderConfirmationNotification(user, order);
+        const message = messages_1.emailTemplates.orderConfirmationNotification(user, order, vendorOrders, '$');
         try {
             yield (0, mail_service_1.sendMail)(user.email, `${process.env.APP_NAME} - Order Confirmation`, message);
         }
@@ -1403,7 +1434,9 @@ const checkoutDollar = (req, res) => __awaiter(void 0, void 0, void 0, function*
         });
     }
     catch (error) {
-        yield transaction.rollback();
+        if (!transactionCommitted) {
+            yield transaction.rollback();
+        }
         logger_1.default.error("Error during checkout:", error);
         res.status(500).json({ message: "Checkout failed" });
     }
@@ -1917,6 +1950,44 @@ const getAllOrderItems = (req, res) => __awaiter(void 0, void 0, void 0, functio
     }
 });
 exports.getAllOrderItems = getAllOrderItems;
+const viewOrderItem = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { orderItemId } = req.query;
+    try {
+        // Query for a single order item and required associations
+        const orderItem = yield orderitem_1.default.findOne({
+            where: { id: orderItemId },
+            include: [
+                {
+                    model: order_1.default,
+                    as: "order",
+                    include: [
+                        {
+                            model: user_1.default,
+                            as: "user",
+                            attributes: ["id", "firstName", "lastName", "email", "phoneNumber"], // Include user details
+                        },
+                    ],
+                },
+            ],
+        });
+        // If order item is not found
+        if (!orderItem) {
+            res.status(404).json({ message: "Order item not found" });
+            return;
+        }
+        // Convert Sequelize model to plain object and add computed field
+        const formattedOrderItem = Object.assign(Object.assign({}, orderItem.get()), { totalPrice: orderItem.quantity * orderItem.price });
+        res.status(200).json({
+            message: "Order item retrieved successfully",
+            data: formattedOrderItem,
+        });
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching order item:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+exports.viewOrderItem = viewOrderItem;
 const updateOrderStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b, _c, _d, _e;
     const { status, orderItemId } = req.body;
@@ -1939,6 +2010,12 @@ const updateOrderStatus = (req, res) => __awaiter(void 0, void 0, void 0, functi
         if (!order) {
             yield transaction.rollback();
             res.status(404).json({ message: "Order item not found." });
+            return;
+        }
+        const mainOrder = yield order_1.default.findOne({ where: { id: order.orderId } });
+        if (!mainOrder) {
+            yield transaction.rollback();
+            res.status(404).json({ message: "Buyer information not found." });
             return;
         }
         // If the order is already delivered or cancelled, stop further processing
@@ -1990,18 +2067,18 @@ const updateOrderStatus = (req, res) => __awaiter(void 0, void 0, void 0, functi
             vendor.dollarWallet = (Number(vendor.dollarWallet) + price);
             yield vendor.save({ transaction });
         }
-        // Send a notification to the vendor/admin
+        // Send a notification to the Buyer
         yield notification_1.default.create({
-            userId: userId,
+            userId: mainOrder.userId,
             title: "Order Status Updated",
             message: `Your product has been marked as '${status}'.`,
             type: "order_status_update",
         }, { transaction });
-        // Send a notification to the vendor (who owns the product)
+        // Send a notification to the vendor/admin (who owns the product)
         yield notification_1.default.create({
             userId: vendorId,
             title: "Order Status Updated",
-            message: `The status of the product '${productData === null || productData === void 0 ? void 0 : productData.name}' purchased from you has been updated to '${status}' by the customer.`,
+            message: `The status of the product '${productData === null || productData === void 0 ? void 0 : productData.name}' purchased from you has been updated to '${status}'.`,
             type: "order_status_update",
         }, { transaction });
         // Commit transaction

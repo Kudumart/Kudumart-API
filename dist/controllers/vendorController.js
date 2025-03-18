@@ -1279,6 +1279,19 @@ const getVendorOrderItems = (req, res) => __awaiter(void 0, void 0, void 0, func
         // Fetch OrderItems related to the vendor
         const orderItems = yield orderitem_1.default.findAll({
             where: { vendorId },
+            include: [
+                {
+                    model: order_1.default,
+                    as: "order",
+                    include: [
+                        {
+                            model: user_1.default,
+                            as: "user",
+                            attributes: ["id", "firstName", "lastName", "email", "phoneNumber"], // Include user details
+                        },
+                    ]
+                }
+            ],
             order: [["createdAt", "DESC"]], // Sort by most recent
         });
         if (!orderItems || orderItems.length === 0) {
