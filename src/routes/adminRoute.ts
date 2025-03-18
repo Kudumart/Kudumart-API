@@ -124,6 +124,7 @@ adminRoutes.get("/auction/product/bidders", adminAuthMiddleware, adminController
 // Orders
 adminRoutes.get("/order/items", adminAuthMiddleware, adminController.getOrderItems);
 adminRoutes.get("/order/item/details", adminAuthMiddleware, adminController.getOrderItemsInfo);
+adminRoutes.post("/order/item/update/status", adminAuthMiddleware, adminController.updateOrderStatus);
 
 //General Store | Product | Auction Products | Adverts
 adminRoutes.get("/general/stores", adminAuthMiddleware, adminController.getGeneralStores);

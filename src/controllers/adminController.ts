@@ -46,6 +46,7 @@ import path from "path";
 import fs from "fs";
 import Withdrawal from "../models/withdrawal";
 import Banner from "../models/banner";
+import { ProductData } from "../types/index";
 
 // Extend the Express Request interface to include adminId and admin
 interface AuthenticatedRequest extends Request {
@@ -4431,6 +4432,19 @@ export const getOrderItems = async (req: AuthenticatedRequest, res: Response): P
         // Fetch OrderItems related to the vendor
         const orderItems = await OrderItem.findAll({
             where: { vendorId: adminId },
+            include: [
+                {
+                    model: Order,
+                    as: "order",
+                    include: [
+                        {
+                            model: User,
+                            as: "user",
+                            attributes: ["id", "firstName", "lastName", "email", "phoneNumber"], // Include user details
+                        },
+                    ]
+                }
+            ],
             order: [["createdAt", "DESC"]], // Sort by most recent
         });
 
@@ -4474,6 +4488,136 @@ export const getOrderItemsInfo = async (req: Request, res: Response): Promise<vo
     }
 };
 
+export const updateOrderStatus = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const { status, orderItemId } = req.body;
+  
+    const adminId = req.admin?.id;
+
+    if (!adminId) {
+      res.status(400).json({ message: "Admin must be authenticated" });
+      return;
+    }
+  
+    // Define allowed statuses
+    const allowedStatuses = ["pending", "processing", "shipped", "delivered", "cancelled"];
+  
+    if (!allowedStatuses.includes(status)) {
+      res.status(400).json({ message: "Invalid order status provided." });
+      return;
+    }
+  
+    // Start transaction
+    const transaction = await sequelizeService.connection!.transaction();
+  
+    try {
+      // Find the order item
+      const order = await OrderItem.findOne({ where: { id: orderItemId }, transaction });
+  
+      if (!order) {
+        await transaction.rollback();
+        res.status(404).json({ message: "Order item not found." });
+        return;
+      }
+  
+      const mainOrder = await Order.findOne({ where: { id: order.orderId }})
+
+        if (!mainOrder) {
+            await transaction.rollback();
+            res.status(404).json({ message: "Buyer information not found." });
+            return;
+        }
+
+      // If the order is already delivered or cancelled, stop further processing
+      if (order.status === "delivered" || order.status === "cancelled") {
+        await transaction.rollback();
+        res.status(400).json({
+          message: `Order is already ${order.status}. No further updates are allowed.`
+        });
+        return;
+      }
+  
+      let productData: ProductData | null = order.product as ProductData;
+  
+      // If product data is stored as a string, parse it
+      if (typeof order.product === "string") {
+        productData = JSON.parse(order.product) as ProductData;
+      }
+  
+      // Extract vendorId safely
+      const vendorId = productData?.vendorId ?? null;
+      const currencySymbol = productData?.store?.currency?.symbol ?? null;
+  
+      if (!vendorId) {
+        await transaction.rollback();
+        res.status(400).json({ message: "Vendor ID not found in product data." });
+        return;
+      }
+  
+      if (!currencySymbol) {
+        await transaction.rollback();
+        res.status(400).json({ message: "Currency not found in product data." });
+        return;
+      }
+  
+      // Update the order status
+      order.status = status;
+      await order.save({ transaction });
+  
+      // Check if vendorId exists in the User or Admin table
+      const vendor = await User.findByPk(vendorId, { transaction });
+      const admin = await Admin.findByPk(vendorId, { transaction });
+  
+      if (!vendor && !admin) {
+        await transaction.rollback();
+        res.status(404).json({ message: "Product owner not found." });
+        return;
+      }
+  
+      // If the order is delivered, add funds to the vendor's wallet
+      if ((status === "delivered" && currencySymbol === "#" && vendor) || (status === "delivered" && currencySymbol === "₦" && vendor)) {
+        const price = Number(order.price);
+        vendor.wallet = (Number(vendor.wallet) + price);
+        await vendor.save({ transaction });
+      }
+  
+      // If the order is delivered and the currency is USD, add funds to the vendor's wallet
+      if (status === "delivered" && currencySymbol === "$" && vendor) {
+        const price = Number(order.price);
+        vendor.dollarWallet = (Number(vendor.dollarWallet) + price);
+        await vendor.save({ transaction });
+      }
+  
+      // Send a notification to the buyer
+      await Notification.create({
+        userId: mainOrder.userId,
+        title: "Order Status Updated",
+        message: `Your product has been marked as '${status}'.`,
+        type: "order_status_update",
+      }, { transaction });
+  
+      // Send a notification to the vendor/admin (who owns the product)
+      await Notification.create({
+        userId: adminId,
+        title: "Order Status Updated",
+        message: `The status of the product '${productData?.name}' purchased from you has been updated to '${status}'.`,
+        type: "order_status_update",
+      }, { transaction });
+  
+      // Commit transaction
+      await transaction.commit();
+  
+      res.status(200).json({
+        message: `Order status updated to '${status}' successfully.`,
+        data: order,
+      });
+  
+    } catch (error) {
+      await transaction.rollback();
+      logger.error("Error updating order status:", error);
+      res.status(500).json({ message: "An error occurred while updating the order status." });
+    }
+};
+  
 // Create a testimonial
 export const createTestimonial = async (req: Request, res: Response): Promise<void> => {
     const { name, position, photo, message } = req.body;

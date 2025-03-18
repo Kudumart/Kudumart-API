@@ -1489,6 +1489,19 @@ export const getVendorOrderItems = async (req: Request, res: Response): Promise<
         // Fetch OrderItems related to the vendor
         const orderItems = await OrderItem.findAll({
             where: { vendorId },
+            include: [
+                {
+                    model: Order,
+                    as: "order",
+                    include: [
+                        {
+                            model: User,
+                            as: "user",
+                            attributes: ["id", "firstName", "lastName", "email", "phoneNumber"], // Include user details
+                        },
+                    ]
+                }
+            ],
             order: [["createdAt", "DESC"]], // Sort by most recent
         });
 

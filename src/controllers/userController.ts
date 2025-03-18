@@ -1235,6 +1235,7 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
   }
 
   const transaction = await sequelizeService.connection!.transaction();
+  let transactionCommitted = false;
 
   try {
     // Fetch active Paystack secret key from PaymentGateway model
@@ -1427,6 +1428,36 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
       { transaction }
     );
 
+    const groupedVendorOrders: { [key: string]: OrderItem[] } = {};
+
+    cartItems.forEach(cartItem => {
+      if (!cartItem.product) {
+        console.error(`❌ Product not found for cart item with ID ${cartItem.id}`);
+        throw new Error(`Product not found for cart item with ID ${cartItem.id}`);
+      }
+      
+      const vendorId = cartItem.product.vendorId;
+    
+      if (!groupedVendorOrders[vendorId]) {
+        groupedVendorOrders[vendorId] = [];
+      }
+    
+      groupedVendorOrders[vendorId].push({
+        vendorId: vendorId,
+        orderId:  order.id, // Ensure orderId is included
+        product: {
+          id: cartItem.product.id,
+          name: cartItem.product.name,
+          price: cartItem.product.price,
+        }, // Ensure product is an object
+        quantity: cartItem.quantity,
+        price: cartItem.product.price,
+        status: "pending", // Default status (if required)
+        createdAt: new Date(), // Ensure timestamps if needed
+      } as OrderItem);
+    });
+    
+
     // Clear user's cart
     await Cart.destroy({ where: { userId }, transaction });
 
@@ -1442,12 +1473,13 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
     if (!user) {
       throw new Error(`User not found.`);
     }
-
+    
     // Commit the transaction
     await transaction.commit();
+    transactionCommitted = true; // Mark as committed
 
     // Send mail (outside of transaction)
-    const message = emailTemplates.orderConfirmationNotification(user, order);
+    const message = emailTemplates.orderConfirmationNotification(user, order, groupedVendorOrders, '₦');
     try {
       await sendMail(
         user.email,
@@ -1462,7 +1494,9 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
       message: "Checkout successful"
     });
   } catch (error: any) {
-    await transaction.rollback();
+    if (!transactionCommitted) {
+      await transaction.rollback();
+    }
     logger.error("Error during checkout:", error);
     res.status(500).json({ message: error.message || "Checkout failed" });
   }
@@ -1488,6 +1522,7 @@ export const checkoutDollar = async (req: Request, res: Response): Promise<void>
   }
 
   const transaction = await sequelizeService.connection!.transaction();
+  let transactionCommitted = false;
 
   try {
     // Fetch cart items
@@ -1611,6 +1646,10 @@ export const checkoutDollar = async (req: Request, res: Response): Promise<void>
       message: `Your order (TRACKING NO: ${order.trackingNumber}) has been successfully placed.`,
     }, { transaction });
 
+    // Commit transaction before sending notifications
+    await transaction.commit();
+    transactionCommitted = true; // Mark as committed
+
     // Notify Each Vendor/Admin
     for (const vendorId in vendorOrders) {
       try {
@@ -1628,7 +1667,7 @@ export const checkoutDollar = async (req: Request, res: Response): Promise<void>
             title: "New Order Received",
             type: "new_order",
             message: `You have received a new order (TRACKING NO: ${order.trackingNumber}) for your product.`,
-          }, { transaction });
+          });
 
           const message = emailTemplates.newOrderNotification(vendor, order);
 
@@ -1643,7 +1682,7 @@ export const checkoutDollar = async (req: Request, res: Response): Promise<void>
             title: "New Order Received",
             type: "new_order",
             message: `A new order (TRACKING NO: ${order.trackingNumber}) has been placed for your product.`,
-          }, { transaction });
+          });
 
           const message = emailTemplates.newOrderAdminNotification(admin, order);
 
@@ -1658,11 +1697,8 @@ export const checkoutDollar = async (req: Request, res: Response): Promise<void>
       }
     }
 
-    // Commit transaction
-    await transaction.commit();
-
     // Send mail (outside of transaction)
-    const message = emailTemplates.orderConfirmationNotification(user, order);
+    const message = emailTemplates.orderConfirmationNotification(user, order, vendorOrders, '$');
     try {
       await sendMail(
         user.email,
@@ -1677,7 +1713,9 @@ export const checkoutDollar = async (req: Request, res: Response): Promise<void>
       message: "Checkout successful",
     });
   } catch (error: any) {
-    await transaction.rollback();
+    if (!transactionCommitted) {
+      await transaction.rollback();
+    }
     logger.error("Error during checkout:", error);
     res.status(500).json({ message: "Checkout failed" });
   }
@@ -2298,6 +2336,14 @@ export const updateOrderStatus = async (req: Request, res: Response): Promise<vo
       return;
     }
 
+    const mainOrder = await Order.findOne({ where: { id: order.orderId }})
+
+    if (!mainOrder) {
+      await transaction.rollback();
+      res.status(404).json({ message: "Buyer information not found." });
+      return;
+    }
+
     // If the order is already delivered or cancelled, stop further processing
     if (order.status === "delivered" || order.status === "cancelled") {
       await transaction.rollback();
@@ -2358,19 +2404,19 @@ export const updateOrderStatus = async (req: Request, res: Response): Promise<vo
       await vendor.save({ transaction });
     }
 
-    // Send a notification to the vendor/admin
+    // Send a notification to the Buyer
     await Notification.create({
-      userId: userId,
+      userId: mainOrder.userId,
       title: "Order Status Updated",
       message: `Your product has been marked as '${status}'.`,
       type: "order_status_update",
     }, { transaction });
 
-    // Send a notification to the vendor (who owns the product)
+    // Send a notification to the vendor/admin (who owns the product)
     await Notification.create({
       userId: vendorId,
       title: "Order Status Updated",
-      message: `The status of the product '${productData?.name}' purchased from you has been updated to '${status}' by the customer.`,
+      message: `The status of the product '${productData?.name}' purchased from you has been updated to '${status}'.`,
       type: "order_status_update",
     }, { transaction });
 
