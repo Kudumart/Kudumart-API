@@ -11,6 +11,7 @@ class SubscriptionPlan extends Model {
   public auctionProductLimit!: number | null; // Null if auctions are not allowed
   public maxAds!: number | null;
   public adsDurationDays!: number;
+  public currencyId!: string;
   public createdAt!: Date;
   public updatedAt!: Date;
 
@@ -18,6 +19,10 @@ class SubscriptionPlan extends Model {
     this.hasMany(models.VendorSubscription, {
       as: 'vendorSubscriptions',
       foreignKey: 'subscriptionPlanId',
+    });
+    this.belongsTo(models.Currency, { 
+      as: 'currency',
+      foreignKey: 'currencyId' 
     });
   }
 }
@@ -65,6 +70,10 @@ const initModel = (sequelize: Sequelize) => {
         type: DataTypes.INTEGER,
         allowNull: true, // Null if auctions are not allowed
         defaultValue: 0
+      },
+      currencyId: {
+        type: DataTypes.UUID,
+        allowNull: true
       },
     },
     {

@@ -16,6 +16,8 @@ import OrderItem from '../models/orderitem';
 import Order from '../models/order';
 import User from '../models/user';
 import Job from '../models/job';
+import Stripe from 'stripe';
+import PaymentGateway from '../models/paymentgateway';
 
 interface PaystackResponse {
   status: boolean;
@@ -66,7 +68,7 @@ const sendSMS = async (mobile: string, messageContent: string): Promise<void> =>
         try {
           const result = JSON.parse(responseData);
           if (result.status && result.status.toUpperCase() === 'OK') {
-            console.log('SMS sent successfully');
+            logger.info('SMS sent successfully');
             resolve();
           } else {
             reject(new Error(`SMS failed with error: ${result.error}`));
@@ -338,5 +340,38 @@ const getJobsBySearch = async (searchTerm: string, number: number) => {
   });
 };
 
+export const getStripeSecretKey = async (): Promise<string | null> => {
+  try {
+    const paymentGateway = await PaymentGateway.findOne({
+      where: {
+        isActive: true,
+        name: "stripe", // Assuming 'name' is the field storing the gateway name
+      },
+    });
+
+    if (!paymentGateway) {
+      logger.error("No active Stripe gateway found.");
+      return null;
+    }
+
+    return paymentGateway.secretKey; // Ensure your model has this field
+  } catch (error) {
+    logger.error("Error fetching Stripe secret key:", error);
+    return null;
+  }
+};
+
+const initStripe = async () => {
+  const secretKey = await getStripeSecretKey();
+
+  if (!secretKey) {
+    throw new Error("Stripe secret key not found.");
+  }
+
+  return new Stripe(secretKey, {
+    apiVersion: "2025-02-24.acacia" as any, // Force TypeScript to accept it
+  });
+};
+
 // Export functions
-export { generateOTP, capitalizeFirstLetter, sendSMS, fetchAdminWithPermissions, checkVendorProductLimit, checkVendorAuctionProductLimit, checkAdvertLimit, verifyPayment, shuffleArray, hasPurchasedProduct, generateUniquePhoneNumber, getJobsBySearch };
+export { generateOTP, capitalizeFirstLetter, sendSMS, fetchAdminWithPermissions, checkVendorProductLimit, checkVendorAuctionProductLimit, checkAdvertLimit, verifyPayment, shuffleArray, hasPurchasedProduct, generateUniquePhoneNumber, getJobsBySearch, initStripe };

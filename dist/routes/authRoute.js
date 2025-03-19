@@ -82,5 +82,6 @@ authRoutes.get("/fetch/jobs", homeController.fetchJobs);
 authRoutes.get("/view/job", homeController.viewJob);
 authRoutes.post('/apply/job', homeController.applyJob);
 authRoutes.get("/banners", homeController.getAllBanners); // Get all banners
+authRoutes.post("/create-payment-intent", homeController.createPaymentIntent);
 exports.default = authRoutes; // Export the router
 //# sourceMappingURL=authRoute.js.map

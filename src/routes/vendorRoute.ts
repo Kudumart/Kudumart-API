@@ -49,6 +49,7 @@ vendorRoutes.get("/auction/product/bidders", authMiddleware, authorizeVendor, ve
 // Subscription
 vendorRoutes.get("/subscription/plans", authMiddleware, authorizeVendor, vendorController.subscriptionPlans);
 vendorRoutes.post("/subscribe", authMiddleware, authorizeVendor, vendorController.subscribe);
+vendorRoutes.post("/subscribe/dollar", authMiddleware, authorizeVendor, vendorController.subscribeDollar);
 
 vendorRoutes.get("/verifyCAC", authMiddleware, authorizeVendor, vendorController.verifyCAC);
 

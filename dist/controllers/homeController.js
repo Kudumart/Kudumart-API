@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAllBanners = exports.applyJob = exports.viewJob = exports.fetchJobs = exports.submitContactForm = exports.getFaqCategoryWithFaqs = exports.getAllTestimonials = exports.viewAdvert = exports.getAdverts = exports.getAuctionProductById = exports.getAuctionProducts = exports.getStoreProducts = exports.getAllStores = exports.getProductById = exports.products = exports.getCategoriesWithSubcategories = exports.getCategorySubCategories = exports.getAllCategories = void 0;
+exports.createPaymentIntent = exports.getAllBanners = exports.applyJob = exports.viewJob = exports.fetchJobs = exports.submitContactForm = exports.getFaqCategoryWithFaqs = exports.getAllTestimonials = exports.viewAdvert = exports.getAdverts = exports.getAuctionProductById = exports.getAuctionProducts = exports.getStoreProducts = exports.getAllStores = exports.getProductById = exports.products = exports.getCategoriesWithSubcategories = exports.getCategorySubCategories = exports.getAllCategories = void 0;
 const mail_service_1 = require("../services/mail.service");
 const messages_1 = require("../utils/messages");
 const logger_1 = __importDefault(require("../middlewares/logger")); // Adjust the path to your logger.js
@@ -789,7 +789,7 @@ const submitContactForm = (req, res) => __awaiter(void 0, void 0, void 0, functi
         });
     }
     catch (error) {
-        console.error("Error submitting contact form:", error);
+        logger_1.default.error("Error submitting contact form:", error);
         res.status(500).json({
             message: "An error occurred while submitting the contact form.",
         });
@@ -902,4 +902,25 @@ const getAllBanners = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
 });
 exports.getAllBanners = getAllBanners;
+const createPaymentIntent = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { amount, currency } = req.body;
+        // Ensure amount and currency are provided
+        if (!amount || !currency) {
+            res.status(400).json({ message: "Amount and currency are required" });
+            return;
+        }
+        const stripe = yield (0, helpers_1.initStripe)(); // Await the function to get the Stripe instance
+        const paymentIntent = yield stripe.paymentIntents.create({
+            amount: amount * 100, // Convert amount to cents
+            currency: currency || "usd",
+        });
+        res.status(200).json({ data: paymentIntent.client_secret });
+    }
+    catch (error) {
+        logger_1.default.error("Stripe Error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+exports.createPaymentIntent = createPaymentIntent;
 //# sourceMappingURL=homeController.js.map

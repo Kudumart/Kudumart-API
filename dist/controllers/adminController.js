@@ -23,9 +23,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getGeneralProducts = exports.viewGeneralStore = exports.getGeneralStores = exports.viewUser = exports.toggleUserStatus = exports.getAllVendors = exports.getAllCustomers = exports.deleteCurrency = exports.getAllCurrencies = exports.updateCurrency = exports.addCurrency = exports.setPaymentGatewayActive = exports.getAllPaymentGateways = exports.deletePaymentGateway = exports.updatePaymentGateway = exports.createPaymentGateway = exports.approveOrRejectKYC = exports.getAllKYC = exports.getAllSubCategories = exports.deleteSubCategory = exports.updateSubCategory = exports.createSubCategory = exports.getCategoriesWithSubCategories = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getAllCategories = exports.deleteSubscriptionPlan = exports.updateSubscriptionPlan = exports.createSubscriptionPlan = exports.getAllSubscriptionPlans = exports.deletePermission = exports.updatePermission = exports.getPermissions = exports.createPermission = exports.deletePermissionFromRole = exports.assignPermissionToRole = exports.viewRolePermissions = exports.updateRole = exports.getRoles = exports.createRole = exports.resendLoginDetailsSubAdmin = exports.deleteSubAdmin = exports.deactivateOrActivateSubAdmin = exports.updateSubAdmin = exports.createSubAdmin = exports.subAdmins = exports.updatePassword = exports.updateProfile = exports.logout = void 0;
-exports.createFaqCategory = exports.deleteTestimonial = exports.getTestimonial = exports.getAllTestimonials = exports.updateTestimonial = exports.createTestimonial = exports.updateOrderStatus = exports.getOrderItemsInfo = exports.viewOrderItem = exports.getOrderItems = exports.approveOrRejectAdvert = exports.viewGeneralAdvert = exports.getGeneralAdverts = exports.deleteAdvert = exports.viewAdvert = exports.getAdverts = exports.updateAdvert = exports.createAdvert = exports.activeProducts = exports.getTransactionsForAdmin = exports.getAllBidsByAuctionProductId = exports.viewAuctionProduct = exports.fetchAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.getStore = exports.getAllSubscribers = exports.getGeneralPaymentDetails = exports.getAllGeneralOrderItems = exports.getAllGeneralOrders = exports.getAllBiddersByAuctionProductId = exports.deleteGeneralAuctionProduct = exports.viewGeneralAuctionProduct = exports.getGeneralAuctionProducts = exports.publishProduct = exports.unpublishProduct = exports.deleteGeneralProduct = exports.viewGeneralProduct = void 0;
-exports.deleteBanner = exports.getBanner = exports.getAllBanners = exports.updateBanner = exports.createBanner = exports.getWithdrawalById = exports.getWithdrawals = exports.updateWithdrawalStatus = exports.downloadApplicantResume = exports.repostJob = exports.viewApplicant = exports.getJobApplicants = exports.deleteJob = exports.closeJob = exports.getJobById = exports.updateJob = exports.getJobs = exports.postJob = exports.deleteContactById = exports.getContactById = exports.getAllContacts = exports.deleteFaq = exports.updateFaq = exports.getFaq = exports.getAllFaqs = exports.createFaq = exports.deleteFaqCategory = exports.updateFaqCategory = exports.getFaqCategory = exports.getAllFaqCategories = void 0;
+exports.viewGeneralStore = exports.getGeneralStores = exports.viewUser = exports.toggleUserStatus = exports.getAllVendors = exports.getAllCustomers = exports.deleteCurrency = exports.getAllCurrencies = exports.updateCurrency = exports.addCurrency = exports.setPaymentGatewayActive = exports.paymentGateway = exports.getAllPaymentGateways = exports.deletePaymentGateway = exports.updatePaymentGateway = exports.createPaymentGateway = exports.approveOrRejectKYC = exports.getAllKYC = exports.getAllSubCategories = exports.deleteSubCategory = exports.updateSubCategory = exports.createSubCategory = exports.getCategoriesWithSubCategories = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getAllCategories = exports.deleteSubscriptionPlan = exports.updateSubscriptionPlan = exports.createSubscriptionPlan = exports.getAllSubscriptionPlans = exports.deletePermission = exports.updatePermission = exports.getPermissions = exports.createPermission = exports.deletePermissionFromRole = exports.assignPermissionToRole = exports.viewRolePermissions = exports.updateRole = exports.getRoles = exports.createRole = exports.resendLoginDetailsSubAdmin = exports.deleteSubAdmin = exports.deactivateOrActivateSubAdmin = exports.updateSubAdmin = exports.createSubAdmin = exports.subAdmins = exports.updatePassword = exports.updateProfile = exports.logout = void 0;
+exports.deleteTestimonial = exports.getTestimonial = exports.getAllTestimonials = exports.updateTestimonial = exports.createTestimonial = exports.updateOrderStatus = exports.getOrderItemsInfo = exports.viewOrderItem = exports.getOrderItems = exports.approveOrRejectAdvert = exports.viewGeneralAdvert = exports.getGeneralAdverts = exports.deleteAdvert = exports.viewAdvert = exports.getAdverts = exports.updateAdvert = exports.createAdvert = exports.activeProducts = exports.getTransactionsForAdmin = exports.getAllBidsByAuctionProductId = exports.viewAuctionProduct = exports.fetchAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.getStore = exports.getAllSubscribers = exports.getGeneralPaymentDetails = exports.getAllGeneralOrderItems = exports.getAllGeneralOrders = exports.getAllBiddersByAuctionProductId = exports.deleteGeneralAuctionProduct = exports.viewGeneralAuctionProduct = exports.getGeneralAuctionProducts = exports.publishProduct = exports.unpublishProduct = exports.deleteGeneralProduct = exports.viewGeneralProduct = exports.getGeneralProducts = void 0;
+exports.deleteBanner = exports.getBanner = exports.getAllBanners = exports.updateBanner = exports.createBanner = exports.getWithdrawalById = exports.getWithdrawals = exports.updateWithdrawalStatus = exports.downloadApplicantResume = exports.repostJob = exports.viewApplicant = exports.getJobApplicants = exports.deleteJob = exports.closeJob = exports.getJobById = exports.updateJob = exports.getJobs = exports.postJob = exports.deleteContactById = exports.getContactById = exports.getAllContacts = exports.deleteFaq = exports.updateFaq = exports.getFaq = exports.getAllFaqs = exports.createFaq = exports.deleteFaqCategory = exports.updateFaqCategory = exports.getFaqCategory = exports.getAllFaqCategories = exports.createFaqCategory = void 0;
 const sequelize_1 = require("sequelize");
 const uuid_1 = require("uuid");
 const mail_service_1 = require("../services/mail.service");
@@ -645,7 +645,14 @@ exports.deletePermission = deletePermission;
 const getAllSubscriptionPlans = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { name } = req.query; // Get the name from query parameters
-        const queryOptions = {}; // Initialize query options
+        const queryOptions = {
+            include: [
+                {
+                    model: currency_1.default, // Include the Currency model
+                    as: "currency", // Ensure this matches the alias in the association
+                },
+            ],
+        }; // Initialize query options
         // If a name is provided, add a condition to the query
         if (name) {
             queryOptions.where = {
@@ -664,7 +671,7 @@ const getAllSubscriptionPlans = (req, res) => __awaiter(void 0, void 0, void 0, 
 });
 exports.getAllSubscriptionPlans = getAllSubscriptionPlans;
 const createSubscriptionPlan = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { name, duration, price, productLimit, allowsAuction, auctionProductLimit, maxAds, adsDurationDays, } = req.body;
+    const { currencyId, name, duration, price, productLimit, allowsAuction, auctionProductLimit, maxAds, adsDurationDays, } = req.body;
     try {
         // Check if the subscription plan name already exists
         const existingPlan = yield subscriptionplan_1.default.findOne({ where: { name } });
@@ -672,6 +679,12 @@ const createSubscriptionPlan = (req, res) => __awaiter(void 0, void 0, void 0, f
             res
                 .status(400)
                 .json({ message: "A plan with this name already exists." });
+            return;
+        }
+        // Find the currency by ID
+        const currency = yield currency_1.default.findByPk(currencyId);
+        if (!currency) {
+            res.status(404).json({ message: 'Currency not found' });
             return;
         }
         // Create the subscription plan
@@ -684,6 +697,7 @@ const createSubscriptionPlan = (req, res) => __awaiter(void 0, void 0, void 0, f
             auctionProductLimit,
             maxAds,
             adsDurationDays,
+            currencyId: currency.id,
         });
         res.status(200).json({
             message: "Subscription plan created successfully.",
@@ -696,7 +710,7 @@ const createSubscriptionPlan = (req, res) => __awaiter(void 0, void 0, void 0, f
 });
 exports.createSubscriptionPlan = createSubscriptionPlan;
 const updateSubscriptionPlan = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { planId, name, duration, price, productLimit, allowsAuction, auctionProductLimit, maxAds, adsDurationDays, } = req.body;
+    const { planId, currencyId, name, duration, price, productLimit, allowsAuction, auctionProductLimit, maxAds, adsDurationDays, } = req.body;
     try {
         // Fetch the subscription plan to update
         const plan = yield subscriptionplan_1.default.findByPk(planId);
@@ -721,6 +735,12 @@ const updateSubscriptionPlan = (req, res) => __awaiter(void 0, void 0, void 0, f
                 .json({ message: "A different plan with this name already exists." });
             return;
         }
+        // Find the currency by ID
+        const currency = yield currency_1.default.findByPk(currencyId);
+        if (!currency) {
+            res.status(404).json({ message: 'Currency not found' });
+            return;
+        }
         // Update fields
         plan.name = name;
         plan.duration = duration;
@@ -730,6 +750,7 @@ const updateSubscriptionPlan = (req, res) => __awaiter(void 0, void 0, void 0, f
         plan.auctionProductLimit = auctionProductLimit;
         plan.maxAds = maxAds;
         plan.adsDurationDays = adsDurationDays;
+        plan.currencyId = currency.id;
         yield plan.save();
         res.status(200).json({ message: "Subscription plan updated successfully" });
     }
@@ -1312,6 +1333,26 @@ const getAllPaymentGateways = (req, res) => __awaiter(void 0, void 0, void 0, fu
     }
 });
 exports.getAllPaymentGateways = getAllPaymentGateways;
+const paymentGateway = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const id = req.query.id;
+    try {
+        const paymentGateway = yield paymentgateway_1.default.findByPk(id);
+        if (!paymentGateway) {
+            res.status(404).json({ message: "Payment Gateway not found" });
+            return;
+        }
+        res.status(200).json({
+            message: "Payment gateway retrieved successfully",
+            data: paymentGateway,
+        });
+    }
+    catch (error) {
+        res.status(500).json({
+            message: error.message || "An error occurred while fetching payment gateway.",
+        });
+    }
+});
+exports.paymentGateway = paymentGateway;
 const setPaymentGatewayActive = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const id = req.query.id;
     try {
@@ -3856,6 +3897,12 @@ const updateOrderStatus = (req, res) => __awaiter(void 0, void 0, void 0, functi
             res.status(404).json({ message: "Buyer information not found." });
             return;
         }
+        const buyer = yield user_1.default.findByPk(mainOrder.userId, { transaction });
+        if (!buyer) {
+            yield transaction.rollback();
+            res.status(404).json({ message: "Buyer not found." });
+            return;
+        }
         // If the order is already delivered or cancelled, stop further processing
         if (order.status === "delivered" || order.status === "cancelled") {
             yield transaction.rollback();
@@ -3921,6 +3968,14 @@ const updateOrderStatus = (req, res) => __awaiter(void 0, void 0, void 0, functi
         }, { transaction });
         // Commit transaction
         yield transaction.commit();
+        // Send mail (outside of transaction)
+        const message = messages_1.emailTemplates.orderStatusUpdateNotification(buyer, status, productData === null || productData === void 0 ? void 0 : productData.name);
+        try {
+            yield (0, mail_service_1.sendMail)(buyer.email, `${process.env.APP_NAME} - Order Status Update`, message);
+        }
+        catch (emailError) {
+            logger_1.default.error("Error sending email:", emailError);
+        }
         res.status(200).json({
             message: `Order status updated to '${status}' successfully.`,
             data: order,

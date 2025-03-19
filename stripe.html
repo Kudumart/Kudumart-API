@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stripe Payment Test</title>
+    <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body>
+    <h2>Stripe Payment</h2>
+    <form id="payment-form">
+        <label>Amount ($):</label>
+        <input type="number" id="amount" value="10" required />
+        
+        <!-- Card Input Field -->
+        <div id="card-element"></div> 
+        
+        <button type="submit">Pay Now</button>
+    </form>
+    <div id="payment-message"></div>
+
+    <script>
+        const stripe = Stripe("pk_test_51QpXKgP2C755c3IW5SjocmmtzeLcbPMP0aryRT11U7d5wXHpy60QVTUxaLmnSD3zk7hJSb7GU5FWfWTX6YJFvIKt003bCrqbKj"); 
+
+        // Create an instance of Elements
+        const elements = stripe.elements();
+        const card = elements.create("card");
+        card.mount("#card-element"); // Attach it to the div
+
+        document.getElementById("payment-form").addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const amount = document.getElementById("amount").value;
+            
+            const response = await fetch("http://localhost:3000/api/create-payment-intent", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ amount, currency: "usd" }),
+            });
+
+            const { data } = await response.json(); // Make sure the backend sends `data`
+
+            const result = await stripe.confirmCardPayment(data, {
+                payment_method: { card: card }, // Now card is defined correctly
+            });
+
+            if (result.error) {
+                document.getElementById("payment-message").innerText = result.error.message;
+            } else {
+                // Extract payment details
+                const paymentIntent = result.paymentIntent;
+                
+                // Display payment details
+                document.getElementById("payment-message").innerHTML = `
+                    <strong>Payment Successful! ✅</strong><br>
+                    <strong>Status:</strong> ${paymentIntent.status}<br>
+                    <strong>Transaction ID:</strong> ${paymentIntent.id}<br>
+                    <strong>Amount:</strong> ${(paymentIntent.amount / 100).toFixed(2)} USD
+                `;
+            }
+        });
+    </script>
+</body>
+</html>

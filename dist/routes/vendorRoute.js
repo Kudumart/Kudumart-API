@@ -71,6 +71,7 @@ vendorRoutes.get("/auction/product/bidders", authMiddleware_1.default, authorize
 // Subscription
 vendorRoutes.get("/subscription/plans", authMiddleware_1.default, authorizeVendor_1.default, vendorController.subscriptionPlans);
 vendorRoutes.post("/subscribe", authMiddleware_1.default, authorizeVendor_1.default, vendorController.subscribe);
+vendorRoutes.post("/subscribe/dollar", authMiddleware_1.default, authorizeVendor_1.default, vendorController.subscribeDollar);
 vendorRoutes.get("/verifyCAC", authMiddleware_1.default, authorizeVendor_1.default, vendorController.verifyCAC);
 vendorRoutes.get('/currencies', authMiddleware_1.default, authorizeVendor_1.default, vendorController.getAllCurrencies);
 vendorRoutes.get('/categories', authMiddleware_1.default, authorizeVendor_1.default, vendorController.getAllSubCategories);

@@ -9,6 +9,10 @@ class SubscriptionPlan extends sequelize_1.Model {
             as: 'vendorSubscriptions',
             foreignKey: 'subscriptionPlanId',
         });
+        this.belongsTo(models.Currency, {
+            as: 'currency',
+            foreignKey: 'currencyId'
+        });
     }
 }
 const initModel = (sequelize) => {
@@ -53,6 +57,10 @@ const initModel = (sequelize) => {
             type: sequelize_1.DataTypes.INTEGER,
             allowNull: true, // Null if auctions are not allowed
             defaultValue: 0
+        },
+        currencyId: {
+            type: sequelize_1.DataTypes.UUID,
+            allowNull: true
         },
     }, {
         sequelize,

@@ -11,7 +11,7 @@ import Category from "../models/category";
 import User from "../models/user";
 import Store from "../models/store";
 import KYC from "../models/kyc";
-import { shuffleArray, getJobsBySearch } from "../utils/helpers";
+import { shuffleArray, getJobsBySearch, initStripe } from "../utils/helpers";
 import AuctionProduct from "../models/auctionproduct";
 import Currency from "../models/currency";
 import Admin from "../models/admin";
@@ -875,7 +875,7 @@ export const submitContactForm = async (req: Request, res: Response): Promise<vo
             data: newContact,
         });
     } catch (error: any) {
-        console.error("Error submitting contact form:", error);
+        logger.error("Error submitting contact form:", error);
         res.status(500).json({
             message: "An error occurred while submitting the contact form.",
         });
@@ -994,5 +994,29 @@ export const getAllBanners = async (req: Request, res: Response): Promise<void> 
     } catch (error: any) {
         logger.error(`Error retrieving banners: ${error.message}`);
         res.status(500).json({ message: "An error occurred while retrieving banners. Please try again later." });
+    }
+};
+
+export const createPaymentIntent = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { amount, currency } = req.body;
+
+        // Ensure amount and currency are provided
+        if (!amount || !currency) {
+            res.status(400).json({ message: "Amount and currency are required" });
+            return;
+        }
+
+        const stripe = await initStripe(); // Await the function to get the Stripe instance
+
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: amount * 100, // Convert amount to cents
+            currency: currency || "usd",
+        });
+
+        res.status(200).json({ data: paymentIntent.client_secret });
+    } catch (error) {
+        logger.error("Stripe Error:", error);
+        res.status(500).json({ error: (error as Error).message });
     }
 };

@@ -54,6 +54,7 @@ userRoutes.patch('/mark/message/read', authMiddleware, userController.markAsRead
 userRoutes.post('/auction/interest', authMiddleware, validateShowInterest(), validate, userController.showInterest)
 userRoutes.get('/auction/products/interest', authMiddleware, userController.getAllAuctionProductsInterest)
 userRoutes.post('/place/bid', authMiddleware, validatePlaceBid(), validate, userController.placeBid)
+userRoutes.get("/auction/product/bidders", authMiddleware, userController.actionProductBidders);
 
 userRoutes.post("/become/vendor", authMiddleware, userController.becomeVendor);
 

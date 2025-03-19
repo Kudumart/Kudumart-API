@@ -23,7 +23,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getWithdrawalById = exports.updateWithdrawal = exports.getWithdrawals = exports.requestWithdrawal = exports.deleteBankInformation = exports.getSingleBankInformation = exports.getBankInformation = exports.updateBankInformation = exports.addBankInformation = exports.deleteAdvert = exports.viewAdvert = exports.getAdverts = exports.updateAdvert = exports.createAdvert = exports.activeProducts = exports.getOrderItemsInfo = exports.getVendorOrderItems = exports.getAllSubCategories = exports.getAllCurrencies = exports.verifyCAC = exports.subscribe = exports.subscriptionPlans = exports.getAllBidsByAuctionProductId = exports.viewAuctionProduct = exports.fetchVendorAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchVendorProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.viewStore = exports.getStore = exports.getKYC = exports.submitOrUpdateKYC = void 0;
+exports.getWithdrawalById = exports.updateWithdrawal = exports.getWithdrawals = exports.requestWithdrawal = exports.deleteBankInformation = exports.getSingleBankInformation = exports.getBankInformation = exports.updateBankInformation = exports.addBankInformation = exports.deleteAdvert = exports.viewAdvert = exports.getAdverts = exports.updateAdvert = exports.createAdvert = exports.activeProducts = exports.getOrderItemsInfo = exports.getVendorOrderItems = exports.getAllSubCategories = exports.getAllCurrencies = exports.verifyCAC = exports.subscribeDollar = exports.subscribe = exports.subscriptionPlans = exports.getAllBidsByAuctionProductId = exports.viewAuctionProduct = exports.fetchVendorAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchVendorProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.viewStore = exports.getStore = exports.getKYC = exports.submitOrUpdateKYC = void 0;
 const user_1 = __importDefault(require("../models/user"));
 const uuid_1 = require("uuid");
 const sequelize_1 = require("sequelize");
@@ -1029,26 +1029,33 @@ exports.getAllBidsByAuctionProductId = getAllBidsByAuctionProductId;
 const subscriptionPlans = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    const { currencySymbol } = req.query; // Get currency symbol from query parameters
     try {
+        // Build query options with optional currency symbol filter
+        const queryOptions = {
+            include: [
+                Object.assign({ model: currency_1.default, as: "currency", attributes: ["id", "name", "symbol"] }, (currencySymbol && {
+                    where: {
+                        symbol: {
+                            [sequelize_1.Op.like]: `%${currencySymbol}%`, // Allow partial match
+                        },
+                    },
+                })),
+            ],
+        };
         // Fetch all subscription plans
-        const subscriptionPlans = yield subscriptionplan_1.default.findAll();
+        const subscriptionPlans = yield subscriptionplan_1.default.findAll(queryOptions);
         // Fetch the active subscription for the vendor
         const activeSubscription = yield vendorsubscription_1.default.findOne({
             where: {
                 vendorId: vendorId,
-                isActive: true, // Only get active subscriptions
+                isActive: true,
             },
         });
-        // Check if the vendor has an active subscription
+        // Mark active plan in the list
         if (activeSubscription) {
-            // Mark the active plan in the list
             subscriptionPlans.forEach((plan) => {
-                if (plan.id === activeSubscription.subscriptionPlanId) {
-                    plan.setDataValue('isActiveForVendor', true); // Mark this plan as active for this vendor
-                }
-                else {
-                    plan.setDataValue('isActiveForVendor', false); // Mark others as inactive for this vendor
-                }
+                plan.setDataValue("isActiveForVendor", plan.id === activeSubscription.subscriptionPlanId);
             });
         }
         res.status(200).json({ data: subscriptionPlans });
@@ -1099,7 +1106,7 @@ const subscribe = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             }
             else {
                 const paymentGateway = yield paymentgateway_1.default.findOne({
-                    where: { isActive: true },
+                    where: { isActive: true, name: "paystack" },
                     transaction,
                 });
                 if (!paymentGateway) {
@@ -1166,6 +1173,105 @@ const subscribe = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
 });
 exports.subscribe = subscribe;
+const subscribeDollar = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+    const { subscriptionPlanId, isWallet, refId } = req.body;
+    if (!subscriptionPlanId) {
+        res.status(400).json({ message: "Subscription plan ID is required." });
+        return;
+    }
+    const transaction = yield sequelize_service_1.default.connection.transaction();
+    try {
+        // Step 1: Fetch Active Subscription
+        const activeSubscription = yield vendorsubscription_1.default.findOne({
+            where: { vendorId, isActive: true },
+            transaction,
+            lock: true, // Prevent concurrent modifications
+        });
+        const startDate = new Date();
+        const endDate = new Date();
+        // Step 2: Fetch New Subscription Plan
+        const subscriptionPlan = yield subscriptionplan_1.default.findByPk(subscriptionPlanId, { transaction });
+        if (!subscriptionPlan) {
+            yield transaction.rollback();
+            res.status(404).json({ message: "Subscription plan not found." });
+            return;
+        }
+        // Step 3: Function to Handle Payment (Wallet or External)
+        const handleTransaction = (amount) => __awaiter(void 0, void 0, void 0, function* () {
+            if (isWallet) {
+                const vendor = yield user_1.default.findByPk(vendorId, { transaction, lock: true });
+                if (!vendor || vendor.dollarWallet === undefined || vendor.dollarWallet < amount) {
+                    yield transaction.rollback();
+                    res.status(400).json({ message: "Insufficient wallet balance." });
+                    return false;
+                }
+                yield vendor.update({ dollarWallet: vendor.dollarWallet - amount }, { transaction });
+            }
+            else {
+                const paymentGateway = yield paymentgateway_1.default.findOne({
+                    where: { isActive: true, name: "stripe" },
+                    transaction,
+                });
+                if (!paymentGateway) {
+                    yield transaction.rollback();
+                    res.status(400).json({ message: "No active payment gateway found." });
+                    return false;
+                }
+                if (!refId) {
+                    yield transaction.rollback();
+                    res.status(400).json({ message: "Payment reference ID (refId) is required." });
+                    return false;
+                }
+            }
+            yield transaction_1.default.create({
+                userId: vendorId,
+                amount,
+                transactionType: "subscription",
+                status: "success",
+                refId: isWallet ? null : refId,
+            }, { transaction });
+            return true;
+        });
+        // Step 4: Process Payment
+        const transactionSuccess = yield handleTransaction(subscriptionPlan.price);
+        if (!transactionSuccess)
+            return;
+        endDate.setMonth(startDate.getMonth() + subscriptionPlan.duration);
+        // Step 5: If user already has an active plan, deactivate it
+        if (activeSubscription) {
+            yield activeSubscription.update({ isActive: false }, { transaction });
+        }
+        // Step 6: Create New Subscription
+        const newSubscription = yield vendorsubscription_1.default.create({
+            vendorId,
+            subscriptionPlanId,
+            startDate,
+            endDate,
+            isActive: true,
+        }, { transaction });
+        // Step 7: Send Notification
+        yield notification_1.default.create({
+            userId: vendorId,
+            title: "Subscription",
+            message: `You have successfully switched to the ${subscriptionPlan.name} plan.`,
+            type: "subscription",
+            isRead: false,
+        }, { transaction });
+        yield transaction.commit(); // Commit all changes
+        res.status(200).json({
+            message: "Switched to new subscription plan successfully",
+            subscription: newSubscription,
+        });
+    }
+    catch (error) {
+        yield transaction.rollback(); // Rollback changes on error
+        logger_1.default.error("Error subscribing vendor:", error);
+        res.status(500).json({ message: "An error occurred while processing the subscription." });
+    }
+});
+exports.subscribeDollar = subscribeDollar;
 const verifyCAC = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const businessName = 'GREEN MOUSE TECHNOLOGIES ENTERPRISES';
     const registrationNumber = 'BN 2182096';

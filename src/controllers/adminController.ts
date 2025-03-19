@@ -766,7 +766,14 @@ export const getAllSubscriptionPlans = async (
     try {
         const { name } = req.query; // Get the name from query parameters
 
-        const queryOptions: any = {}; // Initialize query options
+        const queryOptions: any = {
+            include: [
+                {
+                    model: Currency, // Include the Currency model
+                    as: "currency", // Ensure this matches the alias in the association
+                },
+            ],
+        }; // Initialize query options
 
         // If a name is provided, add a condition to the query
         if (name) {
@@ -790,6 +797,7 @@ export const createSubscriptionPlan = async (
     res: Response
 ): Promise<void> => {
     const {
+        currencyId,
         name,
         duration,
         price,
@@ -811,6 +819,14 @@ export const createSubscriptionPlan = async (
             return;
         }
 
+        // Find the currency by ID
+        const currency = await Currency.findByPk(currencyId);
+
+        if (!currency) {
+            res.status(404).json({ message: 'Currency not found' });
+            return;
+        }
+
         // Create the subscription plan
         await SubscriptionPlan.create({
             name,
@@ -821,6 +837,7 @@ export const createSubscriptionPlan = async (
             auctionProductLimit,
             maxAds,
             adsDurationDays,
+            currencyId: currency.id,
         });
 
         res.status(200).json({
@@ -838,6 +855,7 @@ export const updateSubscriptionPlan = async (
 ): Promise<void> => {
     const {
         planId,
+        currencyId,
         name,
         duration,
         price,
@@ -876,6 +894,14 @@ export const updateSubscriptionPlan = async (
             return;
         }
 
+        // Find the currency by ID
+        const currency = await Currency.findByPk(currencyId);
+
+        if (!currency) {
+            res.status(404).json({ message: 'Currency not found' });
+            return;
+        }
+
         // Update fields
         plan.name = name;
         plan.duration = duration;
@@ -885,6 +911,7 @@ export const updateSubscriptionPlan = async (
         plan.auctionProductLimit = auctionProductLimit;
         plan.maxAds = maxAds;
         plan.adsDurationDays = adsDurationDays;
+        plan.currencyId = currency.id;
         await plan.save();
 
         res.status(200).json({ message: "Subscription plan updated successfully" });
@@ -1573,6 +1600,32 @@ export const getAllPaymentGateways = async (
         res.status(500).json({
             message:
                 error.message || "An error occurred while fetching payment gateways.",
+        });
+    }
+};
+
+export const paymentGateway = async (
+    req: Request,
+    res: Response
+): Promise<void> => {
+    const id = req.query.id as string;
+
+    try {
+        const paymentGateway = await PaymentGateway.findByPk(id);
+
+        if (!paymentGateway) {
+            res.status(404).json({ message: "Payment Gateway not found" });
+            return;
+        }
+
+        res.status(200).json({
+            message: "Payment gateway retrieved successfully",
+            data: paymentGateway,
+        });
+    } catch (error: any) {
+        res.status(500).json({
+            message:
+                error.message || "An error occurred while fetching payment gateway.",
         });
     }
 };
@@ -4571,6 +4624,14 @@ export const updateOrderStatus = async (req: AuthenticatedRequest, res: Response
             return;
         }
 
+        const buyer = await User.findByPk(mainOrder.userId, { transaction });
+
+        if (!buyer) {
+            await transaction.rollback();
+            res.status(404).json({ message: "Buyer not found." });
+            return;
+        }
+
       // If the order is already delivered or cancelled, stop further processing
       if (order.status === "delivered" || order.status === "cancelled") {
         await transaction.rollback();
@@ -4649,6 +4710,18 @@ export const updateOrderStatus = async (req: AuthenticatedRequest, res: Response
   
       // Commit transaction
       await transaction.commit();
+
+      // Send mail (outside of transaction)
+        const message = emailTemplates.orderStatusUpdateNotification(buyer, status, productData?.name);
+        try {
+            await sendMail(
+                buyer.email,
+                `${process.env.APP_NAME} - Order Status Update`,
+                message
+            );
+        } catch (emailError) {
+            logger.error("Error sending email:", emailError);
+        }
   
       res.status(200).json({
         message: `Order status updated to '${status}' successfully.`,

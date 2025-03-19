@@ -2037,6 +2037,75 @@ export const placeBid = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+export const actionProductBidders = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const { auctionproductId } = req.query; // Ensure userId is passed in the request
+
+  try {
+      // Fetch the main product by ID or SKU
+      const product = await AuctionProduct.findOne({
+          where: {
+              [Op.or]: [
+                  { id: auctionproductId },
+                  { SKU: auctionproductId }, // Replace 'SKU' with the actual SKU column name if different
+              ],
+          },
+          include: [
+              {
+                  model: User,
+                  as: "vendor",
+              },
+              {
+                  model: Admin,
+                  as: "admin",
+                  attributes: ["id", "name", "email"],
+              },
+              {
+                  model: Store,
+                  as: "store",
+                  include: [
+                      {
+                          model: Currency,
+                          as: "currency",
+                          attributes: ['symbol']
+                      },
+                  ]
+              },
+              {
+                  model: SubCategory,
+                  as: "sub_category",
+                  attributes: ["id", "name"],
+              },
+              {
+                  model: Bid,
+                  as: "bids",
+                  include: [
+                    {
+                      model: User,
+                      as: "user",
+                    }
+                  ],
+              },
+
+          ],
+      });
+
+      if (!product) {
+          res.status(404).json({ message: "Product not found" });
+          return;
+      }
+
+      res.status(200).json({ data: product });
+  } catch (error: any) {
+      logger.error("Error fetching product:", error);
+      res.status(500).json({
+          message: error.message || "An error occurred while fetching the product.",
+      });
+  }
+};
+
 export const becomeVendor = async (req: Request, res: Response): Promise<void> => {
   const userId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID from middleware
 
@@ -2389,6 +2458,14 @@ export const updateOrderStatus = async (req: Request, res: Response): Promise<vo
       return;
     }
 
+    const buyer = await User.findByPk(mainOrder.userId, { transaction });
+
+    if (!buyer) {
+      await transaction.rollback();
+      res.status(404).json({ message: "Buyer not found." });
+      return;
+    }
+
     // If the order is already delivered or cancelled, stop further processing
     if (order.status === "delivered" || order.status === "cancelled") {
       await transaction.rollback();
@@ -2467,6 +2544,18 @@ export const updateOrderStatus = async (req: Request, res: Response): Promise<vo
 
     // Commit transaction
     await transaction.commit();
+
+    // Send mail (outside of transaction)
+    const message = emailTemplates.orderStatusUpdateNotification(buyer, status, productData?.name);
+    try {
+      await sendMail(
+        buyer.email,
+        `${process.env.APP_NAME} - Order Status Update`,
+        message
+      );
+    } catch (emailError) {
+      logger.error("Error sending email:", emailError);
+    }
 
     res.status(200).json({
       message: `Order status updated to '${status}' successfully.`,

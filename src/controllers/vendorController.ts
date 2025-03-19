@@ -1210,28 +1210,45 @@ export const subscriptionPlans = async (
     res: Response
 ): Promise<void> => {
     const vendorId = (req as AuthenticatedRequest).user?.id as string; // Authenticated user ID from middleware
+    const { currencySymbol } = req.query; // Get currency symbol from query parameters
 
     try {
+        // Build query options with optional currency symbol filter
+        const queryOptions: any = {
+            include: [
+                {
+                    model: Currency,
+                    as: "currency",
+                    attributes: ["id", "name", "symbol"], // Include necessary fields
+                    ...(currencySymbol && {
+                        where: {
+                            symbol: {
+                                [Op.like]: `%${currencySymbol}%`, // Allow partial match
+                            },
+                        },
+                    }),
+                },
+            ],
+        };
+
         // Fetch all subscription plans
-        const subscriptionPlans = await SubscriptionPlan.findAll();
+        const subscriptionPlans = await SubscriptionPlan.findAll(queryOptions);
 
         // Fetch the active subscription for the vendor
         const activeSubscription = await VendorSubscription.findOne({
             where: {
                 vendorId: vendorId,
-                isActive: true, // Only get active subscriptions
+                isActive: true,
             },
         });
 
-        // Check if the vendor has an active subscription
+        // Mark active plan in the list
         if (activeSubscription) {
-            // Mark the active plan in the list
             subscriptionPlans.forEach((plan) => {
-                if (plan.id === activeSubscription.subscriptionPlanId) {
-                    plan.setDataValue('isActiveForVendor', true); // Mark this plan as active for this vendor
-                } else {
-                    plan.setDataValue('isActiveForVendor', false); // Mark others as inactive for this vendor
-                }
+                plan.setDataValue(
+                    "isActiveForVendor",
+                    plan.id === activeSubscription.subscriptionPlanId
+                );
             });
         }
 
@@ -1289,7 +1306,7 @@ export const subscribe = async (req: Request, res: Response): Promise<void> => {
                 await vendor.update({ wallet: vendor.wallet - amount }, { transaction });
             } else {
                 const paymentGateway = await PaymentGateway.findOne({
-                    where: { isActive: true },
+                    where: { isActive: true, name: "paystack"},
                     transaction,
                 });
 
@@ -1366,6 +1383,120 @@ export const subscribe = async (req: Request, res: Response): Promise<void> => {
     }
 };
 
+export const subscribeDollar = async (req: Request, res: Response): Promise<void> => {
+    const vendorId = (req as AuthenticatedRequest).user?.id as string;
+    const { subscriptionPlanId, isWallet, refId } = req.body;
+
+    if (!subscriptionPlanId) {
+        res.status(400).json({ message: "Subscription plan ID is required." });
+        return;
+    }
+
+    const transaction = await sequelizeService.connection!.transaction();
+
+    try {
+        // Step 1: Fetch Active Subscription
+        const activeSubscription = await VendorSubscription.findOne({
+            where: { vendorId, isActive: true },
+            transaction,
+            lock: true, // Prevent concurrent modifications
+        });
+
+        const startDate = new Date();
+        const endDate = new Date();
+
+        // Step 2: Fetch New Subscription Plan
+        const subscriptionPlan = await SubscriptionPlan.findByPk(subscriptionPlanId, { transaction });
+
+        if (!subscriptionPlan) {
+            await transaction.rollback();
+            res.status(404).json({ message: "Subscription plan not found." });
+            return;
+        }
+
+        // Step 3: Function to Handle Payment (Wallet or External)
+        const handleTransaction = async (amount: number) => {
+            if (isWallet) {
+                const vendor = await User.findByPk(vendorId, { transaction, lock: true });
+
+                if (!vendor || vendor.dollarWallet === undefined || vendor.dollarWallet < amount) {
+                    await transaction.rollback();
+                    res.status(400).json({ message: "Insufficient wallet balance." });
+                    return false;
+                }
+
+                await vendor.update({ dollarWallet: vendor.dollarWallet - amount }, { transaction });
+            } else {
+                const paymentGateway = await PaymentGateway.findOne({
+                    where: { isActive: true, name: "stripe" },
+                    transaction,
+                });
+
+                if (!paymentGateway) {
+                    await transaction.rollback();
+                    res.status(400).json({ message: "No active payment gateway found." });
+                    return false;
+                }
+
+                if (!refId) {
+                    await transaction.rollback();
+                    res.status(400).json({ message: "Payment reference ID (refId) is required." });
+                    return false;
+                }
+            }
+
+            await Transaction.create({
+                userId: vendorId,
+                amount,
+                transactionType: "subscription",
+                status: "success",
+                refId: isWallet ? null : refId,
+            }, { transaction });
+
+            return true;
+        };
+
+        // Step 4: Process Payment
+        const transactionSuccess = await handleTransaction(subscriptionPlan.price);
+        if (!transactionSuccess) return;
+
+        endDate.setMonth(startDate.getMonth() + subscriptionPlan.duration);
+
+        // Step 5: If user already has an active plan, deactivate it
+        if (activeSubscription) {
+            await activeSubscription.update({ isActive: false }, { transaction });
+        }
+
+        // Step 6: Create New Subscription
+        const newSubscription = await VendorSubscription.create({
+            vendorId,
+            subscriptionPlanId,
+            startDate,
+            endDate,
+            isActive: true,
+        }, { transaction });
+
+        // Step 7: Send Notification
+        await Notification.create({
+            userId: vendorId,
+            title: "Subscription",
+            message: `You have successfully switched to the ${subscriptionPlan.name} plan.`,
+            type: "subscription",
+            isRead: false,
+        }, { transaction });
+
+        await transaction.commit(); // Commit all changes
+
+        res.status(200).json({
+            message: "Switched to new subscription plan successfully",
+            subscription: newSubscription,
+        });
+    } catch (error) {
+        await transaction.rollback(); // Rollback changes on error
+        logger.error("Error subscribing vendor:", error);
+        res.status(500).json({ message: "An error occurred while processing the subscription." });
+    }
+};
 
 export const verifyCAC = async (req: Request, res: Response): Promise<void> => {
     const businessName = 'GREEN MOUSE TECHNOLOGIES ENTERPRISES';

@@ -92,6 +92,7 @@ adminRoutes.post('/payment-gateway', adminAuthMiddleware_1.default, (0, validati
 adminRoutes.put('/payment-gateway', adminAuthMiddleware_1.default, (0, validations_1.validatePaymentGateway)(), validations_1.validate, adminController.updatePaymentGateway);
 adminRoutes.delete('/payment-gateway', adminAuthMiddleware_1.default, adminController.deletePaymentGateway);
 adminRoutes.get('/payment-gateways', adminAuthMiddleware_1.default, adminController.getAllPaymentGateways);
+adminRoutes.get('/payment-gateway', adminAuthMiddleware_1.default, adminController.paymentGateway);
 adminRoutes.patch('/payment-gateways/status', adminAuthMiddleware_1.default, adminController.setPaymentGatewayActive);
 // Currency
 adminRoutes.post('/currency', adminAuthMiddleware_1.default, adminController.addCurrency);

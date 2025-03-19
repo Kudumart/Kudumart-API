@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getJobsBySearch = exports.generateUniquePhoneNumber = exports.hasPurchasedProduct = exports.shuffleArray = exports.verifyPayment = exports.checkAdvertLimit = exports.checkVendorAuctionProductLimit = exports.checkVendorProductLimit = exports.fetchAdminWithPermissions = exports.sendSMS = exports.generateOTP = void 0;
+exports.initStripe = exports.getJobsBySearch = exports.generateUniquePhoneNumber = exports.hasPurchasedProduct = exports.shuffleArray = exports.verifyPayment = exports.checkAdvertLimit = exports.checkVendorAuctionProductLimit = exports.checkVendorProductLimit = exports.fetchAdminWithPermissions = exports.sendSMS = exports.generateOTP = exports.getStripeSecretKey = void 0;
 exports.capitalizeFirstLetter = capitalizeFirstLetter;
 // utils/helpers.ts
 const http_1 = __importDefault(require("http"));
@@ -24,12 +24,15 @@ const permission_1 = __importDefault(require("../models/permission"));
 const vendorsubscription_1 = __importDefault(require("../models/vendorsubscription"));
 const subscriptionplan_1 = __importDefault(require("../models/subscriptionplan"));
 const product_1 = __importDefault(require("../models/product"));
+const logger_1 = __importDefault(require("../middlewares/logger"));
 const sequelize_1 = require("sequelize");
 const auctionproduct_1 = __importDefault(require("../models/auctionproduct"));
 const advert_1 = __importDefault(require("../models/advert"));
 const orderitem_1 = __importDefault(require("../models/orderitem"));
 const user_1 = __importDefault(require("../models/user"));
 const job_1 = __importDefault(require("../models/job"));
+const stripe_1 = __importDefault(require("stripe"));
+const paymentgateway_1 = __importDefault(require("../models/paymentgateway"));
 // Function to generate a 6-digit OTP
 const generateOTP = () => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
@@ -68,7 +71,7 @@ const sendSMS = (mobile, messageContent) => __awaiter(void 0, void 0, void 0, fu
                 try {
                     const result = JSON.parse(responseData);
                     if (result.status && result.status.toUpperCase() === 'OK') {
-                        console.log('SMS sent successfully');
+                        logger_1.default.info('SMS sent successfully');
                         resolve();
                     }
                     else {
@@ -307,4 +310,34 @@ const getJobsBySearch = (searchTerm, number) => __awaiter(void 0, void 0, void 0
     });
 });
 exports.getJobsBySearch = getJobsBySearch;
+const getStripeSecretKey = () => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const paymentGateway = yield paymentgateway_1.default.findOne({
+            where: {
+                isActive: true,
+                name: "stripe", // Assuming 'name' is the field storing the gateway name
+            },
+        });
+        if (!paymentGateway) {
+            logger_1.default.error("No active Stripe gateway found.");
+            return null;
+        }
+        return paymentGateway.secretKey; // Ensure your model has this field
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching Stripe secret key:", error);
+        return null;
+    }
+});
+exports.getStripeSecretKey = getStripeSecretKey;
+const initStripe = () => __awaiter(void 0, void 0, void 0, function* () {
+    const secretKey = yield (0, exports.getStripeSecretKey)();
+    if (!secretKey) {
+        throw new Error("Stripe secret key not found.");
+    }
+    return new stripe_1.default(secretKey, {
+        apiVersion: "2025-02-24.acacia", // Force TypeScript to accept it
+    });
+});
+exports.initStripe = initStripe;
 //# sourceMappingURL=helpers.js.map

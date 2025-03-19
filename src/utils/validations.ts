@@ -202,6 +202,13 @@ export const updateSubAdminValidationRules = () => {
 // Validation rules for creating a subscription plan
 export const createSubscriptionPlanValidationRules = () => {
   return [
+    check("currencyId")
+      .not()
+      .isEmpty()
+      .withMessage("Currency ID is required")
+      .isUUID()
+      .withMessage("Currency ID must be a valid UUID"),
+
     check("name")
       .not()
       .isEmpty()

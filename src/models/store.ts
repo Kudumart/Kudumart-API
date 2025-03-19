@@ -13,6 +13,7 @@ interface DeliveryOption {
 class Store extends Model {
   public id!: string;
   public vendorId!: string;
+  public currencyId!: string;
   public name!: string;
   public location!: { // Specify the structure for location
     address: string;

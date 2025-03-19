@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getSingleReview = exports.getProductReviews = exports.updateReview = exports.addReview = exports.getSavedProducts = exports.toggleSaveProduct = exports.getPaymentDetails = exports.updateOrderStatus = exports.viewOrderItem = exports.getAllOrderItems = exports.getAllOrders = exports.userMarkNotificationAsRead = exports.getUserNotifications = exports.becomeVendor = exports.placeBid = exports.getAllAuctionProductsInterest = exports.showInterest = exports.checkoutDollar = exports.checkout = exports.getActivePaymentGateways = exports.clearCart = exports.getCartContents = exports.removeCartItem = exports.updateCartItem = exports.addItemToCart = exports.markAsReadHandler = exports.deleteMessageHandler = exports.saveMessage = exports.sendMessageHandler = exports.getAllConversationMessages = exports.getConversations = exports.updateUserNotificationSettings = exports.getUserNotificationSettings = exports.confirmPhoneNumberUpdate = exports.updateProfilePhoneNumber = exports.confirmEmailUpdate = exports.updateProfileEmail = exports.updatePassword = exports.updateProfilePhoto = exports.updateProfile = exports.profile = exports.logout = void 0;
+exports.getSingleReview = exports.getProductReviews = exports.updateReview = exports.addReview = exports.getSavedProducts = exports.toggleSaveProduct = exports.getPaymentDetails = exports.updateOrderStatus = exports.viewOrderItem = exports.getAllOrderItems = exports.getAllOrders = exports.userMarkNotificationAsRead = exports.getUserNotifications = exports.becomeVendor = exports.actionProductBidders = exports.placeBid = exports.getAllAuctionProductsInterest = exports.showInterest = exports.checkoutDollar = exports.checkout = exports.getActivePaymentGateways = exports.clearCart = exports.getCartContents = exports.removeCartItem = exports.updateCartItem = exports.addItemToCart = exports.markAsReadHandler = exports.deleteMessageHandler = exports.saveMessage = exports.sendMessageHandler = exports.getAllConversationMessages = exports.getConversations = exports.updateUserNotificationSettings = exports.getUserNotificationSettings = exports.confirmPhoneNumberUpdate = exports.updateProfilePhoneNumber = exports.confirmEmailUpdate = exports.updateProfileEmail = exports.updatePassword = exports.updateProfilePhoto = exports.updateProfile = exports.profile = exports.logout = void 0;
 const user_1 = __importDefault(require("../models/user"));
 const sequelize_1 = require("sequelize");
 const helpers_1 = require("../utils/helpers");
@@ -1718,6 +1718,69 @@ const placeBid = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
 });
 exports.placeBid = placeBid;
+const actionProductBidders = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { auctionproductId } = req.query; // Ensure userId is passed in the request
+    try {
+        // Fetch the main product by ID or SKU
+        const product = yield auctionproduct_1.default.findOne({
+            where: {
+                [sequelize_1.Op.or]: [
+                    { id: auctionproductId },
+                    { SKU: auctionproductId }, // Replace 'SKU' with the actual SKU column name if different
+                ],
+            },
+            include: [
+                {
+                    model: user_1.default,
+                    as: "vendor",
+                },
+                {
+                    model: admin_1.default,
+                    as: "admin",
+                    attributes: ["id", "name", "email"],
+                },
+                {
+                    model: store_1.default,
+                    as: "store",
+                    include: [
+                        {
+                            model: currency_1.default,
+                            as: "currency",
+                            attributes: ['symbol']
+                        },
+                    ]
+                },
+                {
+                    model: subcategory_1.default,
+                    as: "sub_category",
+                    attributes: ["id", "name"],
+                },
+                {
+                    model: bid_1.default,
+                    as: "bids",
+                    include: [
+                        {
+                            model: user_1.default,
+                            as: "user",
+                        }
+                    ],
+                },
+            ],
+        });
+        if (!product) {
+            res.status(404).json({ message: "Product not found" });
+            return;
+        }
+        res.status(200).json({ data: product });
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching product:", error);
+        res.status(500).json({
+            message: error.message || "An error occurred while fetching the product.",
+        });
+    }
+});
+exports.actionProductBidders = actionProductBidders;
 const becomeVendor = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
@@ -2018,6 +2081,12 @@ const updateOrderStatus = (req, res) => __awaiter(void 0, void 0, void 0, functi
             res.status(404).json({ message: "Buyer information not found." });
             return;
         }
+        const buyer = yield user_1.default.findByPk(mainOrder.userId, { transaction });
+        if (!buyer) {
+            yield transaction.rollback();
+            res.status(404).json({ message: "Buyer not found." });
+            return;
+        }
         // If the order is already delivered or cancelled, stop further processing
         if (order.status === "delivered" || order.status === "cancelled") {
             yield transaction.rollback();
@@ -2083,6 +2152,14 @@ const updateOrderStatus = (req, res) => __awaiter(void 0, void 0, void 0, functi
         }, { transaction });
         // Commit transaction
         yield transaction.commit();
+        // Send mail (outside of transaction)
+        const message = messages_1.emailTemplates.orderStatusUpdateNotification(buyer, status, productData === null || productData === void 0 ? void 0 : productData.name);
+        try {
+            yield (0, mail_service_1.sendMail)(buyer.email, `${process.env.APP_NAME} - Order Status Update`, message);
+        }
+        catch (emailError) {
+            logger_1.default.error("Error sending email:", emailError);
+        }
         res.status(200).json({
             message: `Order status updated to '${status}' successfully.`,
             data: order,
