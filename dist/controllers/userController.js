@@ -1073,6 +1073,7 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const PAYSTACK_SECRET_KEY = paymentGateway.secretKey;
         // Verify payment reference with Paystack
         const verificationResponse = yield (0, helpers_1.verifyPayment)(refId, PAYSTACK_SECRET_KEY);
+        logger_1.default.error('when through for no 1');
         if (verificationResponse.status !== "success") {
             res.status(400).json({ message: "Payment verification failed." });
             return;

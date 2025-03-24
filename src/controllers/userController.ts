@@ -1255,6 +1255,7 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
     // Verify payment reference with Paystack
     const verificationResponse = await verifyPayment(refId, PAYSTACK_SECRET_KEY);
 
+    logger.error('when through for no 1');
     if (verificationResponse.status !== "success") {
       res.status(400).json({ message: "Payment verification failed." });
       return;
