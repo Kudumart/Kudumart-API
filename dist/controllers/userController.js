@@ -1117,7 +1117,6 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             shippingAddress,
             status: "pending",
         }, { transaction });
-        logger_1.default.error('Check 2');
         // Create order items and update product inventory
         for (const cartItem of cartItems) {
             // Ensure cartItem.product is defined
@@ -1164,6 +1163,7 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 quantity: cartItem.quantity,
                 price: product.price,
             }, { transaction });
+            logger_1.default.error('Check 2');
             if (vendor) {
                 yield notification_1.default.create({
                     userId: vendor.id,
