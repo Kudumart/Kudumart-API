@@ -1073,7 +1073,6 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const PAYSTACK_SECRET_KEY = paymentGateway.secretKey;
         // Verify payment reference with Paystack
         const verificationResponse = yield (0, helpers_1.verifyPayment)(refId, PAYSTACK_SECRET_KEY);
-        logger_1.default.error('when through for no 1');
         if (verificationResponse.status !== "success") {
             res.status(400).json({ message: "Payment verification failed." });
             return;
@@ -1208,9 +1207,10 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             paymentDate: paymentData.transaction_date,
         }, { transaction });
         const groupedVendorOrders = {};
+        logger_1.default.error('final check');
         cartItems.forEach(cartItem => {
             if (!cartItem.product) {
-                console.error(`❌ Product not found for cart item with ID ${cartItem.id}`);
+                logger_1.default.error(`❌ Product not found for cart item with ID ${cartItem.id}`);
                 throw new Error(`Product not found for cart item with ID ${cartItem.id}`);
             }
             const vendorId = cartItem.product.vendorId;
