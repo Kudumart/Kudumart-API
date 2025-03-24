@@ -1255,7 +1255,6 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
     // Verify payment reference with Paystack
     const verificationResponse = await verifyPayment(refId, PAYSTACK_SECRET_KEY);
 
-    logger.error('when through for no 1');
     if (verificationResponse.status !== "success") {
       res.status(400).json({ message: "Payment verification failed." });
       return;
@@ -1431,9 +1430,10 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 
     const groupedVendorOrders: { [key: string]: OrderItem[] } = {};
 
+    logger.error('final check');
     cartItems.forEach(cartItem => {
       if (!cartItem.product) {
-        console.error(`❌ Product not found for cart item with ID ${cartItem.id}`);
+        logger.error(`❌ Product not found for cart item with ID ${cartItem.id}`);
         throw new Error(`Product not found for cart item with ID ${cartItem.id}`);
       }
       
@@ -1459,7 +1459,6 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
       } as OrderItem);
     });
     
-
     // Clear user's cart
     await Cart.destroy({ where: { userId }, transaction });
 
