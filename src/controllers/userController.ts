@@ -1368,7 +1368,7 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
       );
       
       logger.error('Check 2');
-      
+
       if (vendor) {
         await Notification.create({
           userId: vendor.id,
@@ -1379,11 +1379,15 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 
         const message = emailTemplates.newOrderNotification(vendor, order);
 
-        await sendMail(
-          vendor.email,
-          `${process.env.APP_NAME} - New Order Received`,
-          message
-        );
+        try {
+          await sendMail(
+            vendor.email,
+            `${process.env.APP_NAME} - New Order Received`,
+            message
+          );
+        } catch (emailError) {
+          logger.error("Error sending email:", emailError);
+        }
       } else if (admin) {
         await Notification.create({
           userId: admin.id,
@@ -1393,13 +1397,18 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
         });
 
         const message = emailTemplates.newOrderAdminNotification(admin, order);
-
-        await sendMail(
-          admin.email,
-          `${process.env.APP_NAME} - New Order Received`,
-          message
-        );
+        try {
+          await sendMail(
+            admin.email,
+            `${process.env.APP_NAME} - New Order Received`,
+            message
+          );
+        } catch (emailError) {
+          logger.error("Error sending email:", emailError);
+        }
       }
+
+      logger.error('Check 3');
 
       // If it's a vendor 
       // if (vendor) {
@@ -1416,7 +1425,8 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
       // );
     }
 
-    logger.error('check 3');
+    logger.error('Check 33');
+
     // Create payment record
     const payment = await Payment.create(
       {

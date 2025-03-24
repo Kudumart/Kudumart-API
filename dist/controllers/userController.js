@@ -1172,7 +1172,12 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                     message: `You have received a new order (TRACKING NO: ${order.trackingNumber}) for your product.`,
                 });
                 const message = messages_1.emailTemplates.newOrderNotification(vendor, order);
-                yield (0, mail_service_1.sendMail)(vendor.email, `${process.env.APP_NAME} - New Order Received`, message);
+                try {
+                    yield (0, mail_service_1.sendMail)(vendor.email, `${process.env.APP_NAME} - New Order Received`, message);
+                }
+                catch (emailError) {
+                    logger_1.default.error("Error sending email:", emailError);
+                }
             }
             else if (admin) {
                 yield notification_1.default.create({
@@ -1182,8 +1187,14 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                     message: `A new order (TRACKING NO: ${order.trackingNumber}) has been placed.`,
                 });
                 const message = messages_1.emailTemplates.newOrderAdminNotification(admin, order);
-                yield (0, mail_service_1.sendMail)(admin.email, `${process.env.APP_NAME} - New Order Received`, message);
+                try {
+                    yield (0, mail_service_1.sendMail)(admin.email, `${process.env.APP_NAME} - New Order Received`, message);
+                }
+                catch (emailError) {
+                    logger_1.default.error("Error sending email:", emailError);
+                }
             }
+            logger_1.default.error('Check 3');
             // If it's a vendor 
             // if (vendor) {
             //   await vendor.update(
@@ -1197,7 +1208,7 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             //   { transaction }
             // );
         }
-        logger_1.default.error('check 3');
+        logger_1.default.error('Check 33');
         // Create payment record
         const payment = yield payment_1.default.create({
             orderId: order.id,
