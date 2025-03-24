@@ -1117,6 +1117,7 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             shippingAddress,
             status: "pending",
         }, { transaction });
+        logger_1.default.error('Check 2');
         // Create order items and update product inventory
         for (const cartItem of cartItems) {
             // Ensure cartItem.product is defined
@@ -1196,6 +1197,7 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             //   { transaction }
             // );
         }
+        logger_1.default.error('check 3');
         // Create payment record
         const payment = yield payment_1.default.create({
             orderId: order.id,
@@ -1206,6 +1208,7 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             channel: paymentData.channel,
             paymentDate: paymentData.transaction_date,
         }, { transaction });
+        logger_1.default.error('Check 4');
         const groupedVendorOrders = {};
         logger_1.default.error('final check');
         cartItems.forEach(cartItem => {

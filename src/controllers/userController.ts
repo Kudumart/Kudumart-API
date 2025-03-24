@@ -1311,6 +1311,8 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
       { transaction }
     );
 
+    logger.error('Check 2');
+
     // Create order items and update product inventory
     for (const cartItem of cartItems) {
       // Ensure cartItem.product is defined
@@ -1414,6 +1416,7 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
       // );
     }
 
+    logger.error('check 3');
     // Create payment record
     const payment = await Payment.create(
       {
@@ -1427,6 +1430,8 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
       },
       { transaction }
     );
+
+    logger.error('Check 4');
 
     const groupedVendorOrders: { [key: string]: OrderItem[] } = {};
 
