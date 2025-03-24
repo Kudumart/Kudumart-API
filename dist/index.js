@@ -58,6 +58,7 @@ const port = process.env.SERVER_PORT || 3000; // Get the port from the environme
 // Start the cron job
 (0, subscriptionCron_1.default)();
 (0, auctionStatusUpdate_1.default)();
+server.timeout = 300000;
 server.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);
 });

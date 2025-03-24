@@ -56,6 +56,8 @@ const port = process.env.SERVER_PORT || 3000; // Get the port from the environme
 runSubscriptionCron();
 auctionStatusUpdate();
 
+server.timeout = 300000;
+
 server.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);
 });
