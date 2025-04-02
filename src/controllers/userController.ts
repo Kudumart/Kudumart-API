@@ -1366,8 +1366,6 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
         },
         { transaction }
       );
-      
-      logger.error('Check 2');
 
       if (vendor) {
         await Notification.create({
@@ -1375,7 +1373,7 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
           title: "New Order Received",
           type: "new_order",
           message: `You have received a new order (TRACKING NO: ${order.trackingNumber}) for your product.`,
-        });
+        }, { transaction });
 
         const message = emailTemplates.newOrderNotification(vendor, order);
 
@@ -1394,7 +1392,7 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
           title: "New Order Received",
           type: "new_order",
           message: `A new order (TRACKING NO: ${order.trackingNumber}) has been placed.`,
-        });
+        }, { transaction });
 
         const message = emailTemplates.newOrderAdminNotification(admin, order);
         try {
@@ -1407,8 +1405,6 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
           logger.error("Error sending email:", emailError);
         }
       }
-
-      logger.error('Check 3');
 
       // If it's a vendor 
       // if (vendor) {
@@ -1425,8 +1421,6 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
       // );
     }
 
-    logger.error('Check 33');
-
     // Create payment record
     const payment = await Payment.create(
       {
@@ -1441,11 +1435,8 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
       { transaction }
     );
 
-    logger.error('Check 4');
-
     const groupedVendorOrders: { [key: string]: OrderItem[] } = {};
 
-    logger.error('final check');
     cartItems.forEach(cartItem => {
       if (!cartItem.product) {
         logger.error(`❌ Product not found for cart item with ID ${cartItem.id}`);
@@ -1683,30 +1674,38 @@ export const checkoutDollar = async (req: Request, res: Response): Promise<void>
             title: "New Order Received",
             type: "new_order",
             message: `You have received a new order (TRACKING NO: ${order.trackingNumber}) for your product.`,
-          });
+          },{ transaction });
 
           const message = emailTemplates.newOrderNotification(vendor, order);
 
-          await sendMail(
-            vendor.email,
-            `${process.env.APP_NAME} - New Order Received`,
-            message
-          );
+          try {
+            await sendMail(
+              vendor.email,
+              `${process.env.APP_NAME} - New Order Received`,
+              message
+            );
+          } catch (emailError) {
+            logger.error("Error sending email:", emailError);
+          }
         } else if (admin) {
           await Notification.create({
             userId: admin.id,
             title: "New Order Received",
             type: "new_order",
             message: `A new order (TRACKING NO: ${order.trackingNumber}) has been placed for your product.`,
-          });
+          }, { transaction });
 
           const message = emailTemplates.newOrderAdminNotification(admin, order);
 
-          await sendMail(
-            admin.email,
-            `${process.env.APP_NAME} - New Order Received`,
-            message
-          );
+          try {
+            await sendMail(
+              admin.email,
+              `${process.env.APP_NAME} - New Order Received`,
+              message
+            );
+          } catch (emailError) {
+            logger.error("Error sending email:", emailError);
+          }
         }
       } catch (notificationError) {
         logger.error(`Failed to notify vendor ${vendorId}:`, notificationError);

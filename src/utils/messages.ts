@@ -2741,7 +2741,7 @@ export const emailTemplates = {
                             <td>
                                 <h2>Application Confirmation</h2>
                                 <p>Hi ${application.name},</p>
-                                <p>Your application was sent to ${process.env.APP_name}</p>
+                                <p>Your application was sent to ${process.env.APP_NAME}</p>
                                 <p><strong>${job.title}</strong></p>
                                 <p><strong>${job.location}</strong></p>
                                 <p><strong>${new Date(application.createdAt).toLocaleString()}</strong></p>
@@ -3040,20 +3040,26 @@ export const emailTemplates = {
   
     let itemsHtml = "";
 
-    // Loop through vendors and their items
     for (const vendorId in vendorOrders) {
         itemsHtml += `<h4>Product Details</h4><ul>`;
-
+    
         for (const item of vendorOrders[vendorId]) {
-        const product = item.product as { sku: string; name: string; price: number };
-        itemsHtml += `<li><strong>Product ID:</strong> ${product.sku} </li>
-            <li><strong>Product:</strong> ${product.name} </li>
-            <li><strong>Quantity:</strong> ${item.quantity} </li>
-            <li><strong>Price:</strong> ${currency}${Number(item.price).toFixed(2)}</li>`;
+            const product = item.product as { id: string; sku?: string; name: string; price: number };
+            
+            // Check if SKU is empty, use product.id instead
+            const productId = product.sku && product.sku.trim() ? product.sku : product.id;
+    
+            itemsHtml += `
+                <li><strong>Product ID:</strong> ${productId} </li>
+                <li><strong>Product:</strong> ${product.name} </li>
+                <li><strong>Quantity:</strong> ${item.quantity} </li>
+                <li><strong>Price:</strong> ${currency}${Number(item.price).toFixed(2)}</li>
+            `;
         }
-
+    
         itemsHtml += `</ul>`;
     }
+    
 
     return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     <html xmlns="http://www.w3.org/1999/xhtml">
