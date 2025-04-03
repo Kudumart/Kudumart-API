@@ -29,13 +29,19 @@
 
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script>
-        const SOCKET_SERVER_URL = "https://api.kudumart.com";
+        const SOCKET_SERVER_URL = "http://localhost:3000";
         const socket = io(SOCKET_SERVER_URL, { transports: ["websocket"] });
 
         function registerUser() {
             const userId = document.getElementById("userId").value;
+            const receiverId = document.getElementById("receiverId").value;
+            const productId = document.getElementById("productId").value;
+
             socket.emit("register", userId);
             console.log("Registered user:", userId);
+
+            // ✅ Join conversation room
+            socket.emit("joinConversation", { userId, receiverId, productId });
         }
 
         function sendMessage() {
@@ -69,7 +75,6 @@
             listItem.textContent = `From ${message.userId}: ${message.content}`;
             messagesList.appendChild(listItem);
         });
-
     </script>
 </body>
 </html>
