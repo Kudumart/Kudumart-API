@@ -99,10 +99,26 @@ export const products = async (req: Request, res: Response): Promise<void> => {
         condition, // Product condition filter
         categoryId,
         popular, // Query parameter to sort by most viewed
-        symbol
+        symbol,
+        page = '1', // Default page '1' if not provided
+        limit = '20' // Default limit '20' if not provided
     } = req.query;
 
     try {
+        // Convert page and limit to numbers
+        const currentPage = Number(page);
+        const currentLimit = Number(limit);
+
+        // Validate page and limit to ensure they are valid numbers
+        if (isNaN(currentPage) || currentPage < 1) {
+            res.status(400).json({ message: "Invalid page number." });
+            return;
+        }
+        if (isNaN(currentLimit) || currentLimit < 1) {
+            res.status(400).json({ message: "Invalid limit number." });
+            return;
+        }
+
         // Define the base where clause with the active status
         const whereClause: any = { status: "active" };
 
@@ -192,14 +208,25 @@ export const products = async (req: Request, res: Response): Promise<void> => {
             ? [["views", "DESC"], [Sequelize.literal("RAND()"), "ASC"]] // Sort by views first, then randomize
             : [[Sequelize.literal("RAND()"), "ASC"]]; // Default random sorting
 
-        // Fetch active products with subcategory details
-        const products = await Product.findAll({
+        // Calculate the offset based on page and limit
+        const offset = (currentPage - 1) * currentLimit;
+
+        // Fetch active products with subcategory details and dynamic pagination
+        const { count, rows: products } = await Product.findAndCountAll({
             where: whereClause,
             include: includeClause,
             order: orderClause, // Dynamic ordering
-            limit: 20, // Fetch top 20 products
+            limit: currentLimit, // Fetch based on the provided limit
+            offset: offset, // Dynamic offset based on page and limit
             subQuery: false, // Ensures the currency filter is applied correctly
         });
+
+        // Calculate the total number of pages
+        const totalPages = Math.ceil(count / currentLimit);
+
+        // Generate the next and previous page links
+        const nextPage = currentPage < totalPages ? `${req.baseUrl}?page=${currentPage + 1}&limit=${currentLimit}` : null;
+        const prevPage = currentPage > 1 ? `${req.baseUrl}?page=${currentPage - 1}&limit=${currentLimit}` : null;
 
         // ✅ **Transform the response to include `isVerified`**
         const formattedProducts = products.map((product) => {
@@ -216,7 +243,17 @@ export const products = async (req: Request, res: Response): Promise<void> => {
             };
         });
 
-        res.status(200).json({ data: formattedProducts });
+        // Send the response with products and pagination info
+        res.status(200).json({
+            data: formattedProducts,
+            pagination: {
+                currentPage: currentPage,
+                totalPages: totalPages,
+                nextPage: nextPage,
+                prevPage: prevPage,
+                totalCount: count
+            }
+        });
     } catch (error: any) {
         logger.error("Error fetching products:", error);
         res.status(500).json({
@@ -224,6 +261,7 @@ export const products = async (req: Request, res: Response): Promise<void> => {
         });
     }
 };
+
 
 // Get Product By ID or SKU with Recommended Products
 export const getProductById = async (

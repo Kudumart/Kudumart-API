@@ -26,6 +26,28 @@ const configureSocket = (io) => {
             activeConnections.set(userId, socket.id);
             console.log(`User ${userId} connected with Socket ID ${socket.id}`);
         });
+        socket.on("joinConversation", (data) => __awaiter(void 0, void 0, void 0, function* () {
+            const { userId, receiverId, productId } = data;
+            // Find or create conversation
+            let conversation = yield conversation_1.default.findOne({
+                where: {
+                    [sequelize_1.Op.or]: [
+                        { senderId: userId, receiverId, productId },
+                        { senderId: receiverId, receiverId: userId, productId }
+                    ]
+                }
+            });
+            if (!conversation) {
+                conversation = yield conversation_1.default.create({
+                    senderId: userId,
+                    receiverId,
+                    productId
+                });
+            }
+            // ✅ User joins the conversation room
+            socket.join(conversation.id);
+            console.log(`User ${userId} joined conversation ${conversation.id}`);
+        }));
         // Handle message sending
         socket.on("sendMessage", (data) => __awaiter(void 0, void 0, void 0, function* () {
             const { productId, userId, receiverId, content, fileUrl } = data;
@@ -33,8 +55,8 @@ const configureSocket = (io) => {
             let conversation = yield conversation_1.default.findOne({
                 where: {
                     [sequelize_1.Op.or]: [
-                        { senderId: userId, receiverId: receiverId },
-                        { senderId: receiverId, receiverId: userId }
+                        { senderId: userId, receiverId, productId },
+                        { senderId: receiverId, receiverId: userId, productId }
                     ]
                 }
             });
@@ -47,11 +69,17 @@ const configureSocket = (io) => {
             }
             // Save message to database
             const message = yield (0, userController_1.saveMessage)(conversation.id, userId, content, fileUrl);
-            // Emit message to receiver if online
+            // ✅ Emit message to the conversation room
+            io.to(conversation.id).emit("receiveMessage", message);
+            console.log(`Message sent in conversation ${conversation.id}`);
+            // Notify the receiver if they are online
             const receiverSocketId = activeConnections.get(receiverId);
             if (receiverSocketId) {
-                io.to(receiverSocketId).emit("receiveMessage", message);
-                console.log(`Message sent to receiver with Socket ID ${receiverSocketId}`);
+                io.to(receiverSocketId).emit("newMessageNotification", {
+                    conversationId: conversation.id,
+                    message
+                });
+                console.log(`New message notification sent to receiver ${receiverId}`);
             }
             else {
                 console.log(`Receiver ${receiverId} is not online`);

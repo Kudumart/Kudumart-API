@@ -1163,14 +1163,13 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 quantity: cartItem.quantity,
                 price: product.price,
             }, { transaction });
-            logger_1.default.error('Check 2');
             if (vendor) {
                 yield notification_1.default.create({
                     userId: vendor.id,
                     title: "New Order Received",
                     type: "new_order",
                     message: `You have received a new order (TRACKING NO: ${order.trackingNumber}) for your product.`,
-                });
+                }, { transaction });
                 const message = messages_1.emailTemplates.newOrderNotification(vendor, order);
                 try {
                     yield (0, mail_service_1.sendMail)(vendor.email, `${process.env.APP_NAME} - New Order Received`, message);
@@ -1185,7 +1184,7 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                     title: "New Order Received",
                     type: "new_order",
                     message: `A new order (TRACKING NO: ${order.trackingNumber}) has been placed.`,
-                });
+                }, { transaction });
                 const message = messages_1.emailTemplates.newOrderAdminNotification(admin, order);
                 try {
                     yield (0, mail_service_1.sendMail)(admin.email, `${process.env.APP_NAME} - New Order Received`, message);
@@ -1194,7 +1193,6 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                     logger_1.default.error("Error sending email:", emailError);
                 }
             }
-            logger_1.default.error('Check 3');
             // If it's a vendor 
             // if (vendor) {
             //   await vendor.update(
@@ -1208,7 +1206,6 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             //   { transaction }
             // );
         }
-        logger_1.default.error('Check 33');
         // Create payment record
         const payment = yield payment_1.default.create({
             orderId: order.id,
@@ -1219,9 +1216,7 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             channel: paymentData.channel,
             paymentDate: paymentData.transaction_date,
         }, { transaction });
-        logger_1.default.error('Check 4');
         const groupedVendorOrders = {};
-        logger_1.default.error('final check');
         cartItems.forEach(cartItem => {
             if (!cartItem.product) {
                 logger_1.default.error(`❌ Product not found for cart item with ID ${cartItem.id}`);
@@ -1417,9 +1412,14 @@ const checkoutDollar = (req, res) => __awaiter(void 0, void 0, void 0, function*
                         title: "New Order Received",
                         type: "new_order",
                         message: `You have received a new order (TRACKING NO: ${order.trackingNumber}) for your product.`,
-                    });
+                    }, { transaction });
                     const message = messages_1.emailTemplates.newOrderNotification(vendor, order);
-                    yield (0, mail_service_1.sendMail)(vendor.email, `${process.env.APP_NAME} - New Order Received`, message);
+                    try {
+                        yield (0, mail_service_1.sendMail)(vendor.email, `${process.env.APP_NAME} - New Order Received`, message);
+                    }
+                    catch (emailError) {
+                        logger_1.default.error("Error sending email:", emailError);
+                    }
                 }
                 else if (admin) {
                     yield notification_1.default.create({
@@ -1427,9 +1427,14 @@ const checkoutDollar = (req, res) => __awaiter(void 0, void 0, void 0, function*
                         title: "New Order Received",
                         type: "new_order",
                         message: `A new order (TRACKING NO: ${order.trackingNumber}) has been placed for your product.`,
-                    });
+                    }, { transaction });
                     const message = messages_1.emailTemplates.newOrderAdminNotification(admin, order);
-                    yield (0, mail_service_1.sendMail)(admin.email, `${process.env.APP_NAME} - New Order Received`, message);
+                    try {
+                        yield (0, mail_service_1.sendMail)(admin.email, `${process.env.APP_NAME} - New Order Received`, message);
+                    }
+                    catch (emailError) {
+                        logger_1.default.error("Error sending email:", emailError);
+                    }
                 }
             }
             catch (notificationError) {
