@@ -15,6 +15,7 @@ class Product extends Model {
   public condition!: 'brand_new' | 'fairly_used' | 'fairly_foreign' | 'refurbished';
   public description!: string | null;
   public specification!: string | null;
+  public quantity?: number | 0;
   public price!: number;
   public discount_price!: number | null;
   public image_url!: string | null;
@@ -125,6 +126,11 @@ const initModel = (sequelize: Sequelize) => {
       specification: {
         type: DataTypes.TEXT,
         allowNull: true,
+      },
+      quantity: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0
       },
       price: {
         type: DataTypes.DECIMAL(20, 2),

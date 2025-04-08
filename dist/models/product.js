@@ -94,6 +94,11 @@ const initModel = (sequelize) => {
             type: sequelize_1.DataTypes.TEXT,
             allowNull: true,
         },
+        quantity: {
+            type: sequelize_1.DataTypes.INTEGER,
+            allowNull: false,
+            defaultValue: 0
+        },
         price: {
             type: sequelize_1.DataTypes.DECIMAL(20, 2),
             allowNull: false,

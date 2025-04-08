@@ -806,7 +806,7 @@ const addItemToCart = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     try {
         // Find the product by productId and include vendor and currency details
         const product = yield product_1.default.findByPk(productId, {
-            attributes: ["vendorId", "name"],
+            attributes: ["vendorId", "name", "quantity"], // Include quantity in the attributes
             include: [
                 {
                     model: store_1.default,
@@ -825,7 +825,7 @@ const addItemToCart = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             res.status(404).json({ message: "Product not found or invalid currency data" });
             return;
         }
-        const { vendorId, name } = product;
+        const { vendorId, name, quantity: availableQuantity = 0 } = product; // Get available quantity
         const productCurrency = product.store.currency;
         // Ensure product currency is either $, #, or ₦
         const allowedCurrencies = ["$", "#", "₦"];
@@ -845,6 +845,13 @@ const addItemToCart = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         if (vendor && !vendor.isVerified) {
             res.status(400).json({
                 message: "Cannot add item to cart. Vendor is not verified.",
+            });
+            return;
+        }
+        // Ensure the requested quantity doesn't exceed available quantity
+        if (quantity > availableQuantity) {
+            res.status(400).json({
+                message: `Sorry, only ${availableQuantity} of this product is available. Please reduce the quantity.`,
             });
             return;
         }
@@ -893,8 +900,16 @@ const addItemToCart = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             where: { userId, productId },
         });
         if (existingCartItem) {
-            // If the item is already in the cart, update its quantity
-            existingCartItem.quantity += quantity;
+            // If the item is already in the cart, check if the new quantity exceeds the available quantity
+            const totalQuantity = existingCartItem.quantity + quantity;
+            if (totalQuantity > availableQuantity) {
+                res.status(400).json({
+                    message: `Sorry, you can't add more than ${availableQuantity} of this product to your cart. Please reduce the quantity.`,
+                });
+                return;
+            }
+            // If the quantity is valid, update the cart with the new quantity
+            existingCartItem.quantity = totalQuantity;
             yield existingCartItem.save();
         }
         else {
@@ -920,13 +935,45 @@ const addItemToCart = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.addItemToCart = addItemToCart;
 const updateCartItem = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     const { cartId, quantity } = req.body;
     try {
-        const cartItem = yield cart_1.default.findByPk(cartId);
-        if (!cartItem) {
-            res.status(404).json({ message: "Cart item not found." });
+        // Find the cart item by cartId
+        const cartItem = yield cart_1.default.findByPk(cartId, {
+            include: [
+                {
+                    model: product_1.default, // Assuming you have a 'Product' model associated with 'Cart'
+                    as: "product", // Alias used in the association
+                    include: [
+                        {
+                            model: store_1.default,
+                            as: "store", // Store model that has the 'currency'
+                            include: [
+                                {
+                                    model: currency_1.default,
+                                    as: "currency", // Currency associated with the store
+                                    attributes: ["name", "symbol"],
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        });
+        if (!cartItem || !cartItem.product || !cartItem.product.quantity) {
+            res.status(404).json({ message: "Cart item or product not found." });
             return;
         }
+        const { productId, product } = cartItem;
+        const availableQuantity = (_a = product.quantity) !== null && _a !== void 0 ? _a : 0; // Use 0 if quantity is undefined
+        // Ensure the requested quantity doesn't exceed available quantity
+        if (quantity > availableQuantity) {
+            res.status(400).json({
+                message: `Sorry, only ${availableQuantity} of this product is available. Please reduce the quantity.`,
+            });
+            return;
+        }
+        // Update the cart item quantity if stock is sufficient
         cartItem.quantity = quantity;
         yield cartItem.save();
         res.status(200).json({ message: "Cart item updated successfully." });
@@ -1042,7 +1089,7 @@ const getActivePaymentGateways = (req, res) => __awaiter(void 0, void 0, void 0,
 });
 exports.getActivePaymentGateways = getActivePaymentGateways;
 const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _a, _b, _c;
     const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get authenticated user ID
     const { refId, shippingAddress } = req.body;
     if (!userId) {
@@ -1085,7 +1132,7 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 {
                     model: product_1.default,
                     as: "product",
-                    attributes: ["id", "name", "price", "vendorId"],
+                    attributes: ["id", "name", "price", "vendorId", "quantity"],
                 },
             ],
         });
@@ -1100,15 +1147,17 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             if (!product) {
                 throw new Error(`Product with ID ${cartItem.productId} not found`);
             }
-            // if (product.quantity < cartItem.quantity) {
-            //   throw new Error(`Insufficient stock for product: ${product.name}`);
-            // }
+            // Check if product.quantity is defined and if there's enough stock before proceeding
+            const availableQuantity = (_b = product.quantity) !== null && _b !== void 0 ? _b : 0; // If quantity is undefined, fallback to 0
+            if (availableQuantity < cartItem.quantity) {
+                throw new Error(`Insufficient stock for product: ${product.name}`);
+            }
             totalAmount += product.price * cartItem.quantity;
         }
         // Validate that the total amount matches the Paystack transaction amount
-        if (paymentData.amount / 100 !== totalAmount) {
-            throw new Error("Payment amount does not match cart total");
-        }
+        // if (paymentData.amount / 100 !== totalAmount) {
+        //   throw new Error("Payment amount does not match cart total");
+        // }
         // Create order
         const order = yield order_1.default.create({
             userId,
@@ -1146,6 +1195,15 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             });
             if (!product) {
                 throw new Error(`Product with ID ${cartItem.product.id} not found.`);
+            }
+            // Reduce product quantity in inventory
+            const availableQuantity = (_c = product.quantity) !== null && _c !== void 0 ? _c : 0; // Fallback to 0 if quantity is undefined
+            if (availableQuantity >= cartItem.quantity) {
+                // Update the product quantity in inventory
+                yield product.update({ quantity: availableQuantity - cartItem.quantity }, { transaction });
+            }
+            else {
+                throw new Error(`Not enough stock for product: ${product.name}`);
             }
             // Check if vendorId exists in the User table (Vendor)
             const vendor = yield user_1.default.findByPk(product.vendorId);
@@ -1193,18 +1251,6 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                     logger_1.default.error("Error sending email:", emailError);
                 }
             }
-            // If it's a vendor 
-            // if (vendor) {
-            //   await vendor.update(
-            //     { wallet: (vendor.wallet as number) + totalAmount },
-            //     { transaction }
-            //   );    
-            // }
-            // Update product inventory
-            // await product.update(
-            //   { quantity: product.quantity - cartItem.quantity },
-            //   { transaction }
-            // );
         }
         // Create payment record
         const payment = yield payment_1.default.create({
@@ -1279,7 +1325,7 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.checkout = checkout;
 const checkoutDollar = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _a, _b;
     const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
     const { refId, shippingAddress } = req.body;
     if (!userId) {
@@ -1300,7 +1346,7 @@ const checkoutDollar = (req, res) => __awaiter(void 0, void 0, void 0, function*
         // Fetch cart items
         const cartItems = yield cart_1.default.findAll({
             where: { userId },
-            include: [{ model: product_1.default, as: "product", attributes: ["id", "name", "price", "vendorId"] }],
+            include: [{ model: product_1.default, as: "product", attributes: ["id", "name", "price", "vendorId", "quantity"] }],
         });
         if (!cartItems || cartItems.length === 0) {
             res.status(400).json({ message: "Cart is empty" });
@@ -1313,6 +1359,11 @@ const checkoutDollar = (req, res) => __awaiter(void 0, void 0, void 0, function*
             const product = cartItem.product;
             if (!product)
                 throw new Error(`Product with ID ${cartItem.productId} not found`);
+            // Check if product has enough stock
+            const availableQuantity = (_b = product.quantity) !== null && _b !== void 0 ? _b : 0; // Fallback to 0 if undefined
+            if (availableQuantity < cartItem.quantity) {
+                throw new Error(`Insufficient stock for product: ${product.name}`);
+            }
             const productInfo = yield product_1.default.findByPk(cartItem.productId, {
                 include: [
                     {
@@ -1337,6 +1388,9 @@ const checkoutDollar = (req, res) => __awaiter(void 0, void 0, void 0, function*
             if (!productInfo) {
                 throw new Error(`Product with ID ${cartItem.productId} not found.`);
             }
+            // Reduce stock quantity
+            const newQuantity = availableQuantity - cartItem.quantity;
+            yield product.update({ quantity: newQuantity }, { transaction });
             totalAmount += product.price * cartItem.quantity;
             // Organize order items by vendor
             if (!vendorOrders[product.vendorId]) {

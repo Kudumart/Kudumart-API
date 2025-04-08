@@ -942,7 +942,7 @@ export const addItemToCart = async (
   try {
     // Find the product by productId and include vendor and currency details
     const product = await Product.findByPk(productId, {
-      attributes: ["vendorId", "name"],
+      attributes: ["vendorId", "name", "quantity"], // Include quantity in the attributes
       include: [
         {
           model: Store,
@@ -963,7 +963,7 @@ export const addItemToCart = async (
       return;
     }
 
-    const { vendorId, name } = product;
+    const { vendorId, name, quantity: availableQuantity = 0 } = product; // Get available quantity
     const productCurrency = product.store.currency;
 
     // Ensure product currency is either $, #, or ₦
@@ -988,6 +988,14 @@ export const addItemToCart = async (
     if (vendor && !vendor.isVerified) {
       res.status(400).json({
         message: "Cannot add item to cart. Vendor is not verified.",
+      });
+      return;
+    }
+
+    // Ensure the requested quantity doesn't exceed available quantity
+    if (quantity > availableQuantity) {
+      res.status(400).json({
+        message: `Sorry, only ${availableQuantity} of this product is available. Please reduce the quantity.`,
       });
       return;
     }
@@ -1045,8 +1053,18 @@ export const addItemToCart = async (
     });
 
     if (existingCartItem) {
-      // If the item is already in the cart, update its quantity
-      existingCartItem.quantity += quantity;
+      // If the item is already in the cart, check if the new quantity exceeds the available quantity
+      const totalQuantity = existingCartItem.quantity + quantity;
+
+      if (totalQuantity > availableQuantity) {
+        res.status(400).json({
+          message: `Sorry, you can't add more than ${availableQuantity} of this product to your cart. Please reduce the quantity.`,
+        });
+        return;
+      }
+
+      // If the quantity is valid, update the cart with the new quantity
+      existingCartItem.quantity = totalQuantity;
       await existingCartItem.save();
     } else {
       const title = "Product Added to Cart";
@@ -1079,13 +1097,46 @@ export const updateCartItem = async (
   const { cartId, quantity } = req.body;
 
   try {
-    const cartItem = await Cart.findByPk(cartId);
+    // Find the cart item by cartId
+    const cartItem = await Cart.findByPk(cartId, {
+      include: [
+        {
+          model: Product,  // Assuming you have a 'Product' model associated with 'Cart'
+          as: "product",   // Alias used in the association
+          include: [
+            {
+              model: Store,
+              as: "store",   // Store model that has the 'currency'
+              include: [
+                {
+                  model: Currency,
+                  as: "currency", // Currency associated with the store
+                  attributes: ["name", "symbol"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
 
-    if (!cartItem) {
-      res.status(404).json({ message: "Cart item not found." });
+    if (!cartItem || !cartItem.product || !cartItem.product.quantity) {
+      res.status(404).json({ message: "Cart item or product not found." });
       return;
     }
 
+    const { productId, product } = cartItem;
+    const availableQuantity = product.quantity ?? 0; // Use 0 if quantity is undefined
+
+    // Ensure the requested quantity doesn't exceed available quantity
+    if (quantity > availableQuantity) {
+      res.status(400).json({
+        message: `Sorry, only ${availableQuantity} of this product is available. Please reduce the quantity.`,
+      });
+      return;
+    }
+
+    // Update the cart item quantity if stock is sufficient
     cartItem.quantity = quantity;
     await cartItem.save();
 
@@ -1094,7 +1145,7 @@ export const updateCartItem = async (
     logger.error(error);
     res.status(500).json({ message: error.message || "Error updating cart item." });
   }
-}
+};
 
 export const removeCartItem = async (
   req: Request,
@@ -1269,7 +1320,7 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
         {
           model: Product,
           as: "product",
-          attributes: ["id", "name", "price", "vendorId"],
+          attributes: ["id", "name", "price", "vendorId", "quantity"],
         },
       ],
     });
@@ -1287,17 +1338,19 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
         throw new Error(`Product with ID ${cartItem.productId} not found`);
       }
 
-      // if (product.quantity < cartItem.quantity) {
-      //   throw new Error(`Insufficient stock for product: ${product.name}`);
-      // }
+      // Check if product.quantity is defined and if there's enough stock before proceeding
+      const availableQuantity = product.quantity ?? 0; // If quantity is undefined, fallback to 0
+      if (availableQuantity < cartItem.quantity) {
+        throw new Error(`Insufficient stock for product: ${product.name}`);
+      }
 
       totalAmount += product.price * cartItem.quantity;
     }
 
     // Validate that the total amount matches the Paystack transaction amount
-    if (paymentData.amount / 100 !== totalAmount) {
-      throw new Error("Payment amount does not match cart total");
-    }
+    // if (paymentData.amount / 100 !== totalAmount) {
+    //   throw new Error("Payment amount does not match cart total");
+    // }
 
     // Create order
     const order = await Order.create(
@@ -1344,12 +1397,22 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
         throw new Error(`Product with ID ${cartItem.product.id} not found.`);
       }
 
+      // Reduce product quantity in inventory
+      const availableQuantity = product.quantity ?? 0; // Fallback to 0 if quantity is undefined
+      if (availableQuantity >= cartItem.quantity) {
+        // Update the product quantity in inventory
+        await product.update(
+          { quantity: availableQuantity - cartItem.quantity },
+          { transaction }
+        );
+      } else {
+        throw new Error(`Not enough stock for product: ${product.name}`);
+      }
+
       // Check if vendorId exists in the User table (Vendor)
       const vendor = await User.findByPk(product.vendorId);
-
       // Check if vendorId exists in the Admin table
       const admin = await Admin.findByPk(product.vendorId);
-
       if (!vendor && !admin) {
         res.status(404).json({ message: "Owner not found" });
         return;
@@ -1405,20 +1468,6 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
           logger.error("Error sending email:", emailError);
         }
       }
-
-      // If it's a vendor 
-      // if (vendor) {
-      //   await vendor.update(
-      //     { wallet: (vendor.wallet as number) + totalAmount },
-      //     { transaction }
-      //   );    
-      // }
-
-      // Update product inventory
-      // await product.update(
-      //   { quantity: product.quantity - cartItem.quantity },
-      //   { transaction }
-      // );
     }
 
     // Create payment record
@@ -1535,7 +1584,7 @@ export const checkoutDollar = async (req: Request, res: Response): Promise<void>
     // Fetch cart items
     const cartItems = await Cart.findAll({
       where: { userId },
-      include: [{ model: Product, as: "product", attributes: ["id", "name", "price", "vendorId"] }],
+      include: [{ model: Product, as: "product", attributes: ["id", "name", "price", "vendorId", "quantity"] }],
     });
 
     if (!cartItems || cartItems.length === 0) {
@@ -1550,6 +1599,12 @@ export const checkoutDollar = async (req: Request, res: Response): Promise<void>
     for (const cartItem of cartItems) {
       const product = cartItem.product;
       if (!product) throw new Error(`Product with ID ${cartItem.productId} not found`);
+
+      // Check if product has enough stock
+      const availableQuantity = product.quantity ?? 0; // Fallback to 0 if undefined
+      if (availableQuantity < cartItem.quantity) {
+        throw new Error(`Insufficient stock for product: ${product.name}`);
+      }
 
       const productInfo = await Product.findByPk(cartItem.productId, {
         include: [
@@ -1576,6 +1631,10 @@ export const checkoutDollar = async (req: Request, res: Response): Promise<void>
       if (!productInfo) {
         throw new Error(`Product with ID ${cartItem.productId} not found.`);
       }
+
+      // Reduce stock quantity
+      const newQuantity = availableQuantity - cartItem.quantity;
+      await product.update({ quantity: newQuantity }, { transaction });
 
       totalAmount += product.price * cartItem.quantity;
 

@@ -40,16 +40,27 @@ exports.upload = (0, multer_1.default)({
             "image/svg+xml",
         ];
         const allowedPdfType = "application/pdf";
-        if (allowedImageTypes.includes(file.mimetype) || file.mimetype === allowedPdfType) {
+        const allowedVideoTypes = [
+            "video/mp4",
+            "video/mkv",
+            "video/avi",
+            "video/webm",
+            "video/mov",
+            "video/flv",
+        ];
+        if (allowedImageTypes.includes(file.mimetype) ||
+            file.mimetype === allowedPdfType ||
+            allowedVideoTypes.includes(file.mimetype)) {
             cb(null, true); // ✅ Allow upload
         }
         else {
             cb(null, false); // ❌ Reject file
-            req.fileValidationError = "Only images (JPG, PNG, WEBP, GIF, BMP, TIFF, SVG) and PDFs are allowed.";
+            req.fileValidationError =
+                "Only images (JPG, PNG, WEBP, GIF, BMP, TIFF, SVG), PDFs, and videos (MP4, MKV, AVI, WEBM, MOV, FLV) are allowed.";
         }
     },
 });
-// Upload and process file (image or PDF)
+// Upload and process file (PDF, image and video)
 const uploadFile = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     try {
@@ -64,20 +75,43 @@ const uploadFile = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         }
         let filename = `${(_a = process.env.APP_NAME) === null || _a === void 0 ? void 0 : _a.toLowerCase()}-${Date.now()}`;
         let filePath;
+        // Handle PDF file
         if (req.file.mimetype === "application/pdf") {
-            // Handle PDF file
             filename += ".pdf";
             filePath = path_1.default.join(uploadDir, filename);
             yield fs_1.default.promises.writeFile(filePath, req.file.buffer);
         }
-        else {
-            // Handle image file (convert to WebP)
+        // Handle image file (convert to WebP)
+        else if (req.file.mimetype === "image/jpeg" ||
+            req.file.mimetype === "image/jpg" ||
+            req.file.mimetype === "image/png" ||
+            req.file.mimetype === "image/gif" ||
+            req.file.mimetype === "image/bmp" ||
+            req.file.mimetype === "image/tiff" ||
+            req.file.mimetype === "image/webp" ||
+            req.file.mimetype === "image/svg+xml") {
             filename += ".webp";
             filePath = path_1.default.join(uploadDir, filename);
             yield (0, sharp_1.default)(req.file.buffer)
                 .resize({ width: 800 }) // Resize width to 800px
                 .webp({ quality: 20 }) // Compress to lowest quality
                 .toFile(filePath);
+        }
+        // Handle video file (no conversion needed, just store the file)
+        else if (req.file.mimetype === "video/mp4" ||
+            req.file.mimetype === "video/mkv" ||
+            req.file.mimetype === "video/avi" ||
+            req.file.mimetype === "video/webm" ||
+            req.file.mimetype === "video/mov" ||
+            req.file.mimetype === "video/flv") {
+            const ext = path_1.default.extname(req.file.originalname); // Get the original file extension
+            filename += ext; // Use original file extension (e.g., .mp4, .mkv, etc.)
+            filePath = path_1.default.join(uploadDir, filename);
+            yield fs_1.default.promises.writeFile(filePath, req.file.buffer); // Save the video as-is
+        }
+        else {
+            res.status(400).json({ message: "Invalid file type" });
+            return;
         }
         const protocol = req.headers["x-forwarded-proto"] || req.protocol;
         const fileUrl = `${protocol}://${req.get("host")}/uploads/${filename}`;
