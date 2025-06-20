@@ -2931,3 +2931,28 @@ export const getSingleReview = async (req: Request, res: Response): Promise<void
     res.status(500).json({ message: "An error occurred while fetching the review." });
   }
 };
+
+// Delete user account
+export const deleteAccount = async (req: Request, res: Response): Promise<void> => {
+  const userId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID from middleware
+
+  if (!userId) {
+    res.status(400).json({ message: "User must be authenticated" });
+    return;
+  }
+
+  try {
+    const user = await User.findByPk(userId);
+    if (!user) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
+
+    await user.destroy();
+
+    res.status(200).json({ message: "Account deleted successfully." });
+  } catch (error) {
+    logger.error("Error deleting user account:", error);
+    res.status(500).json({ message: "An error occurred while deleting the account." });
+  }
+};

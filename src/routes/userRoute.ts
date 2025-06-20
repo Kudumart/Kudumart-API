@@ -31,6 +31,8 @@ userRoutes.put('/profile/update/password', authMiddleware, updatePasswordValidat
 userRoutes.get('/notification/settings', authMiddleware, userController.getUserNotificationSettings);
 userRoutes.put('/update/notification/settings', authMiddleware, userController.updateUserNotificationSettings);
 
+userRoutes.delete('/delete/account', authMiddleware, userController.deleteAccount);
+
 // Cart
 userRoutes.post("/cart/add", authMiddleware, validateAddItemToCart(), validate, userController.addItemToCart);
 userRoutes.put("/cart/update", authMiddleware, validateUpdateCartItem(), validate, userController.updateCartItem);
