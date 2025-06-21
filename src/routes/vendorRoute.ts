@@ -50,6 +50,7 @@ vendorRoutes.get("/auction/product/bidders", authMiddleware, authorizeVendor, ve
 vendorRoutes.get("/subscription/plans", authMiddleware, authorizeVendor, vendorController.subscriptionPlans);
 vendorRoutes.post("/subscribe", authMiddleware, authorizeVendor, vendorController.subscribe);
 vendorRoutes.post("/subscribe/dollar", authMiddleware, authorizeVendor, vendorController.subscribeDollar);
+vendorRoutes.delete("/subscription/cancel", authMiddleware, authorizeVendor, vendorController.cancelSubscription);
 
 vendorRoutes.get("/verifyCAC", authMiddleware, authorizeVendor, vendorController.verifyCAC);
 

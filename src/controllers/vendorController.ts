@@ -2333,3 +2333,102 @@ export const getWithdrawalById = async (req: Request, res: Response): Promise<vo
         res.status(500).json({ message: "Internal server error" });
     }
 };
+
+export const cancelSubscription = async (req: Request, res: Response): Promise<void> => {
+    const vendorId = (req as AuthenticatedRequest).user?.id as string;
+
+    if (!vendorId) {
+        res.status(403).json({ message: "Unauthorized. Vendor ID is required." });
+        return;
+    }
+
+    const transaction = await sequelizeService.connection!.transaction();
+
+    try {
+        // Step 1: Find the active subscription for the vendor
+        const activeSubscription = await VendorSubscription.findOne({
+            where: { vendorId, isActive: true },
+            include: [
+                {
+                    model: SubscriptionPlan,
+                    as: 'subscriptionPlans',
+                    attributes: ['id', 'name', 'price']
+                }
+            ],
+            transaction,
+            lock: true, // Prevent concurrent modifications
+        });
+
+        if (!activeSubscription) {
+            await transaction.rollback();
+            res.status(404).json({ message: "No active subscription found for this vendor." });
+            return;
+        }
+
+        // Step 2: Check if it's already a Free Plan
+        if (activeSubscription.subscriptionPlans?.name === "Free Plan") {
+            await transaction.rollback();
+            res.status(400).json({ message: "Cannot cancel Free Plan subscription." });
+            return;
+        }
+
+        // Step 3: Find the Free Plan
+        const freePlan = await SubscriptionPlan.findOne({ 
+            where: { name: "Free Plan" },
+            transaction 
+        });
+
+        if (!freePlan) {
+            await transaction.rollback();
+            res.status(500).json({ message: "Free Plan not found. Please contact support." });
+            return;
+        }
+
+        // Step 4: Deactivate current subscription
+        await activeSubscription.update({ isActive: false }, { transaction });
+
+        // Step 5: Create new Free Plan subscription
+        const startDate = new Date();
+        const endDate = new Date();
+        endDate.setFullYear(startDate.getFullYear() + 10); // Long validity for Free Plan
+
+        const newFreeSubscription = await VendorSubscription.create({
+            vendorId,
+            subscriptionPlanId: freePlan.id,
+            startDate,
+            endDate,
+            isActive: true,
+        }, { transaction });
+
+        // Step 6: Send notification
+        await Notification.create({
+            userId: vendorId,
+            title: "Subscription Cancelled",
+            message: `Your ${activeSubscription.subscriptionPlans?.name} subscription has been cancelled. You have been moved to the Free Plan.`,
+            type: "subscription",
+            isRead: false,
+        }, { transaction });
+
+        await transaction.commit(); // Commit all changes
+
+        res.status(200).json({
+            message: "Subscription cancelled successfully. You have been moved to the Free Plan.",
+            cancelledSubscription: {
+                id: activeSubscription.id,
+                planName: activeSubscription.subscriptionPlans?.name,
+                cancelledAt: new Date()
+            },
+            newSubscription: {
+                id: newFreeSubscription.id,
+                planName: "Free Plan",
+                startDate: newFreeSubscription.startDate,
+                endDate: newFreeSubscription.endDate
+            }
+        });
+
+    } catch (error) {
+        await transaction.rollback(); // Rollback changes on error
+        logger.error("Error cancelling subscription:", error);
+        res.status(500).json({ message: "An error occurred while cancelling the subscription." });
+    }
+};
