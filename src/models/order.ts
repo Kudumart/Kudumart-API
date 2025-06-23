@@ -10,6 +10,7 @@ class Order extends Model {
   public totalAmount!: number;
   public shippingAddress!: string;
   public refId!: string; // Reference ID from payment
+  public deliveryCode!: string | null;
   public createdAt?: Date;
   public updatedAt?: Date;
 
@@ -66,6 +67,10 @@ const initModel = (sequelize: Sequelize) => {
       refId: {
         type: DataTypes.STRING,
         allowNull: false,
+      },
+      deliveryCode: {
+        type: DataTypes.STRING,
+        allowNull: true,
       },
     },
     {

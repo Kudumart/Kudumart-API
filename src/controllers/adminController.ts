@@ -47,6 +47,7 @@ import fs from "fs";
 import Withdrawal from "../models/withdrawal";
 import Banner from "../models/banner";
 import { ProductData } from "../types/index";
+import crypto from 'crypto';
 
 // Extend the Express Request interface to include adminId and admin
 interface AuthenticatedRequest extends Request {
@@ -4666,6 +4667,28 @@ export const updateOrderStatus = async (req: AuthenticatedRequest, res: Response
   
       // Update the order status
       order.status = status;
+      // If status is shipped, generate delivery code and email customer
+      if (status === "shipped") {
+        const deliveryCode = crypto.randomBytes(6).toString('hex').toUpperCase();
+        mainOrder.deliveryCode = deliveryCode;
+        await mainOrder.save({ transaction });
+        // Send email to customer
+        const customer = await User.findByPk(mainOrder.userId, { transaction });
+        if (customer) {
+          const html = `
+            <h3>Hi ${customer.firstName},</h3>
+            <p>Your order <strong>#${mainOrder.id}</strong> has been shipped.</p>
+            <p>Please be available to collect it. Use the code below to confirm delivery:</p>
+            <h2 style="color: blue;">${deliveryCode}</h2>
+            <p>Thanks for shopping with us!</p>
+          `;
+          try {
+            await sendMail(customer.email, 'Your order has been shipped!', html);
+          } catch (emailError) {
+            logger.error("Error sending shipping email:", emailError);
+          }
+        }
+      }
       await order.save({ transaction });
   
       // Check if vendorId exists in the User or Admin table
