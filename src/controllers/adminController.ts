@@ -5820,5 +5820,5 @@ export const markAdminNotificationAsRead = async (req: Request, res: Response): 
     res.status(200).json({ message: 'Notification marked as read' });
   } catch (error) {
     res.status(500).json({ message: 'Failed to update notification' });
-  }
+    }
 };

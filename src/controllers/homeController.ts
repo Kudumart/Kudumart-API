@@ -27,6 +27,7 @@ import Applicant from "../models/applicant";
 import Banner from "../models/banner";
 import { AuthenticatedRequest } from "../types/index";
 import ShowInterest from "../models/showinterest";
+import BlockedVendor from '../models/blockedvendor';
 
 export const getAllCategories = async (
     req: Request,
@@ -144,9 +145,19 @@ export const products = async (req: Request, res: Response): Promise<void> => {
                 { name: { [Op.like]: `%${normalizedName}%` } } // Use LIKE query for product name search
             ];
         }
-
         if (condition) {
             whereClause.condition = condition; // Filter by product condition
+        }
+
+        // Blocked vendor exclusion logic
+        let blockedVendorIds: string[] = [];
+        const userId = (req as AuthenticatedRequest).user?.id;
+        if (userId) {
+            const blockedVendors = await BlockedVendor.findAll({ where: { userId } });
+            blockedVendorIds = blockedVendors.map(bv => bv.vendorId);
+            if (blockedVendorIds.length > 0) {
+                whereClause.vendorId = { [Op.notIn]: blockedVendorIds };
+            }
         }
 
         // Construct the where clause for subCategory with conditional categoryId and subCategoryName

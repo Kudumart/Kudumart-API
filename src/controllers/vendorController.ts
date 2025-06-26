@@ -33,6 +33,7 @@ import Withdrawal from "../models/withdrawal";
 import Admin from "../models/admin";
 import Role from "../models/role";
 import { createAdminNotification } from '../services/notification.service';
+import BlockedVendor from '../models/blockedvendor';
 
 export const submitOrUpdateKYC = async (
     req: Request,
@@ -105,6 +106,17 @@ export const getKYC = async (req: Request, res: Response): Promise<void> => {
 
 export const getStore = async (req: Request, res: Response): Promise<void> => {
     const vendorId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID from middleware
+    const requestedVendorId = req.query.vendorId as string || vendorId;
+    const userId = (req as AuthenticatedRequest).user?.id;
+
+    // Block check: if user is not the vendor, check if user has blocked this vendor
+    if (userId && requestedVendorId && userId !== requestedVendorId) {
+        const blocked = await BlockedVendor.findOne({ where: { userId, vendorId: requestedVendorId } });
+        if (blocked) {
+            res.status(403).json({ message: 'You have blocked this vendor.' });
+            return;
+        }
+    }
 
     try {
         const stores = await Store.findAll({
@@ -164,8 +176,18 @@ export const getStore = async (req: Request, res: Response): Promise<void> => {
 
 export const viewStore = async (req: Request, res: Response): Promise<void> => {
     const vendorId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID from middleware
-
     const storeId = req.query.storeId as string;
+    const userId = (req as AuthenticatedRequest).user?.id;
+
+    // Find the store to get the vendorId
+    const store = await Store.findOne({ where: { id: storeId } });
+    if (store && userId && store.vendorId && userId !== store.vendorId) {
+        const blocked = await BlockedVendor.findOne({ where: { userId, vendorId: store.vendorId } });
+        if (blocked) {
+            res.status(403).json({ message: 'You have blocked this vendor.' });
+            return;
+        }
+    }
 
     try {
         const store = await Store.findOne({

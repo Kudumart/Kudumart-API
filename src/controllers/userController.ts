@@ -36,6 +36,7 @@ import ReviewProduct from "../models/reviewproduct";
 import crypto from 'crypto';
 import { createAdminNotification } from '../services/notification.service';
 import ProductReport from '../models/productreport';
+import BlockedVendor from '../models/blockedvendor';
 
 export const logout = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -757,6 +758,16 @@ export const sendMessageHandler = async (
   if (userId === receiverId) {
     res.status(400).json({ message: "You cannot send a message to yourself" });
     return;
+  }
+
+  // Block check: if receiver is a vendor and sender has blocked them
+  const receiver = await User.findByPk(receiverId);
+  if (receiver && receiver.accountType === 'Vendor') {
+    const blocked = await BlockedVendor.findOne({ where: { userId, vendorId: receiverId } });
+    if (blocked) {
+      res.status(403).json({ message: 'You have blocked this vendor.' });
+      return;
+    }
   }
 
   try {
@@ -3017,5 +3028,37 @@ export const reportProduct = async (req: Request, res: Response): Promise<void> 
     res.status(201).json({ message: 'Product reported successfully.' });
   } catch (error: any) {
     res.status(500).json({ message: error.message || 'Failed to report product.' });
+  }
+};
+
+export const blockVendor = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as AuthenticatedRequest).user?.id;
+    const { vendorId } = req.body;
+
+    if (!vendorId) {
+      res.status(400).json({ message: 'vendorId is required.' });
+      return;
+    }
+    if (!userId) {
+      res.status(401).json({ message: 'Unauthorized.' });
+      return;
+    }
+    if (userId === vendorId) {
+      res.status(400).json({ message: 'You cannot block yourself.' });
+      return;
+    }
+
+    // Check if already blocked
+    const alreadyBlocked = await BlockedVendor.findOne({ where: { userId, vendorId } });
+    if (alreadyBlocked) {
+      res.status(200).json({ message: 'Vendor already blocked.' });
+      return;
+    }
+
+    await BlockedVendor.create({ userId, vendorId });
+    res.status(200).json({ message: 'Vendor blocked successfully.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error.' });
   }
 };
