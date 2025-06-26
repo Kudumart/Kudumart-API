@@ -1,3 +1,4 @@
+                                    
 "use strict";
 
 module.exports = {
@@ -6,7 +7,7 @@ module.exports = {
       type: Sequelize.UUID,
       allowNull: false,
       references: {
-        model: "Products", // Adjust casing if necessary
+        model: "products", // Adjust casing if necessary
         key: "id",
       },
       onUpdate: "CASCADE",
@@ -17,7 +18,7 @@ module.exports = {
       type: Sequelize.UUID,
       allowNull: false,
       references: {
-        model: "Users", // Adjust casing if necessary
+        model: "users", // Adjust casing if necessary
         key: "id",
       },
       onUpdate: "CASCADE",
@@ -30,7 +31,6 @@ module.exports = {
       type: Sequelize.STRING,
       allowNull: false,
     });
-
     await queryInterface.changeColumn("ProductReports", "userId", {
       type: Sequelize.STRING,
       allowNull: false,
