@@ -23,6 +23,7 @@ import {
     updateAuctionProductValidation } from '../utils/validations'; // Import the service
 import checkPermission from '../middlewares/checkPermissionMiddleware';
 import { updateAuctionProduct } from '../controllers/vendorController';
+import { getAdminNotifications, markAdminNotificationAsRead } from '../controllers/adminController';
 
 const adminRoutes = Router();
 
@@ -211,5 +212,9 @@ adminRoutes.get("/banners", adminAuthMiddleware, adminController.getAllBanners);
 adminRoutes.get("/banner",adminAuthMiddleware, adminController.getBanner);
 adminRoutes.put("/banner", adminAuthMiddleware, adminController.updateBanner);
 adminRoutes.delete("/banner", adminAuthMiddleware, adminController.deleteBanner);
+
+// Admin notifications
+adminRoutes.get('/notifications', adminAuthMiddleware, getAdminNotifications);
+adminRoutes.patch('/notifications/:id/read', adminAuthMiddleware, markAdminNotificationAsRead);
 
 export default adminRoutes; // Export the router

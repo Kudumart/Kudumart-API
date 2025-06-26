@@ -34,6 +34,8 @@ import Admin from "../models/admin";
 import SaveProduct from "../models/saveproduct";
 import ReviewProduct from "../models/reviewproduct";
 import crypto from 'crypto';
+import { createAdminNotification } from '../services/notification.service';
+import ProductReport from '../models/productreport';
 
 export const logout = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -2976,9 +2978,44 @@ export const deleteAccount = async (req: Request, res: Response): Promise<void> 
 
     await user.destroy();
 
+    // Admin notification (non-blocking)
+    createAdminNotification(
+      'user_account_deleted',
+      `User deleted account: ${user.email}`,
+      { userId: user.id, email: user.email }
+    );
+
     res.status(200).json({ message: "Account deleted successfully." });
   } catch (error) {
     logger.error("Error deleting user account:", error);
     res.status(500).json({ message: "An error occurred while deleting the account." });
+  }
+};
+
+// Report a product with a reason
+export const reportProduct = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user?.id; // Authenticated user ID from middleware
+    const { productId } = req.params;
+    const { reason } = req.body;
+
+    if (!userId) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+    if (!productId || !reason) {
+      res.status(400).json({ message: 'Product ID and reason are required.' });
+      return;
+    }
+
+    await ProductReport.create({
+      productId,
+      userId,
+      reason,
+    });
+
+    res.status(201).json({ message: 'Product reported successfully.' });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message || 'Failed to report product.' });
   }
 };

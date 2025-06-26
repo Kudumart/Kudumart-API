@@ -81,4 +81,6 @@ userRoutes.put("/update/review", authMiddleware, userController.updateReview);
 userRoutes.get("/get/review", authMiddleware, userController.getProductReviews);
 userRoutes.get("/view/review", authMiddleware, userController.getSingleReview);
 
+userRoutes.post('/products/:productId/report', authMiddleware, userController.reportProduct);
+
 export default userRoutes;

@@ -16,6 +16,7 @@ import VendorSubscription from "../models/vendorsubscription";
 import UserNotificationSetting from "../models/usernotificationsetting";
 import Notification from "../models/notification";
 import passport from "passport";
+import { createAdminNotification } from '../services/notification.service';
 
 export const index = async (req: Request, res: Response) => {
   res.status(200).json({
@@ -124,6 +125,13 @@ export const vendorRegister = async (
       type: notificationType,
     });
 
+    // Admin notification (non-blocking)
+    createAdminNotification(
+      'new_vendor_registration',
+      `New vendor registered: ${email}`,
+      { userId: newUser.id, email }
+    );
+
     // Return a success response
     res.status(200).json({
       message:
@@ -216,8 +224,18 @@ export const customerRegister = async (
       type: notificationType,
     });
 
+    // Admin notification (non-blocking)
+    createAdminNotification(
+      'new_customer_registration',
+      `New customer registered: ${email}`,
+      { userId: newUser.id, email }
+    );
+
     // Return a success response
-    res.status(200).json({ message: "Customer registered successfully. A verification email has been sent to your email address. Please check your inbox to verify your account." });
+    res.status(200).json({
+      message:
+        "Customer registered successfully. A verification email has been sent to your email address. Please check your inbox to verify your account.",
+    });
   } catch (error) {
     logger.error("Error during registration:", error);
     res.status(500).json({ message: "Server error" });

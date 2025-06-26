@@ -48,6 +48,7 @@ import Withdrawal from "../models/withdrawal";
 import Banner from "../models/banner";
 import { ProductData } from "../types/index";
 import crypto from 'crypto';
+import AdminNotification from '../models/adminnotification';
 
 // Extend the Express Request interface to include adminId and admin
 interface AuthenticatedRequest extends Request {
@@ -5793,4 +5794,31 @@ export const deleteBanner = async (req: Request, res: Response): Promise<void> =
         logger.error(`Error deleting banner ID ${id}: ${error.message}`);
         res.status(500).json({ message: "An error occurred while deleting the banner. Please try again later." });
     }
+};
+
+// Get all admin notifications
+export const getAdminNotifications = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const notifications = await AdminNotification.findAll({ order: [['createdAt', 'DESC']] });
+    res.status(200).json({ data: notifications });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch notifications' });
+  }
+};
+
+// Mark a notification as read
+export const markAdminNotificationAsRead = async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+  try {
+    const notification = await AdminNotification.findByPk(id);
+    if (!notification) {
+      res.status(404).json({ message: 'Notification not found' });
+      return;
+    }
+    notification.read = true;
+    await notification.save();
+    res.status(200).json({ message: 'Notification marked as read' });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to update notification' });
+  }
 };
