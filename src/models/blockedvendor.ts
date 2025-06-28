@@ -6,6 +6,15 @@ class BlockedVendor extends Model {
   public vendorId!: string;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
+
+  // Association with User model
+  static associate(models: any) {
+    this.belongsTo(models.User, {
+      as: 'vendor',
+      foreignKey: 'vendorId',
+      onDelete: 'CASCADE',
+    });
+  }
 }
 
 const initBlockedVendor = (sequelize: Sequelize) => {

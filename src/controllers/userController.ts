@@ -34,9 +34,9 @@ import Admin from "../models/admin";
 import SaveProduct from "../models/saveproduct";
 import ReviewProduct from "../models/reviewproduct";
 import crypto from 'crypto';
-import { createAdminNotification } from '../services/notification.service';
 import ProductReport from '../models/productreport';
 import BlockedVendor from '../models/blockedvendor';
+import KYC from '../models/kyc';
 
 export const logout = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -2981,24 +2981,154 @@ export const deleteAccount = async (req: Request, res: Response): Promise<void> 
   }
 
   try {
+    console.log("[DELETE] Starting account deletion for user:", userId);
+    
     const user = await User.findByPk(userId);
     if (!user) {
       res.status(404).json({ message: "User not found" });
       return;
     }
 
-    await user.destroy();
+    console.log("[DELETE] User found, starting to delete related records...");
 
-    // Admin notification (non-blocking)
-    createAdminNotification(
-      'user_account_deleted',
-      `User deleted account: ${user.email}`,
-      { userId: user.id, email: user.email }
-    );
+    // Delete related records first to handle RESTRICT constraints
+    try {
+      await OTP.destroy({ where: { userId } });
+      console.log("[DELETE] OTP records deleted");
+    } catch (error: any) {
+      console.log("[DELETE] Error deleting OTP:", error.message);
+    }
+
+    try {
+      await VendorSubscription.destroy({ where: { vendorId: userId } });
+      console.log("[DELETE] VendorSubscription records deleted");
+    } catch (error: any) {
+      console.log("[DELETE] Error deleting VendorSubscription:", error.message);
+    }
+
+    try {
+      await Store.destroy({ where: { vendorId: userId } });
+      console.log("[DELETE] Store records deleted");
+    } catch (error: any) {
+      console.log("[DELETE] Error deleting Store:", error.message);
+    }
+
+    try {
+      await KYC.destroy({ where: { vendorId: userId } });
+      console.log("[DELETE] KYC records deleted");
+    } catch (error: any) {
+      console.log("[DELETE] Error deleting KYC:", error.message);
+    }
+
+    try {
+      await Bid.destroy({ where: { bidderId: userId } });
+      console.log("[DELETE] Bid records deleted");
+    } catch (error: any) {
+      console.log("[DELETE] Error deleting Bid:", error.message);
+    }
+
+    try {
+      await Cart.destroy({ where: { userId } });
+      console.log("[DELETE] Cart records deleted");
+    } catch (error: any) {
+      console.log("[DELETE] Error deleting Cart:", error.message);
+    }
+
+    try {
+      await ShowInterest.destroy({ where: { userId } });
+      console.log("[DELETE] ShowInterest records deleted");
+    } catch (error: any) {
+      console.log("[DELETE] Error deleting ShowInterest:", error.message);
+    }
+
+    try {
+      await SaveProduct.destroy({ where: { userId } });
+      console.log("[DELETE] SaveProduct records deleted");
+    } catch (error: any) {
+      console.log("[DELETE] Error deleting SaveProduct:", error.message);
+    }
+
+    try {
+      await ReviewProduct.destroy({ where: { userId } });
+      console.log("[DELETE] ReviewProduct records deleted");
+    } catch (error: any) {
+      console.log("[DELETE] Error deleting ReviewProduct:", error.message);
+    }
+
+    try {
+      await Notification.destroy({ where: { userId } });
+      console.log("[DELETE] Notification records deleted");
+    } catch (error: any) {
+      console.log("[DELETE] Error deleting Notification:", error.message);
+    }
+
+    try {
+      await UserNotificationSetting.destroy({ where: { userId } });
+      console.log("[DELETE] UserNotificationSetting records deleted");
+    } catch (error: any) {
+      console.log("[DELETE] Error deleting UserNotificationSetting:", error.message);
+    }
+
+    try {
+      await ProductReport.destroy({ where: { userId } });
+      console.log("[DELETE] ProductReport records deleted");
+    } catch (error: any) {
+      console.log("[DELETE] Error deleting ProductReport:", error.message);
+    }
+
+    try {
+      await BlockedVendor.destroy({ where: { userId } });
+      console.log("[DELETE] BlockedVendor records deleted (userId)");
+    } catch (error: any) {
+      console.log("[DELETE] Error deleting BlockedVendor (userId):", error.message);
+    }
+
+    try {
+      await BlockedVendor.destroy({ where: { vendorId: userId } });
+      console.log("[DELETE] BlockedVendor records deleted (vendorId)");
+    } catch (error: any) {
+      console.log("[DELETE] Error deleting BlockedVendor (vendorId):", error.message);
+    }
+
+    // Delete messages and conversations
+    try {
+      const conversations = await Conversation.findAll({
+        where: {
+          [Op.or]: [
+            { userId1: userId },
+            { userId2: userId }
+          ]
+        }
+      });
+
+      for (const conversation of conversations) {
+        await Message.destroy({ where: { conversationId: conversation.id } });
+      }
+      await Conversation.destroy({
+        where: {
+          [Op.or]: [
+            { userId1: userId },
+            { userId2: userId }
+          ]
+        }
+      });
+      console.log("[DELETE] Messages and conversations deleted");
+    } catch (error: any) {
+      console.log("[DELETE] Error deleting messages/conversations:", error.message);
+    }
+
+    console.log("[DELETE] All related records deleted, now deleting user...");
+
+    // Now delete the user
+    await user.destroy();
+    console.log("[DELETE] User deleted successfully");
+
+    // Admin notification removed to prevent backend crashes
+    // The model isn't properly set up in local database
 
     res.status(200).json({ message: "Account deleted successfully." });
   } catch (error) {
-    logger.error("Error deleting user account:", error);
+    console.error("[DELETE] Error deleting user account:", error);
     res.status(500).json({ message: "An error occurred while deleting the account." });
   }
 };
@@ -3058,6 +3188,63 @@ export const blockVendor = async (req: Request, res: Response): Promise<void> =>
 
     await BlockedVendor.create({ userId, vendorId });
     res.status(200).json({ message: 'Vendor blocked successfully.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error.' });
+  }
+};
+
+export const unblockVendor = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as AuthenticatedRequest).user?.id;
+    const { vendorId } = req.body;
+
+    if (!vendorId) {
+      res.status(400).json({ message: 'vendorId is required.' });
+      return;
+    }
+    if (!userId) {
+      res.status(401).json({ message: 'Unauthorized.' });
+      return;
+    }
+
+    // Check if vendor is blocked
+    const blocked = await BlockedVendor.findOne({ where: { userId, vendorId } });
+    if (!blocked) {
+      res.status(200).json({ message: 'Vendor is not blocked.' });
+      return;
+    }
+
+    await BlockedVendor.destroy({ where: { userId, vendorId } });
+    res.status(200).json({ message: 'Vendor unblocked successfully.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error.' });
+  }
+};
+
+export const getBlockedVendors = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as AuthenticatedRequest).user?.id;
+
+    if (!userId) {
+      res.status(401).json({ message: 'Unauthorized.' });
+      return;
+    }
+
+    const blockedVendors = await BlockedVendor.findAll({
+      where: { userId },
+      include: [
+        {
+          model: User,
+          as: 'vendor',
+          attributes: ['id', 'firstName', 'lastName', 'email', 'phoneNumber'],
+        }
+      ]
+    });
+
+    res.status(200).json({ 
+      message: 'Blocked vendors retrieved successfully.',
+      data: blockedVendors 
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error.' });
   }

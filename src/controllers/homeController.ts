@@ -282,15 +282,31 @@ export const getProductById = async (
     const { productId } = req.query;
 
     try {
+        // Blocked vendor exclusion logic
+        let blockedVendorIds: string[] = [];
+        const userId = (req as AuthenticatedRequest).user?.id;
+        if (userId) {
+            const blockedVendors = await BlockedVendor.findAll({ where: { userId } });
+            blockedVendorIds = blockedVendors.map(bv => bv.vendorId);
+        }
+
+        // Build where clause
+        const whereClause: any = {
+            status: "active",
+            [Op.or]: [
+                { id: productId },
+                { SKU: productId }, // Replace 'SKU' with the actual SKU column name if different
+            ],
+        };
+
+        // Add blocked vendor filter if user has blocked vendors
+        if (blockedVendorIds.length > 0) {
+            whereClause.vendorId = { [Op.notIn]: blockedVendorIds };
+        }
+
         // Fetch the main product by ID or SKU
         const product = await Product.findOne({
-            where: {
-                status: "active",
-                [Op.or]: [
-                    { id: productId },
-                    { SKU: productId }, // Replace 'SKU' with the actual SKU column name if different
-                ],
-            },
+            where: whereClause,
             include: [
                 {
                     model: User,
@@ -356,13 +372,21 @@ export const getProductById = async (
         product.setDataValue("averageRating", parseFloat(averageRating));
         product.setDataValue("totalReviews", totalReviews);
 
+        // Build where clause for recommended products
+        const recommendedWhereClause: any = {
+            categoryId: product.categoryId, // Fetch products from the same subcategory
+            id: { [Op.ne]: product.id }, // Exclude the currently viewed product
+            status: "active",
+        };
+
+        // Add blocked vendor filter to recommended products
+        if (blockedVendorIds.length > 0) {
+            recommendedWhereClause.vendorId = { [Op.notIn]: blockedVendorIds };
+        }
+
         // Fetch recommended products based on the same subcategory
         const recommendedProducts = await Product.findAll({
-            where: {
-                categoryId: product.categoryId, // Fetch products from the same subcategory
-                id: { [Op.ne]: product.id }, // Exclude the currently viewed product
-                status: "active",
-            },
+            where: recommendedWhereClause,
             include: [
                 {
                     model: User,
@@ -472,15 +496,31 @@ export const getStoreProducts = async (req: Request, res: Response): Promise<voi
             return;
         }
 
+        // Blocked vendor exclusion logic
+        let blockedVendorIds: string[] = [];
+        const userId = (req as AuthenticatedRequest).user?.id;
+        if (userId) {
+            const blockedVendors = await BlockedVendor.findAll({ where: { userId } });
+            blockedVendorIds = blockedVendors.map(bv => bv.vendorId);
+        }
+
         // Calculate pagination values
         const offset = (Number(page) - 1) * Number(limit);
 
+        // Build where clause
+        const whereClause: any = {
+            storeId,
+            ...(productName ? { name: { [Op.like]: `%${productName}%` } } : {}),
+        };
+
+        // Add blocked vendor filter if user has blocked vendors
+        if (blockedVendorIds.length > 0) {
+            whereClause.vendorId = { [Op.notIn]: blockedVendorIds };
+        }
+
         // Fetch products along with the associated currency
         const products = await Product.findAll({
-            where: {
-                storeId,
-                ...(productName ? { name: { [Op.like]: `%${productName}%` } } : {}),
-            },
+            where: whereClause,
             include: [
                 {
                     model: User,
@@ -543,6 +583,14 @@ export const getAuctionProducts = async (req: Request, res: Response): Promise<v
     } = req.query;
 
     try {
+        // Blocked vendor exclusion logic
+        let blockedVendorIds: string[] = [];
+        const userId = (req as AuthenticatedRequest).user?.id;
+        if (userId) {
+            const blockedVendors = await BlockedVendor.findAll({ where: { userId } });
+            blockedVendorIds = blockedVendors.map(bv => bv.vendorId);
+        }
+
         // Get today's date (start of the day)
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -585,6 +633,11 @@ export const getAuctionProducts = async (req: Request, res: Response): Promise<v
         }
         if (storeId) {
             whereConditions.storeId = storeId; // Filter by store ID if provided
+        }
+
+        // Add blocked vendor filter if user has blocked vendors
+        if (blockedVendorIds.length > 0) {
+            whereConditions.vendorId = { [Op.notIn]: blockedVendorIds };
         }
 
         // Fetch auction products based on conditions
@@ -646,7 +699,7 @@ export const getAuctionProducts = async (req: Request, res: Response): Promise<v
         });
 
         // Return the results as JSON response
-        res.json({ data: products });
+        res.json({ data: formattedProducts });
     } catch (error) {
         logger.error("Error fetching auction products:", error);
         res.status(500).json({ message: "Could not fetch auction products." });
@@ -662,14 +715,29 @@ export const getAuctionProductById = async (
     const userId = (req as AuthenticatedRequest).user?.id; // Get the authenticated user's ID
 
     try {
+        // Blocked vendor exclusion logic
+        let blockedVendorIds: string[] = [];
+        if (userId) {
+            const blockedVendors = await BlockedVendor.findAll({ where: { userId } });
+            blockedVendorIds = blockedVendors.map(bv => bv.vendorId);
+        }
+
+        // Build where clause
+        const whereClause: any = {
+            [Op.or]: [
+                { id: auctionproductId },
+                { SKU: auctionproductId }, // Replace 'SKU' with the actual SKU column name if different
+            ],
+        };
+
+        // Add blocked vendor filter if user has blocked vendors
+        if (blockedVendorIds.length > 0) {
+            whereClause.vendorId = { [Op.notIn]: blockedVendorIds };
+        }
+
         // Fetch the main product by ID or SKU
         const product = await AuctionProduct.findOne({
-            where: {
-                [Op.or]: [
-                    { id: auctionproductId },
-                    { SKU: auctionproductId }, // Replace 'SKU' with the actual SKU column name if different
-                ],
-            },
+            where: whereClause,
             include: [
                 {
                     model: User,

@@ -45,9 +45,6 @@ const JwtService = {
 
   jwtGetToken: (request: Request): string | undefined => {
     try {
-      if (process.env.SERVER_JWT !== "true") {
-        throw new Error("[JWT] JWT flag is not set");
-      }
       const authHeader = request.headers.authorization;
       if (!authHeader || !authHeader.startsWith("Bearer ")) {
         throw new Error("[JWT] JWT token not provided");

@@ -16,7 +16,6 @@ import VendorSubscription from "../models/vendorsubscription";
 import UserNotificationSetting from "../models/usernotificationsetting";
 import Notification from "../models/notification";
 import passport from "passport";
-import { createAdminNotification } from '../services/notification.service';
 
 export const index = async (req: Request, res: Response) => {
   res.status(200).json({
@@ -125,13 +124,6 @@ export const vendorRegister = async (
       type: notificationType,
     });
 
-    // Admin notification (non-blocking)
-    createAdminNotification(
-      'new_vendor_registration',
-      `New vendor registered: ${email}`,
-      { userId: newUser.id, email }
-    );
-
     // Return a success response
     res.status(200).json({
       message:
@@ -223,13 +215,6 @@ export const customerRegister = async (
       message: notificationMessage,
       type: notificationType,
     });
-
-    // Admin notification (non-blocking)
-    createAdminNotification(
-      'new_customer_registration',
-      `New customer registered: ${email}`,
-      { userId: newUser.id, email }
-    );
 
     // Return a success response
     res.status(200).json({

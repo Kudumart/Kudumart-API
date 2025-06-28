@@ -84,5 +84,7 @@ userRoutes.get("/view/review", authMiddleware, userController.getSingleReview);
 userRoutes.post('/products/:productId/report', authMiddleware, userController.reportProduct);
 
 userRoutes.post('/block/vendor', authMiddleware, userController.blockVendor);
+userRoutes.delete('/block/vendor', authMiddleware, userController.unblockVendor);
+userRoutes.get('/blocked/vendors', authMiddleware, userController.getBlockedVendors);
 
 export default userRoutes;

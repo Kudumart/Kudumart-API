@@ -14,10 +14,6 @@ const authMiddleware = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    if (process.env.SERVER_JWT === "false") {
-      return next();
-    }
-
     const token = JwtService.jwtGetToken(req);
 
     if (!token) {

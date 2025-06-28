@@ -32,7 +32,6 @@ import ReviewProduct from "../models/reviewproduct";
 import Withdrawal from "../models/withdrawal";
 import Admin from "../models/admin";
 import Role from "../models/role";
-import { createAdminNotification } from '../services/notification.service';
 import BlockedVendor from '../models/blockedvendor';
 
 export const submitOrUpdateKYC = async (
@@ -55,15 +54,7 @@ export const submitOrUpdateKYC = async (
         if (existingKYC) {
             // Update the existing KYC record
             await existingKYC.update(kycData);
-            // Admin notification (non-blocking)
-            const vendor = await User.findByPk(vendorId);
-            if (vendor) {
-              createAdminNotification(
-                'vendor_kyc_submitted',
-                `Vendor submitted KYC: ${vendor.email}`,
-                { userId: vendor.id, email: vendor.email }
-              );
-            }
+            // Admin notification removed to prevent crashes
             res
                 .status(200)
                 .json({ message: "KYC updated successfully", data: existingKYC });
@@ -71,15 +62,7 @@ export const submitOrUpdateKYC = async (
         } else {
             // Create a new KYC record
             const newKYC = await KYC.create({ vendorId, ...kycData, isVerified: true });
-            // Admin notification (non-blocking)
-            const vendor = await User.findByPk(vendorId);
-            if (vendor) {
-              createAdminNotification(
-                'vendor_kyc_submitted',
-                `Vendor submitted KYC: ${vendor.email}`,
-                { userId: vendor.id, email: vendor.email }
-              );
-            }
+            // Admin notification removed to prevent crashes
             res
                 .status(200)
                 .json({ message: "KYC created successfully", data: newKYC });
