@@ -4,6 +4,7 @@ class BlockedProduct extends Model {
   public id!: string;
   public userId!: string;
   public productId!: string;
+  public reason?: string; // Reason for blocking the product
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 
@@ -36,6 +37,11 @@ const initBlockedProduct = (sequelize: Sequelize) => {
       productId: {
         type: DataTypes.UUID,
         allowNull: false,
+      },
+      reason: {
+        type: DataTypes.STRING,
+        allowNull: true, // Reason is optional
+        comment: 'Reason for blocking the product',
       },
     },
     {

@@ -27,6 +27,11 @@ module.exports = {
         },
         onDelete: 'CASCADE',
       },
+      reason: {
+        type: Sequelize.STRING,
+        allowNull: true,
+        comment: 'Reason for blocking the product',
+      },
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE,
