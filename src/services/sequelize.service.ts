@@ -25,7 +25,6 @@ const sequelizeService = {
         process.env.DB_PASS!,
         {
           host: process.env.DB_HOST!,
-          port: 8889,
           dialect: (process.env.DB_DIALECT as any) || 'mysql',
           logging: false,
           define: {
