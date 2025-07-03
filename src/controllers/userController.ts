@@ -1326,10 +1326,10 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  if (!refId) {
-    res.status(400).json({ message: 'Payment reference ID is required' });
-    return;
-  }
+  // if (!refId) {
+  //   res.status(400).json({ message: 'Payment reference ID is required' });
+  //   return;
+  // }
 
   if (!shippingAddress) {
     res.status(400).json({ message: 'Shipping address is required' });
@@ -1355,17 +1355,17 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
     const PAYSTACK_SECRET_KEY = paymentGateway.secretKey;
 
     // Verify payment reference with Paystack
-    const verificationResponse = await verifyPayment(
-      refId,
-      PAYSTACK_SECRET_KEY
-    );
+    // const verificationResponse = await verifyPayment(
+    //   refId,
+    //   PAYSTACK_SECRET_KEY
+    // );
 
-    if (verificationResponse.status !== 'success') {
-      res.status(400).json({ message: 'Payment verification failed.' });
-      return;
-    }
+    // if (verificationResponse.status !== 'success') {
+    //   res.status(400).json({ message: 'Payment verification failed.' });
+    //   return;
+    // }
 
-    const paymentData = verificationResponse;
+    // const paymentData = verificationResponse;
 
     // Fetch cart items
     const cartItems = await Cart.findAll({
@@ -1544,18 +1544,18 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Create payment record
-    const payment = await Payment.create(
-      {
-        orderId: order.id,
-        refId,
-        amount: paymentData.amount / 100,
-        currency: paymentData.currency,
-        status: paymentData.status,
-        channel: paymentData.channel,
-        paymentDate: paymentData.transaction_date,
-      },
-      { transaction }
-    );
+    // const payment = await Payment.create(
+    //   {
+    //     orderId: order.id,
+    //     refId,
+    //     amount: paymentData.amount / 100,
+    //     currency: paymentData.currency,
+    //     status: paymentData.status,
+    //     channel: paymentData.channel,
+    //     paymentDate: paymentData.transaction_date,
+    //   },
+    //   { transaction }
+    // );
 
     const groupedVendorOrders: { [key: string]: OrderItem[] } = {};
 
