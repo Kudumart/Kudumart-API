@@ -1326,10 +1326,10 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  // if (!refId) {
-  //   res.status(400).json({ message: 'Payment reference ID is required' });
-  //   return;
-  // }
+  if (!refId) {
+    res.status(400).json({ message: 'Payment reference ID is required' });
+    return;
+  }
 
   if (!shippingAddress) {
     res.status(400).json({ message: 'Shipping address is required' });
@@ -1355,17 +1355,17 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
     const PAYSTACK_SECRET_KEY = paymentGateway.secretKey;
 
     // Verify payment reference with Paystack
-    // const verificationResponse = await verifyPayment(
-    //   refId,
-    //   PAYSTACK_SECRET_KEY
-    // );
+    const verificationResponse = await verifyPayment(
+      refId,
+      PAYSTACK_SECRET_KEY
+    );
 
-    // if (verificationResponse.status !== 'success') {
-    //   res.status(400).json({ message: 'Payment verification failed.' });
-    //   return;
-    // }
+    if (verificationResponse.status !== 'success') {
+      res.status(400).json({ message: 'Payment verification failed.' });
+      return;
+    }
 
-    // const paymentData = verificationResponse;
+    const paymentData = verificationResponse;
 
     // Fetch cart items
     const cartItems = await Cart.findAll({
@@ -1402,9 +1402,9 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Validate that the total amount matches the Paystack transaction amount
-    // if (paymentData.amount / 100 !== totalAmount) {
-    //   throw new Error("Payment amount does not match cart total");
-    // }
+    if (paymentData.amount / 100 !== totalAmount) {
+      throw new Error('Payment amount does not match cart total');
+    }
 
     // Create order
     const order = await Order.create(
@@ -1544,18 +1544,18 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Create payment record
-    // const payment = await Payment.create(
-    //   {
-    //     orderId: order.id,
-    //     refId,
-    //     amount: paymentData.amount / 100,
-    //     currency: paymentData.currency,
-    //     status: paymentData.status,
-    //     channel: paymentData.channel,
-    //     paymentDate: paymentData.transaction_date,
-    //   },
-    //   { transaction }
-    // );
+    const payment = await Payment.create(
+      {
+        orderId: order.id,
+        refId,
+        amount: paymentData.amount / 100,
+        currency: paymentData.currency,
+        status: paymentData.status,
+        channel: paymentData.channel,
+        paymentDate: paymentData.transaction_date,
+      },
+      { transaction }
+    );
 
     const groupedVendorOrders: { [key: string]: OrderItem[] } = {};
 
@@ -3460,7 +3460,7 @@ export const blockVendor = async (
 ): Promise<void> => {
   try {
     const userId = (req as AuthenticatedRequest).user?.id;
-    const { vendorId } = req.body;
+    const { vendorId, reason } = req.body; // Accept reason from request body
 
     if (!vendorId) {
       res.status(400).json({ message: 'vendorId is required.' });
@@ -3484,7 +3484,7 @@ export const blockVendor = async (
       return;
     }
 
-    await BlockedVendor.create({ userId, vendorId });
+    await BlockedVendor.create({ userId, vendorId, reason }); // Save reason when blocking vendor
     res.status(200).json({ message: 'Vendor blocked successfully.' });
   } catch (error) {
     res.status(500).json({ message: 'Server error.' });

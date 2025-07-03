@@ -153,16 +153,10 @@ export const products = async (req: Request, res: Response): Promise<void> => {
     if (userId) {
       const blockedVendors = await BlockedVendor.findAll({ where: { userId } });
       blockedVendorIds = blockedVendors.map((bv: any) => bv.vendorId);
-      if (blockedVendorIds.length > 0) {
-        whereClause.vendorId = { [Op.notIn]: blockedVendorIds };
-      }
-      // Exclude products blocked by the user
-      whereClause.id = {
-        ...(whereClause.id || {}),
-        [Op.notIn]: Sequelize.literal(
-          `(SELECT "productId" FROM blocked_products WHERE "userId" = '${userId}')`
-        ),
-      };
+    }
+    // Exclude products from blocked vendors
+    if (blockedVendorIds.length > 0) {
+      whereClause.vendorId = { [Op.notIn]: blockedVendorIds };
     }
 
     // Construct the where clause for subCategory with conditional categoryId and subCategoryName
