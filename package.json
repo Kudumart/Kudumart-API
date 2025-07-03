@@ -5,7 +5,7 @@
   "main": "../index.ts",
   "scripts": {
     "start": "node dist/index.js",
-    "dev": "nodemon",
+    "dev": "nodemon src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "migrate": "ts-node -r tsconfig-paths/register ./node_modules/.bin/sequelize-cli db:migrate",
     "migrate:seeder": "ts-node -r tsconfig-paths/register ./node_modules/.bin/sequelize-cli db:seed:all"
