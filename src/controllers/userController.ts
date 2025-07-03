@@ -2712,7 +2712,7 @@ export const updateOrderStatus = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  const { status, orderItemId } = req.body;
+  const { status, orderItemId, deliveryCode } = req.body;
 
   const userId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID from middleware
 
@@ -2799,6 +2799,21 @@ export const updateOrderStatus = async (
       return;
     }
 
+    // If the order is delivered, verify the delivery code
+    if (status === 'delivered') {
+      if (!deliveryCode) {
+        await transaction.rollback();
+        res
+          .status(400)
+          .json({ message: 'Delivery code is required to mark as delivered.' });
+        return;
+      }
+      if (!mainOrder.deliveryCode || deliveryCode !== mainOrder.deliveryCode) {
+        await transaction.rollback();
+        res.status(400).json({ message: 'Invalid delivery code.' });
+        return;
+      }
+    }
     // Update the order status
     order.status = status;
     // If status is shipped, generate delivery code and email customer
