@@ -1497,7 +1497,18 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
           { transaction }
         );
 
-        const message = emailTemplates.newOrderNotification(vendor, order);
+        // Fetch user before the for loop so it's available
+        const user = await User.findByPk(vendor.id, { transaction });
+        if (!user) {
+          throw new Error(`User not found.`);
+        }
+
+        const message = emailTemplates.newOrderNotification(
+          vendor,
+          order,
+          user,
+          cartItem.product
+        );
 
         try {
           await sendMail(
@@ -1594,7 +1605,8 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
       { transaction }
     );
 
-    const user = await User.findByPk(userId, { transaction }); // Add transaction scope
+    // Fetch user before the for loop so it's available
+    const user = await User.findByPk(userId, { transaction });
     if (!user) {
       throw new Error(`User not found.`);
     }
@@ -1747,10 +1759,16 @@ export const checkoutDollar = async (
     );
 
     // Process order items per vendor
+    // Fetch user before the vendorOrders loop so it's available and not null
+    const user = await User.findByPk(userId, { transaction });
+    if (!user) {
+      throw new Error('User not found.');
+    }
     for (const vendorId in vendorOrders) {
       const vendorOrderItems = vendorOrders[vendorId];
-
+      // Loop through each order item for the current vendor
       for (const item of vendorOrderItems) {
+        // Create the order item in the database
         await OrderItem.create(
           {
             vendorId: item.vendorId,
@@ -1761,6 +1779,35 @@ export const checkoutDollar = async (
           },
           { transaction }
         );
+
+        // Fetch vendor object
+        const vendor = await User.findByPk(item.vendorId, { transaction });
+        if (!vendor) {
+          throw new Error(`Vendor not found.`);
+        }
+        // Fetch user (customer) object
+        const user = await User.findByPk(order.userId, { transaction });
+        if (!user) {
+          throw new Error(`User not found.`);
+        }
+
+        // Create the email message for the current order item
+        const message = emailTemplates.newOrderNotification(
+          vendor,
+          order,
+          user,
+          item.product
+        );
+        try {
+          // Send the email to the vendor
+          await sendMail(
+            vendor.email,
+            `${process.env.APP_NAME} - New Order Received`,
+            message
+          );
+        } catch (emailError) {
+          logger.error('Error sending email:', emailError);
+        }
       }
     }
 
@@ -1783,11 +1830,6 @@ export const checkoutDollar = async (
 
     // **Send Notifications**
 
-    const user = await User.findByPk(userId, { transaction }); // Add transaction scope
-    if (!user) {
-      throw new Error(`User not found.`);
-    }
-
     // Notify the Buyer
     await Notification.create(
       {
@@ -1805,7 +1847,10 @@ export const checkoutDollar = async (
 
     // Notify Each Vendor/Admin
     for (const vendorId in vendorOrders) {
-      try {
+      const vendorOrderItems = vendorOrders[vendorId]; // Get all order items for this vendor
+      for (const item of vendorOrderItems) {
+        // Loop through each order item for the current vendor
+
         const vendor = await User.findByPk(vendorId);
         const admin = await Admin.findByPk(vendorId);
 
@@ -1825,7 +1870,12 @@ export const checkoutDollar = async (
             { transaction }
           );
 
-          const message = emailTemplates.newOrderNotification(vendor, order);
+          const message = emailTemplates.newOrderNotification(
+            vendor,
+            order,
+            user,
+            item.product
+          );
 
           try {
             await sendMail(
@@ -1862,8 +1912,6 @@ export const checkoutDollar = async (
             logger.error('Error sending email:', emailError);
           }
         }
-      } catch (notificationError) {
-        logger.error(`Failed to notify vendor ${vendorId}:`, notificationError);
       }
     }
 

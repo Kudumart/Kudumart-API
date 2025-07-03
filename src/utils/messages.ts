@@ -1,12 +1,12 @@
 // utils/emailTemplates.ts
 
-import Admin from "../models/admin";
-import Applicant from "../models/applicant";
-import AuctionProduct from "../models/auctionproduct";
-import Job from "../models/job";
-import OrderItem from "../models/orderitem";
-import Order from "../models/order";
-import User from "../models/user";
+import Admin from '../models/admin';
+import Applicant from '../models/applicant';
+import AuctionProduct from '../models/auctionproduct';
+import Job from '../models/job';
+import OrderItem from '../models/orderitem';
+import Order from '../models/order';
+import User from '../models/user';
 
 export const emailTemplates = {
   verifyEmail: (user: User, code: string): string => {
@@ -1844,12 +1844,12 @@ export const emailTemplates = {
   },
 
   kycStatusUpdate: (
-    user: User, 
-    isApproved: boolean, 
+    user: User,
+    isApproved: boolean,
     adminNote?: string
   ): string => {
     const logoUrl: string | undefined = process.env.LOGO_URL;
-  
+
     return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
@@ -2027,7 +2027,9 @@ export const emailTemplates = {
                         <tr>
                             <td class="center">
                                 <div class="logo">
-                                    <img src="${logoUrl}" alt="Logo of ${process.env.APP_NAME}" width="150px">
+                                    <img src="${logoUrl}" alt="Logo of ${
+      process.env.APP_NAME
+    }" width="150px">
                                 </div>
                             </td>
                         </tr>
@@ -2036,16 +2038,29 @@ export const emailTemplates = {
                                 <h2>KYC Status Update</h2>
                                 <p>Hi ${user.firstName} ${user.lastName},</p>
                                 <p>Your KYC submission has been reviewed.</p>
-                                <p>Status: <strong>${isApproved ? "Approved" : "Rejected"}</strong></p>
-                                ${!isApproved ? `<p>Note: ${adminNote || "No additional notes provided."}</p>` : ''}
+                                <p>Status: <strong>${
+                                  isApproved ? 'Approved' : 'Rejected'
+                                }</strong></p>
+                                ${
+                                  !isApproved
+                                    ? `<p>Note: ${
+                                        adminNote ||
+                                        'No additional notes provided.'
+                                      }</p>`
+                                    : ''
+                                }
                                 <p>Thank you for your cooperation!</p>
                                 <p>If you have any questions, feel free to reach out to our support team.</p>
-                                <p>Best regards,<br> The ${process.env.APP_NAME} Support Team.</p>
+                                <p>Best regards,<br> The ${
+                                  process.env.APP_NAME
+                                } Support Team.</p>
                             </td>
                         </tr>
                         <tr>
                             <td>
-                                <p class="footnote">For assistance, please contact us at <a href="mailto:${process.env.SUPPORT_EMAIL}">${process.env.SUPPORT_EMAIL}</a>.</p>
+                                <p class="footnote">For assistance, please contact us at <a href="mailto:${
+                                  process.env.SUPPORT_EMAIL
+                                }">${process.env.SUPPORT_EMAIL}</a>.</p>
                             </td>
                         </tr>
                     </table>
@@ -2064,7 +2079,9 @@ export const emailTemplates = {
                     <table>
                         <tr>
                             <td align="center">
-                                © <script>document.write(new Date().getFullYear())</script> <a href="#">${process.env.APP_NAME}</a>.
+                                © <script>document.write(new Date().getFullYear())</script> <a href="#">${
+                                  process.env.APP_NAME
+                                }</a>.
                             </td>
                         </tr>
                     </table>
@@ -2080,11 +2097,11 @@ export const emailTemplates = {
   },
 
   outBidNotification: (
-    highestBid: any, 
-    auctionProduct: AuctionProduct, 
+    highestBid: any,
+    auctionProduct: AuctionProduct
   ): string => {
     const logoUrl: string | undefined = process.env.LOGO_URL;
-  
+
     return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
@@ -2316,11 +2333,11 @@ export const emailTemplates = {
 
   interestNotification: (
     user: User,
-    amountPaid: number, 
-    auctionProduct: AuctionProduct, 
+    amountPaid: number,
+    auctionProduct: AuctionProduct
   ): string => {
     const logoUrl: string | undefined = process.env.LOGO_URL;
-  
+
     return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
@@ -2498,7 +2515,9 @@ export const emailTemplates = {
                         <tr>
                             <td class="center">
                                 <div class="logo">
-                                    <img src="${logoUrl}" alt="Logo of ${process.env.APP_NAME}" width="150px">
+                                    <img src="${logoUrl}" alt="Logo of ${
+      process.env.APP_NAME
+    }" width="150px">
                                 </div>
                             </td>
                         </tr>
@@ -2506,16 +2525,26 @@ export const emailTemplates = {
                             <td>
                                 <h2>Auction Interest Confirmation!</h2>
                                 <p>Hi ${user.firstName} ${user.lastName},</p>
-                                <p>Thank you for showing interest in the auction for <strong>${auctionProduct.name}</strong>.</p>
-                                <p>Your payment of <strong>${amountPaid.toFixed(2)}</strong> has been successfully recorded.</p>
-                                <p>The auction is scheduled to start on <strong>${new Date(auctionProduct.startDate).toLocaleString()}</strong>.</p>
+                                <p>Thank you for showing interest in the auction for <strong>${
+                                  auctionProduct.name
+                                }</strong>.</p>
+                                <p>Your payment of <strong>${amountPaid.toFixed(
+                                  2
+                                )}</strong> has been successfully recorded.</p>
+                                <p>The auction is scheduled to start on <strong>${new Date(
+                                  auctionProduct.startDate
+                                ).toLocaleString()}</strong>.</p>
                                 <p>Stay tuned for updates!</p>
-                                <p>Best Regards,<br>${process.env.APP_NAME} Team</p>
+                                <p>Best Regards,<br>${
+                                  process.env.APP_NAME
+                                } Team</p>
                             </td>
                         </tr>
                         <tr>
                             <td>
-                                <p class="footnote">For assistance, please contact us at <a href="mailto:${process.env.SUPPORT_EMAIL}">${process.env.SUPPORT_EMAIL}</a>.</p>
+                                <p class="footnote">For assistance, please contact us at <a href="mailto:${
+                                  process.env.SUPPORT_EMAIL
+                                }">${process.env.SUPPORT_EMAIL}</a>.</p>
                             </td>
                         </tr>
                     </table>
@@ -2534,7 +2563,9 @@ export const emailTemplates = {
                     <table>
                         <tr>
                             <td align="center">
-                                © <script>document.write(new Date().getFullYear())</script> <a href="#">${process.env.APP_NAME}</a>.
+                                © <script>document.write(new Date().getFullYear())</script> <a href="#">${
+                                  process.env.APP_NAME
+                                }</a>.
                             </td>
                         </tr>
                     </table>
@@ -2549,12 +2580,9 @@ export const emailTemplates = {
     `;
   },
 
-  applicantNotify: (
-    job: Job, 
-    application: Applicant
-  ): string => {
+  applicantNotify: (job: Job, application: Applicant): string => {
     const logoUrl: string | undefined = process.env.LOGO_URL;
-  
+
     return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
@@ -2733,7 +2761,9 @@ export const emailTemplates = {
                         <tr>
                             <td class="center">
                                 <div class="logo">
-                                    <img src="${logoUrl}" alt="Logo of ${process.env.APP_NAME}" width="150px">
+                                    <img src="${logoUrl}" alt="Logo of ${
+      process.env.APP_NAME
+    }" width="150px">
                                 </div>
                             </td>
                         </tr>
@@ -2741,18 +2771,26 @@ export const emailTemplates = {
                             <td>
                                 <h2>Application Confirmation</h2>
                                 <p>Hi ${application.name},</p>
-                                <p>Your application was sent to ${process.env.APP_NAME}</p>
+                                <p>Your application was sent to ${
+                                  process.env.APP_NAME
+                                }</p>
                                 <p><strong>${job.title}</strong></p>
                                 <p><strong>${job.location}</strong></p>
-                                <p><strong>${new Date(application.createdAt).toLocaleString()}</strong></p>
+                                <p><strong>${new Date(
+                                  application.createdAt
+                                ).toLocaleString()}</strong></p>
                                 <p>We will notify you of any updates regarding your application.</p>
                                 <p>If you have any questions, feel free to reach out to our support team.</p>
-                                <p>Best regards,<br> The ${process.env.APP_NAME} Support Team.</p>
+                                <p>Best regards,<br> The ${
+                                  process.env.APP_NAME
+                                } Support Team.</p>
                             </td>
                         </tr>
                         <tr>
                             <td>
-                                <p class="footnote">For assistance, please contact us at <a href="mailto:${process.env.SUPPORT_EMAIL}">${process.env.SUPPORT_EMAIL}</a>.</p>
+                                <p class="footnote">For assistance, please contact us at <a href="mailto:${
+                                  process.env.SUPPORT_EMAIL
+                                }">${process.env.SUPPORT_EMAIL}</a>.</p>
                             </td>
                         </tr>
                     </table>
@@ -2771,7 +2809,9 @@ export const emailTemplates = {
                     <table>
                         <tr>
                             <td align="center">
-                               <script>document.write(new Date().getFullYear())</script> © <a href="#">${process.env.APP_NAME}</a>.
+                               <script>document.write(new Date().getFullYear())</script> © <a href="#">${
+                                 process.env.APP_NAME
+                               }</a>.
                             </td>
                         </tr>
                     </table>
@@ -2787,12 +2827,12 @@ export const emailTemplates = {
   },
 
   jobOwnerMailData: (
-    job: Job, 
+    job: Job,
     creator: Admin,
     application: Applicant
   ): string => {
     const logoUrl: string | undefined = process.env.LOGO_URL;
-  
+
     return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
@@ -3031,35 +3071,42 @@ export const emailTemplates = {
   },
 
   orderConfirmationNotification: (
-    user: User, 
+    user: User,
     order: Order,
-    vendorOrders: { [key: string]: OrderItem[] }, 
+    vendorOrders: { [key: string]: OrderItem[] },
     currency: string
   ): string => {
     const logoUrl: string | undefined = process.env.LOGO_URL;
-  
-    let itemsHtml = "";
+
+    let itemsHtml = '';
 
     for (const vendorId in vendorOrders) {
-        itemsHtml += `<h4>Product Details</h4><ul>`;
-    
-        for (const item of vendorOrders[vendorId]) {
-            const product = item.product as { id: string; sku?: string; name: string; price: number };
-            
-            // Check if SKU is empty, use product.id instead
-            const productId = product.sku && product.sku.trim() ? product.sku : product.id;
-    
-            itemsHtml += `
+      itemsHtml += `<h4>Product Details</h4><ul>`;
+
+      for (const item of vendorOrders[vendorId]) {
+        const product = item.product as {
+          id: string;
+          sku?: string;
+          name: string;
+          price: number;
+        };
+
+        // Check if SKU is empty, use product.id instead
+        const productId =
+          product.sku && product.sku.trim() ? product.sku : product.id;
+
+        itemsHtml += `
                 <li><strong>Product ID:</strong> ${productId} </li>
                 <li><strong>Product:</strong> ${product.name} </li>
                 <li><strong>Quantity:</strong> ${item.quantity} </li>
-                <li><strong>Price:</strong> ${currency}${Number(item.price).toFixed(2)}</li>
+                <li><strong>Price:</strong> ${currency}${Number(
+          item.price
+        ).toFixed(2)}</li>
             `;
-        }
-    
-        itemsHtml += `</ul>`;
+      }
+
+      itemsHtml += `</ul>`;
     }
-    
 
     return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     <html xmlns="http://www.w3.org/1999/xhtml">
@@ -3290,11 +3337,12 @@ export const emailTemplates = {
   },
 
   newOrderNotification: (
-    vendor: User, 
-    order: Order, 
+    vendor: User,
+    order: Order,
+    customer?: User, // Add customer as optional
+    product?: any // Add product/orderItem as optional
   ): string => {
     const logoUrl: string | undefined = process.env.LOGO_URL;
-  
     return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
@@ -3309,159 +3357,36 @@ export const emailTemplates = {
                 font-size: 100%;
                 line-height: 1.6;
             }
-
-            img { 
-                max-width: 100%; 
-            }
-
-            body {
-                -webkit-font-smoothing:antialiased; 
-                -webkit-text-size-adjust:none; 
-                width: 100%!important; 
-                height: 100%;
-            }
-
-            a { 
-                color: #348eda;
-            }
-
-            .btn-primary{
-                text-decoration:none;
-                color: #FFF;
-                background-color: #348eda;
-                border:solid #348eda;
-                border-width:10px 20px;
-                line-height:2;
-                font-weight:bold;
-                margin-right:10px;
-                text-align:center;
-                cursor:pointer;
-                display: inline-block;
-                border-radius: 25px;
-            }
-
-            .last { 
-                margin-bottom: 0;
-            }
-
-            .first{
-                margin-top: 0;
-            }
-
-            .padding{
-                padding:10px 0;
-            }
-
-            table.body-wrap { 
-                width: 100%;
-                padding: 20px;
-            }
-
-            table.body-wrap .container{
-                border: 1px solid #f0f0f0;
-            }
-
-            table.footer-wrap { 
-                width: 100%;	
-                clear:both!important;
-            }
-
-            .footer-wrap .container p {
-                font-size:12px;
-                color:#666;
-            }
-
-            table.footer-wrap a{
-                color: #999;
-            }
-
-            h1,h2,h3{
-                font-family: "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif; 
-                line-height: 1.1; 
-                margin-bottom:15px; 
-                color:#000;
-                margin: 40px 0 10px;
-                line-height: 1.2;
-                font-weight:200; 
-            }
-
-            h1 {
-                font-size: 36px;
-            }
-            h2 {
-                font-size: 28px;
-                text-align:center;
-            }
-            h3 {
-                font-size: 22px;
-            }
-
-            p, ul, ol { 
-                margin-bottom: 10px; 
-                font-weight: normal; 
-                font-size:15px;
-            }
-
-            ul li, ol li {
-                margin-left:5px;
-                list-style-position: inside;
-            }
-
-            .container {
-                display:block!important;
-                max-width:600px!important;
-                margin:0 auto!important; 
-                clear:both!important;
-            }
-
-            .body-wrap .container{
-                padding:20px;
-            }
-
-            .content {
-                max-width:600px;
-                margin:0 auto;
-                display:block; 
-            }
-
-            .content table { 
-                width: 100%; 
-            }
-
-            .center{
-                text-align:center;
-            }
-
-            .left{
-                text-align:left;
-            }
-
-            .logo{
-                display:inline-block;
-                width:399px;
-                height:85px;
-                max-width:90%;
-            }
-
-            .footnote{
-                font-size:14px;
-                color:#444;
-            }
-
-            @media all and (min-resolution: 192dpi), (-webkit-min-device-pixel-ratio: 2), (min--moz-device-pixel-ratio: 2), (-o-min-device-pixel-ratio: 2/1), (min-device-pixel-ratio: 2), (min-resolution: 2dppx){
-                .logo{
-                    background-image:url(chartblocks@2x.png);
-                    background-size:100% auto;
-                    background-repeat:no-repeat;
-                }
-                .logo img{
-                    visibility:hidden;
-                }
-            }        
+            img { max-width: 100%; }
+            body { -webkit-font-smoothing:antialiased; -webkit-text-size-adjust:none; width: 100%!important; height: 100%; }
+            a { color: #348eda; }
+            .btn-primary{ text-decoration:none; color: #FFF; background-color: #348eda; border:solid #348eda; border-width:10px 20px; line-height:2; font-weight:bold; margin-right:10px; text-align:center; cursor:pointer; display: inline-block; border-radius: 25px; }
+            .last { margin-bottom: 0; }
+            .first{ margin-top: 0; }
+            .padding{ padding:10px 0; }
+            table.body-wrap { width: 100%; padding: 20px; }
+            table.body-wrap .container{ border: 1px solid #f0f0f0; }
+            table.footer-wrap { width: 100%; clear:both!important; }
+            .footer-wrap .container p { font-size:12px; color:#666; }
+            table.footer-wrap a{ color: #999; }
+            h1,h2,h3{ font-family: "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif; line-height: 1.1; margin-bottom:15px; color:#000; margin: 40px 0 10px; line-height: 1.2; font-weight:200; }
+            h1 { font-size: 36px; }
+            h2 { font-size: 28px; text-align:center; }
+            h3 { font-size: 22px; }
+            p, ul, ol { margin-bottom: 10px; font-weight: normal; font-size:15px; }
+            ul li, ol li { margin-left:5px; list-style-position: inside; }
+            .container { display:block!important; max-width:600px!important; margin:0 auto!important; clear:both!important; }
+            .body-wrap .container{ padding:20px; }
+            .content { max-width:600px; margin:0 auto; display:block; }
+            .content table { width: 100%; }
+            .center{ text-align:center; }
+            .left{ text-align:left; }
+            .logo{ display:inline-block; width:399px; height:85px; max-width:90%; }
+            .footnote{ font-size:14px; color:#444; }
+            @media all and (min-resolution: 192dpi), (-webkit-min-device-pixel-ratio: 2), (min--moz-device-pixel-ratio: 2), (-o-min-device-pixel-ratio: 2/1), (min-device-pixel-ratio: 2), (min-resolution: 2dppx){ .logo{ background-image:url(chartblocks@2x.png); background-size:100% auto; background-repeat:no-repeat; } .logo img{ visibility:hidden; } }        
         </style>
     </head>
     <body bgcolor="#f6f6f6">
-    
     <!-- body -->
     <table class="body-wrap">
         <tr>
@@ -3472,22 +3397,69 @@ export const emailTemplates = {
                         <tr>
                             <td class="center">
                                 <div class="logo">
-                                    <img src="${logoUrl}" alt="Logo of ${process.env.APP_NAME}" width="150px">
+                                    <img src="${logoUrl}" alt="Logo of ${
+      process.env.APP_NAME
+    }" width="150px">
                                 </div>
                             </td>
                         </tr>
                         <tr>
                             <td>
                                 <h2>New Order Received</h2>
-                                <p>Hi ${vendor.firstName} ${vendor.lastName},</p>
-                                <p>A new order (TRACKING NO: <strong>${order.trackingNumber}</strong>) has been placed for one of your products.</p>
+                                <p>Hi ${vendor.firstName} ${
+      vendor.lastName
+    },</p>
+                                <p>A new order (TRACKING NO: <strong>${
+                                  order.trackingNumber
+                                }</strong>) has been placed for one of your products.</p>
+                                ${
+                                  customer
+                                    ? `<h3>Customer Details</h3>
+                                <ul>
+                                    <li><strong>Name:</strong> ${
+                                      customer.firstName
+                                    } ${customer.lastName}</li>
+                                    <li><strong>Email:</strong> ${
+                                      customer.email
+                                    }</li>
+                                    <li><strong>Phone:</strong> ${
+                                      customer.phoneNumber || ''
+                                    }</li>
+                                </ul>`
+                                    : ''
+                                }
+                                ${
+                                  product
+                                    ? `<h3>Product Details</h3>
+                                <ul>
+                                    <li><strong>Product Name:</strong> ${
+                                      product.name ||
+                                      product.product?.name ||
+                                      ''
+                                    }</li>
+                                    <li><strong>SKU:</strong> ${
+                                      product.sku || product.product?.sku || ''
+                                    }</li>
+                                    <li><strong>Quantity:</strong> ${
+                                      product.quantity || ''
+                                    }</li>
+                                    <li><strong>Price:</strong> ${
+                                      product.price || ''
+                                    }</li>
+                                </ul>`
+                                    : ''
+                                }
                                 <p>If you have any questions, feel free to contact our support team.</p>
-                                <p>Best regards,<br> The ${process.env.APP_NAME} Team.</p>
+                                <p>Best regards,<br> The ${
+                                  process.env.APP_NAME
+                                } Team.</p>
                             </td>
                         </tr>
                         <tr>
                             <td>
-                                <p class="footnote">For assistance, please contact us at <a href="mailto:${process.env.SUPPORT_EMAIL}">${process.env.SUPPORT_EMAIL}</a>.</p>
+                                <p class="footnote">For assistance, please contact us at <a href="mailto:${
+                                  process.env.SUPPORT_EMAIL
+                                }">${process.env.SUPPORT_EMAIL}</a>.</p>
                             </td>
                         </tr>
                     </table>
@@ -3496,7 +3468,6 @@ export const emailTemplates = {
             <td></td>
         </tr>
     </table>
-    
     <!-- footer -->
     <table class="footer-wrap">
         <tr>
@@ -3506,7 +3477,9 @@ export const emailTemplates = {
                     <table>
                         <tr>
                             <td align="center">
-                                © <script>document.write(new Date().getFullYear())</script> <a href="#">${process.env.APP_NAME}</a>.
+                                © <script>document.write(new Date().getFullYear())</script> <a href="#">${
+                                  process.env.APP_NAME
+                                }</a>.
                             </td>
                         </tr>
                     </table>
@@ -3515,18 +3488,13 @@ export const emailTemplates = {
             <td></td>
         </tr>
     </table>
-    
     </body>
-    </html>
-    `;
+    </html>`;
   },
 
-  newOrderAdminNotification: (
-    admin: Admin, 
-    order: Order, 
-  ): string => {
+  newOrderAdminNotification: (admin: Admin, order: Order): string => {
     const logoUrl: string | undefined = process.env.LOGO_URL;
-  
+
     return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
@@ -3754,12 +3722,12 @@ export const emailTemplates = {
   },
 
   auctionProductConfirmationNotification: (
-    user: User, 
-    auction: AuctionProduct, 
+    user: User,
+    auction: AuctionProduct,
     winningBid: number
   ): string => {
     const logoUrl: string | undefined = process.env.LOGO_URL;
-  
+
     return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
@@ -3994,7 +3962,7 @@ export const emailTemplates = {
   },
 
   orderStatusUpdateNotification: (
-    user: User, 
+    user: User,
     status: string,
     productName: string
   ): string => {
@@ -4177,7 +4145,9 @@ export const emailTemplates = {
                         <tr>
                             <td class="center">
                                 <div class="logo">
-                                    <img src="${logoUrl}" alt="Logo of ${process.env.APP_NAME}" width="150px">
+                                    <img src="${logoUrl}" alt="Logo of ${
+      process.env.APP_NAME
+    }" width="150px">
                                 </div>
                             </td>
                         </tr>
@@ -4185,15 +4155,21 @@ export const emailTemplates = {
                             <td>
                                 <h2>Order Status</h2>
                                 <p>Hi ${user.firstName} ${user.lastName},</p>
-                                <p>Your order for product: <strong>${productName ?? "your item"}</strong> has been updated to <strong>${status}</strong>.</p>
+                                <p>Your order for product: <strong>${
+                                  productName ?? 'your item'
+                                }</strong> has been updated to <strong>${status}</strong>.</p>
                                 <p>Thank you for shopping with us.</p>
                                 <p>For any questions, feel free to contact our support team.</p>
-                                <p>Best regards,<br> The ${process.env.APP_NAME} Team.</p>
+                                <p>Best regards,<br> The ${
+                                  process.env.APP_NAME
+                                } Team.</p>
                             </td>
                         </tr>
                         <tr>
                             <td>
-                                <p class="footnote">For assistance, please contact us at <a href="mailto:${process.env.SUPPORT_EMAIL}">${process.env.SUPPORT_EMAIL}</a>.</p>
+                                <p class="footnote">For assistance, please contact us at <a href="mailto:${
+                                  process.env.SUPPORT_EMAIL
+                                }">${process.env.SUPPORT_EMAIL}</a>.</p>
                             </td>
                         </tr>
                     </table>
@@ -4212,7 +4188,9 @@ export const emailTemplates = {
                     <table>
                         <tr>
                             <td align="center">
-                                © <script>document.write(new Date().getFullYear())</script> <a href="#">${process.env.APP_NAME}</a>.
+                                © <script>document.write(new Date().getFullYear())</script> <a href="#">${
+                                  process.env.APP_NAME
+                                }</a>.
                             </td>
                         </tr>
                     </table>
@@ -4226,6 +4204,6 @@ export const emailTemplates = {
     </html>
     `;
   },
-  
+
   // Add more templates as needed
 };
