@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getSingleReview = exports.getProductReviews = exports.updateReview = exports.addReview = exports.getSavedProducts = exports.toggleSaveProduct = exports.getPaymentDetails = exports.updateOrderStatus = exports.viewOrderItem = exports.getAllOrderItems = exports.getAllOrders = exports.userMarkNotificationAsRead = exports.getUserNotifications = exports.becomeVendor = exports.actionProductBidders = exports.placeBid = exports.getAllAuctionProductsInterest = exports.showInterest = exports.checkoutDollar = exports.checkout = exports.getActivePaymentGateways = exports.clearCart = exports.getCartContents = exports.removeCartItem = exports.updateCartItem = exports.addItemToCart = exports.markAsReadHandler = exports.deleteMessageHandler = exports.saveMessage = exports.sendMessageHandler = exports.getAllConversationMessages = exports.getConversations = exports.updateUserNotificationSettings = exports.getUserNotificationSettings = exports.confirmPhoneNumberUpdate = exports.updateProfilePhoneNumber = exports.confirmEmailUpdate = exports.updateProfileEmail = exports.updatePassword = exports.updateProfilePhoto = exports.updateProfile = exports.profile = exports.logout = void 0;
+exports.blockProduct = exports.getBlockedVendors = exports.unblockVendor = exports.blockVendor = exports.reportProduct = exports.deleteAccount = exports.getSingleReview = exports.getProductReviews = exports.updateReview = exports.addReview = exports.getSavedProducts = exports.toggleSaveProduct = exports.getPaymentDetails = exports.updateOrderStatus = exports.viewOrderItem = exports.getAllOrderItems = exports.getAllOrders = exports.userMarkNotificationAsRead = exports.getUserNotifications = exports.becomeVendor = exports.actionProductBidders = exports.placeBid = exports.getAllAuctionProductsInterest = exports.showInterest = exports.checkoutDollar = exports.checkout = exports.getActivePaymentGateways = exports.clearCart = exports.getCartContents = exports.removeCartItem = exports.updateCartItem = exports.addItemToCart = exports.markAsReadHandler = exports.deleteMessageHandler = exports.saveMessage = exports.sendMessageHandler = exports.getAllConversationMessages = exports.getConversations = exports.updateUserNotificationSettings = exports.getUserNotificationSettings = exports.confirmPhoneNumberUpdate = exports.updateProfilePhoneNumber = exports.confirmEmailUpdate = exports.updateProfileEmail = exports.updatePassword = exports.updateProfilePhoto = exports.updateProfile = exports.profile = exports.logout = void 0;
 const user_1 = __importDefault(require("../models/user"));
 const sequelize_1 = require("sequelize");
 const helpers_1 = require("../utils/helpers");
@@ -45,26 +45,31 @@ const subcategory_1 = __importDefault(require("../models/subcategory"));
 const admin_1 = __importDefault(require("../models/admin"));
 const saveproduct_1 = __importDefault(require("../models/saveproduct"));
 const reviewproduct_1 = __importDefault(require("../models/reviewproduct"));
+const crypto_1 = __importDefault(require("crypto"));
+const productreport_1 = __importDefault(require("../models/productreport"));
+const blockedvendor_1 = __importDefault(require("../models/blockedvendor"));
+const kyc_1 = __importDefault(require("../models/kyc"));
+const blockedproduct_1 = __importDefault(require("../models/blockedproduct"));
 const logout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Get the token from the request
         const token = jwt_service_1.default.jwtGetToken(req);
         if (!token) {
             res.status(400).json({
-                message: "Token not provided",
+                message: 'Token not provided',
             });
             return;
         }
         // Blacklist the token to prevent further usage
         yield jwt_service_1.default.jwtBlacklistToken(token);
         res.status(200).json({
-            message: "Logged out successfully.",
+            message: 'Logged out successfully.',
         });
     }
     catch (error) {
         logger_1.default.error(error);
         res.status(500).json({
-            message: "Server error during logout.",
+            message: 'Server error during logout.',
         });
     }
 });
@@ -75,30 +80,30 @@ const profile = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Assuming the user ID is passed in the URL params
         const user = yield user_1.default.findByPk(userId);
         if (!user) {
-            res.status(404).json({ message: "User not found." });
+            res.status(404).json({ message: 'User not found.' });
             return;
         }
         res.status(200).json({
-            message: "Profile retrieved successfully.",
+            message: 'Profile retrieved successfully.',
             data: user,
         });
     }
     catch (error) {
-        logger_1.default.error("Error retrieving user profile:", error);
+        logger_1.default.error('Error retrieving user profile:', error);
         res.status(500).json({
-            message: "Server error during retrieving profile.",
+            message: 'Server error during retrieving profile.',
         });
     }
 });
 exports.profile = profile;
 const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _b;
     try {
         const { firstName, lastName, dateOfBirth, gender, location } = req.body;
-        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Assuming the user ID is passed in the URL params
+        const userId = (_b = req.user) === null || _b === void 0 ? void 0 : _b.id; // Assuming the user ID is passed in the URL params
         const user = yield user_1.default.findByPk(userId);
         if (!user) {
-            res.status(404).json({ message: "User not found." });
+            res.status(404).json({ message: 'User not found.' });
             return;
         }
         // Update user profile information
@@ -111,59 +116,59 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         user.location = location || user.location;
         yield user.save();
         res.status(200).json({
-            message: "Profile updated successfully.",
+            message: 'Profile updated successfully.',
             data: user,
         });
     }
     catch (error) {
-        logger_1.default.error("Error updating user profile:", error);
+        logger_1.default.error('Error updating user profile:', error);
         res.status(500).json({
-            message: "Server error during profile update.",
+            message: 'Server error during profile update.',
         });
     }
 });
 exports.updateProfile = updateProfile;
 const updateProfilePhoto = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _c;
     try {
         const { photo } = req.body;
-        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Assuming the user ID is passed in the URL params
+        const userId = (_c = req.user) === null || _c === void 0 ? void 0 : _c.id; // Assuming the user ID is passed in the URL params
         const user = yield user_1.default.findByPk(userId);
         if (!user) {
-            res.status(404).json({ message: "User not found." });
+            res.status(404).json({ message: 'User not found.' });
             return;
         }
         // Update user profile photo
         user.photo = photo || user.photo;
         yield user.save();
         res.status(200).json({
-            message: "Profile photo updated successfully.",
+            message: 'Profile photo updated successfully.',
             data: user,
         });
     }
     catch (error) {
-        logger_1.default.error("Error updating user profile photo:", error);
+        logger_1.default.error('Error updating user profile photo:', error);
         res.status(500).json({
-            message: "Server error during profile photo update.",
+            message: 'Server error during profile photo update.',
         });
     }
 });
 exports.updateProfilePhoto = updateProfilePhoto;
 const updatePassword = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _d;
     const { oldPassword, newPassword, confirmNewPassword } = req.body;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Using optional chaining to access userId
+    const userId = (_d = req.user) === null || _d === void 0 ? void 0 : _d.id; // Using optional chaining to access userId
     try {
         // Find the user
-        const user = yield user_1.default.scope("auth").findByPk(userId);
+        const user = yield user_1.default.scope('auth').findByPk(userId);
         if (!user) {
-            res.status(404).json({ message: "User not found." });
+            res.status(404).json({ message: 'User not found.' });
             return;
         }
         // Check if the old password is correct
         const isMatch = yield user.checkPassword(oldPassword);
         if (!isMatch) {
-            res.status(400).json({ message: "Old password is incorrect." });
+            res.status(400).json({ message: 'Old password is incorrect.' });
             return;
         }
         // Update the password
@@ -175,12 +180,12 @@ const updatePassword = (req, res) => __awaiter(void 0, void 0, void 0, function*
             yield (0, mail_service_1.sendMail)(user.email, `${process.env.APP_NAME} - Password Reset Notification`, message);
         }
         catch (emailError) {
-            logger_1.default.error("Error sending email:", emailError); // Log error for internal use
+            logger_1.default.error('Error sending email:', emailError); // Log error for internal use
         }
         // Send reset password notification
-        const title = "Password Reset Request";
+        const title = 'Password Reset Request';
         const messageContent = "A password reset request was initiated for your account. If this wasn't you, please contact support.";
-        const type = "reset_password";
+        const type = 'reset_password';
         // Create the notification in the database
         const notification = yield notification_1.default.create({
             userId: user.id,
@@ -189,26 +194,26 @@ const updatePassword = (req, res) => __awaiter(void 0, void 0, void 0, function*
             type,
         });
         res.status(200).json({
-            message: "Password updated successfully.",
+            message: 'Password updated successfully.',
         });
     }
     catch (error) {
         logger_1.default.error(error);
         res.status(500).json({
-            message: "Server error during password update.",
+            message: 'Server error during password update.',
         });
     }
 });
 exports.updatePassword = updatePassword;
 const updateProfileEmail = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _e;
+    const userId = (_e = req.user) === null || _e === void 0 ? void 0 : _e.id; // Authenticated user ID from middleware
     const { newEmail } = req.body;
     try {
         // Check if the current email matches the authenticated user's email
         const user = yield user_1.default.findOne({ where: { id: userId } });
         if (!user) {
-            res.status(404).json({ message: "User not found" });
+            res.status(404).json({ message: 'User not found' });
             return;
         }
         // Check if the new email already exists for another user
@@ -216,7 +221,7 @@ const updateProfileEmail = (req, res) => __awaiter(void 0, void 0, void 0, funct
         if (existingUser) {
             res
                 .status(400)
-                .json({ message: "Email is already in use by another account" });
+                .json({ message: 'Email is already in use by another account' });
             return;
         }
         // Generate OTP for verification
@@ -232,31 +237,31 @@ const updateProfileEmail = (req, res) => __awaiter(void 0, void 0, void 0, funct
             yield (0, mail_service_1.sendMail)(user.email, `${process.env.APP_NAME} - Verify Your New Email Address`, message);
         }
         catch (emailError) {
-            logger_1.default.error("Error sending email:", emailError); // Log error for internal use
+            logger_1.default.error('Error sending email:', emailError); // Log error for internal use
         }
         // Send response
         res.status(200).json({
-            message: "New email verification code sent successfully",
+            message: 'New email verification code sent successfully',
             data: newEmail,
         });
     }
     catch (error) {
-        logger_1.default.error("Error updating profile email:", error);
+        logger_1.default.error('Error updating profile email:', error);
         res
             .status(500)
-            .json({ message: "An error occurred while updating the email" });
+            .json({ message: 'An error occurred while updating the email' });
     }
 });
 exports.updateProfileEmail = updateProfileEmail;
 const confirmEmailUpdate = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _f;
+    const userId = (_f = req.user) === null || _f === void 0 ? void 0 : _f.id; // Authenticated user ID from middleware
     const { newEmail, otpCode } = req.body;
     try {
         // Check if the current email matches the authenticated user's email
         const user = yield user_1.default.findOne({ where: { id: userId } });
         if (!user) {
-            res.status(404).json({ message: "User not found" });
+            res.status(404).json({ message: 'User not found' });
             return;
         }
         // Check if the new email already exists for another user
@@ -264,7 +269,7 @@ const confirmEmailUpdate = (req, res) => __awaiter(void 0, void 0, void 0, funct
         if (existingUser) {
             res
                 .status(400)
-                .json({ message: "Email is already in use by another account" });
+                .json({ message: 'Email is already in use by another account' });
             return;
         }
         // Check for the OTP
@@ -272,12 +277,12 @@ const confirmEmailUpdate = (req, res) => __awaiter(void 0, void 0, void 0, funct
             where: { userId: user.id, otpCode },
         });
         if (!otpRecord) {
-            res.status(400).json({ message: "Invalid OTP code." });
+            res.status(400).json({ message: 'Invalid OTP code.' });
             return;
         }
         // Check if the OTP has expired
         if (!otpRecord.expiresAt || new Date() > otpRecord.expiresAt) {
-            res.status(400).json({ message: "OTP has expired." });
+            res.status(400).json({ message: 'OTP has expired.' });
             return;
         }
         // Update the user's email
@@ -291,12 +296,12 @@ const confirmEmailUpdate = (req, res) => __awaiter(void 0, void 0, void 0, funct
             yield (0, mail_service_1.sendMail)(user.email, `${process.env.APP_NAME} - Email Address Changed`, message);
         }
         catch (emailError) {
-            logger_1.default.error("Error sending email:", emailError); // Log error for internal use
+            logger_1.default.error('Error sending email:', emailError); // Log error for internal use
         }
         // Send a notification for becoming a vendor
-        const title = "Email Address Updated";
+        const title = 'Email Address Updated';
         const messageContent = `Your email address has been successfully updated to ${newEmail}.`;
-        const type = "update_email";
+        const type = 'update_email';
         // Create the notification in the database
         const notification = yield notification_1.default.create({
             userId: user.id,
@@ -305,25 +310,25 @@ const confirmEmailUpdate = (req, res) => __awaiter(void 0, void 0, void 0, funct
             type,
         });
         // Send response
-        res.status(200).json({ message: "Email updated successfully" });
+        res.status(200).json({ message: 'Email updated successfully' });
     }
     catch (error) {
-        logger_1.default.error("Error updating profile email:", error);
+        logger_1.default.error('Error updating profile email:', error);
         res
             .status(500)
-            .json({ message: "An error occurred while updating the email" });
+            .json({ message: 'An error occurred while updating the email' });
     }
 });
 exports.confirmEmailUpdate = confirmEmailUpdate;
 const updateProfilePhoneNumber = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _g;
+    const userId = (_g = req.user) === null || _g === void 0 ? void 0 : _g.id; // Authenticated user ID from middleware
     const { newPhoneNumber } = req.body;
     try {
         // Check if the current user exists
         const user = yield user_1.default.findOne({ where: { id: userId } });
         if (!user) {
-            res.status(404).json({ message: "User not found" });
+            res.status(404).json({ message: 'User not found' });
             return;
         }
         // Check if the new phone number already exists for another user
@@ -333,7 +338,7 @@ const updateProfilePhoneNumber = (req, res) => __awaiter(void 0, void 0, void 0,
         if (existingUser) {
             res
                 .status(400)
-                .json({ message: "Phone number is already in use by another account" });
+                .json({ message: 'Phone number is already in use by another account' });
             return;
         }
         // Update the user's phone number
@@ -345,12 +350,12 @@ const updateProfilePhoneNumber = (req, res) => __awaiter(void 0, void 0, void 0,
             yield (0, mail_service_1.sendMail)(user.email, `${process.env.APP_NAME} - Phone Number Updated`, message);
         }
         catch (emailError) {
-            logger_1.default.error("Error sending email:", emailError); // Log error for internal use
+            logger_1.default.error('Error sending email:', emailError); // Log error for internal use
         }
         // Send a notification for becoming a vendor
-        const title = "Phone Number Updated";
+        const title = 'Phone Number Updated';
         const messageContent = `Your phone number has been successfully updated to ${newPhoneNumber}.`;
-        const type = "update_phone";
+        const type = 'update_phone';
         // Create the notification in the database
         const notification = yield notification_1.default.create({
             userId: user.id,
@@ -359,25 +364,25 @@ const updateProfilePhoneNumber = (req, res) => __awaiter(void 0, void 0, void 0,
             type,
         });
         // Send response
-        res.status(200).json({ message: "Phone number updated successfully" });
+        res.status(200).json({ message: 'Phone number updated successfully' });
     }
     catch (error) {
-        logger_1.default.error("Error updating phone number:", error);
+        logger_1.default.error('Error updating phone number:', error);
         res
             .status(500)
-            .json({ message: "An error occurred while updating the phone number" });
+            .json({ message: 'An error occurred while updating the phone number' });
     }
 });
 exports.updateProfilePhoneNumber = updateProfilePhoneNumber;
 const confirmPhoneNumberUpdate = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _h;
+    const userId = (_h = req.user) === null || _h === void 0 ? void 0 : _h.id; // Authenticated user ID from middleware
     const { newPhoneNumber, otpCode } = req.body;
     try {
         // Check if the current user exists
         const user = yield user_1.default.findOne({ where: { id: userId } });
         if (!user) {
-            res.status(404).json({ message: "User not found" });
+            res.status(404).json({ message: 'User not found' });
             return;
         }
         // Check if the new phone number already exists for another user
@@ -387,7 +392,7 @@ const confirmPhoneNumberUpdate = (req, res) => __awaiter(void 0, void 0, void 0,
         if (existingUser) {
             res
                 .status(400)
-                .json({ message: "Phone number is already in use by another account" });
+                .json({ message: 'Phone number is already in use by another account' });
             return;
         }
         // Check for the OTP
@@ -395,12 +400,12 @@ const confirmPhoneNumberUpdate = (req, res) => __awaiter(void 0, void 0, void 0,
             where: { userId: user.id, otpCode },
         });
         if (!otpRecord) {
-            res.status(400).json({ message: "Invalid OTP code." });
+            res.status(400).json({ message: 'Invalid OTP code.' });
             return;
         }
         // Check if the OTP has expired
         if (!otpRecord.expiresAt || new Date() > otpRecord.expiresAt) {
-            res.status(400).json({ message: "OTP has expired." });
+            res.status(400).json({ message: 'OTP has expired.' });
             return;
         }
         // Update the user's phone number
@@ -414,12 +419,12 @@ const confirmPhoneNumberUpdate = (req, res) => __awaiter(void 0, void 0, void 0,
             yield (0, mail_service_1.sendMail)(user.email, `${process.env.APP_NAME} - Phone Number Updated`, message);
         }
         catch (emailError) {
-            logger_1.default.error("Error sending email:", emailError); // Log error for internal use
+            logger_1.default.error('Error sending email:', emailError); // Log error for internal use
         }
         // Send a notification for becoming a vendor
-        const title = "Phone Number Updated";
+        const title = 'Phone Number Updated';
         const messageContent = `Your phone number has been successfully updated to ${newPhoneNumber}.`;
-        const type = "update_phone";
+        const type = 'update_phone';
         // Create the notification in the database
         const notification = yield notification_1.default.create({
             userId: user.id,
@@ -428,55 +433,55 @@ const confirmPhoneNumberUpdate = (req, res) => __awaiter(void 0, void 0, void 0,
             type,
         });
         // Send response
-        res.status(200).json({ message: "Phone number updated successfully" });
+        res.status(200).json({ message: 'Phone number updated successfully' });
     }
     catch (error) {
-        logger_1.default.error("Error updating profile email:", error);
+        logger_1.default.error('Error updating profile email:', error);
         res
             .status(500)
-            .json({ message: "An error occurred while updating the email" });
+            .json({ message: 'An error occurred while updating the email' });
     }
 });
 exports.confirmPhoneNumberUpdate = confirmPhoneNumberUpdate;
 const getUserNotificationSettings = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get the authenticated user's ID
+    var _j;
+    const userId = (_j = req.user) === null || _j === void 0 ? void 0 : _j.id; // Get the authenticated user's ID
     try {
         // Step 1: Retrieve the user's notification settings
         const userSettings = yield usernotificationsetting_1.default.findOne({
             where: { userId },
-            attributes: ["hotDeals", "auctionProducts", "subscription"], // Include only relevant fields
+            attributes: ['hotDeals', 'auctionProducts', 'subscription'], // Include only relevant fields
         });
         // Step 2: Check if settings exist
         if (!userSettings) {
             res.status(404).json({
-                message: "Notification settings not found for the user.",
+                message: 'Notification settings not found for the user.',
             });
             return;
         }
         // Step 3: Send the settings as a response
         res.status(200).json({
-            message: "Notification settings retrieved successfully.",
+            message: 'Notification settings retrieved successfully.',
             settings: userSettings,
         });
     }
     catch (error) {
         res.status(500).json({
-            message: "Error retrieving notification settings.",
+            message: 'Error retrieving notification settings.',
         });
     }
 });
 exports.getUserNotificationSettings = getUserNotificationSettings;
 const updateUserNotificationSettings = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get the authenticated user's ID
+    var _k;
+    const userId = (_k = req.user) === null || _k === void 0 ? void 0 : _k.id; // Get the authenticated user's ID
     const { hotDeals, auctionProducts, subscription } = req.body; // These values will be passed from the frontend
     // Step 1: Validate the notification settings
-    if (typeof hotDeals !== "boolean" ||
-        typeof auctionProducts !== "boolean" ||
-        typeof subscription !== "boolean") {
+    if (typeof hotDeals !== 'boolean' ||
+        typeof auctionProducts !== 'boolean' ||
+        typeof subscription !== 'boolean') {
         res.status(400).json({
-            message: "All notification settings (hotDeals, auctionProducts, subscription) must be boolean values.",
+            message: 'All notification settings (hotDeals, auctionProducts, subscription) must be boolean values.',
         });
         return;
     }
@@ -494,7 +499,7 @@ const updateUserNotificationSettings = (req, res) => __awaiter(void 0, void 0, v
             });
             res
                 .status(200)
-                .json({ message: "Notification settings updated successfully." });
+                .json({ message: 'Notification settings updated successfully.' });
         }
         else {
             // Step 4: If the settings don't exist (this shouldn't happen since they are created on signup), create them
@@ -506,24 +511,24 @@ const updateUserNotificationSettings = (req, res) => __awaiter(void 0, void 0, v
             });
             res
                 .status(200)
-                .json({ message: "Notification settings created successfully." });
+                .json({ message: 'Notification settings created successfully.' });
         }
     }
     catch (error) {
         logger_1.default.error(error);
         res.status(500).json({
-            message: error.message || "Error updating notification settings.",
+            message: error.message || 'Error updating notification settings.',
         });
     }
 });
 exports.updateUserNotificationSettings = updateUserNotificationSettings;
 const getConversations = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get the authenticated user's ID
+    var _l;
+    const userId = (_l = req.user) === null || _l === void 0 ? void 0 : _l.id; // Get the authenticated user's ID
     if (!userId) {
         res
             .status(400)
-            .json({ message: "User ID is required and user must be authenticated" });
+            .json({ message: 'User ID is required and user must be authenticated' });
         return;
     }
     try {
@@ -535,25 +540,39 @@ const getConversations = (req, res) => __awaiter(void 0, void 0, void 0, functio
             include: [
                 {
                     model: user_1.default,
-                    as: "senderUser", // Assuming senderId references the User model
-                    attributes: ["id", "firstName", "lastName", "email", "phoneNumber", "photo"], // Modify attributes as needed
+                    as: 'senderUser',
+                    attributes: [
+                        'id',
+                        'firstName',
+                        'lastName',
+                        'email',
+                        'phoneNumber',
+                        'photo',
+                    ], // Modify attributes as needed
                 },
                 {
                     model: user_1.default,
-                    as: "receiverUser", // Assuming receiverId references the User model
-                    attributes: ["id", "firstName", "lastName", "email", "phoneNumber", "photo"], // Modify attributes as needed
+                    as: 'receiverUser',
+                    attributes: [
+                        'id',
+                        'firstName',
+                        'lastName',
+                        'email',
+                        'phoneNumber',
+                        'photo',
+                    ], // Modify attributes as needed
                 },
                 {
                     model: product_1.default,
-                    as: "product",
-                    attributes: ["id", "name"], // Modify attributes as needed
+                    as: 'product',
+                    attributes: ['id', 'name'], // Modify attributes as needed
                 },
                 {
                     model: message_1.default,
-                    as: "message",
-                    limit: 1, // Limit to 1 message to get the last one
-                    order: [["createdAt", "DESC"]], // Order by createdAt in descending order to get the latest message
-                    attributes: ["id", "content", "fileUrl", "createdAt", "isRead"], // Modify attributes as needed
+                    as: 'message',
+                    limit: 1,
+                    order: [['createdAt', 'DESC']],
+                    attributes: ['id', 'content', 'fileUrl', 'createdAt', 'isRead'], // Modify attributes as needed
                 },
             ],
             attributes: {
@@ -567,31 +586,31 @@ const getConversations = (req, res) => __awaiter(void 0, void 0, void 0, functio
                  AND messages.isRead = 0
               )
             `),
-                        "unreadMessagesCount",
+                        'unreadMessagesCount',
                     ],
                 ],
             },
-            order: [["createdAt", "DESC"]],
+            order: [['createdAt', 'DESC']],
         });
         res.status(200).json({
-            message: "Conversations fetched successfully",
+            message: 'Conversations fetched successfully',
             data: conversations,
         });
     }
     catch (error) {
-        logger_1.default.error("Error fetching conversations:", error);
-        res.status(500).json({ message: error.message || "Internal server error" });
+        logger_1.default.error('Error fetching conversations:', error);
+        res.status(500).json({ message: error.message || 'Internal server error' });
     }
 });
 exports.getConversations = getConversations;
 const getAllConversationMessages = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get the authenticated user's ID
+    var _m;
+    const userId = (_m = req.user) === null || _m === void 0 ? void 0 : _m.id; // Get the authenticated user's ID
     try {
         const { conversationId } = req.query;
         // Validate that conversationId is provided
         if (!conversationId) {
-            res.status(400).json({ message: "Conversation ID is required." });
+            res.status(400).json({ message: 'Conversation ID is required.' });
             return;
         }
         // Fetch the conversation with related messages, users, and product
@@ -600,75 +619,86 @@ const getAllConversationMessages = (req, res) => __awaiter(void 0, void 0, void 
             include: [
                 {
                     model: message_1.default,
-                    as: "message", // Ensure this matches your Sequelize model alias
+                    as: 'message',
                     include: [
                         {
                             model: user_1.default,
-                            as: "user", // Alias for sender relationship
-                            attributes: ["id", "firstName", "lastName", "email"],
+                            as: 'user',
+                            attributes: ['id', 'firstName', 'lastName', 'email'],
                         },
                     ],
                 },
                 {
                     model: product_1.default,
-                    as: "product",
-                    attributes: ["id", "name", "price"],
+                    as: 'product',
+                    attributes: ['id', 'name', 'price'],
                 },
             ],
-            order: [[{ model: message_1.default, as: "message" }, "createdAt", "ASC"]], // Order messages by creation date
+            order: [[{ model: message_1.default, as: 'message' }, 'createdAt', 'ASC']], // Order messages by creation date
         });
         if (!conversation) {
             res
                 .status(404)
-                .json({ message: "No conversation found with the given ID." });
+                .json({ message: 'No conversation found with the given ID.' });
             return;
         }
         // Mark messages not sent by the user as read
         yield message_1.default.update({ isRead: true }, {
             where: {
                 conversationId,
-                userId: { [sequelize_1.Op.ne]: userId }, // Not equal to userId
+                userId: { [sequelize_1.Op.ne]: userId },
                 isRead: false, // Only update unread messages
             },
         });
         res.status(200).json({ data: conversation });
     }
     catch (error) {
-        logger_1.default.error("Error fetching conversation messages:", error);
+        logger_1.default.error('Error fetching conversation messages:', error);
         res.status(500).json({
-            message: "An error occurred while retrieving conversation messages.",
+            message: 'An error occurred while retrieving conversation messages.',
             error: error.message,
         });
     }
 });
 exports.getAllConversationMessages = getAllConversationMessages;
 const sendMessageHandler = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get the authenticated user's ID
+    var _o;
+    const userId = (_o = req.user) === null || _o === void 0 ? void 0 : _o.id; // Get the authenticated user's ID
     // Ensure userId is defined
     if (!userId) {
         res.status(400).json({
-            message: "Sender ID is required and user must be authenticated",
+            message: 'Sender ID is required and user must be authenticated',
         });
         return;
     }
     const { productId, receiverId, content, fileUrl } = req.body;
     // Prevent user from sending a message to themselves
     if (userId === receiverId) {
-        res.status(400).json({ message: "You cannot send a message to yourself" });
+        res.status(400).json({ message: 'You cannot send a message to yourself' });
         return;
+    }
+    // Block check: if receiver is a vendor and sender has blocked them
+    const receiver = yield user_1.default.findByPk(receiverId);
+    if (receiver && receiver.accountType === 'Vendor') {
+        const blocked = yield blockedvendor_1.default.findOne({
+            where: { userId, vendorId: receiverId },
+        });
+        if (blocked) {
+            res.status(403).json({ message: 'You have blocked this vendor.' });
+            return;
+        }
     }
     try {
         // Find the product by its ID
         const product = yield product_1.default.findByPk(productId);
         // Check if the product exists
         if (!product) {
-            res.status(404).json({ message: "Product not found" });
+            res.status(404).json({ message: 'Product not found' });
             return;
         }
         const user = yield user_1.default.findByPk(receiverId);
         if (!user) {
-            res.status(404).json({ message: "User not found" });
+            res.status(404).json({ message: 'User not found' });
             return;
         }
         // Find an existing conversation between sender and receiver or create a new one
@@ -692,16 +722,16 @@ const sendMessageHandler = (req, res) => __awaiter(void 0, void 0, void 0, funct
         // Call the sendMessage function to save the message
         const message = yield (0, exports.saveMessage)(conversation.id, userId, content, fileUrl);
         if (!message) {
-            res.status(500).json({ message: "Failed to send message" });
+            res.status(500).json({ message: 'Failed to send message' });
             return;
         }
         res
             .status(200)
-            .json({ message: "Message sent successfully", data: message });
+            .json({ message: 'Message sent successfully', data: message });
     }
     catch (error) {
-        logger_1.default.error("Error sending message:", error);
-        res.status(500).json({ message: "Internal server error" });
+        logger_1.default.error('Error sending message:', error);
+        res.status(500).json({ message: 'Internal server error' });
     }
 });
 exports.sendMessageHandler = sendMessageHandler;
@@ -718,18 +748,18 @@ const saveMessage = (conversationId, userId, content, fileUrl) => __awaiter(void
         return message;
     }
     catch (error) {
-        logger_1.default.error("Error creating message:", error);
+        logger_1.default.error('Error creating message:', error);
         return null; // Return null or throw a custom error based on your needs
     }
 });
 exports.saveMessage = saveMessage;
 const deleteMessageHandler = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get the authenticated user's ID
+    var _p;
+    const userId = (_p = req.user) === null || _p === void 0 ? void 0 : _p.id; // Get the authenticated user's ID
     // Ensure userId is defined
     if (!userId) {
         res.status(400).json({
-            message: "Sender ID is required and user must be authenticated",
+            message: 'Sender ID is required and user must be authenticated',
         });
         return;
     }
@@ -739,32 +769,32 @@ const deleteMessageHandler = (req, res) => __awaiter(void 0, void 0, void 0, fun
         const message = yield message_1.default.findByPk(messageId);
         // Check if the message exists
         if (!message) {
-            res.status(404).json({ message: "Message not found" });
+            res.status(404).json({ message: 'Message not found' });
             return;
         }
         // Ensure the message was sent by the authenticated user
         if (message.userId !== userId) {
             res
                 .status(403)
-                .json({ message: "You can only delete your own messages" });
+                .json({ message: 'You can only delete your own messages' });
             return;
         }
         // Delete the message
         yield message.destroy();
-        res.status(200).json({ message: "Message deleted successfully" });
+        res.status(200).json({ message: 'Message deleted successfully' });
     }
     catch (error) {
-        logger_1.default.error("Error deleting message:", error);
-        res.status(500).json({ message: "Internal server error" });
+        logger_1.default.error('Error deleting message:', error);
+        res.status(500).json({ message: 'Internal server error' });
     }
 });
 exports.deleteMessageHandler = deleteMessageHandler;
 const markAsReadHandler = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get the authenticated user's ID
+    var _q;
+    const userId = (_q = req.user) === null || _q === void 0 ? void 0 : _q.id; // Get the authenticated user's ID
     // Ensure userId is defined
     if (!userId) {
-        res.status(400).json({ message: "User must be authenticated" });
+        res.status(400).json({ message: 'User must be authenticated' });
         return;
     }
     const messageId = req.query.messageId; // Get the message ID from the URL
@@ -773,64 +803,68 @@ const markAsReadHandler = (req, res) => __awaiter(void 0, void 0, void 0, functi
         const message = yield message_1.default.findByPk(messageId);
         // Check if the message exists
         if (!message) {
-            res.status(404).json({ message: "Message not found" });
+            res.status(404).json({ message: 'Message not found' });
             return;
         }
         // Ensure the message is for the authenticated user (i.e., the receiver)
         if (message.userId === userId) {
             res
                 .status(403)
-                .json({ message: "You can only mark your received messages as read" });
+                .json({ message: 'You can only mark your received messages as read' });
             return;
         }
         // Mark the message as read
         message.isRead = true;
         yield message.save();
-        res.status(200).json({ message: "Message marked as read", data: message });
+        res.status(200).json({ message: 'Message marked as read', data: message });
     }
     catch (error) {
-        logger_1.default.error("Error marking message as read:", error);
-        res.status(500).json({ message: "Internal server error" });
+        logger_1.default.error('Error marking message as read:', error);
+        res.status(500).json({ message: 'Internal server error' });
     }
 });
 exports.markAsReadHandler = markAsReadHandler;
 // Cart
 const addItemToCart = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get the authenticated user's ID
+    var _r;
+    const userId = (_r = req.user) === null || _r === void 0 ? void 0 : _r.id; // Get the authenticated user's ID
     if (!userId) {
-        res.status(400).json({ message: "User must be authenticated" });
+        res.status(400).json({ message: 'User must be authenticated' });
         return;
     }
     const { productId, quantity } = req.body;
     try {
         // Find the product by productId and include vendor and currency details
         const product = yield product_1.default.findByPk(productId, {
-            attributes: ["vendorId", "name", "quantity"], // Include quantity in the attributes
+            attributes: ['vendorId', 'name', 'quantity'],
             include: [
                 {
                     model: store_1.default,
-                    as: "store",
+                    as: 'store',
                     include: [
                         {
                             model: currency_1.default,
-                            as: "currency",
-                            attributes: ["name", "symbol"],
+                            as: 'currency',
+                            attributes: ['name', 'symbol'],
                         },
                     ],
                 },
             ],
         });
         if (!product || !product.store || !product.store.currency) {
-            res.status(404).json({ message: "Product not found or invalid currency data" });
+            res
+                .status(404)
+                .json({ message: 'Product not found or invalid currency data' });
             return;
         }
         const { vendorId, name, quantity: availableQuantity = 0 } = product; // Get available quantity
         const productCurrency = product.store.currency;
         // Ensure product currency is either $, #, or ₦
-        const allowedCurrencies = ["$", "#", "₦"];
+        const allowedCurrencies = ['$', '#', '₦'];
         if (!allowedCurrencies.includes(productCurrency.symbol)) {
-            res.status(400).json({ message: `Only products with currencies ${allowedCurrencies.join(", ")} are allowed.` });
+            res.status(400).json({
+                message: `Only products with currencies ${allowedCurrencies.join(', ')} are allowed.`,
+            });
             return;
         }
         // Check if vendorId exists in the User table (Vendor)
@@ -838,13 +872,13 @@ const addItemToCart = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         // Check if vendorId exists in the Admin table
         const admin = yield admin_1.default.findByPk(vendorId);
         if (!vendor && !admin) {
-            res.status(404).json({ message: "Owner not found" });
+            res.status(404).json({ message: 'Owner not found' });
             return;
         }
         // If it's a vendor, ensure they are verified
         if (vendor && !vendor.isVerified) {
             res.status(400).json({
-                message: "Cannot add item to cart. Vendor is not verified.",
+                message: 'Cannot add item to cart. Vendor is not verified.',
             });
             return;
         }
@@ -861,16 +895,16 @@ const addItemToCart = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             include: [
                 {
                     model: product_1.default,
-                    as: "product",
+                    as: 'product',
                     include: [
                         {
                             model: store_1.default,
-                            as: "store",
+                            as: 'store',
                             include: [
                                 {
                                     model: currency_1.default,
-                                    as: "currency",
-                                    attributes: ["name", "symbol"],
+                                    as: 'currency',
+                                    attributes: ['name', 'symbol'],
                                 },
                             ],
                         },
@@ -882,8 +916,10 @@ const addItemToCart = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             // Extract the currency of the first item in the cart
             const existingCartItem = existingCartItems[0];
             const existingProduct = existingCartItem.product;
-            if (!existingProduct || !existingProduct.store || !existingProduct.store.currency) {
-                throw new Error("Cart contains invalid product or currency information.");
+            if (!existingProduct ||
+                !existingProduct.store ||
+                !existingProduct.store.currency) {
+                throw new Error('Cart contains invalid product or currency information.');
             }
             const existingCurrency = existingProduct.store.currency;
             // Check if the currency matches
@@ -913,9 +949,9 @@ const addItemToCart = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             yield existingCartItem.save();
         }
         else {
-            const title = "Product Added to Cart";
+            const title = 'Product Added to Cart';
             const message = `You have successfully added "${product.name}" to your cart.`;
-            const type = "add_to_cart";
+            const type = 'add_to_cart';
             // Create the notification in the database
             const notification = yield notification_1.default.create({
                 userId,
@@ -926,33 +962,35 @@ const addItemToCart = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             // Add a new item to the cart
             yield cart_1.default.create({ userId, productId, quantity });
         }
-        res.status(200).json({ message: "Item added to cart successfully." });
+        res.status(200).json({ message: 'Item added to cart successfully.' });
     }
     catch (error) {
         logger_1.default.error(error);
-        res.status(500).json({ message: error.message || "Error adding item to cart." });
+        res
+            .status(500)
+            .json({ message: error.message || 'Error adding item to cart.' });
     }
 });
 exports.addItemToCart = addItemToCart;
 const updateCartItem = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _s;
     const { cartId, quantity } = req.body;
     try {
         // Find the cart item by cartId
         const cartItem = yield cart_1.default.findByPk(cartId, {
             include: [
                 {
-                    model: product_1.default, // Assuming you have a 'Product' model associated with 'Cart'
-                    as: "product", // Alias used in the association
+                    model: product_1.default,
+                    as: 'product',
                     include: [
                         {
                             model: store_1.default,
-                            as: "store", // Store model that has the 'currency'
+                            as: 'store',
                             include: [
                                 {
                                     model: currency_1.default,
-                                    as: "currency", // Currency associated with the store
-                                    attributes: ["name", "symbol"],
+                                    as: 'currency',
+                                    attributes: ['name', 'symbol'],
                                 },
                             ],
                         },
@@ -961,11 +999,11 @@ const updateCartItem = (req, res) => __awaiter(void 0, void 0, void 0, function*
             ],
         });
         if (!cartItem || !cartItem.product || !cartItem.product.quantity) {
-            res.status(404).json({ message: "Cart item or product not found." });
+            res.status(404).json({ message: 'Cart item or product not found.' });
             return;
         }
         const { productId, product } = cartItem;
-        const availableQuantity = (_a = product.quantity) !== null && _a !== void 0 ? _a : 0; // Use 0 if quantity is undefined
+        const availableQuantity = (_s = product.quantity) !== null && _s !== void 0 ? _s : 0; // Use 0 if quantity is undefined
         // Ensure the requested quantity doesn't exceed available quantity
         if (quantity > availableQuantity) {
             res.status(400).json({
@@ -976,20 +1014,22 @@ const updateCartItem = (req, res) => __awaiter(void 0, void 0, void 0, function*
         // Update the cart item quantity if stock is sufficient
         cartItem.quantity = quantity;
         yield cartItem.save();
-        res.status(200).json({ message: "Cart item updated successfully." });
+        res.status(200).json({ message: 'Cart item updated successfully.' });
     }
     catch (error) {
         logger_1.default.error(error);
-        res.status(500).json({ message: error.message || "Error updating cart item." });
+        res
+            .status(500)
+            .json({ message: error.message || 'Error updating cart item.' });
     }
 });
 exports.updateCartItem = updateCartItem;
 const removeCartItem = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get the authenticated user's ID
+    var _t;
+    const userId = (_t = req.user) === null || _t === void 0 ? void 0 : _t.id; // Get the authenticated user's ID
     // Ensure userId is defined
     if (!userId) {
-        res.status(400).json({ message: "User must be authenticated" });
+        res.status(400).json({ message: 'User must be authenticated' });
         return;
     }
     const { cartId } = req.query;
@@ -998,42 +1038,44 @@ const removeCartItem = (req, res) => __awaiter(void 0, void 0, void 0, function*
             where: { userId, id: cartId },
         });
         if (!cartItem) {
-            res.status(404).json({ message: "Cart item not found." });
+            res.status(404).json({ message: 'Cart item not found.' });
             return;
         }
         yield cartItem.destroy();
-        res.status(200).json({ message: "Cart item removed successfully." });
+        res.status(200).json({ message: 'Cart item removed successfully.' });
     }
     catch (error) {
         logger_1.default.error(error);
-        res.status(500).json({ message: error.message || "Error removing cart item." });
+        res
+            .status(500)
+            .json({ message: error.message || 'Error removing cart item.' });
     }
 });
 exports.removeCartItem = removeCartItem;
 const getCartContents = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get the authenticated user's ID
+    var _u;
+    const userId = (_u = req.user) === null || _u === void 0 ? void 0 : _u.id; // Get the authenticated user's ID
     try {
         const cartItems = yield cart_1.default.findAll({
             where: { userId },
             include: [
                 {
                     model: user_1.default,
-                    as: "user",
+                    as: 'user',
                 },
                 {
                     model: product_1.default,
-                    as: "product",
+                    as: 'product',
                     include: [
                         {
                             model: store_1.default,
-                            as: "store",
-                            attributes: ["name"],
+                            as: 'store',
+                            attributes: ['name'],
                             include: [
                                 {
                                     model: currency_1.default,
-                                    as: "currency",
-                                    attributes: ["name", "symbol"],
+                                    as: 'currency',
+                                    attributes: ['name', 'symbol'],
                                 },
                             ],
                         },
@@ -1045,20 +1087,22 @@ const getCartContents = (req, res) => __awaiter(void 0, void 0, void 0, function
     }
     catch (error) {
         logger_1.default.error(error);
-        res.status(500).json({ message: error.message || "Error fetching cart contents." });
+        res
+            .status(500)
+            .json({ message: error.message || 'Error fetching cart contents.' });
     }
 });
 exports.getCartContents = getCartContents;
 const clearCart = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get the authenticated user's ID
+    var _v;
+    const userId = (_v = req.user) === null || _v === void 0 ? void 0 : _v.id; // Get the authenticated user's ID
     try {
         yield cart_1.default.destroy({ where: { userId } });
-        res.status(200).json({ message: "Cart cleared successfully." });
+        res.status(200).json({ message: 'Cart cleared successfully.' });
     }
     catch (error) {
         logger_1.default.error(error);
-        res.status(500).json({ message: error.message || "Error clearing cart." });
+        res.status(500).json({ message: error.message || 'Error clearing cart.' });
     }
 });
 exports.clearCart = clearCart;
@@ -1068,40 +1112,40 @@ const getActivePaymentGateways = (req, res) => __awaiter(void 0, void 0, void 0,
         const paymentGateways = yield paymentgateway_1.default.findAll({
             where: {
                 isActive: true,
-                name: ["paystack", "stripe"], // Assuming 'name' is the field for gateway names
+                name: ['paystack', 'stripe'], // Assuming 'name' is the field for gateway names
             },
         });
         if (!paymentGateways.length) {
-            res.status(404).json({ message: "No active payment gateways found" });
+            res.status(404).json({ message: 'No active payment gateways found' });
             return;
         }
         res.status(200).json({
-            message: "Active payment gateways fetched successfully",
+            message: 'Active payment gateways fetched successfully',
             data: paymentGateways,
         });
     }
     catch (error) {
-        logger_1.default.error("Error fetching active payment gateways:", error);
+        logger_1.default.error('Error fetching active payment gateways:', error);
         res.status(500).json({
-            message: "An error occurred while fetching the active payment gateways",
+            message: 'An error occurred while fetching the active payment gateways',
         });
     }
 });
 exports.getActivePaymentGateways = getActivePaymentGateways;
 const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get authenticated user ID
+    var _w, _x, _y;
+    const userId = (_w = req.user) === null || _w === void 0 ? void 0 : _w.id; // Get authenticated user ID
     const { refId, shippingAddress } = req.body;
     if (!userId) {
-        res.status(400).json({ message: "User must be authenticated" });
+        res.status(400).json({ message: 'User must be authenticated' });
         return;
     }
     if (!refId) {
-        res.status(400).json({ message: "Payment reference ID is required" });
+        res.status(400).json({ message: 'Payment reference ID is required' });
         return;
     }
     if (!shippingAddress) {
-        res.status(400).json({ message: "Shipping address is required" });
+        res.status(400).json({ message: 'Shipping address is required' });
         return;
     }
     const transaction = yield sequelize_service_1.default.connection.transaction();
@@ -1110,18 +1154,18 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         // Fetch active Paystack secret key from PaymentGateway model
         const paymentGateway = yield paymentgateway_1.default.findOne({
             where: {
-                name: "Paystack",
+                name: 'Paystack',
                 isActive: true,
             },
         });
         if (!paymentGateway || !paymentGateway.secretKey) {
-            throw new Error("Active Paystack gateway not configured");
+            throw new Error('Active Paystack gateway not configured');
         }
         const PAYSTACK_SECRET_KEY = paymentGateway.secretKey;
         // Verify payment reference with Paystack
         const verificationResponse = yield (0, helpers_1.verifyPayment)(refId, PAYSTACK_SECRET_KEY);
-        if (verificationResponse.status !== "success") {
-            res.status(400).json({ message: "Payment verification failed." });
+        if (verificationResponse.status !== 'success') {
+            res.status(400).json({ message: 'Payment verification failed.' });
             return;
         }
         const paymentData = verificationResponse;
@@ -1131,13 +1175,13 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             include: [
                 {
                     model: product_1.default,
-                    as: "product",
-                    attributes: ["id", "name", "price", "vendorId", "quantity"],
+                    as: 'product',
+                    attributes: ['id', 'name', 'price', 'vendorId', 'quantity'],
                 },
             ],
         });
         if (!cartItems || cartItems.length === 0) {
-            res.status(400).json({ message: "Cart is empty" });
+            res.status(400).json({ message: 'Cart is empty' });
             return;
         }
         // Calculate total price and validate inventory
@@ -1148,7 +1192,7 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 throw new Error(`Product with ID ${cartItem.productId} not found`);
             }
             // Check if product.quantity is defined and if there's enough stock before proceeding
-            const availableQuantity = (_b = product.quantity) !== null && _b !== void 0 ? _b : 0; // If quantity is undefined, fallback to 0
+            const availableQuantity = (_x = product.quantity) !== null && _x !== void 0 ? _x : 0; // If quantity is undefined, fallback to 0
             if (availableQuantity < cartItem.quantity) {
                 throw new Error(`Insufficient stock for product: ${product.name}`);
             }
@@ -1164,7 +1208,7 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             totalAmount,
             refId,
             shippingAddress,
-            status: "pending",
+            status: 'pending',
         }, { transaction });
         // Create order items and update product inventory
         for (const cartItem of cartItems) {
@@ -1177,19 +1221,19 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                     {
                         model: store_1.default,
                         as: 'store',
-                        attributes: ["name"],
+                        attributes: ['name'],
                         include: [
                             {
                                 model: currency_1.default,
                                 as: 'currency',
-                                attributes: ["name", "symbol"]
+                                attributes: ['name', 'symbol'],
                             },
                         ],
                     },
                     {
                         model: subcategory_1.default,
-                        as: "sub_category",
-                        attributes: ["id", "name"],
+                        as: 'sub_category',
+                        attributes: ['id', 'name'],
                     },
                 ],
             });
@@ -1197,7 +1241,7 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 throw new Error(`Product with ID ${cartItem.product.id} not found.`);
             }
             // Reduce product quantity in inventory
-            const availableQuantity = (_c = product.quantity) !== null && _c !== void 0 ? _c : 0; // Fallback to 0 if quantity is undefined
+            const availableQuantity = (_y = product.quantity) !== null && _y !== void 0 ? _y : 0; // Fallback to 0 if quantity is undefined
             if (availableQuantity >= cartItem.quantity) {
                 // Update the product quantity in inventory
                 yield product.update({ quantity: availableQuantity - cartItem.quantity }, { transaction });
@@ -1210,7 +1254,7 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             // Check if vendorId exists in the Admin table
             const admin = yield admin_1.default.findByPk(product.vendorId);
             if (!vendor && !admin) {
-                res.status(404).json({ message: "Owner not found" });
+                res.status(404).json({ message: 'Owner not found' });
                 return;
             }
             // Create the order item
@@ -1224,8 +1268,8 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             if (vendor) {
                 yield notification_1.default.create({
                     userId: vendor.id,
-                    title: "New Order Received",
-                    type: "new_order",
+                    title: 'New Order Received',
+                    type: 'new_order',
                     message: `You have received a new order (TRACKING NO: ${order.trackingNumber}) for your product.`,
                 }, { transaction });
                 const message = messages_1.emailTemplates.newOrderNotification(vendor, order);
@@ -1233,14 +1277,14 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                     yield (0, mail_service_1.sendMail)(vendor.email, `${process.env.APP_NAME} - New Order Received`, message);
                 }
                 catch (emailError) {
-                    logger_1.default.error("Error sending email:", emailError);
+                    logger_1.default.error('Error sending email:', emailError);
                 }
             }
             else if (admin) {
                 yield notification_1.default.create({
                     userId: admin.id,
-                    title: "New Order Received",
-                    type: "new_order",
+                    title: 'New Order Received',
+                    type: 'new_order',
                     message: `A new order (TRACKING NO: ${order.trackingNumber}) has been placed.`,
                 }, { transaction });
                 const message = messages_1.emailTemplates.newOrderAdminNotification(admin, order);
@@ -1248,7 +1292,7 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                     yield (0, mail_service_1.sendMail)(admin.email, `${process.env.APP_NAME} - New Order Received`, message);
                 }
                 catch (emailError) {
-                    logger_1.default.error("Error sending email:", emailError);
+                    logger_1.default.error('Error sending email:', emailError);
                 }
             }
         }
@@ -1263,7 +1307,7 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             paymentDate: paymentData.transaction_date,
         }, { transaction });
         const groupedVendorOrders = {};
-        cartItems.forEach(cartItem => {
+        cartItems.forEach((cartItem) => {
             if (!cartItem.product) {
                 logger_1.default.error(`❌ Product not found for cart item with ID ${cartItem.id}`);
                 throw new Error(`Product not found for cart item with ID ${cartItem.id}`);
@@ -1274,16 +1318,16 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             }
             groupedVendorOrders[vendorId].push({
                 vendorId: vendorId,
-                orderId: order.id, // Ensure orderId is included
+                orderId: order.id,
                 product: {
                     id: cartItem.product.id,
                     sku: cartItem.product.sku,
                     name: cartItem.product.name,
                     price: cartItem.product.price,
-                }, // Ensure product is an object
+                },
                 quantity: cartItem.quantity,
                 price: cartItem.product.price,
-                status: "pending", // Default status (if required)
+                status: 'pending',
                 createdAt: new Date(), // Ensure timestamps if needed
             });
         });
@@ -1292,8 +1336,8 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         // Notify the Buyer
         yield notification_1.default.create({
             userId,
-            title: "Order Confirmation",
-            type: "order_confirmation",
+            title: 'Order Confirmation',
+            type: 'order_confirmation',
             message: `Your order (TRACKING NO: ${order.trackingNumber}) has been successfully placed.`,
         }, { transaction });
         const user = yield user_1.default.findByPk(userId, { transaction }); // Add transaction scope
@@ -1309,35 +1353,35 @@ const checkout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             yield (0, mail_service_1.sendMail)(user.email, `${process.env.APP_NAME} - Order Confirmation`, message);
         }
         catch (emailError) {
-            logger_1.default.error("Error sending email:", emailError);
+            logger_1.default.error('Error sending email:', emailError);
         }
         res.status(200).json({
-            message: "Checkout successful"
+            message: 'Checkout successful',
         });
     }
     catch (error) {
         if (!transactionCommitted) {
             yield transaction.rollback();
         }
-        logger_1.default.error("Error during checkout:", error);
-        res.status(500).json({ message: error.message || "Checkout failed" });
+        logger_1.default.error('Error during checkout:', error);
+        res.status(500).json({ message: error.message || 'Checkout failed' });
     }
 });
 exports.checkout = checkout;
 const checkoutDollar = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+    var _z, _0;
+    const userId = (_z = req.user) === null || _z === void 0 ? void 0 : _z.id;
     const { refId, shippingAddress } = req.body;
     if (!userId) {
-        res.status(400).json({ message: "User must be authenticated" });
+        res.status(400).json({ message: 'User must be authenticated' });
         return;
     }
     if (!refId) {
-        res.status(400).json({ message: "Payment reference ID is required" });
+        res.status(400).json({ message: 'Payment reference ID is required' });
         return;
     }
     if (!shippingAddress) {
-        res.status(400).json({ message: "Shipping address is required" });
+        res.status(400).json({ message: 'Shipping address is required' });
         return;
     }
     const transaction = yield sequelize_service_1.default.connection.transaction();
@@ -1346,10 +1390,16 @@ const checkoutDollar = (req, res) => __awaiter(void 0, void 0, void 0, function*
         // Fetch cart items
         const cartItems = yield cart_1.default.findAll({
             where: { userId },
-            include: [{ model: product_1.default, as: "product", attributes: ["id", "name", "price", "vendorId", "quantity"] }],
+            include: [
+                {
+                    model: product_1.default,
+                    as: 'product',
+                    attributes: ['id', 'name', 'price', 'vendorId', 'quantity'],
+                },
+            ],
         });
         if (!cartItems || cartItems.length === 0) {
-            res.status(400).json({ message: "Cart is empty" });
+            res.status(400).json({ message: 'Cart is empty' });
             return;
         }
         // Calculate total price
@@ -1360,7 +1410,7 @@ const checkoutDollar = (req, res) => __awaiter(void 0, void 0, void 0, function*
             if (!product)
                 throw new Error(`Product with ID ${cartItem.productId} not found`);
             // Check if product has enough stock
-            const availableQuantity = (_b = product.quantity) !== null && _b !== void 0 ? _b : 0; // Fallback to 0 if undefined
+            const availableQuantity = (_0 = product.quantity) !== null && _0 !== void 0 ? _0 : 0; // Fallback to 0 if undefined
             if (availableQuantity < cartItem.quantity) {
                 throw new Error(`Insufficient stock for product: ${product.name}`);
             }
@@ -1369,19 +1419,19 @@ const checkoutDollar = (req, res) => __awaiter(void 0, void 0, void 0, function*
                     {
                         model: store_1.default,
                         as: 'store',
-                        attributes: ["name"],
+                        attributes: ['name'],
                         include: [
                             {
                                 model: currency_1.default,
                                 as: 'currency',
-                                attributes: ["name", "symbol"]
+                                attributes: ['name', 'symbol'],
                             },
                         ],
                     },
                     {
                         model: subcategory_1.default,
-                        as: "sub_category",
-                        attributes: ["id", "name"],
+                        as: 'sub_category',
+                        attributes: ['id', 'name'],
                     },
                 ],
             });
@@ -1409,7 +1459,7 @@ const checkoutDollar = (req, res) => __awaiter(void 0, void 0, void 0, function*
             totalAmount,
             refId,
             shippingAddress,
-            status: "pending",
+            status: 'pending',
         }, { transaction });
         // Process order items per vendor
         for (const vendorId in vendorOrders) {
@@ -1429,9 +1479,9 @@ const checkoutDollar = (req, res) => __awaiter(void 0, void 0, void 0, function*
             orderId: order.id,
             refId,
             amount: totalAmount,
-            currency: "USD",
-            status: "success",
-            channel: "Stripe",
+            currency: 'USD',
+            status: 'success',
+            channel: 'Stripe',
             paymentDate: new Date(),
         }, { transaction });
         // Clear cart
@@ -1444,8 +1494,8 @@ const checkoutDollar = (req, res) => __awaiter(void 0, void 0, void 0, function*
         // Notify the Buyer
         yield notification_1.default.create({
             userId,
-            title: "Order Confirmation",
-            type: "order_confirmation",
+            title: 'Order Confirmation',
+            type: 'order_confirmation',
             message: `Your order (TRACKING NO: ${order.trackingNumber}) has been successfully placed.`,
         }, { transaction });
         // Commit transaction before sending notifications
@@ -1457,14 +1507,14 @@ const checkoutDollar = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 const vendor = yield user_1.default.findByPk(vendorId);
                 const admin = yield admin_1.default.findByPk(vendorId);
                 if (!vendor && !admin) {
-                    res.status(404).json({ message: "Owner not found" });
+                    res.status(404).json({ message: 'Owner not found' });
                     return;
                 }
                 if (vendor) {
                     yield notification_1.default.create({
                         userId: vendor.id,
-                        title: "New Order Received",
-                        type: "new_order",
+                        title: 'New Order Received',
+                        type: 'new_order',
                         message: `You have received a new order (TRACKING NO: ${order.trackingNumber}) for your product.`,
                     }, { transaction });
                     const message = messages_1.emailTemplates.newOrderNotification(vendor, order);
@@ -1472,14 +1522,14 @@ const checkoutDollar = (req, res) => __awaiter(void 0, void 0, void 0, function*
                         yield (0, mail_service_1.sendMail)(vendor.email, `${process.env.APP_NAME} - New Order Received`, message);
                     }
                     catch (emailError) {
-                        logger_1.default.error("Error sending email:", emailError);
+                        logger_1.default.error('Error sending email:', emailError);
                     }
                 }
                 else if (admin) {
                     yield notification_1.default.create({
                         userId: admin.id,
-                        title: "New Order Received",
-                        type: "new_order",
+                        title: 'New Order Received',
+                        type: 'new_order',
                         message: `A new order (TRACKING NO: ${order.trackingNumber}) has been placed for your product.`,
                     }, { transaction });
                     const message = messages_1.emailTemplates.newOrderAdminNotification(admin, order);
@@ -1487,7 +1537,7 @@ const checkoutDollar = (req, res) => __awaiter(void 0, void 0, void 0, function*
                         yield (0, mail_service_1.sendMail)(admin.email, `${process.env.APP_NAME} - New Order Received`, message);
                     }
                     catch (emailError) {
-                        logger_1.default.error("Error sending email:", emailError);
+                        logger_1.default.error('Error sending email:', emailError);
                     }
                 }
             }
@@ -1501,41 +1551,47 @@ const checkoutDollar = (req, res) => __awaiter(void 0, void 0, void 0, function*
             yield (0, mail_service_1.sendMail)(user.email, `${process.env.APP_NAME} - Order Confirmation`, message);
         }
         catch (emailError) {
-            logger_1.default.error("Error sending email:", emailError);
+            logger_1.default.error('Error sending email:', emailError);
         }
         res.status(200).json({
-            message: "Checkout successful",
+            message: 'Checkout successful',
         });
     }
     catch (error) {
         if (!transactionCommitted) {
             yield transaction.rollback();
         }
-        logger_1.default.error("Error during checkout:", error);
-        res.status(500).json({ message: "Checkout failed" });
+        logger_1.default.error('Error during checkout:', error);
+        res.status(500).json({ message: 'Checkout failed' });
     }
 });
 exports.checkoutDollar = checkoutDollar;
 // Bid
 const showInterest = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _1;
     try {
         const { auctionProductId, amountPaid } = req.body;
-        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get the authenticated user's ID
+        const userId = (_1 = req.user) === null || _1 === void 0 ? void 0 : _1.id; // Get the authenticated user's ID
         // Fetch the auction product
         const auctionProduct = yield auctionproduct_1.default.findOne({
             where: {
                 id: auctionProductId,
-                auctionStatus: "upcoming", // Ensure auction status is "upcoming"
+                auctionStatus: 'upcoming', // Ensure auction status is "upcoming"
             },
         });
         if (!auctionProduct) {
-            res.status(404).json({ message: "Auction product not found or is not upcoming." });
+            res
+                .status(404)
+                .json({ message: 'Auction product not found or is not upcoming.' });
             return;
         }
         // Validate auction date is not the start date
-        if (auctionProduct.startDate && new Date(auctionProduct.startDate).toDateString() === new Date().toDateString()) {
-            res.status(400).json({ message: "You cannot show interest on the day the auction starts." });
+        if (auctionProduct.startDate &&
+            new Date(auctionProduct.startDate).toDateString() ===
+                new Date().toDateString()) {
+            res.status(400).json({
+                message: 'You cannot show interest on the day the auction starts.',
+            });
             return;
         }
         // Check if user has already shown interest
@@ -1543,7 +1599,9 @@ const showInterest = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             where: { userId, auctionProductId },
         });
         if (existingInterest) {
-            res.status(400).json({ message: "You have already shown interest in this auction." });
+            res
+                .status(400)
+                .json({ message: 'You have already shown interest in this auction.' });
             return;
         }
         // Create a new interest record
@@ -1551,13 +1609,13 @@ const showInterest = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             userId,
             auctionProductId,
             amountPaid,
-            status: "confirmed",
+            status: 'confirmed',
         });
         // Fetch the user based on userId
         const user = yield user_1.default.findOne({ where: { id: userId } });
         if (!user) {
             logger_1.default.warn(`User with ID ${userId} not found. Email notification skipped.`);
-            res.status(404).json({ message: "User not found." });
+            res.status(404).json({ message: 'User not found.' });
             return;
         }
         // Notify user via email
@@ -1567,98 +1625,102 @@ const showInterest = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 yield (0, mail_service_1.sendMail)(user.email, `${process.env.APP_NAME} - Interest Confirmation`, message);
             }
             catch (emailError) {
-                logger_1.default.error("Error sending email notification:", emailError);
+                logger_1.default.error('Error sending email notification:', emailError);
             }
         }
         else {
             logger_1.default.warn(`User with ID ${userId} has no email. Notification skipped.`);
         }
         res.status(200).json({
-            message: "Interest recorded successfully. Please wait for confirmation.",
+            message: 'Interest recorded successfully. Please wait for confirmation.',
             data: newInterest,
         });
     }
     catch (error) {
-        logger_1.default.error("Error showing interest:", error);
-        res.status(500).json({ message: error.message || "An error occurred while recording your interest." });
+        logger_1.default.error('Error showing interest:', error);
+        res.status(500).json({
+            message: error.message || 'An error occurred while recording your interest.',
+        });
     }
 });
 exports.showInterest = showInterest;
 const getAllAuctionProductsInterest = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _2;
     try {
-        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get authenticated user ID
+        const userId = (_2 = req.user) === null || _2 === void 0 ? void 0 : _2.id; // Get authenticated user ID
         if (!userId) {
-            res.status(401).json({ message: "Unauthorized: User not authenticated." });
+            res
+                .status(401)
+                .json({ message: 'Unauthorized: User not authenticated.' });
             return;
         }
         // Fetch all interests for the authenticated user
         const userAuctionProductInterests = yield showinterest_1.default.findAll({
-            where: { userId }, // Filter by authenticated user ID
+            where: { userId },
             include: [
                 {
                     model: auctionproduct_1.default,
-                    as: "auctionProduct",
+                    as: 'auctionProduct',
                     include: [
                         {
                             model: user_1.default,
-                            as: "vendor"
+                            as: 'vendor',
                         },
                         {
                             model: admin_1.default,
-                            as: "admin",
-                            attributes: ["id", "name", "email"],
+                            as: 'admin',
+                            attributes: ['id', 'name', 'email'],
                         },
                         {
                             model: store_1.default,
-                            as: "store",
+                            as: 'store',
                             attributes: ['name'],
                             include: [
                                 {
                                     model: currency_1.default,
-                                    as: "currency",
-                                    attributes: ['symbol']
+                                    as: 'currency',
+                                    attributes: ['symbol'],
                                 },
-                            ]
+                            ],
                         },
                         {
                             model: subcategory_1.default,
-                            as: "sub_category",
-                            attributes: ["id", "name"],
+                            as: 'sub_category',
+                            attributes: ['id', 'name'],
                         },
                     ],
                 },
             ],
         });
         res.status(200).json({
-            message: "User auction product interests retrieved successfully.",
+            message: 'User auction product interests retrieved successfully.',
             data: userAuctionProductInterests,
         });
     }
     catch (error) {
-        logger_1.default.error("Error retrieving user auction product interests:", error);
+        logger_1.default.error('Error retrieving user auction product interests:', error);
         res.status(500).json({
-            message: error.message || "An error occurred while retrieving interests.",
+            message: error.message || 'An error occurred while retrieving interests.',
         });
     }
 });
 exports.getAllAuctionProductsInterest = getAllAuctionProductsInterest;
 const placeBid = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b;
+    var _3, _4;
     try {
         const { auctionProductId, bidAmount } = req.body;
-        const bidderId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+        const bidderId = (_3 = req.user) === null || _3 === void 0 ? void 0 : _3.id; // Authenticated user ID from middleware
         // Check if the user has an interest in the auction product
         const existingInterest = yield showinterest_1.default.findOne({
             where: {
                 userId: bidderId,
                 auctionProductId,
-                status: "confirmed",
+                status: 'confirmed',
             },
         });
         if (!existingInterest) {
             res.status(403).json({
-                message: "You must show interest in this auction before placing a bid.",
+                message: 'You must show interest in this auction before placing a bid.',
             });
             return;
         }
@@ -1666,45 +1728,49 @@ const placeBid = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const auctionProduct = yield auctionproduct_1.default.findOne({
             where: {
                 id: auctionProductId,
-                auctionStatus: "ongoing",
+                auctionStatus: 'ongoing',
                 startDate: { [sequelize_1.Op.lte]: new Date() },
                 endDate: { [sequelize_1.Op.gte]: new Date() },
             },
             include: [
                 {
                     model: bid_1.default,
-                    as: "bids",
+                    as: 'bids',
                     include: [
                         {
                             model: user_1.default,
-                            as: "user",
+                            as: 'user',
                         },
                     ],
                 },
             ],
-            order: [[{ model: bid_1.default, as: "bids" }, "bidAmount", "DESC"]], // Ordering the bids by amount descending
+            order: [[{ model: bid_1.default, as: 'bids' }, 'bidAmount', 'DESC']], // Ordering the bids by amount descending
         });
         if (!auctionProduct) {
-            res
-                .status(404)
-                .json({
-                message: "Auction product not found or auction is not ongoing.",
+            res.status(404).json({
+                message: 'Auction product not found or auction is not ongoing.',
             });
             return;
         }
         // Get the current highest bid
-        const highestBid = (_b = auctionProduct === null || auctionProduct === void 0 ? void 0 : auctionProduct.bids) === null || _b === void 0 ? void 0 : _b[0];
+        const highestBid = (_4 = auctionProduct === null || auctionProduct === void 0 ? void 0 : auctionProduct.bids) === null || _4 === void 0 ? void 0 : _4[0];
         // Determine minimum acceptable bid
         const highestBidAmount = highestBid ? Number(highestBid.bidAmount) : 0;
-        const bidIncrement = auctionProduct.bidIncrement ? Number(auctionProduct.bidIncrement) : 0;
-        const startingPrice = auctionProduct.price ? Number(auctionProduct.price) : 0;
+        const bidIncrement = auctionProduct.bidIncrement
+            ? Number(auctionProduct.bidIncrement)
+            : 0;
+        const startingPrice = auctionProduct.price
+            ? Number(auctionProduct.price)
+            : 0;
         // Determine minimum acceptable bid
         const minAcceptableBid = highestBid
             ? highestBidAmount + bidIncrement
             : startingPrice;
         if (isNaN(minAcceptableBid)) {
-            logger_1.default.error("Invalid minimum acceptable bid calculation.");
-            res.status(500).json({ message: "Invalid minimum acceptable bid calculation." });
+            logger_1.default.error('Invalid minimum acceptable bid calculation.');
+            res
+                .status(500)
+                .json({ message: 'Invalid minimum acceptable bid calculation.' });
             return;
         }
         if (bidAmount < minAcceptableBid) {
@@ -1718,7 +1784,8 @@ const placeBid = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             const previousBidders = auctionProduct.bids.filter((bid) => bid.bidderId !== bidderId && bid.user // Exclude current bidder and ensure user exists
             );
             for (const previousBid of previousBidders) {
-                if (previousBid.user) { // Ensure user is not undefined
+                if (previousBid.user) {
+                    // Ensure user is not undefined
                     try {
                         // Generate outbid notification message
                         const message = messages_1.emailTemplates.outBidNotification(previousBid, auctionProduct);
@@ -1747,13 +1814,13 @@ const placeBid = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 yield highestBid.save();
             }
             // Real-time bid update via WebSocket
-            index_1.io.to(auctionProductId).emit("newBid", {
+            index_1.io.to(auctionProductId).emit('newBid', {
                 auctionProductId,
                 bidAmount: existingBid.bidAmount,
                 bidderId: existingBid.bidderId,
             });
             res.status(200).json({
-                message: "Bid updated successfully.",
+                message: 'Bid updated successfully.',
                 data: existingBid,
             });
             return;
@@ -1774,20 +1841,20 @@ const placeBid = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         newBid.isWinningBid = true;
         yield newBid.save();
         // Real-time bid update via WebSocket
-        index_1.io.to(auctionProductId).emit("newBid", {
+        index_1.io.to(auctionProductId).emit('newBid', {
             auctionProductId,
             bidAmount: newBid.bidAmount,
             bidderId: newBid.bidderId,
         });
         res.status(200).json({
-            message: "Bid placed successfully.",
+            message: 'Bid placed successfully.',
             data: newBid,
         });
     }
     catch (error) {
-        logger_1.default.error("Error placing bid:", error);
+        logger_1.default.error('Error placing bid:', error);
         res.status(500).json({
-            message: "An error occurred while placing your bid.",
+            message: 'An error occurred while placing your bid.',
         });
     }
 });
@@ -1806,60 +1873,60 @@ const actionProductBidders = (req, res) => __awaiter(void 0, void 0, void 0, fun
             include: [
                 {
                     model: user_1.default,
-                    as: "vendor",
+                    as: 'vendor',
                 },
                 {
                     model: admin_1.default,
-                    as: "admin",
-                    attributes: ["id", "name", "email"],
+                    as: 'admin',
+                    attributes: ['id', 'name', 'email'],
                 },
                 {
                     model: store_1.default,
-                    as: "store",
+                    as: 'store',
                     include: [
                         {
                             model: currency_1.default,
-                            as: "currency",
-                            attributes: ['symbol']
+                            as: 'currency',
+                            attributes: ['symbol'],
                         },
-                    ]
+                    ],
                 },
                 {
                     model: subcategory_1.default,
-                    as: "sub_category",
-                    attributes: ["id", "name"],
+                    as: 'sub_category',
+                    attributes: ['id', 'name'],
                 },
                 {
                     model: bid_1.default,
-                    as: "bids",
+                    as: 'bids',
                     include: [
                         {
                             model: user_1.default,
-                            as: "user",
-                        }
+                            as: 'user',
+                        },
                     ],
                 },
             ],
         });
         if (!product) {
-            res.status(404).json({ message: "Product not found" });
+            res.status(404).json({ message: 'Product not found' });
             return;
         }
         res.status(200).json({ data: product });
     }
     catch (error) {
-        logger_1.default.error("Error fetching product:", error);
+        logger_1.default.error('Error fetching product:', error);
         res.status(500).json({
-            message: error.message || "An error occurred while fetching the product.",
+            message: error.message || 'An error occurred while fetching the product.',
         });
     }
 });
 exports.actionProductBidders = actionProductBidders;
 const becomeVendor = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _5;
+    const userId = (_5 = req.user) === null || _5 === void 0 ? void 0 : _5.id; // Authenticated user ID from middleware
     if (!userId) {
-        res.status(400).json({ message: "User must be authenticated" });
+        res.status(400).json({ message: 'User must be authenticated' });
         return;
     }
     const transaction = yield sequelize_service_1.default.connection.transaction();
@@ -1867,32 +1934,36 @@ const becomeVendor = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         // Fetch the user
         const user = yield user_1.default.findByPk(userId, { transaction });
         if (!user) {
-            res.status(404).json({ message: "User not found" });
+            res.status(404).json({ message: 'User not found' });
             yield transaction.rollback();
             return;
         }
         // Check if the user is already a vendor
-        if (user.accountType === "Vendor") {
-            res.status(400).json({ message: "User is already a vendor" });
+        if (user.accountType === 'Vendor') {
+            res.status(400).json({ message: 'User is already a vendor' });
             yield transaction.rollback();
             return;
         }
         // Check if the user is eligible to become a vendor
-        if (user.accountType !== "Customer") {
-            res.status(400).json({ message: "Account type cannot be changed to vendor" });
+        if (user.accountType !== 'Customer') {
+            res
+                .status(400)
+                .json({ message: 'Account type cannot be changed to vendor' });
             yield transaction.rollback();
             return;
         }
         // Update the accountType to vendor
-        user.accountType = "Vendor";
+        user.accountType = 'Vendor';
         yield user.save({ transaction });
         // Find the free subscription plan
         const freePlan = yield subscriptionplan_1.default.findOne({
-            where: { name: "Free Plan" },
+            where: { name: 'Free Plan' },
             transaction,
         });
         if (!freePlan) {
-            res.status(400).json({ message: "Free plan not found. Please contact support." });
+            res
+                .status(400)
+                .json({ message: 'Free plan not found. Please contact support.' });
             yield transaction.rollback();
             return;
         }
@@ -1910,25 +1981,27 @@ const becomeVendor = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         // Send a notification for becoming a vendor
         yield notification_1.default.create({
             userId: user.id,
-            title: "Welcome, Vendor!",
-            message: "Congratulations! You are now a vendor. Start setting up your store and manage your products.",
-            type: "vendor",
+            title: 'Welcome, Vendor!',
+            message: 'Congratulations! You are now a vendor. Start setting up your store and manage your products.',
+            type: 'vendor',
         }, { transaction });
         yield transaction.commit(); // Commit transaction
-        res.status(200).json({ message: "Account successfully upgraded to vendor" });
+        res
+            .status(200)
+            .json({ message: 'Account successfully upgraded to vendor' });
     }
     catch (error) {
         yield transaction.rollback(); // Rollback transaction on error
-        logger_1.default.error("Error upgrading account to vendor:", error);
-        res.status(500).json({ message: "Failed to update account type" });
+        logger_1.default.error('Error upgrading account to vendor:', error);
+        res.status(500).json({ message: 'Failed to update account type' });
     }
 });
 exports.becomeVendor = becomeVendor;
 const getUserNotifications = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _6;
+    const userId = (_6 = req.user) === null || _6 === void 0 ? void 0 : _6.id; // Authenticated user ID from middleware
     if (!userId) {
-        res.status(400).json({ message: "User must be authenticated" });
+        res.status(400).json({ message: 'User must be authenticated' });
         return;
     }
     const { isRead, limit = 10, page = 1 } = req.query; // Query params
@@ -1960,21 +2033,21 @@ const getUserNotifications = (req, res) => __awaiter(void 0, void 0, void 0, fun
         });
     }
     catch (error) {
-        logger_1.default.error("Error fetching notifications:", error);
-        res.status(500).json({ message: "Failed to fetch notifications", error });
+        logger_1.default.error('Error fetching notifications:', error);
+        res.status(500).json({ message: 'Failed to fetch notifications', error });
     }
 });
 exports.getUserNotifications = getUserNotifications;
 const userMarkNotificationAsRead = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _7;
+    const userId = (_7 = req.user) === null || _7 === void 0 ? void 0 : _7.id; // Authenticated user ID from middleware
     const notificationId = req.query.notificationId; // Notification ID passed in the request body
     if (!userId) {
-        res.status(400).json({ message: "User must be authenticated" });
+        res.status(400).json({ message: 'User must be authenticated' });
         return;
     }
     if (!notificationId) {
-        res.status(400).json({ message: "Notification ID is required" });
+        res.status(400).json({ message: 'Notification ID is required' });
         return;
     }
     try {
@@ -1983,25 +2056,27 @@ const userMarkNotificationAsRead = (req, res) => __awaiter(void 0, void 0, void 
             where: { id: notificationId, userId },
         });
         if (!notification) {
-            res.status(404).json({ message: "Notification not found or does not belong to the user" });
+            res.status(404).json({
+                message: 'Notification not found or does not belong to the user',
+            });
             return;
         }
         // Update the `readAt` field to mark it as read
         notification.isRead = true;
         yield notification.save();
-        res.status(200).json({ message: "Notification marked as read" });
+        res.status(200).json({ message: 'Notification marked as read' });
     }
     catch (error) {
-        logger_1.default.error("Error marking notification as read:", error);
-        res.status(500).json({ message: "Failed to mark notification as read" });
+        logger_1.default.error('Error marking notification as read:', error);
+        res.status(500).json({ message: 'Failed to mark notification as read' });
     }
 });
 exports.userMarkNotificationAsRead = userMarkNotificationAsRead;
 const getAllOrders = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _8;
+    const userId = (_8 = req.user) === null || _8 === void 0 ? void 0 : _8.id; // Authenticated user ID from middleware
     if (!userId) {
-        res.status(400).json({ message: "User must be authenticated" });
+        res.status(400).json({ message: 'User must be authenticated' });
         return;
     }
     const { trackingNumber } = req.query; // Only track by tracking number, no pagination
@@ -2014,34 +2089,34 @@ const getAllOrders = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             attributes: {
                 include: [
                     [
-                        sequelize_1.Sequelize.fn("COUNT", sequelize_1.Sequelize.col("orderItems.id")),
-                        "orderItemsCount", // Alias for the count of order items
+                        sequelize_1.Sequelize.fn('COUNT', sequelize_1.Sequelize.col('orderItems.id')),
+                        'orderItemsCount', // Alias for the count of order items
                     ],
                 ],
             },
             include: [
                 {
                     model: orderitem_1.default,
-                    as: "orderItems",
+                    as: 'orderItems',
                     attributes: [], // Do not include actual order items
                 },
             ],
-            group: ["Order.id"], // Group by order to ensure correct counting
-            order: [["createdAt", "DESC"]], // Order by createdAt
+            group: ['Order.id'],
+            order: [['createdAt', 'DESC']], // Order by createdAt
         });
         if (!orders || orders.length === 0) {
-            res.status(404).json({ message: "No orders found for this user" });
+            res.status(404).json({ message: 'No orders found for this user' });
             return;
         }
         // Return the response with orders data
         res.status(200).json({
-            message: "Orders retrieved successfully",
+            message: 'Orders retrieved successfully',
             data: orders,
         });
     }
     catch (error) {
-        logger_1.default.error("Error fetching orders:", error);
-        res.status(500).json({ message: "Internal server error" });
+        logger_1.default.error('Error fetching orders:', error);
+        res.status(500).json({ message: 'Internal server error' });
     }
 });
 exports.getAllOrders = getAllOrders;
@@ -2054,7 +2129,7 @@ const getAllOrderItems = (req, res) => __awaiter(void 0, void 0, void 0, functio
     try {
         // Ensure `orderId` is provided
         if (!orderId) {
-            res.status(400).json({ message: "Order ID is required" });
+            res.status(400).json({ message: 'Order ID is required' });
             return;
         }
         // Query for order items with pagination and required associations
@@ -2062,19 +2137,19 @@ const getAllOrderItems = (req, res) => __awaiter(void 0, void 0, void 0, functio
             where: { orderId },
             limit: limitNumber,
             offset,
-            order: [["createdAt", "DESC"]],
+            order: [['createdAt', 'DESC']],
         });
         if (!orderItems || orderItems.length === 0) {
-            res.status(404).json({ message: "No items found for this order" });
+            res.status(404).json({ message: 'No items found for this order' });
             return;
         }
         // Prepare metadata for pagination
         const totalPages = Math.ceil(count / limitNumber);
         res.status(200).json({
-            message: "Order items retrieved successfully",
+            message: 'Order items retrieved successfully',
             data: orderItems,
             meta: {
-                total: count, // Total number of order items
+                total: count,
                 page: pageNumber,
                 limit: limitNumber,
                 totalPages,
@@ -2082,8 +2157,8 @@ const getAllOrderItems = (req, res) => __awaiter(void 0, void 0, void 0, functio
         });
     }
     catch (error) {
-        logger_1.default.error("Error fetching order items:", error);
-        res.status(500).json({ message: "Internal server error" });
+        logger_1.default.error('Error fetching order items:', error);
+        res.status(500).json({ message: 'Internal server error' });
     }
 });
 exports.getAllOrderItems = getAllOrderItems;
@@ -2096,12 +2171,18 @@ const viewOrderItem = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             include: [
                 {
                     model: order_1.default,
-                    as: "order",
+                    as: 'order',
                     include: [
                         {
                             model: user_1.default,
-                            as: "user",
-                            attributes: ["id", "firstName", "lastName", "email", "phoneNumber"], // Include user details
+                            as: 'user',
+                            attributes: [
+                                'id',
+                                'firstName',
+                                'lastName',
+                                'email',
+                                'phoneNumber',
+                            ], // Include user details
                         },
                     ],
                 },
@@ -2109,120 +2190,159 @@ const viewOrderItem = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         });
         // If order item is not found
         if (!orderItem) {
-            res.status(404).json({ message: "Order item not found" });
+            res.status(404).json({ message: 'Order item not found' });
             return;
         }
         // Convert Sequelize model to plain object and add computed field
         const formattedOrderItem = Object.assign(Object.assign({}, orderItem.get()), { totalPrice: orderItem.quantity * orderItem.price });
         res.status(200).json({
-            message: "Order item retrieved successfully",
+            message: 'Order item retrieved successfully',
             data: formattedOrderItem,
         });
     }
     catch (error) {
-        logger_1.default.error("Error fetching order item:", error);
-        res.status(500).json({ message: "Internal server error" });
+        logger_1.default.error('Error fetching order item:', error);
+        res.status(500).json({ message: 'Internal server error' });
     }
 });
 exports.viewOrderItem = viewOrderItem;
 const updateOrderStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c, _d, _e;
+    var _9, _10, _11, _12, _13;
     const { status, orderItemId } = req.body;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    const userId = (_9 = req.user) === null || _9 === void 0 ? void 0 : _9.id; // Authenticated user ID from middleware
     if (!userId) {
-        res.status(400).json({ message: "User must be authenticated" });
+        res.status(400).json({ message: 'User must be authenticated' });
         return;
     }
     // Define allowed statuses
-    const allowedStatuses = ["pending", "processing", "shipped", "delivered", "cancelled"];
+    const allowedStatuses = [
+        'pending',
+        'processing',
+        'shipped',
+        'delivered',
+        'cancelled',
+    ];
     if (!allowedStatuses.includes(status)) {
-        res.status(400).json({ message: "Invalid order status provided." });
+        res.status(400).json({ message: 'Invalid order status provided.' });
         return;
     }
     // Start transaction
     const transaction = yield sequelize_service_1.default.connection.transaction();
     try {
         // Find the order item
-        const order = yield orderitem_1.default.findOne({ where: { id: orderItemId }, transaction });
+        const order = yield orderitem_1.default.findOne({
+            where: { id: orderItemId },
+            transaction,
+        });
         if (!order) {
             yield transaction.rollback();
-            res.status(404).json({ message: "Order item not found." });
+            res.status(404).json({ message: 'Order item not found.' });
             return;
         }
         const mainOrder = yield order_1.default.findOne({ where: { id: order.orderId } });
         if (!mainOrder) {
             yield transaction.rollback();
-            res.status(404).json({ message: "Buyer information not found." });
+            res.status(404).json({ message: 'Buyer information not found.' });
             return;
         }
         const buyer = yield user_1.default.findByPk(mainOrder.userId, { transaction });
         if (!buyer) {
             yield transaction.rollback();
-            res.status(404).json({ message: "Buyer not found." });
+            res.status(404).json({ message: 'Buyer not found.' });
             return;
         }
         // If the order is already delivered or cancelled, stop further processing
-        if (order.status === "delivered" || order.status === "cancelled") {
+        if (order.status === 'delivered' || order.status === 'cancelled') {
             yield transaction.rollback();
             res.status(400).json({
-                message: `Order is already ${order.status}. No further updates are allowed.`
+                message: `Order is already ${order.status}. No further updates are allowed.`,
             });
             return;
         }
         let productData = order.product;
         // If product data is stored as a string, parse it
-        if (typeof order.product === "string") {
+        if (typeof order.product === 'string') {
             productData = JSON.parse(order.product);
         }
         // Extract vendorId safely
-        const vendorId = (_b = productData === null || productData === void 0 ? void 0 : productData.vendorId) !== null && _b !== void 0 ? _b : null;
-        const currencySymbol = (_e = (_d = (_c = productData === null || productData === void 0 ? void 0 : productData.store) === null || _c === void 0 ? void 0 : _c.currency) === null || _d === void 0 ? void 0 : _d.symbol) !== null && _e !== void 0 ? _e : null;
+        const vendorId = (_10 = productData === null || productData === void 0 ? void 0 : productData.vendorId) !== null && _10 !== void 0 ? _10 : null;
+        const currencySymbol = (_13 = (_12 = (_11 = productData === null || productData === void 0 ? void 0 : productData.store) === null || _11 === void 0 ? void 0 : _11.currency) === null || _12 === void 0 ? void 0 : _12.symbol) !== null && _13 !== void 0 ? _13 : null;
         if (!vendorId) {
             yield transaction.rollback();
-            res.status(400).json({ message: "Vendor ID not found in product data." });
+            res.status(400).json({ message: 'Vendor ID not found in product data.' });
             return;
         }
         if (!currencySymbol) {
             yield transaction.rollback();
-            res.status(400).json({ message: "Currency not found in product data." });
+            res.status(400).json({ message: 'Currency not found in product data.' });
             return;
         }
         // Update the order status
         order.status = status;
+        // If status is shipped, generate delivery code and email customer
+        if (status === 'shipped') {
+            const deliveryCode = crypto_1.default.randomBytes(6).toString('hex').toUpperCase();
+            const mainOrder = yield order_1.default.findOne({
+                where: { id: order.orderId },
+                transaction,
+            });
+            if (mainOrder) {
+                mainOrder.deliveryCode = deliveryCode;
+                yield mainOrder.save({ transaction });
+                // Send email to customer
+                const customer = yield user_1.default.findByPk(mainOrder.userId, { transaction });
+                if (customer) {
+                    const html = `
+            <h3>Hi ${customer.firstName},</h3>
+            <p>Your order <strong>#${mainOrder.id}</strong> has been shipped.</p>
+            <p>Please be available to collect it. Use the code below to confirm delivery:</p>
+            <h2 style="color: blue;">${deliveryCode}</h2>
+            <p>Thanks for shopping with us!</p>
+          `;
+                    try {
+                        yield (0, mail_service_1.sendMail)(customer.email, 'Your order has been shipped!', html);
+                    }
+                    catch (emailError) {
+                        logger_1.default.error('Error sending shipping email:', emailError);
+                    }
+                }
+            }
+        }
         yield order.save({ transaction });
         // Check if vendorId exists in the User or Admin table
         const vendor = yield user_1.default.findByPk(vendorId, { transaction });
         const admin = yield admin_1.default.findByPk(vendorId, { transaction });
         if (!vendor && !admin) {
             yield transaction.rollback();
-            res.status(404).json({ message: "Product owner not found." });
+            res.status(404).json({ message: 'Product owner not found.' });
             return;
         }
         // If the order is delivered, add funds to the vendor's wallet
-        if ((status === "delivered" && currencySymbol === "#" && vendor) || (status === "delivered" && currencySymbol === "₦" && vendor)) {
+        if ((status === 'delivered' && currencySymbol === '#' && vendor) ||
+            (status === 'delivered' && currencySymbol === '₦' && vendor)) {
             const price = Number(order.price);
-            vendor.wallet = (Number(vendor.wallet) + price);
+            vendor.wallet = Number(vendor.wallet) + price;
             yield vendor.save({ transaction });
         }
         // If the order is delivered and the currency is USD, add funds to the vendor's wallet
-        if (status === "delivered" && currencySymbol === "$" && vendor) {
+        if (status === 'delivered' && currencySymbol === '$' && vendor) {
             const price = Number(order.price);
-            vendor.dollarWallet = (Number(vendor.dollarWallet) + price);
+            vendor.dollarWallet = Number(vendor.dollarWallet) + price;
             yield vendor.save({ transaction });
         }
         // Send a notification to the Buyer
         yield notification_1.default.create({
             userId: mainOrder.userId,
-            title: "Order Status Updated",
+            title: 'Order Status Updated',
             message: `Your product has been marked as '${status}'.`,
-            type: "order_status_update",
+            type: 'order_status_update',
         }, { transaction });
         // Send a notification to the vendor/admin (who owns the product)
         yield notification_1.default.create({
             userId: vendorId,
-            title: "Order Status Updated",
+            title: 'Order Status Updated',
             message: `The status of the product '${productData === null || productData === void 0 ? void 0 : productData.name}' purchased from you has been updated to '${status}'.`,
-            type: "order_status_update",
+            type: 'order_status_update',
         }, { transaction });
         // Commit transaction
         yield transaction.commit();
@@ -2232,7 +2352,7 @@ const updateOrderStatus = (req, res) => __awaiter(void 0, void 0, void 0, functi
             yield (0, mail_service_1.sendMail)(buyer.email, `${process.env.APP_NAME} - Order Status Update`, message);
         }
         catch (emailError) {
-            logger_1.default.error("Error sending email:", emailError);
+            logger_1.default.error('Error sending email:', emailError);
         }
         res.status(200).json({
             message: `Order status updated to '${status}' successfully.`,
@@ -2241,8 +2361,10 @@ const updateOrderStatus = (req, res) => __awaiter(void 0, void 0, void 0, functi
     }
     catch (error) {
         yield transaction.rollback();
-        logger_1.default.error("Error updating order status:", error);
-        res.status(500).json({ message: "An error occurred while updating the order status." });
+        logger_1.default.error('Error updating order status:', error);
+        res
+            .status(500)
+            .json({ message: 'An error occurred while updating the order status.' });
     }
 });
 exports.updateOrderStatus = updateOrderStatus;
@@ -2259,17 +2381,17 @@ const getPaymentDetails = (req, res) => __awaiter(void 0, void 0, void 0, functi
             where: { orderId },
             limit: limitNumber,
             offset: offset,
-            order: [["createdAt", "DESC"]], // Order by latest payments
+            order: [['createdAt', 'DESC']], // Order by latest payments
         });
         if (!payments || payments.length === 0) {
-            res.status(404).json({ message: "No payments found for this order" });
+            res.status(404).json({ message: 'No payments found for this order' });
             return;
         }
         res.status(200).json({
-            message: "Payments retrieved successfully",
+            message: 'Payments retrieved successfully',
             data: payments,
             meta: {
-                total: count, // Total number of payments for the order
+                total: count,
                 page: pageNumber,
                 limit: limitNumber,
                 totalPages: Math.ceil(count / limitNumber), // Calculate total pages
@@ -2277,46 +2399,50 @@ const getPaymentDetails = (req, res) => __awaiter(void 0, void 0, void 0, functi
         });
     }
     catch (error) {
-        logger_1.default.error("Error fetching payment details:", error);
-        res.status(500).json({ message: "Internal server error" });
+        logger_1.default.error('Error fetching payment details:', error);
+        res.status(500).json({ message: 'Internal server error' });
     }
 });
 exports.getPaymentDetails = getPaymentDetails;
 const toggleSaveProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _14;
     const { productId } = req.body;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    const userId = (_14 = req.user) === null || _14 === void 0 ? void 0 : _14.id; // Authenticated user ID from middleware
     try {
         // Check if the product exists
-        const product = yield product_1.default.findOne({ where: { id: productId, status: "active" } });
+        const product = yield product_1.default.findOne({
+            where: { id: productId, status: 'active' },
+        });
         if (!product) {
-            res.status(404).json({ message: "Product not found" });
+            res.status(404).json({ message: 'Product not found' });
             return;
         }
         // Check if the product is already saved (wishlist)
         const existingSavedProduct = yield saveproduct_1.default.findOne({
-            where: { userId, productId }
+            where: { userId, productId },
         });
         if (existingSavedProduct) {
             // If exists, remove it (toggle)
             yield existingSavedProduct.destroy();
-            res.status(200).json({ message: "Product removed from your saved list" });
+            res.status(200).json({ message: 'Product removed from your saved list' });
         }
         else {
             // Otherwise, add the product to the saved list
             yield saveproduct_1.default.create({ userId, productId });
-            res.status(200).json({ message: "Product added to your saved list" });
+            res.status(200).json({ message: 'Product added to your saved list' });
         }
     }
     catch (error) {
-        logger_1.default.error("Error toggling save product:", error);
-        res.status(500).json({ message: "An error occurred while processing the request." });
+        logger_1.default.error('Error toggling save product:', error);
+        res
+            .status(500)
+            .json({ message: 'An error occurred while processing the request.' });
     }
 });
 exports.toggleSaveProduct = toggleSaveProduct;
 const getSavedProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    var _15;
+    const userId = (_15 = req.user) === null || _15 === void 0 ? void 0 : _15.id; // Authenticated user ID from middleware
     try {
         // Fetch all saved products for the authenticated user
         const savedProducts = yield saveproduct_1.default.findAll({
@@ -2324,119 +2450,137 @@ const getSavedProducts = (req, res) => __awaiter(void 0, void 0, void 0, functio
             include: [
                 {
                     model: product_1.default,
-                    as: "product", // Adjust the alias if necessary
-                    where: { status: "active" }, // Only include active products
+                    as: 'product',
+                    where: { status: 'active' },
                     include: [
                         {
                             model: user_1.default,
-                            as: "vendor",
+                            as: 'vendor',
                         },
                         {
                             model: admin_1.default,
-                            as: "admin",
-                            attributes: ["id", "name", "email"],
+                            as: 'admin',
+                            attributes: ['id', 'name', 'email'],
                         },
                         {
                             model: subcategory_1.default,
-                            as: "sub_category",
-                            attributes: ["id", "name", "categoryId"],
+                            as: 'sub_category',
+                            attributes: ['id', 'name', 'categoryId'],
                         },
                         {
                             model: store_1.default,
-                            as: "store",
-                            attributes: ["id", "name"],
+                            as: 'store',
+                            attributes: ['id', 'name'],
                             include: [
                                 {
                                     model: currency_1.default,
-                                    as: "currency",
-                                    attributes: ["symbol"],
+                                    as: 'currency',
+                                    attributes: ['symbol'],
                                 },
                             ],
                         },
-                    ]
+                    ],
                 },
             ],
         });
         // If no saved products are found
         if (savedProducts.length === 0) {
-            res.status(404).json({ message: "No saved products found" });
+            res.status(404).json({ message: 'No saved products found' });
             return;
         }
         // Send the saved products in the response
         res.status(200).json({ data: savedProducts });
     }
     catch (error) {
-        logger_1.default.error("Error fetching saved products:", error);
-        res.status(500).json({ message: "An error occurred while fetching saved products." });
+        logger_1.default.error('Error fetching saved products:', error);
+        res
+            .status(500)
+            .json({ message: 'An error occurred while fetching saved products.' });
     }
 });
 exports.getSavedProducts = getSavedProducts;
 const addReview = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _16;
     const { orderId, productId, rating, comment } = req.body;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID
+    const userId = (_16 = req.user) === null || _16 === void 0 ? void 0 : _16.id; // Authenticated user ID
     if (!userId) {
-        res.status(401).json({ message: "Unauthorized: User ID is missing." });
+        res.status(401).json({ message: 'Unauthorized: User ID is missing.' });
         return;
     }
     // Ensure rating is a valid number between 1 and 5
-    if (typeof rating !== "number" || isNaN(rating) || rating < 1 || rating > 5) {
-        res.status(400).json({ message: "Rating must be a numeric value between 1 and 5." });
+    if (typeof rating !== 'number' || isNaN(rating) || rating < 1 || rating > 5) {
+        res
+            .status(400)
+            .json({ message: 'Rating must be a numeric value between 1 and 5.' });
         return;
     }
     try {
         // Check if user has purchased the product
         const purchased = yield (0, helpers_2.hasPurchasedProduct)(orderId, productId);
         if (!purchased) {
-            res.status(403).json({ message: "You can only review products that has been delivered." });
+            res.status(403).json({
+                message: 'You can only review products that has been delivered.',
+            });
             return;
         }
         // Check if the user already reviewed the product
-        const existingReview = yield reviewproduct_1.default.findOne({ where: { userId, productId } });
+        const existingReview = yield reviewproduct_1.default.findOne({
+            where: { userId, productId },
+        });
         if (existingReview) {
-            res.status(400).json({ message: "You have already reviewed this product." });
+            res
+                .status(400)
+                .json({ message: 'You have already reviewed this product.' });
             return;
         }
         // Create the review
         yield reviewproduct_1.default.create({ userId, productId, rating, comment });
-        res.status(200).json({ message: "Review submitted successfully." });
+        res.status(200).json({ message: 'Review submitted successfully.' });
     }
     catch (error) {
-        logger_1.default.error("Error adding review:", error);
-        res.status(500).json({ message: "An error occurred while submitting the review." });
+        logger_1.default.error('Error adding review:', error);
+        res
+            .status(500)
+            .json({ message: 'An error occurred while submitting the review.' });
     }
 });
 exports.addReview = addReview;
 const updateReview = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _17;
     const { reviewId, rating, comment } = req.body;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID
+    const userId = (_17 = req.user) === null || _17 === void 0 ? void 0 : _17.id; // Authenticated user ID
     // Ensure rating is a valid number between 1 and 5
-    if (typeof rating !== "number" || isNaN(rating) || rating < 1 || rating > 5) {
-        res.status(400).json({ message: "Rating must be a numeric value between 1 and 5." });
+    if (typeof rating !== 'number' || isNaN(rating) || rating < 1 || rating > 5) {
+        res
+            .status(400)
+            .json({ message: 'Rating must be a numeric value between 1 and 5.' });
         return;
     }
     try {
         // Find existing review
-        const review = yield reviewproduct_1.default.findOne({ where: { userId, id: reviewId } });
+        const review = yield reviewproduct_1.default.findOne({
+            where: { userId, id: reviewId },
+        });
         if (!review) {
-            res.status(404).json({ message: "Review not found." });
+            res.status(404).json({ message: 'Review not found.' });
             return;
         }
         // Update the review
         yield review.update({ rating, comment });
-        res.status(200).json({ message: "Review updated successfully." });
+        res.status(200).json({ message: 'Review updated successfully.' });
     }
     catch (error) {
-        logger_1.default.error("Error updating review:", error);
-        res.status(500).json({ message: "An error occurred while updating the review." });
+        logger_1.default.error('Error updating review:', error);
+        res
+            .status(500)
+            .json({ message: 'An error occurred while updating the review.' });
     }
 });
 exports.updateReview = updateReview;
 const getProductReviews = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _18;
     const { productId } = req.query; // Query parameter for productId
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID
+    const userId = (_18 = req.user) === null || _18 === void 0 ? void 0 : _18.id; // Authenticated user ID
     try {
         const whereClause = { userId }; // Default filter by user ID
         if (productId) {
@@ -2447,16 +2591,18 @@ const getProductReviews = (req, res) => __awaiter(void 0, void 0, void 0, functi
             include: [
                 {
                     model: user_1.default,
-                    as: "user",
-                    attributes: ["id", "firstName", "lastName", "email"]
-                }
+                    as: 'user',
+                    attributes: ['id', 'firstName', 'lastName', 'email'],
+                },
             ],
         });
         res.status(200).json({ data: reviews });
     }
     catch (error) {
-        logger_1.default.error("Error fetching reviews:", error);
-        res.status(500).json({ message: "An error occurred while fetching reviews." });
+        logger_1.default.error('Error fetching reviews:', error);
+        res
+            .status(500)
+            .json({ message: 'An error occurred while fetching reviews.' });
     }
 });
 exports.getProductReviews = getProductReviews;
@@ -2468,53 +2614,355 @@ const getSingleReview = (req, res) => __awaiter(void 0, void 0, void 0, function
             include: [
                 {
                     model: user_1.default,
-                    as: "user",
-                    attributes: ["id", "firstName", "lastName", "email"]
+                    as: 'user',
+                    attributes: ['id', 'firstName', 'lastName', 'email'],
                 },
                 {
                     model: product_1.default,
-                    as: "product",
+                    as: 'product',
                     include: [
                         {
                             model: user_1.default,
-                            as: "vendor",
+                            as: 'vendor',
                         },
                         {
                             model: admin_1.default,
-                            as: "admin",
-                            attributes: ["id", "name", "email"],
+                            as: 'admin',
+                            attributes: ['id', 'name', 'email'],
                         },
                         {
                             model: subcategory_1.default,
-                            as: "sub_category",
-                            attributes: ["id", "name", "categoryId"],
+                            as: 'sub_category',
+                            attributes: ['id', 'name', 'categoryId'],
                         },
                         {
                             model: store_1.default,
-                            as: "store",
-                            attributes: ["id", "name"],
+                            as: 'store',
+                            attributes: ['id', 'name'],
                             include: [
                                 {
                                     model: currency_1.default,
-                                    as: "currency",
-                                    attributes: ["symbol"],
+                                    as: 'currency',
+                                    attributes: ['symbol'],
                                 },
                             ],
                         },
-                    ]
-                }
+                    ],
+                },
             ],
         });
         if (!review) {
-            res.status(404).json({ message: "Review not found." });
+            res.status(404).json({ message: 'Review not found.' });
             return;
         }
         res.status(200).json({ data: review });
     }
     catch (error) {
-        logger_1.default.error("Error fetching review:", error);
-        res.status(500).json({ message: "An error occurred while fetching the review." });
+        logger_1.default.error('Error fetching review:', error);
+        res
+            .status(500)
+            .json({ message: 'An error occurred while fetching the review.' });
     }
 });
 exports.getSingleReview = getSingleReview;
+// Delete user account
+const deleteAccount = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _19;
+    const userId = (_19 = req.user) === null || _19 === void 0 ? void 0 : _19.id; // Authenticated user ID from middleware
+    if (!userId) {
+        res.status(400).json({ message: 'User must be authenticated' });
+        return;
+    }
+    try {
+        console.log('[DELETE] Starting account deletion for user:', userId);
+        const user = yield user_1.default.findByPk(userId);
+        if (!user) {
+            res.status(404).json({ message: 'User not found' });
+            return;
+        }
+        console.log('[DELETE] User found, starting to delete related records...');
+        // Delete related records first to handle RESTRICT constraints
+        try {
+            yield otp_1.default.destroy({ where: { userId } });
+            console.log('[DELETE] OTP records deleted');
+        }
+        catch (error) {
+            console.log('[DELETE] Error deleting OTP:', error.message);
+        }
+        try {
+            yield vendorsubscription_1.default.destroy({ where: { vendorId: userId } });
+            console.log('[DELETE] VendorSubscription records deleted');
+        }
+        catch (error) {
+            console.log('[DELETE] Error deleting VendorSubscription:', error.message);
+        }
+        try {
+            yield store_1.default.destroy({ where: { vendorId: userId } });
+            console.log('[DELETE] Store records deleted');
+        }
+        catch (error) {
+            console.log('[DELETE] Error deleting Store:', error.message);
+        }
+        try {
+            yield kyc_1.default.destroy({ where: { vendorId: userId } });
+            console.log('[DELETE] KYC records deleted');
+        }
+        catch (error) {
+            console.log('[DELETE] Error deleting KYC:', error.message);
+        }
+        try {
+            yield bid_1.default.destroy({ where: { bidderId: userId } });
+            console.log('[DELETE] Bid records deleted');
+        }
+        catch (error) {
+            console.log('[DELETE] Error deleting Bid:', error.message);
+        }
+        try {
+            yield cart_1.default.destroy({ where: { userId } });
+            console.log('[DELETE] Cart records deleted');
+        }
+        catch (error) {
+            console.log('[DELETE] Error deleting Cart:', error.message);
+        }
+        try {
+            yield showinterest_1.default.destroy({ where: { userId } });
+            console.log('[DELETE] ShowInterest records deleted');
+        }
+        catch (error) {
+            console.log('[DELETE] Error deleting ShowInterest:', error.message);
+        }
+        try {
+            yield saveproduct_1.default.destroy({ where: { userId } });
+            console.log('[DELETE] SaveProduct records deleted');
+        }
+        catch (error) {
+            console.log('[DELETE] Error deleting SaveProduct:', error.message);
+        }
+        try {
+            yield reviewproduct_1.default.destroy({ where: { userId } });
+            console.log('[DELETE] ReviewProduct records deleted');
+        }
+        catch (error) {
+            console.log('[DELETE] Error deleting ReviewProduct:', error.message);
+        }
+        try {
+            yield notification_1.default.destroy({ where: { userId } });
+            console.log('[DELETE] Notification records deleted');
+        }
+        catch (error) {
+            console.log('[DELETE] Error deleting Notification:', error.message);
+        }
+        try {
+            yield usernotificationsetting_1.default.destroy({ where: { userId } });
+            console.log('[DELETE] UserNotificationSetting records deleted');
+        }
+        catch (error) {
+            console.log('[DELETE] Error deleting UserNotificationSetting:', error.message);
+        }
+        try {
+            yield productreport_1.default.destroy({ where: { userId } });
+            console.log('[DELETE] ProductReport records deleted');
+        }
+        catch (error) {
+            console.log('[DELETE] Error deleting ProductReport:', error.message);
+        }
+        try {
+            yield blockedvendor_1.default.destroy({ where: { userId } });
+            console.log('[DELETE] BlockedVendor records deleted (userId)');
+        }
+        catch (error) {
+            console.log('[DELETE] Error deleting BlockedVendor (userId):', error.message);
+        }
+        try {
+            yield blockedvendor_1.default.destroy({ where: { vendorId: userId } });
+            console.log('[DELETE] BlockedVendor records deleted (vendorId)');
+        }
+        catch (error) {
+            console.log('[DELETE] Error deleting BlockedVendor (vendorId):', error.message);
+        }
+        // Delete messages and conversations
+        try {
+            const conversations = yield conversation_1.default.findAll({
+                where: {
+                    [sequelize_1.Op.or]: [{ userId1: userId }, { userId2: userId }],
+                },
+            });
+            for (const conversation of conversations) {
+                yield message_1.default.destroy({ where: { conversationId: conversation.id } });
+            }
+            yield conversation_1.default.destroy({
+                where: {
+                    [sequelize_1.Op.or]: [{ userId1: userId }, { userId2: userId }],
+                },
+            });
+            console.log('[DELETE] Messages and conversations deleted');
+        }
+        catch (error) {
+            console.log('[DELETE] Error deleting messages/conversations:', error.message);
+        }
+        console.log('[DELETE] All related records deleted, now deleting user...');
+        // Now delete the user
+        yield user.destroy();
+        console.log('[DELETE] User deleted successfully');
+        // Admin notification removed to prevent backend crashes
+        // The model isn't properly set up in local database
+        res.status(200).json({ message: 'Account deleted successfully.' });
+    }
+    catch (error) {
+        console.error('[DELETE] Error deleting user account:', error);
+        res
+            .status(500)
+            .json({ message: 'An error occurred while deleting the account.' });
+    }
+});
+exports.deleteAccount = deleteAccount;
+// Report a product with a reason
+const reportProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _20;
+    try {
+        const userId = (_20 = req.user) === null || _20 === void 0 ? void 0 : _20.id; // Authenticated user ID from middleware
+        const { productId } = req.params;
+        const { reason } = req.body;
+        if (!userId) {
+            res.status(401).json({ message: 'Unauthorized' });
+            return;
+        }
+        if (!productId || !reason) {
+            res.status(400).json({ message: 'Product ID and reason are required.' });
+            return;
+        }
+        yield productreport_1.default.create({
+            productId,
+            userId,
+            reason,
+        });
+        res.status(201).json({ message: 'Product reported successfully.' });
+    }
+    catch (error) {
+        res
+            .status(500)
+            .json({ message: error.message || 'Failed to report product.' });
+    }
+});
+exports.reportProduct = reportProduct;
+const blockVendor = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _21;
+    try {
+        const userId = (_21 = req.user) === null || _21 === void 0 ? void 0 : _21.id;
+        const { vendorId } = req.body;
+        if (!vendorId) {
+            res.status(400).json({ message: 'vendorId is required.' });
+            return;
+        }
+        if (!userId) {
+            res.status(401).json({ message: 'Unauthorized.' });
+            return;
+        }
+        if (userId === vendorId) {
+            res.status(400).json({ message: 'You cannot block yourself.' });
+            return;
+        }
+        // Check if already blocked
+        const alreadyBlocked = yield blockedvendor_1.default.findOne({
+            where: { userId, vendorId },
+        });
+        if (alreadyBlocked) {
+            res.status(200).json({ message: 'Vendor already blocked.' });
+            return;
+        }
+        yield blockedvendor_1.default.create({ userId, vendorId });
+        res.status(200).json({ message: 'Vendor blocked successfully.' });
+    }
+    catch (error) {
+        res.status(500).json({ message: 'Server error.' });
+    }
+});
+exports.blockVendor = blockVendor;
+const unblockVendor = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _22;
+    try {
+        const userId = (_22 = req.user) === null || _22 === void 0 ? void 0 : _22.id;
+        const { vendorId } = req.body;
+        if (!vendorId) {
+            res.status(400).json({ message: 'vendorId is required.' });
+            return;
+        }
+        if (!userId) {
+            res.status(401).json({ message: 'Unauthorized.' });
+            return;
+        }
+        // Check if vendor is blocked
+        const blocked = yield blockedvendor_1.default.findOne({
+            where: { userId, vendorId },
+        });
+        if (!blocked) {
+            res.status(200).json({ message: 'Vendor is not blocked.' });
+            return;
+        }
+        yield blockedvendor_1.default.destroy({ where: { userId, vendorId } });
+        res.status(200).json({ message: 'Vendor unblocked successfully.' });
+    }
+    catch (error) {
+        res.status(500).json({ message: 'Server error.' });
+    }
+});
+exports.unblockVendor = unblockVendor;
+const getBlockedVendors = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _23;
+    try {
+        const userId = (_23 = req.user) === null || _23 === void 0 ? void 0 : _23.id;
+        if (!userId) {
+            res.status(401).json({ message: 'Unauthorized.' });
+            return;
+        }
+        const blockedVendors = yield blockedvendor_1.default.findAll({
+            where: { userId },
+            include: [
+                {
+                    model: user_1.default,
+                    as: 'vendor',
+                    attributes: ['id', 'firstName', 'lastName', 'email', 'phoneNumber'],
+                },
+            ],
+        });
+        res.status(200).json({
+            message: 'Blocked vendors retrieved successfully.',
+            data: blockedVendors,
+        });
+    }
+    catch (error) {
+        res.status(500).json({ message: 'Server error.' });
+    }
+});
+exports.getBlockedVendors = getBlockedVendors;
+// Block a product for a user (hide product from user's view)
+const blockProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _24;
+    try {
+        const userId = (_24 = req.user) === null || _24 === void 0 ? void 0 : _24.id;
+        const { productId } = req.body;
+        if (!productId) {
+            res.status(400).json({ message: 'productId is required.' });
+            return;
+        }
+        if (!userId) {
+            res.status(401).json({ message: 'Unauthorized.' });
+            return;
+        }
+        // Check if already blocked
+        const alreadyBlocked = yield blockedproduct_1.default.findOne({
+            where: { userId, productId },
+        });
+        if (alreadyBlocked) {
+            res.status(200).json({ message: 'Product already blocked.' });
+            return;
+        }
+        yield blockedproduct_1.default.create({ userId, productId });
+        res.status(200).json({ message: 'Product blocked successfully.' });
+    }
+    catch (error) {
+        res.status(500).json({ message: 'Server error.' });
+    }
+});
+exports.blockProduct = blockProduct;
 //# sourceMappingURL=userController.js.map

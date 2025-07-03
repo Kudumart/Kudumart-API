@@ -38,15 +38,16 @@ const sequelize_service_1 = __importDefault(require("../services/sequelize.servi
 const applicant_1 = __importDefault(require("../models/applicant"));
 const banner_1 = __importDefault(require("../models/banner"));
 const showinterest_1 = __importDefault(require("../models/showinterest"));
+const blockedvendor_1 = __importDefault(require("../models/blockedvendor"));
 const getAllCategories = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const categories = yield category_1.default.findAll();
         res.status(200).json({ data: categories });
     }
     catch (error) {
-        logger_1.default.error("Error fetching categories", error);
+        logger_1.default.error('Error fetching categories', error);
         res.status(500).json({
-            message: "An error occurred while fetching categories.",
+            message: 'An error occurred while fetching categories.',
         });
     }
 });
@@ -55,14 +56,14 @@ const getCategorySubCategories = (req, res) => __awaiter(void 0, void 0, void 0,
     const { categoryId } = req.query;
     try {
         const subCategories = yield subcategory_1.default.findAll({
-            where: { categoryId }
+            where: { categoryId },
         });
         res.status(200).json({ data: subCategories });
     }
     catch (error) {
-        logger_1.default.error("Error fetching sub categories", error);
+        logger_1.default.error('Error fetching sub categories', error);
         res.status(500).json({
-            message: "An error occurred while fetching sub categories.",
+            message: 'An error occurred while fetching sub categories.',
         });
     }
 });
@@ -73,27 +74,28 @@ const getCategoriesWithSubcategories = (req, res) => __awaiter(void 0, void 0, v
             include: [
                 {
                     model: subcategory_1.default,
-                    as: "subCategories",
+                    as: 'subCategories',
                 },
             ],
         });
         res.status(200).json({ data: categories });
     }
     catch (error) {
-        logger_1.default.error("Error fetching categories with subcategories:", error);
+        logger_1.default.error('Error fetching categories with subcategories:', error);
         res.status(500).json({
-            message: error.message || "An error occurred while fetching categories.",
+            message: error.message || 'An error occurred while fetching categories.',
         });
     }
 });
 exports.getCategoriesWithSubcategories = getCategoriesWithSubcategories;
 const products = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     const { country, productId, storeId, minPrice, maxPrice, name, // Product name
     subCategoryName, // Subcategory name filter
     condition, // Product condition filter
     categoryId, popular, // Query parameter to sort by most viewed
     symbol, page = '1', // Default page '1' if not provided
-    limit = '20' // Default limit '20' if not provided
+    limit = '20', // Default limit '20' if not provided
      } = req.query;
     try {
         // Convert page and limit to numbers
@@ -101,21 +103,18 @@ const products = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const currentLimit = Number(limit);
         // Validate page and limit to ensure they are valid numbers
         if (isNaN(currentPage) || currentPage < 1) {
-            res.status(400).json({ message: "Invalid page number." });
+            res.status(400).json({ message: 'Invalid page number.' });
             return;
         }
         if (isNaN(currentLimit) || currentLimit < 1) {
-            res.status(400).json({ message: "Invalid limit number." });
+            res.status(400).json({ message: 'Invalid limit number.' });
             return;
         }
         // Define the base where clause with the active status
-        const whereClause = { status: "active" };
+        const whereClause = { status: 'active' };
         // Additional filters based on query parameters
         if (productId) {
-            whereClause[sequelize_1.Op.or] = [
-                { id: productId },
-                { sku: productId }
-            ];
+            whereClause[sequelize_1.Op.or] = [{ id: productId }, { sku: productId }];
         }
         if (storeId) {
             whereClause.storeId = storeId;
@@ -127,13 +126,25 @@ const products = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             whereClause.price = Object.assign(Object.assign({}, whereClause.price), { [sequelize_1.Op.lte]: Number(maxPrice) });
         }
         if (name) {
-            const normalizedName = String(name).trim().replace(/\s+/g, " "); // Normalize spaces
+            const normalizedName = String(name).trim().replace(/\s+/g, ' '); // Normalize spaces
             whereClause[sequelize_1.Op.or] = [
-                { name: { [sequelize_1.Op.like]: `%${normalizedName}%` } } // Use LIKE query for product name search
+                { name: { [sequelize_1.Op.like]: `%${normalizedName}%` } }, // Use LIKE query for product name search
             ];
         }
         if (condition) {
             whereClause.condition = condition; // Filter by product condition
+        }
+        // Blocked vendor exclusion logic
+        let blockedVendorIds = [];
+        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+        if (userId) {
+            const blockedVendors = yield blockedvendor_1.default.findAll({ where: { userId } });
+            blockedVendorIds = blockedVendors.map((bv) => bv.vendorId);
+            if (blockedVendorIds.length > 0) {
+                whereClause.vendorId = { [sequelize_1.Op.notIn]: blockedVendorIds };
+            }
+            // Exclude products blocked by the user
+            whereClause.id = Object.assign(Object.assign({}, (whereClause.id || {})), { [sequelize_1.Op.notIn]: sequelize_1.Sequelize.literal(`(SELECT "productId" FROM blocked_products WHERE "userId" = '${userId}')`) });
         }
         // Construct the where clause for subCategory with conditional categoryId and subCategoryName
         const subCategoryWhereClause = {};
@@ -147,69 +158,78 @@ const products = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const includeClause = [
             {
                 model: user_1.default,
-                as: "vendor",
+                as: 'vendor',
                 include: [
                     {
                         model: kyc_1.default,
-                        as: "kyc",
-                        attributes: ["isVerified"], // Fetch isVerified from KYC
+                        as: 'kyc',
+                        attributes: ['isVerified'], // Fetch isVerified from KYC
                     },
                 ],
             },
             {
                 model: admin_1.default,
-                as: "admin",
-                attributes: ["id", "name", "email"],
+                as: 'admin',
+                attributes: ['id', 'name', 'email'],
             },
             {
                 model: subcategory_1.default,
-                as: "sub_category",
+                as: 'sub_category',
                 where: Object.keys(subCategoryWhereClause).length > 0
                     ? subCategoryWhereClause
                     : undefined,
-                attributes: ["id", "name", "categoryId"],
+                attributes: ['id', 'name', 'categoryId'],
             },
             {
                 model: store_1.default,
-                as: "store",
+                as: 'store',
                 include: [
                     {
                         model: currency_1.default,
-                        as: "currency",
-                        attributes: ["id", "symbol"],
+                        as: 'currency',
+                        attributes: ['id', 'symbol'],
                     },
                 ],
             },
         ];
         // **Apply the currency symbol filter separately**
         if (symbol) {
-            whereClause["$store.currency.symbol$"] = symbol;
+            whereClause['$store.currency.symbol$'] = symbol;
         }
         // Determine sorting order dynamically
-        const orderClause = popular === "true"
-            ? [["views", "DESC"], [sequelize_1.Sequelize.literal("RAND()"), "ASC"]] // Sort by views first, then randomize
-            : [[sequelize_1.Sequelize.literal("RAND()"), "ASC"]]; // Default random sorting
+        const orderClause = popular === 'true'
+            ? [
+                ['views', 'DESC'],
+                [sequelize_1.Sequelize.literal('RAND()'), 'ASC'],
+            ] // Sort by views first, then randomize
+            : [[sequelize_1.Sequelize.literal('RAND()'), 'ASC']]; // Default random sorting
         // Calculate the offset based on page and limit
         const offset = (currentPage - 1) * currentLimit;
         // Fetch active products with subcategory details and dynamic pagination
         const { count, rows: products } = yield product_1.default.findAndCountAll({
             where: whereClause,
             include: includeClause,
-            order: orderClause, // Dynamic ordering
-            limit: currentLimit, // Fetch based on the provided limit
-            offset: offset, // Dynamic offset based on page and limit
+            order: orderClause,
+            limit: currentLimit,
+            offset: offset,
             subQuery: false, // Ensures the currency filter is applied correctly
         });
         // Calculate the total number of pages
         const totalPages = Math.ceil(count / currentLimit);
         // Generate the next and previous page links
-        const nextPage = currentPage < totalPages ? `${req.baseUrl}?page=${currentPage + 1}&limit=${currentLimit}` : null;
-        const prevPage = currentPage > 1 ? `${req.baseUrl}?page=${currentPage - 1}&limit=${currentLimit}` : null;
+        const nextPage = currentPage < totalPages
+            ? `${req.baseUrl}?page=${currentPage + 1}&limit=${currentLimit}`
+            : null;
+        const prevPage = currentPage > 1
+            ? `${req.baseUrl}?page=${currentPage - 1}&limit=${currentLimit}`
+            : null;
         // ✅ **Transform the response to include `isVerified`**
         const formattedProducts = products.map((product) => {
             let vendorData = product.vendor ? product.vendor.toJSON() : null;
             if (vendorData) {
-                vendorData.isVerified = vendorData.kyc ? vendorData.kyc.isVerified : false;
+                vendorData.isVerified = vendorData.kyc
+                    ? vendorData.kyc.isVerified
+                    : false;
                 delete vendorData.kyc; // Remove nested kyc object if unnecessary
             }
             return Object.assign(Object.assign({}, product.toJSON()), { vendor: vendorData !== null && vendorData !== void 0 ? vendorData : null });
@@ -222,134 +242,156 @@ const products = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 totalPages: totalPages,
                 nextPage: nextPage,
                 prevPage: prevPage,
-                totalCount: count
-            }
+                totalCount: count,
+            },
         });
     }
     catch (error) {
-        logger_1.default.error("Error fetching products:", error);
+        logger_1.default.error('Error fetching products:', error);
         res.status(500).json({
-            message: error.message || "An error occurred while fetching products.",
+            message: error.message || 'An error occurred while fetching products.',
         });
     }
 });
 exports.products = products;
 // Get Product By ID or SKU with Recommended Products
 const getProductById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _b;
     const { productId } = req.query;
     try {
+        // Blocked vendor exclusion logic
+        let blockedVendorIds = [];
+        const userId = (_b = req.user) === null || _b === void 0 ? void 0 : _b.id;
+        if (userId) {
+            const blockedVendors = yield blockedvendor_1.default.findAll({ where: { userId } });
+            blockedVendorIds = blockedVendors.map((bv) => bv.vendorId);
+        }
+        // Build where clause
+        const whereClause = {
+            status: 'active',
+            [sequelize_1.Op.or]: [
+                { id: productId },
+                { SKU: productId }, // Replace 'SKU' with the actual SKU column name if different
+            ],
+        };
+        // Add blocked vendor filter if user has blocked vendors
+        if (blockedVendorIds.length > 0) {
+            whereClause.vendorId = { [sequelize_1.Op.notIn]: blockedVendorIds };
+        }
         // Fetch the main product by ID or SKU
         const product = yield product_1.default.findOne({
-            where: {
-                status: "active",
-                [sequelize_1.Op.or]: [
-                    { id: productId },
-                    { SKU: productId }, // Replace 'SKU' with the actual SKU column name if different
-                ],
-            },
+            where: whereClause,
             include: [
                 {
                     model: user_1.default,
-                    as: "vendor",
+                    as: 'vendor',
                 },
                 {
                     model: admin_1.default,
-                    as: "admin",
-                    attributes: ["id", "name", "email"],
+                    as: 'admin',
+                    attributes: ['id', 'name', 'email'],
                 },
                 {
                     model: store_1.default,
-                    as: "store",
+                    as: 'store',
                     include: [
                         {
                             model: currency_1.default,
-                            as: "currency",
-                            attributes: ["symbol"],
+                            as: 'currency',
+                            attributes: ['symbol'],
                         },
                     ],
                 },
                 {
                     model: subcategory_1.default,
-                    as: "sub_category",
-                    attributes: ["id", "name"],
+                    as: 'sub_category',
+                    attributes: ['id', 'name'],
                 },
                 {
                     model: reviewproduct_1.default,
-                    as: "reviews",
+                    as: 'reviews',
                     include: [
                         {
                             model: user_1.default,
-                            as: "user",
-                            attributes: ["id", "firstName", "lastName", "email"]
-                        }
+                            as: 'user',
+                            attributes: ['id', 'firstName', 'lastName', 'email'],
+                        },
                     ],
-                }
+                },
             ],
         });
         if (!product) {
-            res.status(404).json({ message: "Product not found" });
+            res.status(404).json({ message: 'Product not found' });
             return;
         }
         // Increment the view count by 1
-        yield product.increment("views", { by: 1 });
+        yield product.increment('views', { by: 1 });
         // Fetch vendor KYC verification status
         if (product.vendor) {
             const kyc = yield kyc_1.default.findOne({ where: { vendorId: product.vendor.id } });
-            product.vendor.setDataValue("isVerified", kyc ? kyc.isVerified : false);
+            product.vendor.setDataValue('isVerified', kyc ? kyc.isVerified : false);
         }
         // ✅ Calculate Review Rating
-        const reviews = Array.isArray(product.reviews) ? product.reviews : [];
+        const reviews = Array.isArray(product.reviews)
+            ? product.reviews
+            : [];
         const totalReviews = reviews.length;
         const averageRating = totalReviews > 0
             ? (reviews.reduce((sum, review) => sum + Number(review.rating) || 0, 0) / totalReviews).toFixed(1)
-            : "0.0";
+            : '0.0';
         // Attach review data to the product
-        product.setDataValue("averageRating", parseFloat(averageRating));
-        product.setDataValue("totalReviews", totalReviews);
+        product.setDataValue('averageRating', parseFloat(averageRating));
+        product.setDataValue('totalReviews', totalReviews);
+        // Build where clause for recommended products
+        const recommendedWhereClause = {
+            categoryId: product.categoryId,
+            id: { [sequelize_1.Op.ne]: product.id },
+            status: 'active',
+        };
+        // Add blocked vendor filter to recommended products
+        if (blockedVendorIds.length > 0) {
+            recommendedWhereClause.vendorId = { [sequelize_1.Op.notIn]: blockedVendorIds };
+        }
         // Fetch recommended products based on the same subcategory
         const recommendedProducts = yield product_1.default.findAll({
-            where: {
-                categoryId: product.categoryId, // Fetch products from the same subcategory
-                id: { [sequelize_1.Op.ne]: product.id }, // Exclude the currently viewed product
-                status: "active",
-            },
+            where: recommendedWhereClause,
             include: [
                 {
                     model: user_1.default,
-                    as: "vendor",
+                    as: 'vendor',
                     required: true, // Ensure the user is included
                 },
                 {
                     model: admin_1.default,
-                    as: "admin",
+                    as: 'admin',
                 },
                 {
                     model: store_1.default,
-                    as: "store",
+                    as: 'store',
                     include: [
                         {
                             model: currency_1.default,
-                            as: "currency",
-                            attributes: ["symbol"],
+                            as: 'currency',
+                            attributes: ['symbol'],
                         },
                     ],
                 },
                 {
                     model: subcategory_1.default,
-                    as: "sub_category",
-                    attributes: ["id", "name"],
+                    as: 'sub_category',
+                    attributes: ['id', 'name'],
                 },
             ],
             limit: 10,
-            order: sequelize_1.Sequelize.literal("RAND()"), // Randomize the order
+            order: sequelize_1.Sequelize.literal('RAND()'), // Randomize the order
         });
         // Send the product and recommended products in the response
         res.status(200).json({ data: product, recommendedProducts });
     }
     catch (error) {
-        logger_1.default.error("Error fetching product:", error);
+        logger_1.default.error('Error fetching product:', error);
         res.status(500).json({
-            message: error.message || "An error occurred while fetching the product.",
+            message: error.message || 'An error occurred while fetching the product.',
         });
     }
 });
@@ -358,10 +400,10 @@ exports.getProductById = getProductById;
 const getAllStores = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Extract query parameters with default values
-        const { name = "", // Default to an empty string for name filter
-        city = "", // Default to an empty string for city filter
+        const { name = '', // Default to an empty string for name filter
+        city = '', // Default to an empty string for city filter
         page = 1, // Default to page 1
-        limit = 10 // Default to 10 items per page
+        limit = 10, // Default to 10 items per page
          } = req.query;
         // Define search filters dynamically
         const filters = {};
@@ -369,7 +411,7 @@ const getAllStores = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             filters.name = { [sequelize_1.Op.like]: `%${name}%` }; // Case-insensitive partial match for name
         }
         if (city) {
-            filters["location.city"] = { [sequelize_1.Op.like]: `%${city}%` }; // Case-insensitive partial match for city
+            filters['location.city'] = { [sequelize_1.Op.like]: `%${city}%` }; // Case-insensitive partial match for city
         }
         // Calculate pagination settings
         const offset = (Number(page) - 1) * Number(limit);
@@ -379,69 +421,83 @@ const getAllStores = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             include: [
                 {
                     model: currency_1.default,
-                    as: "currency",
-                    attributes: ['symbol']
+                    as: 'currency',
+                    attributes: ['symbol'],
                 },
             ],
             limit: Number(limit),
             offset,
-            order: [["createdAt", "DESC"]], // Sort by creation date in descending order
+            order: [['createdAt', 'DESC']], // Sort by creation date in descending order
         });
         // Send response with stores data and pagination info
         res.status(200).json({
-            message: "Stores fetched successfully",
+            message: 'Stores fetched successfully',
             data: stores,
             pagination: {
-                total, // Total number of matching records
-                page: Number(page), // Current page number
-                limit: Number(limit) // Number of items per page
-            }
+                total,
+                page: Number(page),
+                limit: Number(limit), // Number of items per page
+            },
         });
     }
     catch (error) {
-        logger_1.default.error("Error fetching stores:", error);
+        logger_1.default.error('Error fetching stores:', error);
         res.status(500).json({
-            message: error.message || "An error occurred while fetching stores.",
+            message: error.message || 'An error occurred while fetching stores.',
         });
     }
 });
 exports.getAllStores = getAllStores;
 // Controller to fetch a store's products with optional shuffle and pagination
 const getStoreProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _c;
     try {
         // Extract storeId from query parameters or request params
         const storeId = req.query.storeId;
-        const { productName = "", page = 1, limit = 10 } = req.query;
+        const { productName = '', page = 1, limit = 10 } = req.query;
         if (!storeId) {
-            res.status(400).json({ message: "Store ID is required" });
+            res.status(400).json({ message: 'Store ID is required' });
             return;
+        }
+        // Blocked vendor exclusion logic
+        let blockedVendorIds = [];
+        const userId = (_c = req.user) === null || _c === void 0 ? void 0 : _c.id;
+        if (userId) {
+            const blockedVendors = yield blockedvendor_1.default.findAll({ where: { userId } });
+            blockedVendorIds = blockedVendors.map((bv) => bv.vendorId);
         }
         // Calculate pagination values
         const offset = (Number(page) - 1) * Number(limit);
+        // Build where clause
+        const whereClause = Object.assign({ storeId }, (productName ? { name: { [sequelize_1.Op.like]: `%${productName}%` } } : {}));
+        // Add blocked vendor filter if user has blocked vendors
+        if (blockedVendorIds.length > 0) {
+            whereClause.vendorId = { [sequelize_1.Op.notIn]: blockedVendorIds };
+        }
         // Fetch products along with the associated currency
         const products = yield product_1.default.findAll({
-            where: Object.assign({ storeId }, (productName ? { name: { [sequelize_1.Op.like]: `%${productName}%` } } : {})),
+            where: whereClause,
             include: [
                 {
                     model: user_1.default,
-                    as: "vendor"
+                    as: 'vendor',
                 },
                 {
                     model: admin_1.default,
-                    as: "admin",
-                    attributes: ["id", "name", "email"],
+                    as: 'admin',
+                    attributes: ['id', 'name', 'email'],
                 },
                 {
                     model: store_1.default,
-                    as: "store",
+                    as: 'store',
                     attributes: ['name'],
                     include: [
                         {
                             model: currency_1.default,
-                            as: "currency",
-                            attributes: ['symbol']
+                            as: 'currency',
+                            attributes: ['symbol'],
                         },
-                    ]
+                    ],
                 },
             ],
             limit: Number(limit),
@@ -450,7 +506,7 @@ const getStoreProducts = (req, res) => __awaiter(void 0, void 0, void 0, functio
         // Shuffle products
         const shuffledProducts = (0, helpers_1.shuffleArray)(products);
         res.status(200).json({
-            message: "Store products fetched successfully",
+            message: 'Store products fetched successfully',
             data: shuffledProducts,
             pagination: {
                 total: products.length,
@@ -460,15 +516,16 @@ const getStoreProducts = (req, res) => __awaiter(void 0, void 0, void 0, functio
         });
     }
     catch (error) {
-        logger_1.default.error("Error fetching store products:", error);
+        logger_1.default.error('Error fetching store products:', error);
         res.status(500).json({
-            message: error.message || "An error occurred while fetching store products.",
+            message: error.message || 'An error occurred while fetching store products.',
         });
     }
 });
 exports.getStoreProducts = getStoreProducts;
 // Function to get all auction products with search functionality
 const getAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _d;
     const { productId, storeId, name, // Product name
     subCategoryName, // Subcategory name filter
     condition, // Product condition filter
@@ -478,6 +535,13 @@ const getAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 0, funct
     offset = 0, // Default to 0 offset (start from the beginning)
      } = req.query;
     try {
+        // Blocked vendor exclusion logic
+        let blockedVendorIds = [];
+        const userId = (_d = req.user) === null || _d === void 0 ? void 0 : _d.id;
+        if (userId) {
+            const blockedVendors = yield blockedvendor_1.default.findAll({ where: { userId } });
+            blockedVendorIds = blockedVendors.map((bv) => bv.vendorId);
+        }
         // Get today's date (start of the day)
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -501,10 +565,7 @@ const getAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 0, funct
         }
         // Add search filters to the where condition
         if (productId) {
-            whereConditions[sequelize_1.Op.or] = [
-                { id: productId },
-                { sku: productId }
-            ];
+            whereConditions[sequelize_1.Op.or] = [{ id: productId }, { sku: productId }];
         }
         if (name) {
             whereConditions.name = { [sequelize_1.Op.like]: `%${name}%` }; // Search by product name
@@ -518,110 +579,128 @@ const getAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 0, funct
         if (storeId) {
             whereConditions.storeId = storeId; // Filter by store ID if provided
         }
+        // Add blocked vendor filter if user has blocked vendors
+        if (blockedVendorIds.length > 0) {
+            whereConditions.vendorId = { [sequelize_1.Op.notIn]: blockedVendorIds };
+        }
         // Fetch auction products based on conditions
         const products = yield auctionproduct_1.default.findAll({
             where: whereConditions,
             include: [
                 {
                     model: user_1.default,
-                    as: "vendor",
+                    as: 'vendor',
                     include: [
                         {
                             model: kyc_1.default,
-                            as: "kyc",
-                            attributes: ["isVerified"], // Fetch isVerified from KYC
+                            as: 'kyc',
+                            attributes: ['isVerified'], // Fetch isVerified from KYC
                         },
                     ],
                 },
                 {
                     model: admin_1.default,
-                    as: "admin",
-                    attributes: ["id", "name", "email"],
+                    as: 'admin',
+                    attributes: ['id', 'name', 'email'],
                 },
                 {
                     model: store_1.default,
-                    as: "store",
+                    as: 'store',
                     attributes: ['name'],
                     include: [
                         {
                             model: currency_1.default,
-                            as: "currency",
-                            attributes: ['symbol']
+                            as: 'currency',
+                            attributes: ['symbol'],
                         },
-                    ]
+                    ],
                 },
                 {
                     model: subcategory_1.default,
-                    as: "sub_category",
-                    attributes: ["id", "name"],
+                    as: 'sub_category',
+                    attributes: ['id', 'name'],
                 },
             ],
             limit: Number(limit),
             offset: Number(offset),
-            order: [["startDate", "ASC"]], // Sort by start date (ascending)
+            order: [['startDate', 'ASC']], // Sort by start date (ascending)
         });
         // ✅ **Transform the response to include `isVerified`**
         const formattedProducts = products.map((product) => {
             let vendorData = product.vendor ? product.vendor.toJSON() : null;
             if (vendorData) {
-                vendorData.isVerified = vendorData.kyc ? vendorData.kyc.isVerified : false;
+                vendorData.isVerified = vendorData.kyc
+                    ? vendorData.kyc.isVerified
+                    : false;
                 delete vendorData.kyc; // Remove nested kyc object if unnecessary
             }
             return Object.assign(Object.assign({}, product.toJSON()), { vendor: vendorData !== null && vendorData !== void 0 ? vendorData : null });
         });
         // Return the results as JSON response
-        res.json({ data: products });
+        res.json({ data: formattedProducts });
     }
     catch (error) {
-        logger_1.default.error("Error fetching auction products:", error);
-        res.status(500).json({ message: "Could not fetch auction products." });
+        logger_1.default.error('Error fetching auction products:', error);
+        res.status(500).json({ message: 'Could not fetch auction products.' });
     }
 });
 exports.getAuctionProducts = getAuctionProducts;
 // Get Auction Product By ID or SKU with Recommended Products
 const getAuctionProductById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _e;
     const { auctionproductId } = req.query; // Ensure userId is passed in the request
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get the authenticated user's ID
+    const userId = (_e = req.user) === null || _e === void 0 ? void 0 : _e.id; // Get the authenticated user's ID
     try {
+        // Blocked vendor exclusion logic
+        let blockedVendorIds = [];
+        if (userId) {
+            const blockedVendors = yield blockedvendor_1.default.findAll({ where: { userId } });
+            blockedVendorIds = blockedVendors.map((bv) => bv.vendorId);
+        }
+        // Build where clause
+        const whereClause = {
+            [sequelize_1.Op.or]: [
+                { id: auctionproductId },
+                { SKU: auctionproductId }, // Replace 'SKU' with the actual SKU column name if different
+            ],
+        };
+        // Add blocked vendor filter if user has blocked vendors
+        if (blockedVendorIds.length > 0) {
+            whereClause.vendorId = { [sequelize_1.Op.notIn]: blockedVendorIds };
+        }
         // Fetch the main product by ID or SKU
         const product = yield auctionproduct_1.default.findOne({
-            where: {
-                [sequelize_1.Op.or]: [
-                    { id: auctionproductId },
-                    { SKU: auctionproductId }, // Replace 'SKU' with the actual SKU column name if different
-                ],
-            },
+            where: whereClause,
             include: [
                 {
                     model: user_1.default,
-                    as: "vendor",
+                    as: 'vendor',
                 },
                 {
                     model: admin_1.default,
-                    as: "admin",
-                    attributes: ["id", "name", "email"],
+                    as: 'admin',
+                    attributes: ['id', 'name', 'email'],
                 },
                 {
                     model: store_1.default,
-                    as: "store",
+                    as: 'store',
                     include: [
                         {
                             model: currency_1.default,
-                            as: "currency",
-                            attributes: ['symbol']
+                            as: 'currency',
+                            attributes: ['symbol'],
                         },
-                    ]
+                    ],
                 },
                 {
                     model: subcategory_1.default,
-                    as: "sub_category",
-                    attributes: ["id", "name"],
+                    as: 'sub_category',
+                    attributes: ['id', 'name'],
                 },
             ],
         });
         if (!product) {
-            res.status(404).json({ message: "Product not found" });
+            res.status(404).json({ message: 'Product not found' });
             return;
         }
         if (product && product.vendor) {
@@ -641,62 +720,62 @@ const getAuctionProductById = (req, res) => __awaiter(void 0, void 0, void 0, fu
         res.status(200).json({ data: productWithInterest });
     }
     catch (error) {
-        logger_1.default.error("Error fetching product:", error);
+        logger_1.default.error('Error fetching product:', error);
         res.status(500).json({
-            message: error.message || "An error occurred while fetching the product.",
+            message: error.message || 'An error occurred while fetching the product.',
         });
     }
 });
 exports.getAuctionProductById = getAuctionProductById;
 const getAdverts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { search = "", page = 1, limit = 10, showOnHomePage } = req.query;
+        const { search = '', page = 1, limit = 10, showOnHomePage } = req.query;
         // Convert pagination params
         const pageNumber = parseInt(page) || 1;
         const pageSize = parseInt(limit) || 10;
         const offset = (pageNumber - 1) * pageSize;
         // Base condition: Only approved adverts
-        const searchCondition = { status: "approved" };
+        const searchCondition = { status: 'approved' };
         // Apply search query if provided
         if (search) {
             searchCondition[sequelize_1.Op.or] = [
-                { title: { [sequelize_1.Op.like]: `%${search}%` } }, // Search in advert title
+                { title: { [sequelize_1.Op.like]: `%${search}%` } },
                 { categoryId: { [sequelize_1.Op.like]: `%${search}%` } },
                 { productId: { [sequelize_1.Op.like]: `%${search}%` } },
-                { "$sub_category.name$": { [sequelize_1.Op.like]: `%${search}%` } }, // Search in category name
-                { "$product.name$": { [sequelize_1.Op.like]: `%${search}%` } }, // Search in product name
+                { '$sub_category.name$': { [sequelize_1.Op.like]: `%${search}%` } },
+                { '$product.name$': { [sequelize_1.Op.like]: `%${search}%` } }, // Search in product name
             ];
         }
         // Handle boolean filtering for showOnHomePage
         if (showOnHomePage !== undefined) {
-            searchCondition.showOnHomePage = showOnHomePage === "true";
+            searchCondition.showOnHomePage = showOnHomePage === 'true';
         }
-        const shuffle = "true";
+        const shuffle = 'true';
         // Determine sorting order
-        const orderClause = [[sequelize_1.Sequelize.literal("RAND()"), "ASC"]]; // Ensure valid format
+        const orderClause = [[sequelize_1.Sequelize.literal('RAND()'), 'ASC']]; // Ensure valid format
         // Query adverts
         const { rows: adverts, count } = yield advert_1.default.findAndCountAll({
             where: searchCondition,
             include: [
                 {
                     model: user_1.default,
-                    as: "vendor",
-                    attributes: ["id", "firstName", "lastName", "email"],
+                    as: 'vendor',
+                    attributes: ['id', 'firstName', 'lastName', 'email'],
                 },
                 {
                     model: admin_1.default,
-                    as: "admin",
-                    attributes: ["id", "name", "email"],
+                    as: 'admin',
+                    attributes: ['id', 'name', 'email'],
                 },
                 {
                     model: subcategory_1.default,
-                    as: "sub_category",
-                    attributes: ["id", "name"], // Include only necessary fields
+                    as: 'sub_category',
+                    attributes: ['id', 'name'], // Include only necessary fields
                 },
                 {
                     model: product_1.default,
-                    as: "product",
-                    attributes: ["id", "name"], // Include only necessary fields
+                    as: 'product',
+                    attributes: ['id', 'name'], // Include only necessary fields
                 },
             ],
             limit: pageSize,
@@ -704,7 +783,7 @@ const getAdverts = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             order: orderClause,
         });
         res.status(200).json({
-            message: "Adverts retrieved successfully.",
+            message: 'Adverts retrieved successfully.',
             data: adverts,
             pagination: {
                 total: count,
@@ -714,8 +793,8 @@ const getAdverts = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         });
     }
     catch (error) {
-        logger_1.default.error("Error fetching adverts:", error);
-        res.status(500).json({ message: "Failed to retrieve adverts." });
+        logger_1.default.error('Error fetching adverts:', error);
+        res.status(500).json({ message: 'Failed to retrieve adverts.' });
     }
 });
 exports.getAdverts = getAdverts;
@@ -723,7 +802,7 @@ const viewAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     try {
         const advertId = req.query.advertId;
         if (!advertId) {
-            res.status(400).json({ message: "Advert ID is required." });
+            res.status(400).json({ message: 'Advert ID is required.' });
             return;
         }
         // Find the advert by ID
@@ -732,40 +811,40 @@ const viewAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             include: [
                 {
                     model: user_1.default,
-                    as: "vendor",
-                    attributes: ["id", "firstName", "lastName", "email"],
+                    as: 'vendor',
+                    attributes: ['id', 'firstName', 'lastName', 'email'],
                 },
                 {
                     model: admin_1.default,
-                    as: "admin",
-                    attributes: ["id", "name", "email"],
+                    as: 'admin',
+                    attributes: ['id', 'name', 'email'],
                 },
                 {
                     model: subcategory_1.default,
-                    as: "sub_category",
-                    attributes: ["id", "name"],
+                    as: 'sub_category',
+                    attributes: ['id', 'name'],
                 },
                 {
                     model: product_1.default,
-                    as: "product",
-                    attributes: ["id", "name"],
+                    as: 'product',
+                    attributes: ['id', 'name'],
                 },
             ],
         });
         if (!advert) {
-            res.status(404).json({ message: "Advert not found." });
+            res.status(404).json({ message: 'Advert not found.' });
             return;
         }
         // Increment the `clicks` field by 1
-        yield advert_1.default.update({ clicks: sequelize_1.Sequelize.literal("clicks + 1") }, { where: { id: advertId } });
+        yield advert_1.default.update({ clicks: sequelize_1.Sequelize.literal('clicks + 1') }, { where: { id: advertId } });
         res.status(200).json({
-            message: "Advert retrieved successfully.",
+            message: 'Advert retrieved successfully.',
             data: advert,
         });
     }
     catch (error) {
-        logger_1.default.error("Error viewing advert:", error);
-        res.status(500).json({ message: "Failed to retrieve advert." });
+        logger_1.default.error('Error viewing advert:', error);
+        res.status(500).json({ message: 'Failed to retrieve advert.' });
     }
 });
 exports.viewAdvert = viewAdvert;
@@ -777,7 +856,9 @@ const getAllTestimonials = (req, res) => __awaiter(void 0, void 0, void 0, funct
     }
     catch (error) {
         logger_1.default.error(`Error retrieving testimonials: ${error.message}`);
-        res.status(500).json({ message: "An error occurred while retrieving testimonials. Please try again later." });
+        res.status(500).json({
+            message: 'An error occurred while retrieving testimonials. Please try again later.',
+        });
     }
 });
 exports.getAllTestimonials = getAllTestimonials;
@@ -788,20 +869,22 @@ const getFaqCategoryWithFaqs = (req, res) => __awaiter(void 0, void 0, void 0, f
             include: [
                 {
                     model: faq_1.default,
-                    as: "faqs",
-                    attributes: ["id", "question", "answer"], // Select only required fields
+                    as: 'faqs',
+                    attributes: ['id', 'question', 'answer'], // Select only required fields
                 },
             ],
         });
         if (!categories) {
-            res.status(404).json({ message: "FAQ category not found" });
+            res.status(404).json({ message: 'FAQ category not found' });
             return;
         }
         res.status(200).json({ data: categories });
     }
     catch (error) {
         logger_1.default.error(`Error fetching FAQ categories with faqs: ${error.message}`);
-        res.status(500).json({ message: "An error occurred while fetching the FAQ category." });
+        res
+            .status(500)
+            .json({ message: 'An error occurred while fetching the FAQ category.' });
     }
 });
 exports.getFaqCategoryWithFaqs = getFaqCategoryWithFaqs;
@@ -816,14 +899,14 @@ const submitContactForm = (req, res) => __awaiter(void 0, void 0, void 0, functi
             message,
         });
         res.status(201).json({
-            message: "Thank you for reaching out! Your message has been successfully submitted. We will get back to you as soon as possible.",
+            message: 'Thank you for reaching out! Your message has been successfully submitted. We will get back to you as soon as possible.',
             data: newContact,
         });
     }
     catch (error) {
-        logger_1.default.error("Error submitting contact form:", error);
+        logger_1.default.error('Error submitting contact form:', error);
         res.status(500).json({
-            message: "An error occurred while submitting the contact form.",
+            message: 'An error occurred while submitting the contact form.',
         });
     }
 });
@@ -845,7 +928,7 @@ const fetchJobs = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.fetchJobs = fetchJobs;
 const viewJob = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _f;
     try {
         const jobId = req.query.jobId;
         const job = yield job_1.default.findByPk(jobId);
@@ -856,7 +939,7 @@ const viewJob = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             return;
         }
         // Ensure `views` is not null before incrementing
-        job.views = ((_a = job.views) !== null && _a !== void 0 ? _a : 0) + 1;
+        job.views = ((_f = job.views) !== null && _f !== void 0 ? _f : 0) + 1;
         yield job.save();
         res.status(200).json({
             message: 'Job retrieved successfully.',
@@ -875,8 +958,10 @@ const applyJob = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { jobId, name, emailAddress, phoneNumber, resumeType, resume } = req.body;
         // Validation: Ensure resumeType is required and must be "pdf"
-        if (!resumeType || resumeType.toLowerCase() !== "pdf") {
-            res.status(400).json({ message: "Invalid resume type. Only PDF is allowed." });
+        if (!resumeType || resumeType.toLowerCase() !== 'pdf') {
+            res
+                .status(400)
+                .json({ message: 'Invalid resume type. Only PDF is allowed.' });
             return;
         }
         const job = yield job_1.default.findByPk(jobId);
@@ -884,9 +969,13 @@ const applyJob = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             res.status(404).json({ message: 'Job not found in our database.' });
             return;
         }
-        const existingApplication = yield applicant_1.default.findOne({ where: { emailAddress, jobId } });
+        const existingApplication = yield applicant_1.default.findOne({
+            where: { emailAddress, jobId },
+        });
         if (existingApplication) {
-            res.status(400).json({ message: 'You have already applied for this job.' });
+            res
+                .status(400)
+                .json({ message: 'You have already applied for this job.' });
             return;
         }
         const status = job.status === 'active' ? 'applied' : 'in-progress';
@@ -918,7 +1007,7 @@ const applyJob = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     catch (error) {
         yield transaction.rollback();
         logger_1.default.error('Error in applyJob:', error);
-        res.status(500).json({ message: "Error in applying job." });
+        res.status(500).json({ message: 'Error in applying job.' });
     }
 });
 exports.applyJob = applyJob;
@@ -930,7 +1019,9 @@ const getAllBanners = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
     catch (error) {
         logger_1.default.error(`Error retrieving banners: ${error.message}`);
-        res.status(500).json({ message: "An error occurred while retrieving banners. Please try again later." });
+        res.status(500).json({
+            message: 'An error occurred while retrieving banners. Please try again later.',
+        });
     }
 });
 exports.getAllBanners = getAllBanners;
@@ -939,18 +1030,18 @@ const createPaymentIntent = (req, res) => __awaiter(void 0, void 0, void 0, func
         const { amount, currency } = req.body;
         // Ensure amount and currency are provided
         if (!amount || !currency) {
-            res.status(400).json({ message: "Amount and currency are required" });
+            res.status(400).json({ message: 'Amount and currency are required' });
             return;
         }
         const stripe = yield (0, helpers_1.initStripe)(); // Await the function to get the Stripe instance
         const paymentIntent = yield stripe.paymentIntents.create({
-            amount: amount * 100, // Convert amount to cents
-            currency: currency || "usd",
+            amount: amount * 100,
+            currency: currency || 'usd',
         });
         res.status(200).json({ data: paymentIntent.client_secret });
     }
     catch (error) {
-        logger_1.default.error("Stripe Error:", error);
+        logger_1.default.error('Stripe Error:', error);
         res.status(500).json({ error: error.message });
     }
 });

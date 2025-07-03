@@ -16,9 +16,6 @@ const jwt_service_1 = __importDefault(require("../services/jwt.service"));
 const user_1 = __importDefault(require("../models/user"));
 const authMiddleware = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        if (process.env.SERVER_JWT === "false") {
-            return next();
-        }
         const token = jwt_service_1.default.jwtGetToken(req);
         if (!token) {
             res.status(401).json({ message: "Token not provided" });

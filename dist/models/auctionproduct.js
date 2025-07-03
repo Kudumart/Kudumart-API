@@ -120,7 +120,7 @@ const initModel = (sequelize) => {
         additionalImages: {
             type: sequelize_1.DataTypes.JSON,
             allowNull: true,
-            defaultValue: [], // Ensures it's an array by default
+            defaultValue: [],
             get() {
                 const value = this.getDataValue('additionalImages');
                 return typeof value === 'string' ? JSON.parse(value) : value;

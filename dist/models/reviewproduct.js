@@ -36,7 +36,7 @@ const initModel = (sequelize) => {
             allowNull: false,
         },
         rating: {
-            type: sequelize_1.DataTypes.INTEGER, // 1 to 5 stars
+            type: sequelize_1.DataTypes.INTEGER,
             allowNull: false,
             validate: { min: 1, max: 5 }
         },

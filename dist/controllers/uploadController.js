@@ -27,7 +27,7 @@ if (!fs_1.default.existsSync(uploadDir)) {
 const storage = multer_1.default.memoryStorage();
 exports.upload = (0, multer_1.default)({
     storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         const allowedImageTypes = [
             "image/jpeg",

@@ -15,23 +15,13 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -43,7 +33,7 @@ const authMiddleware_1 = __importDefault(require("../middlewares/authMiddleware"
 const validations_1 = require("../utils/validations");
 const userRoutes = (0, express_1.Router)();
 // User routes
-userRoutes.post("/logout", authMiddleware_1.default, userController.logout);
+userRoutes.post('/logout', authMiddleware_1.default, userController.logout);
 userRoutes.get('/profile', authMiddleware_1.default, userController.profile);
 userRoutes.put('/profile/update', authMiddleware_1.default, userController.updateProfile);
 userRoutes.patch('/profile/photo/update', authMiddleware_1.default, userController.updateProfilePhoto);
@@ -54,15 +44,16 @@ userRoutes.put('/profile/confirm/phone/number', authMiddleware_1.default, (0, va
 userRoutes.put('/profile/update/password', authMiddleware_1.default, (0, validations_1.updatePasswordValidationRules)(), validations_1.validate, userController.updatePassword);
 userRoutes.get('/notification/settings', authMiddleware_1.default, userController.getUserNotificationSettings);
 userRoutes.put('/update/notification/settings', authMiddleware_1.default, userController.updateUserNotificationSettings);
+userRoutes.delete('/delete/account', authMiddleware_1.default, userController.deleteAccount);
 // Cart
-userRoutes.post("/cart/add", authMiddleware_1.default, (0, validations_1.validateAddItemToCart)(), validations_1.validate, userController.addItemToCart);
-userRoutes.put("/cart/update", authMiddleware_1.default, (0, validations_1.validateUpdateCartItem)(), validations_1.validate, userController.updateCartItem);
-userRoutes.delete("/cart/remove", authMiddleware_1.default, userController.removeCartItem);
-userRoutes.get("/cart", authMiddleware_1.default, userController.getCartContents);
-userRoutes.delete("/cart/clear", authMiddleware_1.default, userController.clearCart);
-userRoutes.get("/payment/gateway", authMiddleware_1.default, userController.getActivePaymentGateways);
-userRoutes.post("/checkout", authMiddleware_1.default, userController.checkout);
-userRoutes.post("/checkout/dollar", authMiddleware_1.default, userController.checkoutDollar);
+userRoutes.post('/cart/add', authMiddleware_1.default, (0, validations_1.validateAddItemToCart)(), validations_1.validate, userController.addItemToCart);
+userRoutes.put('/cart/update', authMiddleware_1.default, (0, validations_1.validateUpdateCartItem)(), validations_1.validate, userController.updateCartItem);
+userRoutes.delete('/cart/remove', authMiddleware_1.default, userController.removeCartItem);
+userRoutes.get('/cart', authMiddleware_1.default, userController.getCartContents);
+userRoutes.delete('/cart/clear', authMiddleware_1.default, userController.clearCart);
+userRoutes.get('/payment/gateway', authMiddleware_1.default, userController.getActivePaymentGateways);
+userRoutes.post('/checkout', authMiddleware_1.default, userController.checkout);
+userRoutes.post('/checkout/dollar', authMiddleware_1.default, userController.checkoutDollar);
 // Conversation and Message
 userRoutes.get('/conversations', authMiddleware_1.default, userController.getConversations);
 userRoutes.get('/messages', authMiddleware_1.default, userController.getAllConversationMessages);
@@ -73,24 +64,29 @@ userRoutes.patch('/mark/message/read', authMiddleware_1.default, userController.
 userRoutes.post('/auction/interest', authMiddleware_1.default, (0, validations_1.validateShowInterest)(), validations_1.validate, userController.showInterest);
 userRoutes.get('/auction/products/interest', authMiddleware_1.default, userController.getAllAuctionProductsInterest);
 userRoutes.post('/place/bid', authMiddleware_1.default, (0, validations_1.validatePlaceBid)(), validations_1.validate, userController.placeBid);
-userRoutes.get("/auction/product/bidders", authMiddleware_1.default, userController.actionProductBidders);
-userRoutes.post("/become/vendor", authMiddleware_1.default, userController.becomeVendor);
+userRoutes.get('/auction/product/bidders', authMiddleware_1.default, userController.actionProductBidders);
+userRoutes.post('/become/vendor', authMiddleware_1.default, userController.becomeVendor);
 // Notification
-userRoutes.get("/notifications", authMiddleware_1.default, userController.getUserNotifications);
-userRoutes.patch("/mark/notification/as/read", authMiddleware_1.default, userController.userMarkNotificationAsRead);
+userRoutes.get('/notifications', authMiddleware_1.default, userController.getUserNotifications);
+userRoutes.patch('/mark/notification/as/read', authMiddleware_1.default, userController.userMarkNotificationAsRead);
 // Order, OrderItem and Payment
-userRoutes.get("/orders", authMiddleware_1.default, userController.getAllOrders);
-userRoutes.get("/order/items", authMiddleware_1.default, userController.getAllOrderItems);
-userRoutes.get("/order/item", authMiddleware_1.default, userController.viewOrderItem);
-userRoutes.post("/order/item/update/status", authMiddleware_1.default, userController.updateOrderStatus);
-userRoutes.get("/order/payment", authMiddleware_1.default, userController.getPaymentDetails);
+userRoutes.get('/orders', authMiddleware_1.default, userController.getAllOrders);
+userRoutes.get('/order/items', authMiddleware_1.default, userController.getAllOrderItems);
+userRoutes.get('/order/item', authMiddleware_1.default, userController.viewOrderItem);
+userRoutes.post('/order/item/update/status', authMiddleware_1.default, userController.updateOrderStatus);
+userRoutes.get('/order/payment', authMiddleware_1.default, userController.getPaymentDetails);
 // Save Product
-userRoutes.post("/save/product", authMiddleware_1.default, userController.toggleSaveProduct);
-userRoutes.get("/saved/products", authMiddleware_1.default, userController.getSavedProducts);
+userRoutes.post('/save/product', authMiddleware_1.default, userController.toggleSaveProduct);
+userRoutes.get('/saved/products', authMiddleware_1.default, userController.getSavedProducts);
 // add Review
-userRoutes.post("/add/review", authMiddleware_1.default, userController.addReview);
-userRoutes.put("/update/review", authMiddleware_1.default, userController.updateReview);
-userRoutes.get("/get/review", authMiddleware_1.default, userController.getProductReviews);
-userRoutes.get("/view/review", authMiddleware_1.default, userController.getSingleReview);
+userRoutes.post('/add/review', authMiddleware_1.default, userController.addReview);
+userRoutes.put('/update/review', authMiddleware_1.default, userController.updateReview);
+userRoutes.get('/get/review', authMiddleware_1.default, userController.getProductReviews);
+userRoutes.get('/view/review', authMiddleware_1.default, userController.getSingleReview);
+userRoutes.post('/products/:productId/report', authMiddleware_1.default, userController.reportProduct);
+userRoutes.post('/block/vendor', authMiddleware_1.default, userController.blockVendor);
+userRoutes.delete('/block/vendor', authMiddleware_1.default, userController.unblockVendor);
+userRoutes.get('/blocked/vendors', authMiddleware_1.default, userController.getBlockedVendors);
+userRoutes.post('/block/product', authMiddleware_1.default, userController.blockProduct);
 exports.default = userRoutes;
 //# sourceMappingURL=userRoute.js.map

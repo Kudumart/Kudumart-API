@@ -7,9 +7,9 @@ module.exports = {
   password: process.env.DB_PASS,
   database: process.env.DB_NAME,
   define: {
-    timestamps: true
+    timestamps: true,
   },
-  migrationStorage: "sequelize",
-  migrationStorageTableName: "SequelizeMeta",
-  migrations: ["database/migrations"]
+  migrationStorage: 'sequelize',
+  migrationStorageTableName: 'SequelizeMeta',
+  migrations: ['database/migrations'],
 };

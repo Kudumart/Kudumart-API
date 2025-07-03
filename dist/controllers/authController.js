@@ -164,9 +164,9 @@ const customerRegister = (req, res) => __awaiter(void 0, void 0, void 0, functio
         });
         // Step 2: Create default notification settings for the user
         yield usernotificationsetting_1.default.create({
-            userId: newUser.id, // Link the settings to the new user
-            hotDeals: false, // Default value is false
-            auctionProducts: false, // Default value is false
+            userId: newUser.id,
+            hotDeals: false,
+            auctionProducts: false,
             subscription: false, // Default value is false
         });
         // Generate OTP for verification
@@ -195,7 +195,9 @@ const customerRegister = (req, res) => __awaiter(void 0, void 0, void 0, functio
             type: notificationType,
         });
         // Return a success response
-        res.status(200).json({ message: "Customer registered successfully. A verification email has been sent to your email address. Please check your inbox to verify your account." });
+        res.status(200).json({
+            message: "Customer registered successfully. A verification email has been sent to your email address. Please check your inbox to verify your account.",
+        });
     }
     catch (error) {
         logger_1.default.error("Error during registration:", error);
@@ -408,7 +410,7 @@ const codeCheck = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 otpCode,
             },
             include: {
-                model: user_1.default, // Assuming OTP is linked to User model
+                model: user_1.default,
                 as: "user",
                 where: { email },
             },
@@ -568,9 +570,9 @@ const handleGoogleAuth = (req, res) => __awaiter(void 0, void 0, void 0, functio
                 firstName,
                 lastName,
                 accountType,
-                password: yield (0, helpers_2.generateUniquePhoneNumber)(), // Generate unique phone number
-                phoneNumber: yield (0, helpers_2.generateUniquePhoneNumber)(), // Generate unique phone number
-                googleId: providerId, // Storing provider ID as Google ID
+                password: yield (0, helpers_2.generateUniquePhoneNumber)(),
+                phoneNumber: yield (0, helpers_2.generateUniquePhoneNumber)(),
+                googleId: providerId,
                 email_verified_at: new Date(),
             });
         }
@@ -593,7 +595,7 @@ const adminLogin = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             where: { email },
             include: [
                 {
-                    model: role_1.default, // Assuming you've imported the Role model
+                    model: role_1.default,
                     as: "role", // Make sure this alias matches the one you used in the association
                 },
             ],

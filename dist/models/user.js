@@ -31,7 +31,7 @@ class User extends sequelize_1.Model {
     static associate(models) {
         this.hasOne(models.OTP, {
             as: 'otp',
-            foreignKey: 'userId', // Ensure the OTP model has a 'userId' column
+            foreignKey: 'userId',
             onDelete: 'RESTRICT'
         });
         this.hasMany(models.VendorSubscription, {
@@ -73,7 +73,7 @@ const initModel = (sequelize) => {
         gender: sequelize_1.DataTypes.STRING,
         email: {
             type: sequelize_1.DataTypes.STRING,
-            unique: true, // Ensure unique emails
+            unique: true,
             allowNull: false, // You might want to enforce this
         },
         email_verified_at: sequelize_1.DataTypes.DATE,
@@ -89,7 +89,7 @@ const initModel = (sequelize) => {
         dateOfBirth: sequelize_1.DataTypes.STRING,
         location: {
             type: sequelize_1.DataTypes.JSON,
-            defaultValue: [], // Ensures it's an array by default
+            defaultValue: [],
             get() {
                 const value = this.getDataValue('location');
                 return typeof value === 'string' ? JSON.parse(value) : value;

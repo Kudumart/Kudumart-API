@@ -27,7 +27,7 @@ const initModel = (sequelize) => {
         bankInformation: {
             type: sequelize_1.DataTypes.JSON,
             allowNull: false,
-            defaultValue: [], // Ensures it's an array by default
+            defaultValue: [],
             get() {
                 const value = this.getDataValue('bankInformation');
                 return typeof value === 'string' ? JSON.parse(value) : value;
@@ -51,7 +51,7 @@ const initModel = (sequelize) => {
             allowNull: true,
         },
         paymentReceipt: {
-            type: sequelize_1.DataTypes.TEXT, // Store file path or URL
+            type: sequelize_1.DataTypes.TEXT,
             allowNull: true, // Optional field
         },
     }, {

@@ -15,23 +15,13 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -59,6 +49,7 @@ const sequelizeService = {
             // Create the connection
             sequelizeService.connection = new sequelize_1.Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.DB_PASS, {
                 host: process.env.DB_HOST,
+                port: 8889,
                 dialect: process.env.DB_DIALECT || 'mysql',
                 logging: false,
                 define: {
@@ -67,10 +58,12 @@ const sequelizeService = {
             });
             // Test connection
             yield sequelizeService.connection.authenticate();
-            console.log("Database connected successfully");
+            console.log('Database connected successfully');
             // Load models dynamically
             const modelDirectory = path_1.default.join(__dirname, '../models');
-            const modelFiles = fs_1.default.readdirSync(modelDirectory).filter(file => file.endsWith('.ts') || file.endsWith('.js'));
+            const modelFiles = fs_1.default
+                .readdirSync(modelDirectory)
+                .filter((file) => file.endsWith('.ts') || file.endsWith('.js'));
             // Make sure to adjust the order of loading if needed.
             for (const file of modelFiles) {
                 const modelModule = yield Promise.resolve(`${path_1.default.join(modelDirectory, file)}`).then(s => __importStar(require(s)));

@@ -43,7 +43,7 @@ const runSubscriptionCron = () => {
                     vendorId: subscription.vendorId,
                     subscriptionPlanId: freePlan.id,
                     startDate: today,
-                    endDate: new Date(today.setFullYear(today.getFullYear() + 10)), // Long validity
+                    endDate: new Date(today.setFullYear(today.getFullYear() + 10)),
                     isActive: true,
                 });
                 yield notification_1.default.create({

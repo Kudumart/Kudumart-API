@@ -4,6 +4,7 @@ class BlockedVendor extends Model {
   public id!: string;
   public userId!: string;
   public vendorId!: string;
+  public reason?: string; // Reason for blocking the vendor
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 
@@ -33,6 +34,11 @@ const initBlockedVendor = (sequelize: Sequelize) => {
         type: DataTypes.UUID,
         allowNull: false,
       },
+      reason: {
+        type: DataTypes.STRING,
+        allowNull: true, // Reason is optional
+        comment: 'Reason for blocking the vendor',
+      },
     },
     {
       sequelize,
@@ -44,4 +50,4 @@ const initBlockedVendor = (sequelize: Sequelize) => {
 };
 
 export default BlockedVendor;
-export { initBlockedVendor as initModel }; 
+export { initBlockedVendor as initModel };

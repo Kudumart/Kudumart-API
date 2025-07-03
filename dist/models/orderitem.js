@@ -47,7 +47,7 @@ const initModel = (sequelize) => {
         product: {
             type: sequelize_1.DataTypes.JSON,
             allowNull: false,
-            defaultValue: [], // Ensures it's an array by default
+            defaultValue: [],
             get() {
                 const value = this.getDataValue('product');
                 return typeof value === 'string' ? JSON.parse(value) : value;
