@@ -43,8 +43,6 @@ sequelizeService
   .then(async () => {
     if (sequelizeService.connection) {
       await sequelizeService.connection.authenticate(); // Ensure the connection is established
-
-      sequelizeService.connection.sync({ force: true });
       console.log('Database connected successfully');
     } else {
       console.error('Database connection is not initialized.');
