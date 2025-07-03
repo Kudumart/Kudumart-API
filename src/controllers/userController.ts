@@ -1355,17 +1355,17 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
     const PAYSTACK_SECRET_KEY = paymentGateway.secretKey;
 
     // Verify payment reference with Paystack
-    // const verificationResponse = await verifyPayment(
-    //   refId,
-    //   PAYSTACK_SECRET_KEY
-    // );
+    const verificationResponse = await verifyPayment(
+      refId,
+      PAYSTACK_SECRET_KEY
+    );
 
-    // if (verificationResponse.status !== 'success') {
-    //   res.status(400).json({ message: 'Payment verification failed.' });
-    //   return;
-    // }
+    if (verificationResponse.status !== 'success') {
+      res.status(400).json({ message: 'Payment verification failed.' });
+      return;
+    }
 
-    // const paymentData = verificationResponse;
+    const paymentData = verificationResponse;
 
     // Fetch cart items
     const cartItems = await Cart.findAll({
@@ -1374,7 +1374,7 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
         {
           model: Product,
           as: 'product',
-          attributes: ['id', 'name', 'price', 'vendorId', 'quantity'],
+          attributes: ['id', 'name', 'price', 'vendorId', 'quantity', 'sku'],
         },
       ],
     });
@@ -1544,18 +1544,18 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
     }
 
     // Create payment record
-    // const payment = await Payment.create(
-    //   {
-    //     orderId: order.id,
-    //     refId,
-    //     amount: paymentData.amount / 100,
-    //     currency: paymentData.currency,
-    //     status: paymentData.status,
-    //     channel: paymentData.channel,
-    //     paymentDate: paymentData.transaction_date,
-    //   },
-    //   { transaction }
-    // );
+    const payment = await Payment.create(
+      {
+        orderId: order.id,
+        refId,
+        amount: paymentData.amount / 100,
+        currency: paymentData.currency,
+        status: paymentData.status,
+        channel: paymentData.channel,
+        paymentDate: paymentData.transaction_date,
+      },
+      { transaction }
+    );
 
     const groupedVendorOrders: { [key: string]: OrderItem[] } = {};
 
@@ -3562,30 +3562,33 @@ export const blockProduct = async (
   res: Response
 ): Promise<void> => {
   try {
-    const userId = (req as AuthenticatedRequest).user?.id;
-    const { productId } = req.body;
+    const userId = (req as AuthenticatedRequest).user?.id; // Get the authenticated user's ID
+    const { productId, reason } = req.body; // Get productId and reason from request body
 
     if (!productId) {
+      // Check if productId is provided
       res.status(400).json({ message: 'productId is required.' });
       return;
     }
     if (!userId) {
+      // Check if user is authenticated
       res.status(401).json({ message: 'Unauthorized.' });
       return;
     }
 
     // Check if already blocked
     const alreadyBlocked = await BlockedProduct.findOne({
-      where: { userId, productId },
+      where: { userId, productId }, // Check if this product is already blocked for this user
     });
     if (alreadyBlocked) {
+      // If already blocked, return
       res.status(200).json({ message: 'Product already blocked.' });
       return;
     }
 
-    await BlockedProduct.create({ userId, productId });
-    res.status(200).json({ message: 'Product blocked successfully.' });
+    await BlockedProduct.create({ userId, productId, reason }); // Block the product and save the reason
+    res.status(200).json({ message: 'Product blocked successfully.' }); // Respond with success
   } catch (error) {
-    res.status(500).json({ message: 'Server error.' });
+    res.status(500).json({ message: 'Server error.' }); // Handle server error
   }
 };
