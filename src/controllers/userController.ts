@@ -1486,6 +1486,8 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
         { transaction }
       );
 
+      // Fetch user before the for loop so it's available
+      const user = await User.findByPk(userId, { transaction });
       if (vendor) {
         await Notification.create(
           {
@@ -1497,8 +1499,6 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
           { transaction }
         );
 
-        // Fetch user before the for loop so it's available
-        const user = await User.findByPk(userId, { transaction });
         if (!user) {
           throw new Error(`User not found.`);
         }
