@@ -3492,7 +3492,12 @@ export const emailTemplates = {
     </html>`;
   },
 
-  newOrderAdminNotification: (admin: Admin, order: Order): string => {
+  newOrderAdminNotification: (
+    admin: Admin,
+    order: Order,
+    customer?: User,
+    product?: any
+  ): string => {
     const logoUrl: string | undefined = process.env.LOGO_URL;
 
     return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -3672,7 +3677,9 @@ export const emailTemplates = {
                         <tr>
                             <td class="center">
                                 <div class="logo">
-                                    <img src="${logoUrl}" alt="Logo of ${process.env.APP_NAME}" width="150px">
+                                    <img src="${logoUrl}" alt="Logo of ${
+      process.env.APP_NAME
+    }" width="150px">
                                 </div>
                             </td>
                         </tr>
@@ -3680,14 +3687,66 @@ export const emailTemplates = {
                             <td>
                                 <h2>New Order Received</h2>
                                 <p>Hi ${admin.name},</p>
-                                <p>A new order (Order TRACKING NO: <strong>${order.trackingNumber}</strong>) has been placed for one of your products.</p>
+                                <p>A new order (Order TRACKING NO: <strong>${
+                                  order.trackingNumber
+                                }</strong>) has been placed for one of your products.</p>
+                                
+                                ${
+                                  customer
+                                    ? `
+                                <h3>Customer Details</h3>
+                                <ul>
+                                    <li><strong>Name:</strong> ${
+                                      customer.firstName
+                                    } ${customer.lastName}</li>
+                                    <li><strong>Email:</strong> ${
+                                      customer.email
+                                    }</li>
+                                    <li><strong>Phone:</strong> ${
+                                      customer.phoneNumber || 'Not provided'
+                                    }</li>
+                                </ul>
+                                `
+                                    : ''
+                                }
+                                
+                                ${
+                                  product
+                                    ? `
+                                <h3>Product Details</h3>
+                                <ul>
+                                    <li><strong>Product Name:</strong> ${
+                                      product.name ||
+                                      product.product?.name ||
+                                      'N/A'
+                                    }</li>
+                                    <li><strong>SKU:</strong> ${
+                                      product.sku ||
+                                      product.product?.sku ||
+                                      'N/A'
+                                    }</li>
+                                    <li><strong>Quantity:</strong> ${
+                                      product.quantity || 'N/A'
+                                    }</li>
+                                    <li><strong>Price:</strong> ${
+                                      product.price || 'N/A'
+                                    }</li>
+                                </ul>
+                                `
+                                    : ''
+                                }
+                                
                                 <p>If you have any questions, feel free to contact our support team.</p>
-                                <p>Best regards,<br> The ${process.env.APP_NAME} Team.</p>
+                                <p>Best regards,<br> The ${
+                                  process.env.APP_NAME
+                                } Team.</p>
                             </td>
                         </tr>
                         <tr>
                             <td>
-                                <p class="footnote">For assistance, please contact us at <a href="mailto:${process.env.SUPPORT_EMAIL}">${process.env.SUPPORT_EMAIL}</a>.</p>
+                                <p class="footnote">For assistance, please contact us at <a href="mailto:${
+                                  process.env.SUPPORT_EMAIL
+                                }">${process.env.SUPPORT_EMAIL}</a>.</p>
                             </td>
                         </tr>
                     </table>
@@ -3706,7 +3765,9 @@ export const emailTemplates = {
                     <table>
                         <tr>
                             <td align="center">
-                                © <script>document.write(new Date().getFullYear())</script> <a href="#">${process.env.APP_NAME}</a>.
+                                © <script>document.write(new Date().getFullYear())</script> <a href="#">${
+                                  process.env.APP_NAME
+                                }</a>.
                             </td>
                         </tr>
                     </table>
