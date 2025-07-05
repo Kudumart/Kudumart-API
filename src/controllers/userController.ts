@@ -1488,6 +1488,11 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 
       // Fetch user before the for loop so it's available
       const user = await User.findByPk(userId, { transaction });
+
+      if (!user) {
+        throw new Error(`User not found.`);
+      }
+
       if (vendor) {
         await Notification.create(
           {
@@ -1498,10 +1503,6 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
           },
           { transaction }
         );
-
-        if (!user) {
-          throw new Error(`User not found.`);
-        }
 
         const message = emailTemplates.newOrderNotification(
           vendor,
