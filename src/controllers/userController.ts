@@ -1498,7 +1498,7 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
         );
 
         // Fetch user before the for loop so it's available
-        const user = await User.findByPk(vendor.id, { transaction });
+        const user = await User.findByPk(userId, { transaction });
         if (!user) {
           throw new Error(`User not found.`);
         }
@@ -1530,7 +1530,12 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
           { transaction }
         );
 
-        const message = emailTemplates.newOrderAdminNotification(admin, order);
+        const message = emailTemplates.newOrderAdminNotification(
+          admin,
+          order,
+          user,
+          cartItem.product
+        );
         try {
           await sendMail(
             admin.email,
@@ -1899,7 +1904,9 @@ export const checkoutDollar = async (
 
           const message = emailTemplates.newOrderAdminNotification(
             admin,
-            order
+            order,
+            user,
+            item.product
           );
 
           try {
