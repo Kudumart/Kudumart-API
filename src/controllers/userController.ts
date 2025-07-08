@@ -1508,7 +1508,8 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
           vendor,
           order,
           user,
-          cartItem.product
+          cartItem.product,
+          cartItem.quantity
         );
 
         try {
@@ -1802,7 +1803,8 @@ export const checkoutDollar = async (
           vendor,
           order,
           user,
-          item.product
+          item.product,
+          item.quantity
         );
         try {
           // Send the email to the vendor
@@ -1880,7 +1882,8 @@ export const checkoutDollar = async (
             vendor,
             order,
             user,
-            item.product
+            item.product,
+            item.quantity
           );
 
           try {

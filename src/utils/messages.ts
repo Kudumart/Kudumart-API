@@ -3340,9 +3340,37 @@ export const emailTemplates = {
     vendor: User,
     order: Order,
     customer?: User, // Add customer as optional
-    product?: any // Add product/orderItem as optional
+    product?: any, // Add product/orderItem as optional
+    quantity?: number
   ): string => {
     const logoUrl: string | undefined = process.env.LOGO_URL;
+
+    // Format the address if possible
+    let formattedAddress = 'Not provided';
+    if (customer?.location) {
+      let addressObj = customer.location;
+      if (typeof addressObj === 'string') {
+        try {
+          addressObj = JSON.parse(addressObj);
+        } catch (e) {
+          // If not JSON, use as is
+          addressObj = addressObj;
+        }
+      }
+      if (
+        typeof addressObj === 'object' &&
+        addressObj !== null &&
+        !Array.isArray(addressObj)
+      ) {
+        const { street, city, state, country } = addressObj as any;
+        formattedAddress = [street, city, state, country]
+          .filter(Boolean)
+          .join(', ');
+      } else if (typeof addressObj === 'string') {
+        formattedAddress = addressObj;
+      }
+    }
+
     return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
@@ -3425,6 +3453,9 @@ export const emailTemplates = {
                                     <li><strong>Phone:</strong> ${
                                       customer.phoneNumber || ''
                                     }</li>
+                                    <li><strong>Address:</strong> ${
+                                      formattedAddress || ''
+                                    }</li>
                                 </ul>`
                                     : ''
                                 }
@@ -3441,7 +3472,7 @@ export const emailTemplates = {
                                       product.sku || product.product?.sku || ''
                                     }</li>
                                     <li><strong>Quantity:</strong> ${
-                                      product.quantity || ''
+                                      quantity || ''
                                     }</li>
                                     <li><strong>Price:</strong> ${
                                       product.price || ''
