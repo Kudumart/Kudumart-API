@@ -3362,7 +3362,7 @@ export const emailTemplates = {
         addressObj !== null &&
         !Array.isArray(addressObj)
       ) {
-        const { street, city, state, country } = addressObj;
+        const { street, city, state, country } = addressObj as any;
         formattedAddress = [street, city, state, country]
           .filter(Boolean)
           .join(', ');
