@@ -2917,7 +2917,8 @@ export const updateOrderStatus = async (
     const message = emailTemplates.orderStatusUpdateNotification(
       buyer,
       status,
-      productData?.name
+      productData?.name,
+      deliveryCode
     );
     try {
       await sendMail(

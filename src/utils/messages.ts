@@ -4057,7 +4057,7 @@ export const emailTemplates = {
     user: User,
     status: string,
     productName: string,
-    deliveryCode: string
+    deliveryCode?: string
   ): string => {
     const logoUrl: string | undefined = process.env.LOGO_URL;
 
@@ -4252,7 +4252,10 @@ export const emailTemplates = {
                                   productName ?? 'your item'
                                 }</strong> has been updated to <strong>${status}</strong>.</p>
 
-                                <p>Delivery code: ${deliveryCode}</p>
+                                <p>${
+                                  deliveryCode &&
+                                  `Delivery code: ${deliveryCode}`
+                                }</p>
                                 <p>Thank you for shopping with us.</p>
                                 <p>For any questions, feel free to contact our support team.</p>
                                 <p>Best regards,<br> The ${
