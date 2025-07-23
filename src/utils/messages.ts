@@ -1,18 +1,18 @@
 // utils/emailTemplates.ts
 
-import Admin from '../models/admin';
-import Applicant from '../models/applicant';
-import AuctionProduct from '../models/auctionproduct';
-import Job from '../models/job';
-import OrderItem from '../models/orderitem';
-import Order from '../models/order';
-import User from '../models/user';
+import Admin from "../models/admin";
+import Applicant from "../models/applicant";
+import AuctionProduct from "../models/auctionproduct";
+import Job from "../models/job";
+import OrderItem from "../models/orderitem";
+import Order from "../models/order";
+import User from "../models/user";
 
 export const emailTemplates = {
-  verifyEmail: (user: User, code: string): string => {
-    const logoUrl: string | undefined = process.env.LOGO_URL;
+	verifyEmail: (user: User, code: string): string => {
+		const logoUrl: string | undefined = process.env.LOGO_URL;
 
-    return `
+		return `
     <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
@@ -269,12 +269,106 @@ export const emailTemplates = {
     </html>
     
       `;
-  },
+	},
 
-  forgotPassword: (user: User, code: string): string => {
-    const logoUrl: string | undefined = process.env.LOGO_URL;
+	verifyEmailWithLink: (user: User, token: string) => {
+		const logoUrl = process.env.LOGO_URL;
+		const appName = process.env.APP_NAME;
+		const supportEmail = process.env.SUPPORT_EMAIL;
+		const frontendUrl = process.env.FRONTEND_URL;
 
-    return `
+		if (!frontendUrl) {
+			throw new Error("Frontend url for verification mail not found.");
+		}
+
+		// Build the link the user will click to verify:
+		const verificationLink = `${frontendUrl}/verify-email?token=${encodeURIComponent(token)}&email=${encodeURIComponent(user.email)}`;
+
+		return `
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta name="viewport" content="width=device-width" />
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <title>${appName}</title>
+  <style>
+    /* … your existing styles here … */
+  </style>
+</head>
+<body bgcolor="#f6f6f6">
+  <!-- body -->
+  <table class="body-wrap">
+    <tr><td></td>
+      <td class="container" bgcolor="#FFFFFF">
+        <div class="content">
+          <table>
+            <tr>
+              <td class="center">
+                <img src="${logoUrl}" alt="${appName} logo" width="150px" />
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <h2>Activate your account</h2>
+                <p>Hi ${user.firstName} ${user.lastName},</p>
+                <p>
+                  Thanks for signing up for ${appName}! To complete your registration
+                  and start using ${user.email} to log in, please verify your email:
+                </p>
+                <table>
+                  <tr>
+                    <td class="padding center">
+                      <a
+                        href="${verificationLink}"
+                        class="btn-primary"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Verify Email
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+                <p>This link expires in one hour.</p>
+                <p>Thank you,<br />The ${appName} Support Team</p>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <p class="footnote">
+                  If you have any troubles, email us at
+                  <a href="mailto:${supportEmail}">${supportEmail}</a>.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </div>
+      </td>
+      <td></td>
+    </tr>
+  </table>
+
+  <!-- footer -->
+  <table class="footer-wrap">
+    <tr><td></td>
+      <td class="container">
+        <div class="content" align="center">
+          &copy; ${new Date().getFullYear()} ${appName}
+        </div>
+      </td>
+      <td></td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+	},
+
+	forgotPassword: (user: User, code: string): string => {
+		const logoUrl: string | undefined = process.env.LOGO_URL;
+
+		return `
     <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
@@ -494,12 +588,12 @@ export const emailTemplates = {
     </html>
     
       `;
-  },
+	},
 
-  passwordResetNotification: (user: User): string => {
-    const logoUrl: string | undefined = process.env.LOGO_URL;
+	passwordResetNotification: (user: User): string => {
+		const logoUrl: string | undefined = process.env.LOGO_URL;
 
-    return `
+		return `
     <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
@@ -712,12 +806,12 @@ export const emailTemplates = {
     </html>
     
       `;
-  },
+	},
 
-  adminPasswordResetNotification: (admin: Admin): string => {
-    const logoUrl: string | undefined = process.env.LOGO_URL;
+	adminPasswordResetNotification: (admin: Admin): string => {
+		const logoUrl: string | undefined = process.env.LOGO_URL;
 
-    return `
+		return `
     <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
@@ -930,12 +1024,12 @@ export const emailTemplates = {
     </html>
     
       `;
-  },
+	},
 
-  resendCode: (user: User, code: string, newEmail: string): string => {
-    const logoUrl: string | undefined = process.env.LOGO_URL;
+	resendCode: (user: User, code: string, newEmail: string): string => {
+		const logoUrl: string | undefined = process.env.LOGO_URL;
 
-    return `
+		return `
         <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
         <html xmlns="http://www.w3.org/1999/xhtml">
         <head>
@@ -1161,12 +1255,12 @@ export const emailTemplates = {
         </html>
 
     `;
-  },
+	},
 
-  emailAddressChanged: (user: User): string => {
-    const logoUrl: string | undefined = process.env.LOGO_URL;
+	emailAddressChanged: (user: User): string => {
+		const logoUrl: string | undefined = process.env.LOGO_URL;
 
-    return `
+		return `
         <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
         <html xmlns="http://www.w3.org/1999/xhtml">
         <head>
@@ -1384,12 +1478,12 @@ export const emailTemplates = {
         </html>
 
     `;
-  },
+	},
 
-  phoneNumberUpdated: (user: User): string => {
-    const logoUrl: string | undefined = process.env.LOGO_URL;
+	phoneNumberUpdated: (user: User): string => {
+		const logoUrl: string | undefined = process.env.LOGO_URL;
 
-    return `
+		return `
         <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
         <html xmlns="http://www.w3.org/1999/xhtml">
         <head>
@@ -1608,12 +1702,12 @@ export const emailTemplates = {
         </html>
 
     `;
-  },
+	},
 
-  subAdminCreated: (subAdmin: Admin, temporaryPassword: string): string => {
-    const logoUrl: string | undefined = process.env.LOGO_URL;
+	subAdminCreated: (subAdmin: Admin, temporaryPassword: string): string => {
+		const logoUrl: string | undefined = process.env.LOGO_URL;
 
-    return `
+		return `
         <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
         <html xmlns="http://www.w3.org/1999/xhtml">
         <head>
@@ -1841,16 +1935,16 @@ export const emailTemplates = {
         </body>
         </html>
     `;
-  },
+	},
 
-  kycStatusUpdate: (
-    user: User,
-    isApproved: boolean,
-    adminNote?: string
-  ): string => {
-    const logoUrl: string | undefined = process.env.LOGO_URL;
+	kycStatusUpdate: (
+		user: User,
+		isApproved: boolean,
+		adminNote?: string,
+	): string => {
+		const logoUrl: string | undefined = process.env.LOGO_URL;
 
-    return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+		return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
         <meta name="viewport" content="width=device-width" />
@@ -2028,8 +2122,8 @@ export const emailTemplates = {
                             <td class="center">
                                 <div class="logo">
                                     <img src="${logoUrl}" alt="Logo of ${
-      process.env.APP_NAME
-    }" width="150px">
+																			process.env.APP_NAME
+																		}" width="150px">
                                 </div>
                             </td>
                         </tr>
@@ -2039,28 +2133,26 @@ export const emailTemplates = {
                                 <p>Hi ${user.firstName} ${user.lastName},</p>
                                 <p>Your KYC submission has been reviewed.</p>
                                 <p>Status: <strong>${
-                                  isApproved ? 'Approved' : 'Rejected'
-                                }</strong></p>
+																	isApproved ? "Approved" : "Rejected"
+																}</strong></p>
                                 ${
-                                  !isApproved
-                                    ? `<p>Note: ${
-                                        adminNote ||
-                                        'No additional notes provided.'
-                                      }</p>`
-                                    : ''
-                                }
+																	!isApproved
+																		? `<p>Note: ${
+																				adminNote ||
+																				"No additional notes provided."
+																			}</p>`
+																		: ""
+																}
                                 <p>Thank you for your cooperation!</p>
                                 <p>If you have any questions, feel free to reach out to our support team.</p>
-                                <p>Best regards,<br> The ${
-                                  process.env.APP_NAME
-                                } Support Team.</p>
+                                <p>Best regards,<br> The ${process.env.APP_NAME} Support Team.</p>
                             </td>
                         </tr>
                         <tr>
                             <td>
                                 <p class="footnote">For assistance, please contact us at <a href="mailto:${
-                                  process.env.SUPPORT_EMAIL
-                                }">${process.env.SUPPORT_EMAIL}</a>.</p>
+																	process.env.SUPPORT_EMAIL
+																}">${process.env.SUPPORT_EMAIL}</a>.</p>
                             </td>
                         </tr>
                     </table>
@@ -2080,8 +2172,8 @@ export const emailTemplates = {
                         <tr>
                             <td align="center">
                                 © <script>document.write(new Date().getFullYear())</script> <a href="#">${
-                                  process.env.APP_NAME
-                                }</a>.
+																	process.env.APP_NAME
+																}</a>.
                             </td>
                         </tr>
                     </table>
@@ -2094,15 +2186,15 @@ export const emailTemplates = {
     </body>
     </html>
     `;
-  },
+	},
 
-  outBidNotification: (
-    highestBid: any,
-    auctionProduct: AuctionProduct
-  ): string => {
-    const logoUrl: string | undefined = process.env.LOGO_URL;
+	outBidNotification: (
+		highestBid: any,
+		auctionProduct: AuctionProduct,
+	): string => {
+		const logoUrl: string | undefined = process.env.LOGO_URL;
 
-    return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+		return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
         <meta name="viewport" content="width=device-width" />
@@ -2329,16 +2421,16 @@ export const emailTemplates = {
     </body>
     </html>
     `;
-  },
+	},
 
-  interestNotification: (
-    user: User,
-    amountPaid: number,
-    auctionProduct: AuctionProduct
-  ): string => {
-    const logoUrl: string | undefined = process.env.LOGO_URL;
+	interestNotification: (
+		user: User,
+		amountPaid: number,
+		auctionProduct: AuctionProduct,
+	): string => {
+		const logoUrl: string | undefined = process.env.LOGO_URL;
 
-    return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+		return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
         <meta name="viewport" content="width=device-width" />
@@ -2516,8 +2608,8 @@ export const emailTemplates = {
                             <td class="center">
                                 <div class="logo">
                                     <img src="${logoUrl}" alt="Logo of ${
-      process.env.APP_NAME
-    }" width="150px">
+																			process.env.APP_NAME
+																		}" width="150px">
                                 </div>
                             </td>
                         </tr>
@@ -2526,25 +2618,23 @@ export const emailTemplates = {
                                 <h2>Auction Interest Confirmation!</h2>
                                 <p>Hi ${user.firstName} ${user.lastName},</p>
                                 <p>Thank you for showing interest in the auction for <strong>${
-                                  auctionProduct.name
-                                }</strong>.</p>
+																	auctionProduct.name
+																}</strong>.</p>
                                 <p>Your payment of <strong>${amountPaid.toFixed(
-                                  2
-                                )}</strong> has been successfully recorded.</p>
+																	2,
+																)}</strong> has been successfully recorded.</p>
                                 <p>The auction is scheduled to start on <strong>${new Date(
-                                  auctionProduct.startDate
-                                ).toLocaleString()}</strong>.</p>
+																	auctionProduct.startDate,
+																).toLocaleString()}</strong>.</p>
                                 <p>Stay tuned for updates!</p>
-                                <p>Best Regards,<br>${
-                                  process.env.APP_NAME
-                                } Team</p>
+                                <p>Best Regards,<br>${process.env.APP_NAME} Team</p>
                             </td>
                         </tr>
                         <tr>
                             <td>
                                 <p class="footnote">For assistance, please contact us at <a href="mailto:${
-                                  process.env.SUPPORT_EMAIL
-                                }">${process.env.SUPPORT_EMAIL}</a>.</p>
+																	process.env.SUPPORT_EMAIL
+																}">${process.env.SUPPORT_EMAIL}</a>.</p>
                             </td>
                         </tr>
                     </table>
@@ -2564,8 +2654,8 @@ export const emailTemplates = {
                         <tr>
                             <td align="center">
                                 © <script>document.write(new Date().getFullYear())</script> <a href="#">${
-                                  process.env.APP_NAME
-                                }</a>.
+																	process.env.APP_NAME
+																}</a>.
                             </td>
                         </tr>
                     </table>
@@ -2578,12 +2668,12 @@ export const emailTemplates = {
     </body>
     </html>
     `;
-  },
+	},
 
-  applicantNotify: (job: Job, application: Applicant): string => {
-    const logoUrl: string | undefined = process.env.LOGO_URL;
+	applicantNotify: (job: Job, application: Applicant): string => {
+		const logoUrl: string | undefined = process.env.LOGO_URL;
 
-    return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+		return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
         <meta name="viewport" content="width=device-width" />
@@ -2762,8 +2852,8 @@ export const emailTemplates = {
                             <td class="center">
                                 <div class="logo">
                                     <img src="${logoUrl}" alt="Logo of ${
-      process.env.APP_NAME
-    }" width="150px">
+																			process.env.APP_NAME
+																		}" width="150px">
                                 </div>
                             </td>
                         </tr>
@@ -2772,25 +2862,23 @@ export const emailTemplates = {
                                 <h2>Application Confirmation</h2>
                                 <p>Hi ${application.name},</p>
                                 <p>Your application was sent to ${
-                                  process.env.APP_NAME
-                                }</p>
+																	process.env.APP_NAME
+																}</p>
                                 <p><strong>${job.title}</strong></p>
                                 <p><strong>${job.location}</strong></p>
                                 <p><strong>${new Date(
-                                  application.createdAt
-                                ).toLocaleString()}</strong></p>
+																	application.createdAt,
+																).toLocaleString()}</strong></p>
                                 <p>We will notify you of any updates regarding your application.</p>
                                 <p>If you have any questions, feel free to reach out to our support team.</p>
-                                <p>Best regards,<br> The ${
-                                  process.env.APP_NAME
-                                } Support Team.</p>
+                                <p>Best regards,<br> The ${process.env.APP_NAME} Support Team.</p>
                             </td>
                         </tr>
                         <tr>
                             <td>
                                 <p class="footnote">For assistance, please contact us at <a href="mailto:${
-                                  process.env.SUPPORT_EMAIL
-                                }">${process.env.SUPPORT_EMAIL}</a>.</p>
+																	process.env.SUPPORT_EMAIL
+																}">${process.env.SUPPORT_EMAIL}</a>.</p>
                             </td>
                         </tr>
                     </table>
@@ -2810,8 +2898,8 @@ export const emailTemplates = {
                         <tr>
                             <td align="center">
                                <script>document.write(new Date().getFullYear())</script> © <a href="#">${
-                                 process.env.APP_NAME
-                               }</a>.
+																	process.env.APP_NAME
+																}</a>.
                             </td>
                         </tr>
                     </table>
@@ -2824,16 +2912,16 @@ export const emailTemplates = {
     </body>
     </html>
     `;
-  },
+	},
 
-  jobOwnerMailData: (
-    job: Job,
-    creator: Admin,
-    application: Applicant
-  ): string => {
-    const logoUrl: string | undefined = process.env.LOGO_URL;
+	jobOwnerMailData: (
+		job: Job,
+		creator: Admin,
+		application: Applicant,
+	): string => {
+		const logoUrl: string | undefined = process.env.LOGO_URL;
 
-    return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+		return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
         <meta name="viewport" content="width=device-width" />
@@ -3068,47 +3156,47 @@ export const emailTemplates = {
     </body>
     </html>
     `;
-  },
+	},
 
-  orderConfirmationNotification: (
-    user: User,
-    order: Order,
-    vendorOrders: { [key: string]: OrderItem[] },
-    currency: string
-  ): string => {
-    const logoUrl: string | undefined = process.env.LOGO_URL;
+	orderConfirmationNotification: (
+		user: User,
+		order: Order,
+		vendorOrders: { [key: string]: OrderItem[] },
+		currency: string,
+	): string => {
+		const logoUrl: string | undefined = process.env.LOGO_URL;
 
-    let itemsHtml = '';
+		let itemsHtml = "";
 
-    for (const vendorId in vendorOrders) {
-      itemsHtml += `<h4>Product Details</h4><ul>`;
+		for (const vendorId in vendorOrders) {
+			itemsHtml += `<h4>Product Details</h4><ul>`;
 
-      for (const item of vendorOrders[vendorId]) {
-        const product = item.product as {
-          id: string;
-          sku?: string;
-          name: string;
-          price: number;
-        };
+			for (const item of vendorOrders[vendorId]) {
+				const product = item.product as {
+					id: string;
+					sku?: string;
+					name: string;
+					price: number;
+				};
 
-        // Check if SKU is empty, use product.id instead
-        const productId =
-          product.sku && product.sku.trim() ? product.sku : product.id;
+				// Check if SKU is empty, use product.id instead
+				const productId =
+					product.sku && product.sku.trim() ? product.sku : product.id;
 
-        itemsHtml += `
+				itemsHtml += `
                 <li><strong>Product ID:</strong> ${productId} </li>
                 <li><strong>Product:</strong> ${product.name} </li>
                 <li><strong>Quantity:</strong> ${item.quantity} </li>
                 <li><strong>Price:</strong> ${currency}${Number(
-          item.price
-        ).toFixed(2)}</li>
+									item.price,
+								).toFixed(2)}</li>
             `;
-      }
+			}
 
-      itemsHtml += `</ul>`;
-    }
+			itemsHtml += `</ul>`;
+		}
 
-    return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+		return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
         <meta name="viewport" content="width=device-width" />
@@ -3334,44 +3422,44 @@ export const emailTemplates = {
     </body>
     </html>
     `;
-  },
+	},
 
-  newOrderNotification: (
-    vendor: User,
-    order: Order,
-    customer?: User, // Add customer as optional
-    product?: any, // Add product/orderItem as optional
-    quantity?: number
-  ): string => {
-    const logoUrl: string | undefined = process.env.LOGO_URL;
+	newOrderNotification: (
+		vendor: User,
+		order: Order,
+		customer?: User, // Add customer as optional
+		product?: any, // Add product/orderItem as optional
+		quantity?: number,
+	): string => {
+		const logoUrl: string | undefined = process.env.LOGO_URL;
 
-    // Format the address if possible
-    let formattedAddress = 'Not provided';
-    if (customer?.location) {
-      let addressObj = customer.location;
-      if (typeof addressObj === 'string') {
-        try {
-          addressObj = JSON.parse(addressObj);
-        } catch (e) {
-          // If not JSON, use as is
-          addressObj = addressObj;
-        }
-      }
-      if (
-        typeof addressObj === 'object' &&
-        addressObj !== null &&
-        !Array.isArray(addressObj)
-      ) {
-        const { street, city, state, country } = addressObj as any;
-        formattedAddress = [street, city, state, country]
-          .filter(Boolean)
-          .join(', ');
-      } else if (typeof addressObj === 'string') {
-        formattedAddress = addressObj;
-      }
-    }
+		// Format the address if possible
+		let formattedAddress = "Not provided";
+		if (customer?.location) {
+			let addressObj = customer.location;
+			if (typeof addressObj === "string") {
+				try {
+					addressObj = JSON.parse(addressObj);
+				} catch (e) {
+					// If not JSON, use as is
+					addressObj = addressObj;
+				}
+			}
+			if (
+				typeof addressObj === "object" &&
+				addressObj !== null &&
+				!Array.isArray(addressObj)
+			) {
+				const { street, city, state, country } = addressObj as any;
+				formattedAddress = [street, city, state, country]
+					.filter(Boolean)
+					.join(", ");
+			} else if (typeof addressObj === "string") {
+				formattedAddress = addressObj;
+			}
+		}
 
-    return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+		return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
         <meta name="viewport" content="width=device-width" />
@@ -3426,71 +3514,67 @@ export const emailTemplates = {
                             <td class="center">
                                 <div class="logo">
                                     <img src="${logoUrl}" alt="Logo of ${
-      process.env.APP_NAME
-    }" width="150px">
+																			process.env.APP_NAME
+																		}" width="150px">
                                 </div>
                             </td>
                         </tr>
                         <tr>
                             <td>
                                 <h2>New Order Received</h2>
-                                <p>Hi ${vendor.firstName} ${
-      vendor.lastName
-    },</p>
+                                <p>Hi ${vendor.firstName} ${vendor.lastName},</p>
                                 <p>A new order (TRACKING NO: <strong>${
-                                  order.trackingNumber
-                                }</strong>) has been placed for one of your products.</p>
+																	order.trackingNumber
+																}</strong>) has been placed for one of your products.</p>
                                 ${
-                                  customer
-                                    ? `<h3>Customer Details</h3>
+																	customer
+																		? `<h3>Customer Details</h3>
                                 <ul>
                                     <li><strong>Name:</strong> ${
-                                      customer.firstName
-                                    } ${customer.lastName}</li>
+																			customer.firstName
+																		} ${customer.lastName}</li>
                                     <li><strong>Email:</strong> ${
-                                      customer.email
-                                    }</li>
+																			customer.email
+																		}</li>
                                     <li><strong>Phone:</strong> ${
-                                      customer.phoneNumber || ''
-                                    }</li>
+																			customer.phoneNumber || ""
+																		}</li>
                                     <li><strong>Address:</strong> ${
-                                      formattedAddress || ''
-                                    }</li>
+																			formattedAddress || ""
+																		}</li>
                                 </ul>`
-                                    : ''
-                                }
+																		: ""
+																}
                                 ${
-                                  product
-                                    ? `<h3>Product Details</h3>
+																	product
+																		? `<h3>Product Details</h3>
                                 <ul>
                                     <li><strong>Product Name:</strong> ${
-                                      product.name ||
-                                      product.product?.name ||
-                                      ''
-                                    }</li>
+																			product.name ||
+																			product.product?.name ||
+																			""
+																		}</li>
                                     <li><strong>SKU:</strong> ${
-                                      product.sku || product.product?.sku || ''
-                                    }</li>
+																			product.sku || product.product?.sku || ""
+																		}</li>
                                     <li><strong>Quantity:</strong> ${
-                                      quantity || ''
-                                    }</li>
+																			quantity || ""
+																		}</li>
                                     <li><strong>Price:</strong> ${
-                                      product.price || ''
-                                    }</li>
+																			product.price || ""
+																		}</li>
                                 </ul>`
-                                    : ''
-                                }
+																		: ""
+																}
                                 <p>If you have any questions, feel free to contact our support team.</p>
-                                <p>Best regards,<br> The ${
-                                  process.env.APP_NAME
-                                } Team.</p>
+                                <p>Best regards,<br> The ${process.env.APP_NAME} Team.</p>
                             </td>
                         </tr>
                         <tr>
                             <td>
                                 <p class="footnote">For assistance, please contact us at <a href="mailto:${
-                                  process.env.SUPPORT_EMAIL
-                                }">${process.env.SUPPORT_EMAIL}</a>.</p>
+																	process.env.SUPPORT_EMAIL
+																}">${process.env.SUPPORT_EMAIL}</a>.</p>
                             </td>
                         </tr>
                     </table>
@@ -3509,8 +3593,8 @@ export const emailTemplates = {
                         <tr>
                             <td align="center">
                                 © <script>document.write(new Date().getFullYear())</script> <a href="#">${
-                                  process.env.APP_NAME
-                                }</a>.
+																	process.env.APP_NAME
+																}</a>.
                             </td>
                         </tr>
                     </table>
@@ -3521,17 +3605,17 @@ export const emailTemplates = {
     </table>
     </body>
     </html>`;
-  },
+	},
 
-  newOrderAdminNotification: (
-    admin: Admin,
-    order: Order,
-    customer?: User,
-    product?: any
-  ): string => {
-    const logoUrl: string | undefined = process.env.LOGO_URL;
+	newOrderAdminNotification: (
+		admin: Admin,
+		order: Order,
+		customer?: User,
+		product?: any,
+	): string => {
+		const logoUrl: string | undefined = process.env.LOGO_URL;
 
-    return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+		return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
         <meta name="viewport" content="width=device-width" />
@@ -3709,8 +3793,8 @@ export const emailTemplates = {
                             <td class="center">
                                 <div class="logo">
                                     <img src="${logoUrl}" alt="Logo of ${
-      process.env.APP_NAME
-    }" width="150px">
+																			process.env.APP_NAME
+																		}" width="150px">
                                 </div>
                             </td>
                         </tr>
@@ -3719,65 +3803,63 @@ export const emailTemplates = {
                                 <h2>New Order Received</h2>
                                 <p>Hi ${admin.name},</p>
                                 <p>A new order (Order TRACKING NO: <strong>${
-                                  order.trackingNumber
-                                }</strong>) has been placed for one of your products.</p>
+																	order.trackingNumber
+																}</strong>) has been placed for one of your products.</p>
                                 
                                 ${
-                                  customer
-                                    ? `
+																	customer
+																		? `
                                 <h3>Customer Details</h3>
                                 <ul>
                                     <li><strong>Name:</strong> ${
-                                      customer.firstName
-                                    } ${customer.lastName}</li>
+																			customer.firstName
+																		} ${customer.lastName}</li>
                                     <li><strong>Email:</strong> ${
-                                      customer.email
-                                    }</li>
+																			customer.email
+																		}</li>
                                     <li><strong>Phone:</strong> ${
-                                      customer.phoneNumber || 'Not provided'
-                                    }</li>
+																			customer.phoneNumber || "Not provided"
+																		}</li>
                                 </ul>
                                 `
-                                    : ''
-                                }
+																		: ""
+																}
                                 
                                 ${
-                                  product
-                                    ? `
+																	product
+																		? `
                                 <h3>Product Details</h3>
                                 <ul>
                                     <li><strong>Product Name:</strong> ${
-                                      product.name ||
-                                      product.product?.name ||
-                                      'N/A'
-                                    }</li>
+																			product.name ||
+																			product.product?.name ||
+																			"N/A"
+																		}</li>
                                     <li><strong>SKU:</strong> ${
-                                      product.sku ||
-                                      product.product?.sku ||
-                                      'N/A'
-                                    }</li>
+																			product.sku ||
+																			product.product?.sku ||
+																			"N/A"
+																		}</li>
                                     <li><strong>Quantity:</strong> ${
-                                      product.quantity || 'N/A'
-                                    }</li>
+																			product.quantity || "N/A"
+																		}</li>
                                     <li><strong>Price:</strong> ${
-                                      product.price || 'N/A'
-                                    }</li>
+																			product.price || "N/A"
+																		}</li>
                                 </ul>
                                 `
-                                    : ''
-                                }
+																		: ""
+																}
                                 
                                 <p>If you have any questions, feel free to contact our support team.</p>
-                                <p>Best regards,<br> The ${
-                                  process.env.APP_NAME
-                                } Team.</p>
+                                <p>Best regards,<br> The ${process.env.APP_NAME} Team.</p>
                             </td>
                         </tr>
                         <tr>
                             <td>
                                 <p class="footnote">For assistance, please contact us at <a href="mailto:${
-                                  process.env.SUPPORT_EMAIL
-                                }">${process.env.SUPPORT_EMAIL}</a>.</p>
+																	process.env.SUPPORT_EMAIL
+																}">${process.env.SUPPORT_EMAIL}</a>.</p>
                             </td>
                         </tr>
                     </table>
@@ -3797,8 +3879,8 @@ export const emailTemplates = {
                         <tr>
                             <td align="center">
                                 © <script>document.write(new Date().getFullYear())</script> <a href="#">${
-                                  process.env.APP_NAME
-                                }</a>.
+																	process.env.APP_NAME
+																}</a>.
                             </td>
                         </tr>
                     </table>
@@ -3811,16 +3893,16 @@ export const emailTemplates = {
     </body>
     </html>
     `;
-  },
+	},
 
-  auctionProductConfirmationNotification: (
-    user: User,
-    auction: AuctionProduct,
-    winningBid: number
-  ): string => {
-    const logoUrl: string | undefined = process.env.LOGO_URL;
+	auctionProductConfirmationNotification: (
+		user: User,
+		auction: AuctionProduct,
+		winningBid: number,
+	): string => {
+		const logoUrl: string | undefined = process.env.LOGO_URL;
 
-    return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+		return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
         <meta name="viewport" content="width=device-width" />
@@ -4051,17 +4133,17 @@ export const emailTemplates = {
     </body>
     </html>
     `;
-  },
+	},
 
-  orderStatusUpdateNotification: (
-    user: User,
-    status: string,
-    productName: string,
-    deliveryCode?: string
-  ): string => {
-    const logoUrl: string | undefined = process.env.LOGO_URL;
+	orderStatusUpdateNotification: (
+		user: User,
+		status: string,
+		productName: string,
+		deliveryCode?: string,
+	): string => {
+		const logoUrl: string | undefined = process.env.LOGO_URL;
 
-    return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+		return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
     <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
         <meta name="viewport" content="width=device-width" />
@@ -4239,8 +4321,8 @@ export const emailTemplates = {
                             <td class="center">
                                 <div class="logo">
                                     <img src="${logoUrl}" alt="Logo of ${
-      process.env.APP_NAME
-    }" width="150px">
+																			process.env.APP_NAME
+																		}" width="150px">
                                 </div>
                             </td>
                         </tr>
@@ -4249,25 +4331,23 @@ export const emailTemplates = {
                                 <h2>Order Status</h2>
                                 <p>Hi ${user.firstName} ${user.lastName},</p>
                                 <p>Your order for product: <strong>${
-                                  productName ?? 'your item'
-                                }</strong> has been updated to <strong>${status}</strong>.</p>
+																	productName ?? "your item"
+																}</strong> has been updated to <strong>${status}</strong>.</p>
 
                                 <p>${
-                                  deliveryCode &&
-                                  `Delivery code: ${deliveryCode}`
-                                }</p>
+																	deliveryCode &&
+																	`Delivery code: ${deliveryCode}`
+																}</p>
                                 <p>Thank you for shopping with us.</p>
                                 <p>For any questions, feel free to contact our support team.</p>
-                                <p>Best regards,<br> The ${
-                                  process.env.APP_NAME
-                                } Team.</p>
+                                <p>Best regards,<br> The ${process.env.APP_NAME} Team.</p>
                             </td>
                         </tr>
                         <tr>
                             <td>
                                 <p class="footnote">For assistance, please contact us at <a href="mailto:${
-                                  process.env.SUPPORT_EMAIL
-                                }">${process.env.SUPPORT_EMAIL}</a>.</p>
+																	process.env.SUPPORT_EMAIL
+																}">${process.env.SUPPORT_EMAIL}</a>.</p>
                             </td>
                         </tr>
                     </table>
@@ -4287,8 +4367,8 @@ export const emailTemplates = {
                         <tr>
                             <td align="center">
                                 © <script>document.write(new Date().getFullYear())</script> <a href="#">${
-                                  process.env.APP_NAME
-                                }</a>.
+																	process.env.APP_NAME
+																}</a>.
                             </td>
                         </tr>
                     </table>
@@ -4301,7 +4381,7 @@ export const emailTemplates = {
     </body>
     </html>
     `;
-  },
+	},
 
-  // Add more templates as needed
+	// Add more templates as needed
 };
