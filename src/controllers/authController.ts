@@ -40,13 +40,7 @@ export const vendorRegister = async (
 
 	try {
 		// Validate input
-		if (
-			!email ||
-			!password ||
-			!firstName ||
-			!lastName ||
-			!phoneNumber 
-		) {
+		if (!email || !password || !firstName || !lastName || !phoneNumber) {
 			res.status(400).json({ message: "All fields are required" });
 			return;
 		}
@@ -512,7 +506,7 @@ export const resendVerificationEmail = async (
 	req: Request,
 	res: Response,
 ): Promise<void> => {
-	const { email } = req.body; // Assuming the email is sent in the request body
+	const { email, platform } = req.body; // Assuming the email is sent in the request body
 
 	try {
 		// Check if the user exists
@@ -529,19 +523,39 @@ export const resendVerificationEmail = async (
 			});
 		}
 
-		// Generate a new OTP
-		const otpCode = generateOTP();
-
-		// Update or create the OTP record
-		await OTP.upsert({
-			userId: user.id,
-			otpCode: otpCode,
-			expiresAt: new Date(Date.now() + 60 * 60 * 1000), // OTP expires in 1 hour
-		});
-
-		// Prepare and send the verification email
-		const message = emailTemplates.verifyEmail(user, otpCode); // Ensure this function generates the correct email message
 		try {
+			let message;
+			if (!platform || platform === "mobile") {
+				// Generate a new OTP
+				const otpCode = generateOTP();
+
+				// Update or create the OTP record
+				await OTP.upsert({
+					userId: user.id,
+					otpCode: otpCode,
+					expiresAt: new Date(Date.now() + 60 * 60 * 1000), // OTP expires in 1 hour
+				});
+
+				// Prepare and send the verification email
+				message = emailTemplates.verifyEmail(user, otpCode); // Ensure this function generates the correct email message
+			} else {
+				//web
+				// Generate OTP Token for web verification
+				const otpToken = generateOTPToken();
+
+				// Generate OTP Token to store in database
+				const hashedOtpToken = generateHashedOTPToken(otpToken);
+
+				await OTP.upsert({
+					userId: user.id,
+					otpToken: hashedOtpToken,
+					otpTokenExpiresAt: new Date(Date.now() + 60 * 60 * 1000), // OTP token expires in 1 hour
+				});
+
+				// Prepare and send the verification email
+				message = emailTemplates.verifyEmailWithLink(user, otpToken); // Ensure this function generates the correct email message
+			}
+
 			await sendMail(
 				email,
 				`${process.env.APP_NAME} - Verify Your Account`,
