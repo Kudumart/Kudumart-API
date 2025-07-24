@@ -55,7 +55,7 @@ sequelizeService
 	);
 
 // Create and start the HTTP server
-const port = process.env.SERVER_PORT || 3001; // Get the port from the environment variables
+const port = process.env.PORT || 3001; // Get the port from the environment variables
 
 // Start the cron job
 runSubscriptionCron();
