@@ -5,3 +5,5 @@ logs/
 uploads/
 user1.html
 user2.html
+# Sentry Config File
+.sentryclirc
