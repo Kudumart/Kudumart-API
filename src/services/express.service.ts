@@ -1,62 +1,76 @@
 // src/services/express.service.ts
-import express from 'express';
-import bodyParser from 'body-parser';
-import cookieParser from 'cookie-parser';
-import compression from 'compression';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import path from 'path';
-import globalErrorHandler from '../middlewares/errorMiddleware';
-import apiRouter from '../routes/authRoute';
-import userRouter from '../routes/userRoute';
-import adminRouter from '../routes/adminRoute';
-import vendorRouter from '../routes/vendorRoute';
-import uploadRouter from '../routes/uploadRoute';
-import logger from '../middlewares/logger';
+import express from "express";
+import bodyParser from "body-parser";
+import cookieParser from "cookie-parser";
+import compression from "compression";
+import cors from "cors";
+import dotenv from "dotenv";
+import path from "path";
+import globalErrorHandler from "../middlewares/errorMiddleware";
+import apiRouter from "../routes/authRoute";
+import userRouter from "../routes/userRoute";
+import adminRouter from "../routes/adminRoute";
+import vendorRouter from "../routes/vendorRoute";
+import uploadRouter from "../routes/uploadRoute";
+import logger from "../middlewares/logger";
+import * as Sentry from "@sentry/node";
+import { IsApiError } from "../utils/ApiError";
 
 dotenv.config();
 
 const createExpressApp = () => {
-    const app = express();
+	const app = express();
 
-    app.use(cors({
-        origin: "*",
-        methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-        credentials: true,
-    }));
+	app.use(
+		cors({
+			origin: "*",
+			methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+			credentials: true,
+		}),
+	);
 
-    // Serve static files from the public directory
-    app.use(express.static(path.join(__dirname, "../public")));
+	// Serve static files from the public directory
+	app.use(express.static(path.join(__dirname, "../public")));
 
-    // Built-in JSON and URL-encoded middleware
-    app.use(express.json({ limit: '50mb' }));
-    app.use(express.urlencoded({ limit: '50mb', extended: true }));
+	// Built-in JSON and URL-encoded middleware
+	app.use(express.json({ limit: "50mb" }));
+	app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-    // Compression, cookie parsing, and body parsing middleware
-    app.use(compression());
-    app.use(cookieParser());
-    app.use(bodyParser.json());
+	// Compression, cookie parsing, and body parsing middleware
+	app.use(compression());
+	app.use(cookieParser());
+	app.use(bodyParser.json());
 
-    // Serve uploaded images
-    app.use("/uploads", express.static(path.join(__dirname, "../../uploads")));
+	// Serve uploaded images
+	app.use("/uploads", express.static(path.join(__dirname, "../../uploads")));
 
-    // Use your routes
-    app.use("/api", apiRouter);
-    app.use("/api/user", userRouter);
-    app.use("/api/vendor", vendorRouter);
-    app.use("/api/admin", adminRouter);
-    app.use("/api/upload", uploadRouter);
+	// Use your routes
+	app.use("/api", apiRouter);
+	app.use("/api/user", userRouter);
+	app.use("/api/vendor", vendorRouter);
+	app.use("/api/admin", adminRouter);
+	app.use("/api/upload", uploadRouter);
 
-    // 404 handler (this should come after routes)
-    app.use((req, res) => {
-        logger.error(`404 error for path: ${req.path}`);
-        res.status(404).json({ message: 'Route Not Found' });
-    });
+	// Initialize Sentry for error tracking
+	// This should be done before any middleware
+	// and after every controller
+	Sentry.setupExpressErrorHandler(app, {
+		shouldHandleError(error) {
+			// capture all errors except ApiError
+      return !IsApiError(error)
+		},
+	});
 
-    // Global error handler
-    app.use(globalErrorHandler);
+	// 404 handler (this should come after routes)
+	app.use((req, res) => {
+		logger.error(`404 error for path: ${req.path}`);
+		res.status(404).json({ message: "Route Not Found" });
+	});
 
-    return app;
+	// Global error handler
+	app.use(globalErrorHandler);
+
+	return app;
 };
 
 export default createExpressApp;
