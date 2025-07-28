@@ -56,6 +56,16 @@ export const loginValidationRules = () => {
 		check("password")
 			.isLength({ min: 6 })
 			.withMessage("Password must be at least 6 characters"),
+		check("platform")
+			.optional()
+			.isString()
+			.withMessage("Platform must be a string")
+			.isIn(["mobile", "web"])
+			.withMessage('Platform must be either "mobile" or "web"'),
+		check("fcmToken")
+			.isString()
+			.optional()
+			.withMessage("FCM token must be a string"),
 	];
 };
 
@@ -1028,6 +1038,21 @@ export const postJobValidationRules = () => {
 			.withMessage("Description must be a valid string")
 			.isLength({ min: 10 })
 			.withMessage("Description must contain at least 10 characters"),
+	];
+};
+
+export const paginationQueryParamsValidation = () => {
+	return [
+		check("page")
+			.optional()
+			.isInt({ min: 1 })
+			.withMessage("Page must be a positive integer")
+			.default(1),
+		check("limit")
+			.optional()
+			.isInt({ min: 1, max: 50 })
+			.withMessage("Limit must be a positive integer between 1 and 50")
+			.default(10),
 	];
 };
 
