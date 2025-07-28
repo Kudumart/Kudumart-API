@@ -23,6 +23,8 @@ import VendorSubscription from "../models/vendorsubscription";
 import UserNotificationSetting from "../models/usernotificationsetting";
 import Notification from "../models/notification";
 import passport from "passport";
+import { sendPushNotificationToTopic } from "../firebase/pushNotification";
+import { PushNotificationTypes } from "../types";
 
 export const index = async (_: Request, res: Response) => {
 	res.status(200).json({
@@ -267,6 +269,19 @@ export const customerRegister = async (
 			type: notificationType,
 		});
 
+		const notificatonTopic = {
+			topic: "new_user",
+			notification: {
+				title: "New User Registration",
+				body: `A new user has registered with the email: ${newUser.email}`,
+			},
+			data: {
+				userId: newUser.id,
+			},
+		};
+
+		await sendPushNotificationToTopic(notificatonTopic);
+
 		// Return a success response
 		res.status(200).json({
 			message:
@@ -421,7 +436,7 @@ export const verifyEmailWithToken = async (
 };
 
 export const login = async (req: Request, res: Response): Promise<void> => {
-	const { email, password } = req.body;
+	const { email, password, platform, fcmToken } = req.body;
 
 	try {
 		// Find user by email
@@ -441,20 +456,39 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 			return;
 		}
 
+		let message;
 		// Check if email is verified
 		if (!user.email_verified_at) {
-			// Generate a new OTP
-			const otpCode = generateOTP();
+			if (!platform || platform === "mobile") {
+				// Generate a new OTP
+				const otpCode = generateOTP();
 
-			// Update or create the OTP record
-			await OTP.upsert({
-				userId: user.id,
-				otpCode,
-				expiresAt: new Date(Date.now() + 60 * 60 * 1000), // OTP expires in 1 hour
-			});
+				// Update or create the OTP record
+				await OTP.upsert({
+					userId: user.id,
+					otpCode,
+					expiresAt: new Date(Date.now() + 60 * 60 * 1000), // OTP expires in 1 hour
+				});
 
-			// Prepare and send the verification email
-			const message = emailTemplates.verifyEmail(user, otpCode); // Ensure verifyEmailMessage generates the correct email message
+				// Prepare and send the verification email
+				message = emailTemplates.verifyEmail(user, otpCode); // Ensure verifyEmailMessage generates the correct email message
+			} else {
+				//web
+				// Generate OTP Token for web verification
+				const otpToken = generateOTPToken();
+
+				// Generate OTP Token to store in database
+				const hashedOtpToken = generateHashedOTPToken(otpToken);
+				await OTP.upsert({
+					userId: user.id,
+					otpToken: hashedOtpToken,
+					otpTokenExpiresAt: new Date(Date.now() + 60 * 60 * 1000), // OTP token expires in 1 hour
+				});
+
+				// Prepare and send the verification email
+				message = emailTemplates.verifyEmailWithLink(user, otpToken); // Ensure verifyEmailWithLink generates the correct email message
+			}
+
 			try {
 				await sendMail(
 					email,
@@ -477,6 +511,12 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 		if (!isPasswordValid) {
 			res.status(400).json({ message: "Incorrect password" });
 			return;
+		}
+
+		// update FCM token if provided
+		if (fcmToken) {
+			user.fcmToken = fcmToken;
+			await user.save();
 		}
 
 		// Generate token
