@@ -40,6 +40,7 @@ import KYC from "../models/kyc";
 import BlockedProduct from "../models/blockedproduct";
 import { sendPushNotificationSingle } from "../firebase/pushNotification";
 import { PushNotificationTypes } from "../types/index";
+import { createAuctionReminder } from "../services/reminder.service";
 
 export const logout = async (req: Request, res: Response): Promise<void> => {
 	try {
@@ -2119,6 +2120,17 @@ export const showInterest = async (
 			}
 		} else {
 			logger.warn(`User with ID ${userId} has no email. Notification skipped.`);
+		}
+
+		try {
+			// create auction reminder
+			await createAuctionReminder(
+				user.id,
+				auctionProductId,
+				auctionProduct.startDate,
+			);
+		} catch (reminderError) {
+			logger.error("Error creating auction reminder:", reminderError);
 		}
 
 		res.status(200).json({
