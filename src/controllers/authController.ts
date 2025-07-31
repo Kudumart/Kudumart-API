@@ -905,7 +905,7 @@ export const adminLogin = async (
 	req: Request,
 	res: Response,
 ): Promise<void> => {
-	const { email, password } = req.body;
+	const { email, password, fcmToken } = req.body;
 
 	try {
 		// Find admin by email
@@ -938,6 +938,12 @@ export const adminLogin = async (
 		if (!isPasswordValid) {
 			res.status(400).json({ message: "Incorrect password" });
 			return;
+		}
+
+		if (fcmToken) {
+			// Update FCM token if provided
+			admin.fcmToken = fcmToken;
+			await admin.save();
 		}
 
 		// Generate token
