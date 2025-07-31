@@ -7,4 +7,5 @@ user1.html
 user2.html
 # Sentry Config File
 .sentryclirc
-/dist
+dist
+src/firebase/kudumart-firebase-config.json

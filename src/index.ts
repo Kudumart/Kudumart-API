@@ -11,6 +11,7 @@ import "./config/passportConfig"; // Import Password Configuration
 import passport from "passport";
 import runSubscriptionCron from "./job/subscriptionCron"; // Import the cron job
 import auctionStatusUpdate from "./job/auctionStatusUpdate"; // Import the cron job
+import { auctionReminderJob } from "./job/auctionReminder";
 
 dotenv.config();
 
@@ -60,6 +61,7 @@ const port = process.env.PORT || 3001; // Get the port from the environment vari
 // Start the cron job
 runSubscriptionCron();
 auctionStatusUpdate();
+auctionReminderJob();
 
 server.timeout = 300000;
 
