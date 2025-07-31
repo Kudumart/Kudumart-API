@@ -532,6 +532,10 @@ export const addProductValidation = () => {
 			.optional({ checkFalsy: true })
 			.isString()
 			.withMessage("Image URL must be a valid string."),
+		check("video_url")
+			.optional({ checkFalsy: true })
+			.isString()
+			.withMessage("Video URL must be a valid string."),
 		check("additional_images")
 			.optional({ checkFalsy: true })
 			.isArray({ min: 1 })
@@ -613,6 +617,10 @@ export const updateProductValidation = () => {
 			.optional({ checkFalsy: true })
 			.isString()
 			.withMessage("Image URL must be a valid string."),
+		check("video_url")
+			.optional({ checkFalsy: true })
+			.isString()
+			.withMessage("Video URL must be a valid string."),
 		check("additional_images")
 			.optional({ checkFalsy: true })
 			.isArray({ min: 1 })
@@ -706,6 +714,10 @@ export const auctionProductValidation = () => {
 			.optional({ checkFalsy: true })
 			.isString()
 			.withMessage("Image must be a valid url."),
+		check("video")
+			.optional({ checkFalsy: true })
+			.isString()
+			.withMessage("Video must be a valid URL."),
 		check("additionalImages")
 			.optional({ checkFalsy: true })
 			.isArray({ min: 1 })
@@ -778,6 +790,10 @@ export const updateAuctionProductValidation = () => {
 			.optional({ checkFalsy: true })
 			.isString()
 			.withMessage("Image must be a valid url."),
+		check("video")
+			.optional({ checkFalsy: true })
+			.isString()
+			.withMessage("Video must be a valid URL."),
 		check("additionalImages")
 			.optional({ checkFalsy: true })
 			.isArray({ min: 1 })
