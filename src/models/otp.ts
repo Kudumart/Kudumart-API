@@ -25,10 +25,54 @@ const initModel = (sequelize: Sequelize) => {
 	OTP.init(
 		{
 			userId: DataTypes.UUID,
-			otpCode: DataTypes.STRING,
-			otpToken: DataTypes.STRING,
-			otpTokenExpiresAt: DataTypes.DATE,
-			expiresAt: DataTypes.DATE,
+			otpCode: {
+				allowNull: true,
+				type: DataTypes.STRING,
+				validate: {
+					notBothNull(value: string | null) {
+						if (!value && !this.otpToken) {
+							throw new Error("Either otpCode or otpToken must be provided");
+						}
+					},
+				},
+			},
+			otpToken: {
+				allowNull: true,
+				type: DataTypes.STRING,
+				validate: {
+					notBothNull(value: string | null) {
+						if (!value && !this.otpCode) {
+							throw new Error("Either otpCode or otpToken must be provided");
+						}
+					},
+				},
+			},
+			otpTokenExpiresAt: {
+				allowNull: true,
+				type: DataTypes.DATE,
+				validate: {
+					notBothNull(value: Date | null) {
+						if (!value && !this.expiresAt) {
+							throw new Error(
+								"Either otpTokenExpiresAt or expiresAt must be provided",
+							);
+						}
+					},
+				},
+			},
+			expiresAt: {
+				allowNull: true,
+				type: DataTypes.DATE,
+				validate: {
+					notBothNull(value: Date | null) {
+						if (!value && !this.otpTokenExpiresAt) {
+							throw new Error(
+								"Either expiresAt or otpTokenExpiresAt must be provided",
+							);
+						}
+					},
+				},
+			},
 		},
 		{
 			sequelize,
@@ -36,6 +80,20 @@ const initModel = (sequelize: Sequelize) => {
 			timestamps: true,
 			paranoid: false,
 			tableName: "otps",
+			validate: {
+				atLeastOneFieldRequired() {
+					if (!this.otpCode && !this.otpToken) {
+						throw new Error("Either otpCode or otpToken must be provided");
+					}
+				},
+				atLeastOneExpirationFieldRequired() {
+					if (!this.otpTokenExpiresAt && !this.expiresAt) {
+						throw new Error(
+							"Either otpTokenExpiresAt or expiresAt must be provided",
+						);
+					}
+				},
+			},
 		},
 	);
 };
