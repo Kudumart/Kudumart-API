@@ -1947,6 +1947,7 @@ export const getAllVendors = async (
 				{ lastName: { [Op.like]: `%${search}%` } },
 				{ email: { [Op.like]: `%${search}%` } },
 				{ phoneNumber: { [Op.like]: `%${search}%` } },
+				{ trackingId: { [Op.like]: `%${search}%` } },
 			],
 		};
 
