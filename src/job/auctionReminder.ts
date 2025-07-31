@@ -8,7 +8,7 @@ import {
 // send auction reminders every day at 9 AM
 export const auctionReminderJob = async () => {
 	// Schedule the job to run every day at 9 AM
-	cron.schedule("* 9 * * *", async () => {
+	cron.schedule("0 9 * * *", async () => {
 		logger.info("Running auction status update...");
 
 		try {
@@ -24,7 +24,7 @@ export const auctionReminderJob = async () => {
 // Cleanup auction reminders every day at 10 AM
 export const cleanupAuctionReminderJob = async () => {
 	// Schedule the job to run every day at 10 AM
-	cron.schedule("* 10 * * *", async () => {
+	cron.schedule("0 10 * * *", async () => {
 		logger.info("Running auction reminder cleanup...");
 
 		try {
