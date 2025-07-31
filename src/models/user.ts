@@ -2,6 +2,7 @@
 import bcrypt from "bcrypt";
 import { Model, DataTypes, Sequelize } from "sequelize";
 import KYC from "./kyc";
+import { generateVendorTrackingId } from "../utils/trackingId";
 
 interface Location {
 	country?: string;
@@ -12,6 +13,7 @@ interface Location {
 
 class User extends Model {
 	public id!: string; // Use '!' to indicate these fields are definitely assigned
+	public trackingId!: string | null; // Optional, will be generated for vendors
 	public firstName!: string;
 	public lastName!: string;
 	public gender?: string;
@@ -83,6 +85,12 @@ const initModel = (sequelize: Sequelize) => {
 				type: DataTypes.UUID,
 				primaryKey: true,
 				defaultValue: DataTypes.UUIDV4, // Automatically generate UUIDs
+			},
+			trackingId: {
+				// only for vendors
+				type: DataTypes.STRING,
+				unique: true, // Ensure unique tracking IDs
+				allowNull: true,
 			},
 			firstName: DataTypes.STRING,
 			lastName: DataTypes.STRING,
@@ -177,6 +185,26 @@ const initModel = (sequelize: Sequelize) => {
 	User.addHook("beforeSave", async (user: User) => {
 		if (user.changed("password") || user.isNewRecord) {
 			user.password = await User.hashPassword(user.password);
+		}
+	});
+
+	User.addHook("beforeCreate", async (user: User) => {
+		// Only generate tracking ID for vendors
+		if (user.accountType === "Vendor") {
+			user.trackingId = generateVendorTrackingId(user.id);
+		}
+	});
+
+	User.addHook("beforeUpdate", async (user: User) => {
+		// Only generate tracking ID for vendors
+		if (user.changed("accountType")) {
+			if (user.accountType === "Vendor" && !user.trackingId) {
+				// User became a vendor, generate tracking ID
+				user.trackingId = generateVendorTrackingId(user.id);
+			} else if (user.accountType !== "Vendor" && user.trackingId) {
+				// User is no longer a vendor, remove tracking ID
+				user.trackingId = null;
+			}
 		}
 	});
 };
