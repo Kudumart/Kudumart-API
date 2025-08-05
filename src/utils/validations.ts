@@ -1072,6 +1072,67 @@ export const paginationQueryParamsValidation = () => {
 	];
 };
 
+export const productChargeValidation = () => {
+	return [
+		check("name").notEmpty().withMessage("Name is required"),
+		check("description")
+			.optional()
+			.isLength({ min: 5 })
+			.withMessage("Description must be at least 5 characters long"),
+		check("charge_currency")
+			.notEmpty()
+			.withMessage("Currency is required")
+			.isIn(["USD", "NGN"])
+			.withMessage("Currency must be either USD or NGN"),
+		check("charge_amount")
+			.optional()
+			.isDecimal({ decimal_digits: "0,2" })
+			.withMessage(
+				"Charge amount must be a valid decimal number with up to two decimal places",
+			)
+			.custom((value, { req }) => {
+				if (req.body.calculation_type === "fixed" && value <= 0) {
+					throw new Error(
+						"Charge amount must be greater than 0 for fixed calculation type",
+					);
+				}
+				return true;
+			}),
+		check("charge_percentage")
+			.optional()
+			.isDecimal({ decimal_digits: "0,2" })
+			.withMessage(
+				"Charge percentage must be a valid decimal number with up to two decimal places",
+			)
+			.custom((value, { req }) => {
+				if (
+					req.body.calculation_type === "percentage" &&
+					(value <= 0 || value > 100)
+				) {
+					throw new Error(
+						"Charge percentage must be greater than 0 and less than or equal to 100 for percentage calculation type",
+					);
+				}
+				return true;
+			}),
+		check("calculation_type")
+			.notEmpty()
+			.withMessage("Calculation type is required")
+			.isIn(["fixed", "percentage"])
+			.withMessage("Calculation type must be either 'fixed' or 'percentage'"),
+		check("minimum_product_amount")
+			.isDecimal({ decimal_digits: "0,2" })
+			.withMessage(
+				"Minimum product amount must be a valid decimal number with up to two decimal places",
+			),
+		check("maximum_product_amount")
+			.isDecimal({ decimal_digits: "0,2" })
+			.withMessage(
+				"Maximum product amount must be a valid decimal number with up to two decimal places",
+			),
+	];
+};
+
 // Middleware to handle validation errors, sending only the first error
 export const validate = (
 	req: Request,
