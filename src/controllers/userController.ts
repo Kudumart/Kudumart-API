@@ -41,6 +41,7 @@ import BlockedProduct from "../models/blockedproduct";
 import { sendPushNotificationSingle } from "../firebase/pushNotification";
 import { PushNotificationTypes } from "../types/index";
 import { createAuctionReminder } from "../services/reminder.service";
+import ProductCharge from "../models/productcharge";
 
 export const logout = async (req: Request, res: Response): Promise<void> => {
 	try {
@@ -1307,6 +1308,35 @@ export const clearCart = async (req: Request, res: Response): Promise<void> => {
 	} catch (error: any) {
 		logger.error(error);
 		res.status(500).json({ message: error.message || "Error clearing cart." });
+	}
+};
+
+export const getCartCharges = async (req: Request, res: Response) => {
+	try {
+		const charges = await ProductCharge.findAll({
+			where: { is_active: true },
+			attributes: [
+				"id",
+				"name",
+				"description",
+				"calculation_type",
+				"charge_currency",
+				"charge_amount",
+				"charge_percentage",
+				"minimum_product_amount",
+				"maximum_product_amount",
+			],
+		});
+
+		res.status(200).json({
+			message: "Product charges fetched successfully",
+			data: charges,
+		});
+	} catch (error: any) {
+		logger.error("Error fetching product charges:", error);
+		res.status(500).json({
+			message: "An error occurred while fetching product charges",
+		});
 	}
 };
 
