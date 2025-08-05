@@ -1,239 +1,239 @@
 // src/routes/userRoute.ts
-import { Router } from 'express';
-import * as userController from '../controllers/userController';
-import authMiddleware from '../middlewares/authMiddleware';
+import { Router } from "express";
+import * as userController from "../controllers/userController";
+import authMiddleware from "../middlewares/authMiddleware";
 import {
-  updatePasswordValidationRules,
-  updateProfileEmailValidationRules,
-  confirmProfileEmailValidationRules,
-  updateProfilePhoneNumberValidationRules,
-  confirmProfilePhoneNumberValidationRules,
-  validateSendMessage,
-  validatePlaceBid,
-  validateAddItemToCart,
-  validateUpdateCartItem,
-  validateShowInterest,
-  validate,
-} from '../utils/validations';
+	updatePasswordValidationRules,
+	updateProfileEmailValidationRules,
+	confirmProfileEmailValidationRules,
+	updateProfilePhoneNumberValidationRules,
+	confirmProfilePhoneNumberValidationRules,
+	validateSendMessage,
+	validatePlaceBid,
+	validateAddItemToCart,
+	validateUpdateCartItem,
+	validateShowInterest,
+	validate,
+} from "../utils/validations";
 
 const userRoutes = Router();
 
 // User routes
-userRoutes.post('/logout', authMiddleware, userController.logout);
-userRoutes.get('/profile', authMiddleware, userController.profile);
-userRoutes.put('/profile/update', authMiddleware, userController.updateProfile);
+userRoutes.post("/logout", authMiddleware, userController.logout);
+userRoutes.get("/profile", authMiddleware, userController.profile);
+userRoutes.put("/profile/update", authMiddleware, userController.updateProfile);
 userRoutes.patch(
-  '/profile/photo/update',
-  authMiddleware,
-  userController.updateProfilePhoto
+	"/profile/photo/update",
+	authMiddleware,
+	userController.updateProfilePhoto,
 );
 userRoutes.put(
-  '/profile/update/email',
-  authMiddleware,
-  updateProfileEmailValidationRules(),
-  validate,
-  userController.updateProfileEmail
+	"/profile/update/email",
+	authMiddleware,
+	updateProfileEmailValidationRules(),
+	validate,
+	userController.updateProfileEmail,
 );
 userRoutes.put(
-  '/profile/confirm/email',
-  authMiddleware,
-  confirmProfileEmailValidationRules(),
-  validate,
-  userController.confirmEmailUpdate
+	"/profile/confirm/email",
+	authMiddleware,
+	confirmProfileEmailValidationRules(),
+	validate,
+	userController.confirmEmailUpdate,
 );
 userRoutes.put(
-  '/profile/update/phone',
-  authMiddleware,
-  updateProfilePhoneNumberValidationRules(),
-  validate,
-  userController.updateProfilePhoneNumber
+	"/profile/update/phone",
+	authMiddleware,
+	updateProfilePhoneNumberValidationRules(),
+	validate,
+	userController.updateProfilePhoneNumber,
 );
 userRoutes.put(
-  '/profile/confirm/phone/number',
-  authMiddleware,
-  confirmProfilePhoneNumberValidationRules(),
-  validate,
-  userController.confirmPhoneNumberUpdate
+	"/profile/confirm/phone/number",
+	authMiddleware,
+	confirmProfilePhoneNumberValidationRules(),
+	validate,
+	userController.confirmPhoneNumberUpdate,
 );
 userRoutes.put(
-  '/profile/update/password',
-  authMiddleware,
-  updatePasswordValidationRules(),
-  validate,
-  userController.updatePassword
+	"/profile/update/password",
+	authMiddleware,
+	updatePasswordValidationRules(),
+	validate,
+	userController.updatePassword,
 );
 
 userRoutes.get(
-  '/notification/settings',
-  authMiddleware,
-  userController.getUserNotificationSettings
+	"/notification/settings",
+	authMiddleware,
+	userController.getUserNotificationSettings,
 );
 userRoutes.put(
-  '/update/notification/settings',
-  authMiddleware,
-  userController.updateUserNotificationSettings
+	"/update/notification/settings",
+	authMiddleware,
+	userController.updateUserNotificationSettings,
 );
 
 userRoutes.delete(
-  '/delete/account',
-  authMiddleware,
-  userController.deleteAccount
+	"/delete/account",
+	authMiddleware,
+	userController.deleteAccount,
 );
 
 // Cart
 userRoutes.post(
-  '/cart/add',
-  authMiddleware,
-  validateAddItemToCart(),
-  validate,
-  userController.addItemToCart
+	"/cart/add",
+	authMiddleware,
+	validateAddItemToCart(),
+	validate,
+	userController.addItemToCart,
 );
 userRoutes.put(
-  '/cart/update',
-  authMiddleware,
-  validateUpdateCartItem(),
-  validate,
-  userController.updateCartItem
+	"/cart/update",
+	authMiddleware,
+	validateUpdateCartItem(),
+	validate,
+	userController.updateCartItem,
 );
 userRoutes.delete(
-  '/cart/remove',
-  authMiddleware,
-  userController.removeCartItem
+	"/cart/remove",
+	authMiddleware,
+	userController.removeCartItem,
 );
-userRoutes.get('/cart', authMiddleware, userController.getCartContents);
-userRoutes.delete('/cart/clear', authMiddleware, userController.clearCart);
-
+userRoutes.get("/cart", authMiddleware, userController.getCartContents);
+userRoutes.delete("/cart/clear", authMiddleware, userController.clearCart);
+userRoutes.get("/cart/charges", authMiddleware, userController.getCartCharges);
 userRoutes.get(
-  '/payment/gateway',
-  authMiddleware,
-  userController.getActivePaymentGateways
+	"/payment/gateway",
+	authMiddleware,
+	userController.getActivePaymentGateways,
 );
-userRoutes.post('/checkout', authMiddleware, userController.checkout);
+userRoutes.post("/checkout", authMiddleware, userController.checkout);
 userRoutes.post(
-  '/checkout/dollar',
-  authMiddleware,
-  userController.checkoutDollar
+	"/checkout/dollar",
+	authMiddleware,
+	userController.checkoutDollar,
 );
 
 // Conversation and Message
 userRoutes.get(
-  '/conversations',
-  authMiddleware,
-  userController.getConversations
+	"/conversations",
+	authMiddleware,
+	userController.getConversations,
 );
 userRoutes.get(
-  '/messages',
-  authMiddleware,
-  userController.getAllConversationMessages
+	"/messages",
+	authMiddleware,
+	userController.getAllConversationMessages,
 );
 userRoutes.post(
-  '/messages',
-  authMiddleware,
-  validateSendMessage(),
-  validate,
-  userController.sendMessageHandler
+	"/messages",
+	authMiddleware,
+	validateSendMessage(),
+	validate,
+	userController.sendMessageHandler,
 );
 userRoutes.delete(
-  '/messages',
-  authMiddleware,
-  userController.deleteMessageHandler
+	"/messages",
+	authMiddleware,
+	userController.deleteMessageHandler,
 );
 userRoutes.patch(
-  '/mark/message/read',
-  authMiddleware,
-  userController.markAsReadHandler
+	"/mark/message/read",
+	authMiddleware,
+	userController.markAsReadHandler,
 );
 
 // Bid
 userRoutes.post(
-  '/auction/interest',
-  authMiddleware,
-  validateShowInterest(),
-  validate,
-  userController.showInterest
+	"/auction/interest",
+	authMiddleware,
+	validateShowInterest(),
+	validate,
+	userController.showInterest,
 );
 userRoutes.get(
-  '/auction/products/interest',
-  authMiddleware,
-  userController.getAllAuctionProductsInterest
+	"/auction/products/interest",
+	authMiddleware,
+	userController.getAllAuctionProductsInterest,
 );
 userRoutes.post(
-  '/place/bid',
-  authMiddleware,
-  validatePlaceBid(),
-  validate,
-  userController.placeBid
+	"/place/bid",
+	authMiddleware,
+	validatePlaceBid(),
+	validate,
+	userController.placeBid,
 );
 userRoutes.get(
-  '/auction/product/bidders',
-  authMiddleware,
-  userController.actionProductBidders
+	"/auction/product/bidders",
+	authMiddleware,
+	userController.actionProductBidders,
 );
 
-userRoutes.post('/become/vendor', authMiddleware, userController.becomeVendor);
+userRoutes.post("/become/vendor", authMiddleware, userController.becomeVendor);
 
 // Notification
 userRoutes.get(
-  '/notifications',
-  authMiddleware,
-  userController.getUserNotifications
+	"/notifications",
+	authMiddleware,
+	userController.getUserNotifications,
 );
 userRoutes.patch(
-  '/mark/notification/as/read',
-  authMiddleware,
-  userController.userMarkNotificationAsRead
+	"/mark/notification/as/read",
+	authMiddleware,
+	userController.userMarkNotificationAsRead,
 );
 
 // Order, OrderItem and Payment
-userRoutes.get('/orders', authMiddleware, userController.getAllOrders);
-userRoutes.get('/order/items', authMiddleware, userController.getAllOrderItems);
-userRoutes.get('/order/item', authMiddleware, userController.viewOrderItem);
+userRoutes.get("/orders", authMiddleware, userController.getAllOrders);
+userRoutes.get("/order/items", authMiddleware, userController.getAllOrderItems);
+userRoutes.get("/order/item", authMiddleware, userController.viewOrderItem);
 userRoutes.post(
-  '/order/item/update/status',
-  authMiddleware,
-  userController.updateOrderStatus
+	"/order/item/update/status",
+	authMiddleware,
+	userController.updateOrderStatus,
 );
 userRoutes.get(
-  '/order/payment',
-  authMiddleware,
-  userController.getPaymentDetails
+	"/order/payment",
+	authMiddleware,
+	userController.getPaymentDetails,
 );
 
 // Save Product
 userRoutes.post(
-  '/save/product',
-  authMiddleware,
-  userController.toggleSaveProduct
+	"/save/product",
+	authMiddleware,
+	userController.toggleSaveProduct,
 );
 userRoutes.get(
-  '/saved/products',
-  authMiddleware,
-  userController.getSavedProducts
+	"/saved/products",
+	authMiddleware,
+	userController.getSavedProducts,
 );
 
 // add Review
-userRoutes.post('/add/review', authMiddleware, userController.addReview);
-userRoutes.put('/update/review', authMiddleware, userController.updateReview);
-userRoutes.get('/get/review', authMiddleware, userController.getProductReviews);
-userRoutes.get('/view/review', authMiddleware, userController.getSingleReview);
+userRoutes.post("/add/review", authMiddleware, userController.addReview);
+userRoutes.put("/update/review", authMiddleware, userController.updateReview);
+userRoutes.get("/get/review", authMiddleware, userController.getProductReviews);
+userRoutes.get("/view/review", authMiddleware, userController.getSingleReview);
 
 userRoutes.post(
-  '/products/:productId/report',
-  authMiddleware,
-  userController.reportProduct
+	"/products/:productId/report",
+	authMiddleware,
+	userController.reportProduct,
 );
 
-userRoutes.post('/block/vendor', authMiddleware, userController.blockVendor);
+userRoutes.post("/block/vendor", authMiddleware, userController.blockVendor);
 userRoutes.delete(
-  '/block/vendor',
-  authMiddleware,
-  userController.unblockVendor
+	"/block/vendor",
+	authMiddleware,
+	userController.unblockVendor,
 );
 userRoutes.get(
-  '/blocked/vendors',
-  authMiddleware,
-  userController.getBlockedVendors
+	"/blocked/vendors",
+	authMiddleware,
+	userController.getBlockedVendors,
 );
-userRoutes.post('/block/product', authMiddleware, userController.blockProduct);
+userRoutes.post("/block/product", authMiddleware, userController.blockProduct);
 
 export default userRoutes;

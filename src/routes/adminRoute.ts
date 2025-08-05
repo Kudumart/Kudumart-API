@@ -22,6 +22,7 @@ import {
 	validate,
 	updateAuctionProductValidation,
 	paginationQueryParamsValidation,
+	productChargeValidation,
 } from "../utils/validations"; // Import the service
 import checkPermission from "../middlewares/checkPermissionMiddleware";
 import { updateAuctionProduct } from "../controllers/vendorController";
@@ -712,6 +713,46 @@ adminRoutes.patch(
 	"/notifications/:id/read",
 	adminAuthMiddleware,
 	markAdminNotificationAsRead,
+);
+
+adminRoutes.post(
+	"/product/charges",
+	productChargeValidation(),
+	validate,
+	adminAuthMiddleware,
+	adminController.createProductCharge,
+);
+
+adminRoutes.put(
+	"/product/charges/:id",
+	productChargeValidation(),
+	validate,
+	adminAuthMiddleware,
+	adminController.updateProductCharge,
+);
+
+adminRoutes.get(
+	"/product/charges",
+	adminAuthMiddleware,
+	adminController.getAllProductCharges,
+);
+
+adminRoutes.delete(
+	"/product/charges/:id",
+	adminAuthMiddleware,
+	adminController.deleteProductCharge,
+);
+
+adminRoutes.patch(
+	"/product/charges/:id/status/activate",
+	adminAuthMiddleware,
+	adminController.markProductChargeAsActive,
+);
+
+adminRoutes.patch(
+	"/product/charges/:id/status/deactivate",
+	adminAuthMiddleware,
+	adminController.markProductChargeAsInactive,
 );
 
 export default adminRoutes; // Export the router
