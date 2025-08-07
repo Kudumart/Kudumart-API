@@ -1437,6 +1437,11 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 			return;
 		}
 
+		// Get Admin's product charges
+		const productCharges = await ProductCharge.findAll({
+			where: { is_active: true },
+		});
+
 		// Calculate total price and validate inventory
 		let totalAmount = 0;
 		for (const cartItem of cartItems) {
@@ -1451,7 +1456,38 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 				throw new Error(`Insufficient stock for product: ${product.name}`);
 			}
 
-			totalAmount += product.price * cartItem.quantity;
+			// Check for product charge percentage
+			const productChargePercentage = productCharges.find(
+				(charge) =>
+					charge.charge_currency === "NGN" &&
+					charge.calculation_type === "percentage" &&
+					product.price >= charge.minimum_product_amount &&
+					product.price <= charge.maximum_product_amount,
+			);
+
+			// Check for product charge amount
+			const productChargeAmount = productCharges.find(
+				(charge) =>
+					charge.charge_currency === "NGN" &&
+					charge.calculation_type === "fixed" &&
+					product.price >= charge.minimum_product_amount &&
+					product.price <= charge.maximum_product_amount,
+			);
+
+			let chargeAmount = 0;
+			if (productChargePercentage) {
+				// Calculate percentage charge
+				chargeAmount +=
+					product.price * (productChargePercentage.charge_percentage / 100);
+			} else if (productChargeAmount) {
+				// Use fixed amount charge
+				chargeAmount += productChargeAmount.charge_amount;
+			}
+
+			// Calculate total amount for this cart item
+			totalAmount += (product.price + (chargeAmount ?? 0)) * cartItem.quantity;
+
+			// totalAmount += product.price * cartItem.quantity;
 		}
 
 		// Validate that the total amount matches the Paystack transaction amount
