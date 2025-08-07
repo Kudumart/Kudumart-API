@@ -1,9 +1,7 @@
 // src/controllers/userController.ts
-import { Request, Response, NextFunction } from "express";
-import bcrypt from "bcrypt";
+import { Request, Response } from "express";
 import { Op, Sequelize, ForeignKeyConstraintError } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
-import { generateOTP } from "../utils/helpers";
 import { sendMail } from "../services/mail.service";
 import { emailTemplates } from "../utils/messages";
 import JwtService from "../services/jwt.service";
@@ -6171,29 +6169,34 @@ export const createProductCharge = async (req: Request, res: Response) => {
 
 	try {
 		if (!name || !description || !charge_currency || !calculation_type) {
-			return res.status(400).json({
+			res.status(400).json({
 				message:
 					"Name, description, currency, and calculation type are required.",
 			});
+
+			return;
 		}
 
 		if (calculation_type !== "fixed" && calculation_type !== "percentage") {
-			return res.status(400).json({
+			res.status(400).json({
 				message: "Calculation type must be either 'fixed' or 'percentage'.",
 			});
+			return;
 		}
 
 		if (calculation_type === "fixed" && !charge_amount) {
-			return res.status(400).json({
+			res.status(400).json({
 				message: "Charge amount is required for fixed calculation type.",
 			});
+			return;
 		}
 
 		if (calculation_type === "percentage" && !charge_percentage) {
-			return res.status(400).json({
+			res.status(400).json({
 				message:
 					"Charge percentage is required for percentage calculation type.",
 			});
+			return;
 		}
 
 		const newCharge = await ProductCharge.create({
@@ -6208,7 +6211,7 @@ export const createProductCharge = async (req: Request, res: Response) => {
 			maximum_product_amount: maximum_product_amount || 0,
 		});
 
-		return res.status(200).json({
+		res.status(200).json({
 			message: "Product charge created successfully",
 			data: newCharge,
 		});
@@ -6216,12 +6219,14 @@ export const createProductCharge = async (req: Request, res: Response) => {
 		logger.error(`Error creating product charge: ${error.message}`);
 
 		if (error.name === "SequelizeUniqueConstraintError") {
-			return res.status(400).json({
+			res.status(400).json({
 				message: "A product charge with this name already exists.",
 			});
+
+			return;
 		}
 
-		return res.status(500).json({
+		res.status(500).json({
 			message:
 				"An unexpected error occurred while creating the product charge.",
 		});
@@ -6245,7 +6250,8 @@ export const updateProductCharge = async (req: Request, res: Response) => {
 		const charge = await ProductCharge.findByPk(productChargeId);
 
 		if (!charge) {
-			return res.status(404).json({ message: "Product charge not found" });
+			res.status(404).json({ message: "Product charge not found" });
+			return;
 		}
 
 		await charge.update(
@@ -6265,27 +6271,30 @@ export const updateProductCharge = async (req: Request, res: Response) => {
 			},
 		);
 
-		return res.status(200).json({
+		res.status(200).json({
 			message: "Product charge updated successfully",
 			data: charge,
 		});
 	} catch (error: any) {
 		logger.error(`Error updating product charge: ${error.message}`);
-		return res.status(500).json({
+		res.status(500).json({
 			message:
 				"An error occurred while updating the product charge. Please try again later.",
 		});
 	}
 };
 
-export const getAllProductCharges = async (_req: Request, res: Response) => {
+export const getAllProductCharges = async (
+	_req: Request,
+	res: Response,
+): Promise<void> => {
 	try {
 		const charges = await ProductCharge.findAll({});
 
-		return res.status(200).json({ data: charges });
+		res.status(200).json({ data: charges });
 	} catch (error: any) {
 		logger.error(`Error retrieving product charges: ${error.message}`);
-		return res.status(500).json({
+		res.status(500).json({
 			message:
 				"An error occurred while retrieving product charges. Please try again later.",
 		});
@@ -6299,17 +6308,18 @@ export const deleteProductCharge = async (req: Request, res: Response) => {
 		const charge = await ProductCharge.findByPk(productChargeId);
 
 		if (!charge) {
-			return res.status(404).json({ message: "Product charge not found" });
+			res.status(404).json({ message: "Product charge not found" });
+			return;
 		}
 
 		await charge.destroy();
 
-		return res.status(200).json({
+		res.status(200).json({
 			message: "Product charge deleted successfully",
 		});
 	} catch (error: any) {
 		logger.error(`Error deleting product charge: ${error.message}`);
-		return res.status(500).json({
+		res.status(500).json({
 			message:
 				"An error occurred while deleting the product charge. Please try again later.",
 		});
@@ -6326,13 +6336,13 @@ export const markProductChargeAsInactive = async (
 		const charge = await ProductCharge.findByPk(productChargeId);
 
 		if (!charge) {
-			return res.status(404).json({ message: "Product charge not found" });
+			res.status(404).json({ message: "Product charge not found" });
+			return;
 		}
 
 		if (!charge.is_active) {
-			return res
-				.status(400)
-				.json({ message: "Product charge is already inactive" });
+			res.status(400).json({ message: "Product charge is already inactive" });
+			return;
 		}
 
 		await charge.update(
@@ -6344,14 +6354,14 @@ export const markProductChargeAsInactive = async (
 			},
 		);
 
-		return res.status(200).json({
+		res.status(200).json({
 			message: "Product charge marked as inactive successfully",
 			data: charge,
 		});
 	} catch (error: any) {
 		console.error(error);
 		logger.error(`Error marking product charge as inactive: ${error.message}`);
-		return res.status(500).json({
+		res.status(500).json({
 			message:
 				"An error occurred while marking the product charge as inactive. Please try again later.",
 		});
@@ -6368,13 +6378,15 @@ export const markProductChargeAsActive = async (
 		const charge = await ProductCharge.findByPk(productChargeId);
 
 		if (!charge) {
-			return res.status(404).json({ message: "Product charge not found" });
+			res.status(404).json({ message: "Product charge not found" });
+			return;
 		}
 
 		if (charge.is_active) {
-			return res.status(400).json({
+			res.status(400).json({
 				message: "Product charge is already active",
 			});
+			return;
 		}
 
 		await charge.update(
@@ -6384,13 +6396,13 @@ export const markProductChargeAsActive = async (
 			},
 		);
 
-		return res.status(200).json({
+		res.status(200).json({
 			message: "Product charge marked as active successfully",
 			data: charge,
 		});
 	} catch (error: any) {
 		logger.error(`Error marking product charge as active: ${error.message}`);
-		return res.status(500).json({
+		res.status(500).json({
 			message:
 				"An error occurred while marking the product charge as active. Please try again later.",
 		});
