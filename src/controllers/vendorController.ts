@@ -1158,7 +1158,7 @@ export const fetchVendorAuctionProducts = async (
 		});
 
 		if (auctionProducts.length === 0) {
-			res.status(404).json({
+			res.status(200).json({
 				message: "No auction products found for this vendor.",
 				data: [],
 			});
