@@ -858,8 +858,15 @@ export const handleGoogleAuth = async (
 	res: Response,
 ): Promise<void> => {
 	try {
-		const { firstName, lastName, email, phoneNumber, accountType, providerId } =
-			req.body;
+		const {
+			firstName,
+			lastName,
+			email,
+			phoneNumber,
+			accountType,
+			fcmToken,
+			providerId,
+		} = req.body;
 
 		if (!firstName || !lastName || !email || !accountType || !providerId) {
 			res.status(400).json({ message: "All fields are required." });
@@ -880,12 +887,24 @@ export const handleGoogleAuth = async (
 				email,
 				firstName,
 				lastName,
+				fcmToken: fcmToken || "",
 				accountType,
 				password: await generateUniquePhoneNumber(), // Generate unique phone number
 				phoneNumber: await generateUniquePhoneNumber(), // Generate unique phone number
 				googleId: providerId, // Storing provider ID as Google ID
 				email_verified_at: new Date(),
 			});
+		} else {
+			await User.update(
+				{
+					fcmToken: fcmToken || user.fcmToken,
+				},
+				{
+					where: { email },
+				},
+			);
+
+			user.fcmToken = fcmToken; // Update FCM token if provided
 		}
 
 		// Attach user to req object for next function
