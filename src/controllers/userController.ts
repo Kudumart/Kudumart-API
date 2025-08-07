@@ -1492,6 +1492,11 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 
 		// Validate that the total amount matches the Paystack transaction amount
 		if (paymentData.amount / 100 !== totalAmount) {
+			console.log("Payment amount does not match cart total");
+			console.log(`Payment amount From Paystack: ${paymentData.amount}`);
+			console.log(
+				`Payment amount: ${paymentData.amount / 100}, Cart total: ${totalAmount}`,
+			);
 			throw new Error("Payment amount does not match cart total");
 		}
 
