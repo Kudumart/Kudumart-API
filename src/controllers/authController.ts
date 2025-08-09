@@ -25,6 +25,8 @@ import Notification from "../models/notification";
 import passport from "passport";
 import { sendPushNotificationToTopic } from "../firebase/pushNotification";
 import { PushNotificationTypes } from "../types";
+import { DropShippingService } from "../services/dropShipping.service";
+import DropShippingCred from "../models/dropshippngCreds";
 
 export const index = async (_: Request, res: Response) => {
 	res.status(200).json({
@@ -959,6 +961,69 @@ export const adminLogin = async (
 		logger.error("Error in login:", error);
 
 		// Handle server errors
+		res.status(500).json({ message: "Internal server error" });
+	}
+};
+
+export const aliExpressAuth = async (
+	_: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const dropShippingService = new DropShippingService();
+
+		// Redirect to AliExpress authorization URL
+		const authUrl = await dropShippingService.getAuthorizationUrl();
+
+		res.status(200).json({
+			message: "Redirecting to AliExpress for authorization.",
+			authUrl,
+		});
+	} catch (error) {
+		logger.error("Error in aliExpressAuth:", error);
+
+		res.status(500).json({ message: "Internal server error" });
+	}
+};
+
+export const aliExpressAuthCallback = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const dropShippingService = new DropShippingService();
+
+		const code = req.query?.code as string;
+
+		if (!code) {
+			res.status(400).json({ message: "Authorization code is required." });
+			return;
+		}
+
+		// Call the service to get the access token
+		const accessTokenData = await dropShippingService.getAccessToken(code);
+
+		await DropShippingCred.create({
+			accessToken: accessTokenData.accessToken,
+			refreshToken: accessTokenData.refreshToken,
+			expiresIn: accessTokenData.expiresIn,
+			expireTime: accessTokenData.expireTime,
+			userId: accessTokenData.userId,
+			userNick: accessTokenData.userNick,
+			refreshExpiresIn: accessTokenData.refreshExpiresIn,
+			refreshTokenValidTime: accessTokenData.refreshTokenValidTime,
+			locale: accessTokenData.locale,
+			accountId: accessTokenData.accountId,
+			accountPlatform: accessTokenData.accountPlatform,
+			sellerId: accessTokenData.sellerId,
+		});
+
+		res.status(200).json({
+			message: "AliExpress authentication successful. Access token saved.",
+		});
+	} catch (error) {
+		logger.error("Error in aliExpressAuthCallback:", error);
+
 		res.status(500).json({ message: "Internal server error" });
 	}
 };
