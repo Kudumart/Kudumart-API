@@ -1,7 +1,7 @@
 import { DropshipperClient } from "ae_sdk";
 
 interface ProductSearchOptions {
-	keywords?: string;
+	keywords: string;
 	categoryId: string;
 	minPrice?: number;
 	maxPrice?: number;
@@ -40,18 +40,64 @@ export class DropShippingService {
 
 	constructor() {
 		this.dropShipperClient = new DropshipperClient({
-			app_key: process.env.DROPSHIPPER_APP_KEY || "",
-			app_secret: process.env.DROPSHIPPER_APP_SECRET || "",
+			app_key: process.env.ALIEXPRESS_APP_KEY || "",
+			app_secret: process.env.ALIEXPRESS_APP_SECRET || "",
 			session: process.env.DROPSHIPPER_SESSION || "",
 		});
 	}
 
-	async getProductCategories() {
-		const response = await this.dropShipperClient.getCategories({});
+	async getAuthorizationUrl(): Promise<string> {
+		const redirectUri = `${process.env.ALIEXPRESS_AUTH_REDIRECT_URI}?response_type=code&redirect_uri=${encodeURIComponent(
+			process.env.ALIEXPRESS_AUTH_CALLBACK_URL || "",
+		)}&client_id=${process.env.DROPSHIPPER_APP_KEY}`;
 
+		return redirectUri;
+	}
+
+	async getAccessToken(code: string) {
+		const response = await this.dropShipperClient.generateToken({
+			code,
+		});
 		if (!response.ok) {
 			throw new Error(
-				"Failed to fetch product categories from the dropshipper API",
+				"Failed to generate access token from the dropshipper API",
+			);
+		}
+
+		if (!response.data) {
+			throw new Error("No data returned from the dropshipper API");
+		}
+		const accessTokenData = response.data;
+		if (!accessTokenData) {
+			throw new Error("No token data found in the response");
+		}
+
+		return {
+			accessToken: accessTokenData.access_token,
+			refreshToken: accessTokenData.refresh_token,
+			expiresIn: accessTokenData.expires_in,
+			expireTime: accessTokenData.expire_time,
+			userId: accessTokenData.user_id,
+			userNick: accessTokenData.user_nick,
+			refreshExpiresIn: accessTokenData.refresh_expires_in,
+			refreshTokenValidTime: accessTokenData.refresh_token_valid_time,
+			sp: accessTokenData.sp,
+			locale: accessTokenData.locale,
+			account: accessTokenData.account,
+			accountId: accessTokenData.account_id,
+			accountPlatform: accessTokenData.account_platform,
+			havanaId: accessTokenData.havana_id,
+			sellerId: accessTokenData.seller_id,
+		};
+	}
+
+	async refreshAccessToken(refreshToken: string) {
+		const response = await this.dropShipperClient.refreshToken({
+			refresh_token: refreshToken,
+		});
+		if (!response.ok) {
+			throw new Error(
+				"Failed to refresh access token from the dropshipper API",
 			);
 		}
 
@@ -59,21 +105,66 @@ export class DropShippingService {
 			throw new Error("No data returned from the dropshipper API");
 		}
 
-		const { data } = response;
-		const { aliexpress_ds_category_get_response } = data;
-		if (!aliexpress_ds_category_get_response) {
-			throw new Error("No category data found in the response");
+		const accessTokenData = response.data;
+
+		if (!accessTokenData) {
+			throw new Error("No token data found in the response");
 		}
 
-		const { resp_result } = aliexpress_ds_category_get_response;
+		return {
+			accessToken: accessTokenData.access_token,
+			refreshToken: accessTokenData.refresh_token,
+			expiresIn: accessTokenData.expires_in,
+			expireTime: accessTokenData.expire_time,
+			userId: accessTokenData.user_id,
+			userNick: accessTokenData.user_nick,
+			refreshExpiresIn: accessTokenData.refresh_expires_in,
+			refreshTokenValidTime: accessTokenData.refresh_token_valid_time,
+			sp: accessTokenData.sp,
+			locale: accessTokenData.locale,
+			account: accessTokenData.account,
+			accountId: accessTokenData.account_id,
+			accountPlatform: accessTokenData.account_platform,
+			havanaId: accessTokenData.havana_id,
+			sellerId: accessTokenData.seller_id,
+		};
+	}
 
-		if (!resp_result || !resp_result.result) {
-			throw new Error("No category list found in the response");
+	async getProductCategories() {
+		try {
+			const response = await this.dropShipperClient.getCategories({});
+
+			if (!response.ok) {
+				// console.log(response);
+				console.log(response);
+				throw new Error(
+					"Failed to fetch product categories from the dropshipper API",
+				);
+			}
+
+			if (!response.data) {
+				throw new Error("No data returned from the dropshipper API");
+			}
+
+			const { data } = response;
+			const { aliexpress_ds_category_get_response } = data;
+			if (!aliexpress_ds_category_get_response) {
+				throw new Error("No category data found in the response");
+			}
+
+			const { resp_result } = aliexpress_ds_category_get_response;
+
+			if (!resp_result || !resp_result.result) {
+				throw new Error("No category list found in the response");
+			}
+
+			const categories = resp_result.result;
+
+			return categories.categories;
+		} catch (error) {
+			console.log(error);
+			throw error; // Re-throw the error for further handling
 		}
-
-		const categories = resp_result.result;
-
-		return categories;
 	}
 
 	async getProducts(options: ProductSearchOptions) {
