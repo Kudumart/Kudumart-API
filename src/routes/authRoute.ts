@@ -143,4 +143,11 @@ authRoutes.get("/banners", homeController.getAllBanners); // Get all banners
 
 authRoutes.post("/create-payment-intent", homeController.createPaymentIntent);
 
+authRoutes.get("/aliexpress/auth", authController.aliExpressAuth);
+
+authRoutes.get(
+	"/aliexpress/auth-callback",
+	authController.aliExpressAuthCallback,
+);
+
 export default authRoutes; // Export the router

@@ -755,4 +755,10 @@ adminRoutes.patch(
 	adminController.markProductChargeAsInactive,
 );
 
+adminRoutes.get(
+	"/aliexpress/categories",
+	adminAuthMiddleware,
+	adminController.getAliExpressCategories,
+);
+
 export default adminRoutes; // Export the router
