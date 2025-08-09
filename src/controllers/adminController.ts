@@ -20,7 +20,6 @@ import User from "../models/user";
 import KYC from "../models/kyc";
 import PaymentGateway from "../models/paymentgateway";
 import Currency from "../models/currency";
-import { log } from "console";
 import Product from "../models/product";
 import Store from "../models/store";
 import AuctionProduct from "../models/auctionproduct";
@@ -50,6 +49,7 @@ import { ProductData } from "../types/index";
 import crypto from "crypto";
 import AdminNotification from "../models/adminnotification";
 import ProductCharge from "../models/productcharge";
+import { DropShippingService } from "../services/dropShipping.service";
 
 // Extend the Express Request interface to include adminId and admin
 interface AuthenticatedRequest extends Request {
@@ -59,6 +59,8 @@ interface AuthenticatedRequest extends Request {
 
 // Define the upload directory
 const uploadDir = path.join(__dirname, "../../uploads");
+
+const dropShippingService = new DropShippingService();
 
 export const logout = async (req: Request, res: Response): Promise<void> => {
 	try {
@@ -6393,6 +6395,30 @@ export const markProductChargeAsActive = async (
 		return res.status(500).json({
 			message:
 				"An error occurred while marking the product charge as active. Please try again later.",
+		});
+	}
+};
+
+export const getAliExpressCategories = async (
+	_: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const categories = await dropShippingService.getProductCategories();
+
+		if (categories.length === 0) {
+			res.status(404).json({ message: "No categories found" });
+			return;
+		}
+
+		res.status(200).json({ data: categories });
+	} catch (error: any) {
+		// logger.error(
+		// 	`Error retrieving dropshipping product categories: ${error.message}`,
+		// );
+		res.status(500).json({
+			message:
+				"An error occurred while retrieving dropshipping product categories.",
 		});
 	}
 };
