@@ -1463,8 +1463,8 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 				(charge) =>
 					charge.charge_currency === "NGN" &&
 					charge.calculation_type === "percentage" &&
-					product.price >= charge.minimum_product_amount &&
-					product.price <= charge.maximum_product_amount,
+					Number(product.price) >= Number(charge.minimum_product_amount) &&
+					Number(product.price) <= Number(charge.maximum_product_amount),
 			);
 
 			// Check for product charge amount
@@ -1472,22 +1472,39 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 				(charge) =>
 					charge.charge_currency === "NGN" &&
 					charge.calculation_type === "fixed" &&
-					product.price >= charge.minimum_product_amount &&
-					product.price <= charge.maximum_product_amount,
+					Number(product.price) >= Number(charge.minimum_product_amount) &&
+					Number(product.price) <= Number(charge.maximum_product_amount),
 			);
 
 			let chargeAmount = 0;
 			if (productChargePercentage) {
+				console.log(
+					`Applying charge percentage: ${productChargePercentage.charge_percentage}% for product ${product.name}`,
+				);
+				console.log(
+					`Type of charge percentage: ${typeof productChargePercentage.charge_percentage}`,
+				);
 				// Calculate percentage charge
 				chargeAmount +=
-					product.price * (productChargePercentage.charge_percentage / 100);
+					Number(product.price ?? 0) *
+					(Number(productChargePercentage.charge_percentage) / 100);
 			} else if (productChargeAmount) {
+				console.log(
+					`Applying fixed charge: ${productChargeAmount.charge_amount} for product ${product.name}`,
+				);
+				console.log(
+					`Type of charge amount: ${typeof productChargeAmount.charge_amount}`,
+				);
 				// Use fixed amount charge
-				chargeAmount += productChargeAmount.charge_amount;
+				chargeAmount += Number(productChargeAmount.charge_amount ?? 0);
 			}
 
+			console.log(`Charge amount for product ${product.name}: ${chargeAmount}`);
+
 			// Calculate total amount for this cart item
-			totalAmount += (product.price + (chargeAmount ?? 0)) * cartItem.quantity;
+			totalAmount +=
+				(Number(product.price) + Number(chargeAmount)) *
+				Number(cartItem.quantity);
 
 			// totalAmount += product.price * cartItem.quantity;
 		}
@@ -2790,7 +2807,7 @@ export const getAllOrderItems = async (
 	req: Request,
 	res: Response,
 ): Promise<void> => {
-	const { orderId, page = 1, limit = 10 } = req.query;
+	const { orderId, vendorId, page = 1, limit = 10 } = req.query;
 
 	// Convert `page` and `limit` to numbers and ensure they are valid
 	const pageNumber = parseInt(page as string, 10);
@@ -2806,7 +2823,10 @@ export const getAllOrderItems = async (
 
 		// Query for order items with pagination and required associations
 		const { rows: orderItems, count } = await OrderItem.findAndCountAll({
-			where: { orderId },
+			where: {
+				orderId,
+				...(vendorId != null && { vendorId }),
+			},
 			limit: limitNumber,
 			offset,
 			order: [["createdAt", "DESC"]],
