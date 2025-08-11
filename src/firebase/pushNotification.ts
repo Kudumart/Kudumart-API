@@ -13,8 +13,8 @@ firebase.initializeApp({
 
 type FirebaseMessage = {
 	token: string;
-	data?: { [key: string]: string };
-	notification?: {
+	data: { [key: string]: string };
+	notification: {
 		title: string;
 		body: string;
 	};
@@ -22,8 +22,8 @@ type FirebaseMessage = {
 
 type FirebaseMulticastMessage = {
 	tokens: string[];
-	data?: { [key: string]: string };
-	notification?: {
+	data: { [key: string]: string };
+	notification: {
 		title: string;
 		body: string;
 	};
@@ -31,7 +31,7 @@ type FirebaseMulticastMessage = {
 
 type FirebaseTopicMessage = {
 	topic: string;
-	data?: { [key: string]: string };
+	data: { [key: string]: string };
 	notification?: {
 		title: string;
 		body: string;
