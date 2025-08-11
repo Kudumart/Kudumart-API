@@ -1478,28 +1478,28 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 
 			let chargeAmount = 0;
 			if (productChargePercentage) {
-				console.log(
-					`Applying charge percentage: ${productChargePercentage.charge_percentage}% for product ${product.name}`,
-				);
-				console.log(
-					`Type of charge percentage: ${typeof productChargePercentage.charge_percentage}`,
-				);
+				// console.log(
+				// 	`Applying charge percentage: ${productChargePercentage.charge_percentage}% for product ${product.name}`,
+				// );
+				// console.log(
+				// 	`Type of charge percentage: ${typeof productChargePercentage.charge_percentage}`,
+				// );
 				// Calculate percentage charge
 				chargeAmount +=
 					Number(product.price ?? 0) *
 					(Number(productChargePercentage.charge_percentage) / 100);
 			} else if (productChargeAmount) {
-				console.log(
-					`Applying fixed charge: ${productChargeAmount.charge_amount} for product ${product.name}`,
-				);
-				console.log(
-					`Type of charge amount: ${typeof productChargeAmount.charge_amount}`,
-				);
+				// console.log(
+				// 	`Applying fixed charge: ${productChargeAmount.charge_amount} for product ${product.name}`,
+				// );
+				// console.log(
+				// 	`Type of charge amount: ${typeof productChargeAmount.charge_amount}`,
+				// );
 				// Use fixed amount charge
 				chargeAmount += Number(productChargeAmount.charge_amount ?? 0);
 			}
 
-			console.log(`Charge amount for product ${product.name}: ${chargeAmount}`);
+			// console.log(`Charge amount for product ${product.name}: ${chargeAmount}`);
 
 			// Calculate total amount for this cart item
 			totalAmount +=
