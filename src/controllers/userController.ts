@@ -845,8 +845,10 @@ export const sendMessageHandler = async (
 		if (receiver?.fcmToken) {
 			// Send push notification to the receiver
 			const notificationMessage = {
-				title: "New Message",
-				body: `You have a new message from ${user.firstName} ${user.lastName} for product ${product.name}`,
+				notification: {
+					title: "New Message",
+					body: `You have a new message from ${user.firstName} ${user.lastName} for product ${product.name}`,
+				},
 				data: {
 					conversationId: conversation.id,
 					messageId: message.id,
@@ -1620,8 +1622,10 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 					try {
 						// Send push notification to the vendor
 						const notificationMessage = {
-							title: "New Order Received",
-							body: `You have received a new order (TRACKING NO: ${order.trackingNumber}) for your product.`,
+							notification: {
+								title: "New Order Received",
+								body: `You have received a new order (TRACKING NO: ${order.trackingNumber}) for your product.`,
+							},
 							data: {
 								orderId: order.id,
 								type: PushNotificationTypes.ORDER_CREATED,
@@ -1665,8 +1669,10 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 					try {
 						// Send push notification to the admin
 						const notificationMessage = {
-							title: "New Order Received",
-							body: `A new order (TRACKING NO: ${order.trackingNumber}) has been placed.`,
+							notification: {
+								title: "New Order Received",
+								body: `A new order (TRACKING NO: ${order.trackingNumber}) has been placed.`,
+							},
 							data: {
 								orderId: order.id,
 								type: PushNotificationTypes.ORDER_CREATED,
@@ -1775,8 +1781,10 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 			try {
 				// Send push notification to the user
 				const notificationMessage = {
-					title: "Order Confirmation",
-					body: `Your order (TRACKING NO: ${order.trackingNumber}) has been successfully placed.`,
+					notification: {
+						title: "Order Confirmation",
+						body: `Your order (TRACKING NO: ${order.trackingNumber}) has been successfully placed.`,
+					},
 					data: {
 						orderId: order.id,
 						type: PushNotificationTypes.ORDER_CONFIRMATION,
