@@ -6199,6 +6199,21 @@ export const createProductCharge = async (req: Request, res: Response) => {
 			return;
 		}
 
+		const chargeOverlap = await ProductCharge.findOne({
+			where: {
+				minimum_product_amount: { [Op.lte]: maximum_product_amount },
+				maximum_product_amount: { [Op.gte]: minimum_product_amount },
+			},
+		});
+
+		if (chargeOverlap) {
+			res.status(400).json({
+				message:
+					"The minimum and maximum product amounts overlap with an existing charge.",
+			});
+			return;
+		}
+
 		const newCharge = await ProductCharge.create({
 			name,
 			description,
@@ -6246,11 +6261,48 @@ export const updateProductCharge = async (req: Request, res: Response) => {
 		maximum_product_amount,
 	} = req.body;
 
+	if (calculation_type !== "fixed" && calculation_type !== "percentage") {
+		res.status(400).json({
+			message: "Calculation type must be either 'fixed' or 'percentage'.",
+		});
+		return;
+	}
+
+	if (calculation_type === "fixed" && !charge_amount) {
+		res.status(400).json({
+			message: "Charge amount is required for fixed calculation type.",
+		});
+		return;
+	}
+
+	if (calculation_type === "percentage" && !charge_percentage) {
+		res.status(400).json({
+			message: "Charge percentage is required for percentage calculation type.",
+		});
+		return;
+	}
+
 	try {
 		const charge = await ProductCharge.findByPk(productChargeId);
 
 		if (!charge) {
 			res.status(404).json({ message: "Product charge not found" });
+			return;
+		}
+
+		const chargeOverlap = await ProductCharge.findOne({
+			where: {
+				id: { [Op.ne]: productChargeId },
+				minimum_product_amount: { [Op.lte]: maximum_product_amount },
+				maximum_product_amount: { [Op.gte]: minimum_product_amount },
+			},
+		});
+
+		if (chargeOverlap) {
+			res.status(400).json({
+				message:
+					"The minimum and maximum product amounts overlap with an existing charge.",
+			});
 			return;
 		}
 
