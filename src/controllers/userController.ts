@@ -2940,6 +2940,8 @@ export const updateOrderStatus = async (
 	const transaction = await sequelizeService.connection!.transaction();
 
 	try {
+		let newDeliveryCode: string | null = null;
+
 		// Find the order item
 		const order = await OrderItem.findOne({
 			where: { id: orderItemId },
@@ -3020,6 +3022,7 @@ export const updateOrderStatus = async (
 		// If status is shipped, generate delivery code and email customer
 		if (status === "shipped") {
 			const deliveryCode = crypto.randomBytes(6).toString("hex").toUpperCase();
+			newDeliveryCode = deliveryCode; // Store the new delivery code
 			const mainOrder = await Order.findOne({
 				where: { id: order.orderId },
 				transaction,
@@ -3172,7 +3175,7 @@ export const updateOrderStatus = async (
 			buyer,
 			status,
 			productData?.name,
-			deliveryCode,
+			deliveryCode || newDeliveryCode,
 		);
 		try {
 			await sendMail(
