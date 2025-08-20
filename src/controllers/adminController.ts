@@ -48,6 +48,8 @@ import { ProductData } from "../types/index";
 import crypto from "crypto";
 import AdminNotification from "../models/adminnotification";
 import ProductCharge from "../models/productcharge";
+import ServiceCategories from "../models/serviceCategories";
+import ServiceSubCategories from "../models/serviceSubCategories";
 
 // Extend the Express Request interface to include adminId and admin
 interface AuthenticatedRequest extends Request {
@@ -6457,6 +6459,312 @@ export const markProductChargeAsActive = async (
 		res.status(500).json({
 			message:
 				"An error occurred while marking the product charge as active. Please try again later.",
+		});
+	}
+};
+
+export const createServiceCategory = async (req: Request, res: Response) => {
+	const { name, image } = req.body;
+
+	try {
+		if (!name) {
+			res.status(400).json({ message: "Name is required" });
+			return;
+		}
+
+		const newService = await ServiceCategories.create({ name, image });
+
+		res.status(200).json({
+			message: "Service category created successfully",
+			data: newService,
+		});
+	} catch (error: any) {
+		if (error.name === "SequelizeUniqueConstraintError") {
+			res.status(400).json({
+				message: "A service category with this name already exists.",
+			});
+			return;
+		}
+		logger.error(`Error creating service: ${error.message}`);
+		res.status(500).json({
+			message: "An unexpected error occurred while creating the service.",
+		});
+	}
+};
+
+export const updateServiceCategory = async (req: Request, res: Response) => {
+	const id = req.params.id;
+
+	const { name, image } = req.body;
+
+	try {
+		if (!id) {
+			res.status(400).json({ message: "Service category ID is required" });
+			return;
+		}
+
+		if (!name) {
+			res.status(400).json({ message: "Name is required" });
+			return;
+		}
+
+		const service = await ServiceCategories.findByPk(id);
+
+		if (!service) {
+			res.status(404).json({ message: "Service category not found" });
+			return;
+		}
+
+		await service.update(
+			{ name, image },
+			{
+				where: { id },
+			},
+		);
+
+		res.status(200).json({
+			message: "Service category updated successfully",
+			data: service,
+		});
+	} catch (error: any) {
+		if (error.name === "SequelizeUniqueConstraintError") {
+			res.status(400).json({
+				message: "A service category with this name already exists.",
+			});
+			return;
+		}
+		logger.error(`Error updating service category: ${error.message}`);
+		res.status(500).json({
+			message:
+				"An error occurred while updating the service category. Please try again later.",
+		});
+	}
+};
+
+export const getAllServiceCategories = async (
+	_req: Request,
+	res: Response,
+): Promise<void> => {
+	const { page, limit } = _req.query;
+	try {
+		const offset = (Number(page) - 1) * Number(limit);
+
+		const services = await ServiceCategories.findAll({
+			limit: Number(limit) || 10,
+			offset: offset || 0,
+			order: [["createdAt", "DESC"]],
+		});
+		res.status(200).json({ data: services });
+	} catch (error: any) {
+		logger.error(`Error retrieving service categories: ${error.message}`);
+		res.status(500).json({
+			message:
+				"An error occurred while retrieving service categories. Please try again later.",
+		});
+	}
+};
+
+export const deleteServiceCategory = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const id = req.params.id; // Get the service category ID from the request parameters
+
+	try {
+		if (!id) {
+			res.status(400).json({ message: "Service category ID is required" });
+			return;
+		}
+
+		const service = await ServiceCategories.findByPk(id);
+
+		if (!service) {
+			res.status(404).json({ message: "Service category not found" });
+			return;
+		}
+
+		await service.destroy();
+
+		res.status(200).json({
+			message: "Service category deleted successfully",
+		});
+	} catch (error: any) {
+		logger.error(`Error deleting service category: ${error.message}`);
+		res.status(500).json({
+			message:
+				"An error occurred while deleting the service category. Please try again later.",
+		});
+	}
+};
+
+export const createServiceSubCategory = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const { name, image, categoryId: serviceCategoryId } = req.body;
+
+	try {
+		if (!name || !serviceCategoryId) {
+			res.status(400).json({
+				message: "Name and category ID are required.",
+			});
+			return;
+		}
+
+		const newSubCategory = await ServiceSubCategories.create({
+			name,
+			image,
+			serviceCategoryId,
+		});
+
+		res.status(200).json({
+			message: "Service sub-category created successfully",
+			data: newSubCategory,
+		});
+	} catch (error: any) {
+		if (error.name === "SequelizeUniqueConstraintError") {
+			res.status(400).json({
+				message: "A service sub-category with this name already exists.",
+			});
+			return;
+		}
+
+		if (error.name === "SequelizeForeignKeyConstraintError") {
+			res.status(400).json({
+				message: "The service category ID provided does not exist.",
+			});
+			return;
+		}
+
+		logger.error(`Error creating service sub-category: ${error.message}`);
+		res.status(500).json({
+			message:
+				"An unexpected error occurred while creating the service sub-category.",
+		});
+	}
+};
+
+export const updateServiceSubCategory = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const id = req.params.id;
+
+	const { name, image, categoryId: serviceCategoryId } = req.body;
+
+	try {
+		if (!id) {
+			res.status(400).json({ message: "Service sub-category ID is required" });
+			return;
+		}
+
+		if (!name || !serviceCategoryId) {
+			res.status(400).json({
+				message: "Name and category ID are required.",
+			});
+			return;
+		}
+
+		const subCategory = await ServiceSubCategories.findByPk(id);
+
+		if (!subCategory) {
+			res.status(404).json({ message: "Service sub-category not found" });
+			return;
+		}
+
+		await subCategory.update(
+			{ name, image, serviceCategoryId },
+			{
+				where: { id },
+			},
+		);
+
+		res.status(200).json({
+			message: "Service sub-category updated successfully",
+			data: subCategory,
+		});
+	} catch (error: any) {
+		logger.error(`Error updating service sub-category: ${error.message}`);
+
+		if (error.name === "SequelizeUniqueConstraintError") {
+			res.status(400).json({
+				message: "A service sub-category with this name already exists.",
+			});
+			return;
+		}
+
+		if (error.name === "SequelizeForeignKeyConstraintError") {
+			res.status(400).json({
+				message: "The service category ID provided does not exist.",
+			});
+			return;
+		}
+
+		res.status(500).json({
+			message:
+				"An error occurred while updating the service sub-category. Please try again later.",
+		});
+	}
+};
+
+export const getAllServiceSubCategories = async (
+	_req: Request,
+	res: Response,
+): Promise<void> => {
+	const { id: serviceCategoryId } = _req.params;
+
+	const { page, limit } = _req.query;
+
+	try {
+		const offset = (Number(page) - 1) * Number(limit);
+
+		const subCategories = await ServiceSubCategories.findAll({
+			limit: Number(limit) || 10,
+			offset: offset || 0,
+			order: [["createdAt", "DESC"]],
+			where: {
+				serviceCategoryId,
+			},
+		});
+		res.status(200).json({ data: subCategories });
+	} catch (error: any) {
+		logger.error(`Error retrieving service sub-categories: ${error.message}`);
+		res.status(500).json({
+			message:
+				"An error occurred while retrieving service sub-categories. Please try again later.",
+		});
+	}
+};
+
+export const deleteServiceSubCategory = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const id = req.params.id;
+
+	try {
+		if (!id) {
+			res.status(400).json({ message: "Service sub-category ID is required" });
+			return;
+		}
+
+		const subCategory = await ServiceSubCategories.findByPk(id);
+
+		if (!subCategory) {
+			res.status(404).json({ message: "Service sub-category not found" });
+			return;
+		}
+
+		await subCategory.destroy();
+
+		res.status(200).json({
+			message: "Service sub-category deleted successfully",
+		});
+	} catch (error: any) {
+		logger.error(`Error deleting service sub-category: ${error.message}`);
+		res.status(500).json({
+			message:
+				"An error occurred while deleting the service sub-category. Please try again later.",
 		});
 	}
 };

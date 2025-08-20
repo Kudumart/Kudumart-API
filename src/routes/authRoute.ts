@@ -12,6 +12,8 @@ import {
 	resetPasswordValidationRules,
 	validate,
 	verificationTokenValidationRules,
+	paginationQueryParamsValidation,
+	ServiceIdValidation,
 } from "../utils/validations"; // Import the service
 import authMiddleware from "../middlewares/authMiddleware";
 
@@ -142,5 +144,20 @@ authRoutes.post("/apply/job", homeController.applyJob);
 authRoutes.get("/banners", homeController.getAllBanners); // Get all banners
 
 authRoutes.post("/create-payment-intent", homeController.createPaymentIntent);
+
+authRoutes.get(
+	"/service/categories",
+	paginationQueryParamsValidation(),
+	validate,
+	homeController.getAllServiceCategories,
+);
+
+authRoutes.get(
+	"/service/subcategories/:id",
+	ServiceIdValidation(),
+	paginationQueryParamsValidation(),
+	validate,
+	homeController.getAllServiceSubCategories,
+);
 
 export default authRoutes; // Export the router

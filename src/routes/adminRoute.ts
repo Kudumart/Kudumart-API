@@ -23,6 +23,9 @@ import {
 	updateAuctionProductValidation,
 	paginationQueryParamsValidation,
 	productChargeValidation,
+	ServiceCategoryValidation,
+	ServiceIdValidation,
+	ServiceSubCategoryValidation,
 } from "../utils/validations"; // Import the service
 import checkPermission from "../middlewares/checkPermissionMiddleware";
 import { updateAuctionProduct } from "../controllers/vendorController";
@@ -753,6 +756,73 @@ adminRoutes.patch(
 	"/product/charges/:id/status/deactivate",
 	adminAuthMiddleware,
 	adminController.markProductChargeAsInactive,
+);
+
+adminRoutes.post(
+	"/service/categories",
+	adminAuthMiddleware,
+	ServiceCategoryValidation(),
+	validate,
+	adminController.createServiceCategory,
+);
+
+adminRoutes.put(
+	"/service/categories/:id",
+	adminAuthMiddleware,
+	ServiceIdValidation(),
+	ServiceCategoryValidation(),
+	validate,
+	adminController.updateServiceCategory,
+);
+
+adminRoutes.get(
+	"/service/categories",
+	adminAuthMiddleware,
+	paginationQueryParamsValidation(),
+	validate,
+	adminController.getAllServiceCategories,
+);
+
+adminRoutes.delete(
+	"/service/categories/:id",
+	adminAuthMiddleware,
+	ServiceIdValidation(),
+	validate,
+	adminController.deleteServiceCategory,
+);
+
+adminRoutes.post(
+	"/service/subcategories",
+	adminAuthMiddleware,
+	ServiceSubCategoryValidation(),
+	validate,
+	adminController.createServiceSubCategory,
+);
+
+adminRoutes.put(
+	"/service/subcategories/:id",
+	adminAuthMiddleware,
+	ServiceIdValidation(),
+	ServiceSubCategoryValidation(),
+	validate,
+	adminController.updateServiceSubCategory,
+);
+
+adminRoutes.get(
+	"/service/subcategories/:id",
+	adminAuthMiddleware,
+	ServiceIdValidation(),
+	paginationQueryParamsValidation(),
+	validate,
+	adminController.getAllServiceSubCategories,
+);
+
+adminRoutes.delete(
+	"/service/subcategories/:id",
+	adminAuthMiddleware,
+	ServiceIdValidation(),
+	validate,
+	adminController.deleteServiceSubCategory,
 );
 
 export default adminRoutes; // Export the router

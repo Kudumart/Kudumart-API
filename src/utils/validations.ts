@@ -1,4 +1,4 @@
-import { check, validationResult } from "express-validator";
+import { check, param, validationResult } from "express-validator";
 import { Request, Response, NextFunction } from "express";
 
 // Validation rules for different functionalities
@@ -1130,6 +1130,56 @@ export const productChargeValidation = () => {
 			.withMessage(
 				"Maximum product amount must be a valid decimal number with up to two decimal places",
 			),
+	];
+};
+
+export const ServiceCategoryValidation = () => {
+	return [
+		check("name")
+			.not()
+			.isEmpty()
+			.withMessage("Name is required")
+			.isString()
+			.withMessage("Name must be a valid string")
+			.isLength({ min: 2, max: 50 })
+			.withMessage("Name must be between 2 and 50 characters"),
+		check("image")
+			.optional({ checkFalsy: true })
+			.isString()
+			.withMessage("Image must be a valid string"),
+	];
+};
+
+export const ServiceIdValidation = () => {
+	return [
+		param("id")
+			.isNumeric()
+			.withMessage("Service ID must be a valid number")
+			.notEmpty()
+			.withMessage("Service ID is required"),
+	];
+};
+
+export const ServiceSubCategoryValidation = () => {
+	return [
+		check("name")
+			.not()
+			.isEmpty()
+			.withMessage("Name is required")
+			.isString()
+			.withMessage("Name must be a valid string")
+			.isLength({ min: 2, max: 50 })
+			.withMessage("Name must be between 2 and 50 characters"),
+		check("image")
+			.optional({ checkFalsy: true })
+			.isString()
+			.withMessage("Image must be a valid string"),
+		check("categoryId")
+			.not()
+			.isEmpty()
+			.withMessage("Category ID is required")
+			.isNumeric()
+			.withMessage("Category ID must be a valid UUID"),
 	];
 };
 
