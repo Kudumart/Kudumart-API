@@ -59,6 +59,7 @@ import AttributeDefinitions from "../models/attributeDefinitions";
 import sequelize from "../config/sequelize";
 import AttributeOptions from "../models/attributeOptions";
 import ServiceCategoryToAttributeMap from "../models/serviceCategoryToAttributeMap";
+import Services from "../models/services";
 
 // Extend the Express Request interface to include adminId and admin
 interface AuthenticatedRequest extends Request {
@@ -820,6 +821,8 @@ export const createSubscriptionPlan = async (
 		productLimit,
 		allowsAuction,
 		auctionProductLimit,
+    allowsServiceAds,
+    serviceAdsLimit,
 		maxAds,
 		adsDurationDays,
 	} = req.body;
@@ -851,6 +854,8 @@ export const createSubscriptionPlan = async (
 			productLimit,
 			allowsAuction,
 			auctionProductLimit,
+      allowsServiceAds,
+      serviceAdsLimit,
 			maxAds,
 			adsDurationDays,
 			currencyId: currency.id,
@@ -6782,13 +6787,9 @@ export const createServiceAttribute = async (
 	req: Request,
 	res: Response,
 ): Promise<void> => {
-	const { attributes, categoryId } = req.body;
+	const { attributes, } = req.body;
 
 	try {
-		if (!categoryId) {
-			res.status(400).json({ message: "Service category ID is required." });
-			return;
-		}
 
 		if (!attributes || !Array.isArray(attributes) || attributes.length === 0) {
 			res.status(400).json({
@@ -6802,10 +6803,9 @@ export const createServiceAttribute = async (
 			name: string;
 			input_type: string;
 			data_type: string;
-			is_required: boolean;
 		}[] = [];
 		for (const attr of attributes) {
-			const { name, input_type, is_required, value } = attr;
+			const { name, input_type,  value } = attr;
 
 			if (!name ) {
 				res.status(400).json({
@@ -6831,54 +6831,27 @@ export const createServiceAttribute = async (
 				return;
 			}
 
-			if (typeof is_required !== "boolean") {
-				res.status(400).json({
-					message: "is_required must be a boolean value.",
-				});
-				return;
-			}
 
 			switch (input_type) {
 				case ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.INT_INPUT:
-					if (!value || isNaN(Number(value))) {
-						res.status(400).json({
-							message: `Value for attribute ${name} must be a valid number.`,
-						});
-						return;
-					}
 					serviceAttributeDefinitions.push({
 						name,
 						input_type,
 						data_type: ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ.INT,
-						is_required,
 					});
 					break;
 				case ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.STR_INPUT:
-					if (typeof value !== "string" || value.trim() === "") {
-						res.status(400).json({
-							message: `Value for attribute ${name} must be a non-empty string.`,
-						});
-						return;
-					}
 					serviceAttributeDefinitions.push({
 						name,
 						input_type,
 						data_type: ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ.STR,
-						is_required,
 					});
 					break;
 				case ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.BOOL_INPUT:
-					if (typeof value !== "boolean") {
-						res.status(400).json({
-							message: `Value for attribute ${name} must be a boolean.`,
-						});
-						return;
-					}
 					serviceAttributeDefinitions.push({
 						name,
 						input_type,
 						data_type: ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ.BOOL,
-						is_required,
 					});
 					break;
 				case ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.MULTI_SELECT:
@@ -6893,7 +6866,6 @@ export const createServiceAttribute = async (
 						name,
 						input_type,
 						data_type: ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ.STR_ARRAY,
-						is_required,
 					});
 					break;
 				case ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.SINGLE_SELECT:
@@ -6903,18 +6875,11 @@ export const createServiceAttribute = async (
 						});
 						return;
 					}
-					if (value.length !== 1) {
-						res.status(400).json({
-							message: `Value for attribute ${name} must contain exactly one item.`,
-						});
-						return;
-					}
 					optionValuesMap.set(name, value);
 					serviceAttributeDefinitions.push({
 						name,
 						input_type,
 						data_type: ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ.STR_ARRAY,
-						is_required,
 					});
 					break;
 				default:
@@ -6932,12 +6897,12 @@ export const createServiceAttribute = async (
 				newAttribute = await AttributeDefinitions.bulkCreate(
 					serviceAttributeDefinitions,
 					{
-						validate: false,
-						individualHooks: false,
-						ignoreDuplicates: true,
-						transaction: t,
+						validate: true,
+						individualHooks: true,
+          	transaction: t,
 					},
 				);
+
 
 				for (let i = 0; i < serviceAttributeDefinitions.length; i++) {
 
@@ -7048,7 +7013,7 @@ export const addAttributeOptions = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  const attributeId = req.params.id;
+  const attributeId = req.params.attributeId;
   const { options } = req.body;
 
   try {
@@ -7083,25 +7048,7 @@ export const addAttributeOptions = async (
       return;
     }
 
-    if (attribute.input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.SINGLE_SELECT && options.length !== 1) {
-      res.status(400).json({
-        message: "Only one option can be added for 'single_select' attributes.",
-      });
-      return;
-    }
 
-    if (attribute.input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.SINGLE_SELECT) {
-      const existingOptions = await AttributeOptions.findAll({
-        where: { attribute_id: attribute.id },
-      });
-
-      if (existingOptions.length + options.length > 1) {
-        res.status(400).json({
-          message: "A 'single_select' attribute can only have one option.",
-        });
-        return;
-      }
-    }
 
     const optionRecords = options.map((opt: string) => ({
       attribute_id: attribute.id,
@@ -7147,7 +7094,7 @@ export const getAllServiceAttributes = async (
     const attributes = await AttributeDefinitions.findAll({
       limit: Number(limit) || 10,
       offset: offset || 0,
-      order: [["createdAt", "DESC"]],
+      order: [["id", "ASC"]],
       include: [
         {
           model: AttributeOptions,
@@ -7170,7 +7117,7 @@ export const deleteAttributeOption = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  const optionId = req.params.id;
+  const optionId = req.params.optionId;
 
   try {
     if (!optionId) {
@@ -7267,6 +7214,18 @@ export const addAttributeToServiceCategory = async (
       message: "Attributes added to service category successfully",
     });
   } catch (error: any) {
+    if (error.name === "SequelizeForeignKeyConstraintError") {
+      res.status(400).json({
+        message: "One or more attribute IDs are invalid and do not exist.",
+      });
+      return;
+    }
+    if (error.name === "SequelizeUniqueConstraintError") {
+      res.status(400).json({
+        message: "One or more attributes are already associated with this service category.",
+      });
+      return;
+    }
     logger.error(`Error adding attributes to service category: ${error.message}`);
     res.status(500).json({
       message:
@@ -7335,3 +7294,128 @@ export const removeAttributeFromServiceCategory = async (
   }
 }
 
+export const suspendService = async (req: Request, res: Response): Promise<void> => {
+  const serviceId = req.params.serviceId;
+
+  try {
+    if (!serviceId) {
+      res.status(400).json({ message: "Service ID is required." });
+      return;
+    }
+
+    const service = await Services.findByPk(serviceId);
+
+    if (!service) {
+      res.status(404).json({ message: "Service not found." });
+      return;
+    }
+
+    if (service.status === 'suspended') {
+      res.status(400).json({ message: "Service is already suspended." });
+      return;
+    }
+
+    service.status = 'suspended';
+    await service.save();
+
+    res.status(200).json({
+      message: "Service suspended successfully",
+      data: service,
+    });
+  } catch (error: any) {
+    logger.error(`Error suspending service: ${error.message}`);
+    res.status(500).json({
+      message:
+        "An unexpected error occurred while suspending the service.",
+    });
+  }
+}
+
+export const activateService = async (req: Request, res: Response): Promise<void> => {
+  const serviceId = req.params.serviceId;
+
+  try {
+    if (!serviceId) {
+      res.status(400).json({ message: "Service ID is required." });
+      return;
+    }
+
+    const service = await Services.findByPk(serviceId);
+
+    if (!service) {
+      res.status(404).json({ message: "Service not found." });
+      return;
+    }
+
+    if (service.status === 'active') {
+      res.status(400).json({ message: "Service is already active." });
+      return;
+    }
+
+    service.status = 'active';
+    await service.save();
+
+    res.status(200).json({
+      message: "Service activated successfully",
+      data: service,
+    });
+  } catch (error: any) {
+    logger.error(`Error activating service: ${error.message}`);
+    res.status(500).json({
+      message:
+        "An unexpected error occurred while activating the service.",
+    });
+  }
+}
+
+export const getAllServices = async (req: Request, res: Response): Promise<void> => {
+  const { page, limit, status, categoryId, subCategoryId } = req.query;
+
+  try {
+    const offset = (Number(page) - 1) * Number(limit);
+
+    const whereClause: any = {};
+
+    if (status && (status === 'active' || status === 'suspended')) {
+      whereClause.status = status;
+    }
+
+    if (categoryId) {
+      whereClause.serviceCategoryId = categoryId;
+    }
+
+    if (subCategoryId) {
+      whereClause.serviceSubCategoryId = subCategoryId;
+    }
+
+    const services = await Services.findAll({
+      where: whereClause,
+      limit: Number(limit) || 10,
+      offset: offset || 0,
+      order: [["createdAt", "DESC"]],
+      include: [
+        {
+          model: ServiceCategories,
+          as: "category",
+          attributes: ["id", "name"],
+        },
+        {
+          model: ServiceSubCategories,
+          as: "subCategory",
+          attributes: ["id", "name"],
+        },
+        {
+          model: User,
+          as: "provider",
+        }
+      ],
+    });
+    res.status(200).json({ data: services });
+  } catch (error: any) {
+    logger.error(`Error retrieving services: ${error.message}`);
+    res.status(500).json({
+      message:
+        "An error occurred while retrieving services. Please try again later.",
+    });
+  }
+}
