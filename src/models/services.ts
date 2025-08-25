@@ -11,12 +11,15 @@ export class Services extends Model {
 	public service_subcategory_id!: number;
 	public location_city!: string;
 	public location_state!: string;
+	public location_country!: string;
+	public is_negotiable!: boolean;
 	public work_experience_years!: number;
 	public additional_images!: string[];
-	public status!: "active" | "inactive" | "draft";
+	public status!: "active" | "inactive" | "suspended";
 	public price!: number;
 	public discount_price!: number | null;
 	public attributes?: Array<object>;
+	public provider?: any;
 	public createdAt!: Date;
 	public updatedAt!: Date;
 
@@ -24,15 +27,15 @@ export class Services extends Model {
 		this.belongsTo(models.User, {
 			foreignKey: "vendorId",
 			targetKey: "id",
-			as: "vendor",
+			as: "provider",
 		});
-		this.belongsTo(models.ServiceCategory, {
+		this.belongsTo(models.ServiceCategories, {
 			foreignKey: "service_category_id",
 			as: "category",
 		});
-		this.belongsTo(models.ServiceSubCategory, {
+		this.belongsTo(models.ServiceSubCategories, {
 			foreignKey: "service_subcategory_id",
-			as: "subcategory",
+			as: "subCategory",
 		});
 	}
 }
@@ -85,6 +88,10 @@ const initModel = (sequelize: Sequelize) => {
 				type: DataTypes.STRING,
 				allowNull: false,
 			},
+			location_country: {
+				type: DataTypes.STRING,
+				allowNull: false,
+			},
 			work_experience_years: {
 				type: DataTypes.INTEGER,
 				defaultValue: 0,
@@ -111,7 +118,7 @@ const initModel = (sequelize: Sequelize) => {
 				allowNull: true,
 			},
 			status: {
-				type: DataTypes.ENUM("active", "inactive", "draft"),
+				type: DataTypes.ENUM("active", "inactive", "suspended"),
 				defaultValue: "active",
 				allowNull: false,
 			},
