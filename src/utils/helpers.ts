@@ -25,6 +25,33 @@ interface PaystackResponse {
 	data?: any; // Replace `any` with the specific type of the Paystack `data` object if known
 }
 
+export const ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ = {
+	STR_INPUT: "str_input",
+	INT_INPUT: "int_input",
+	BOOL_INPUT: "bool_input",
+	SINGLE_SELECT: "single_select",
+	MULTI_SELECT: "multi_select",
+} as const;
+
+export type AllowedServiceAttributeInputType =
+	(typeof ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ)[keyof typeof ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ];
+export const ALLOWED_SERVICE_ATTRIBUTE_INPUT = Object.values(
+	ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ,
+) as AllowedServiceAttributeInputType[];
+
+export const ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ = {
+	STR: "str",
+	INT: "int",
+	BOOL: "bool",
+	STR_ARRAY: "str_array",
+} as const;
+
+export type AllowedServiceAttributeDataType =
+	(typeof ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ)[keyof typeof ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ];
+export const ALLOWED_SERVICE_ATTRIBUTE_DATA = Object.values(
+	ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ,
+) as AllowedServiceAttributeDataType[];
+
 // Function to generate a 6-digit OTP
 const generateOTP = (): string => {
 	const otp: string = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP

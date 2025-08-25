@@ -6,7 +6,12 @@ import { sendMail } from "../services/mail.service";
 import { emailTemplates } from "../utils/messages";
 import JwtService from "../services/jwt.service";
 import logger from "../middlewares/logger"; // Adjust the path to your logger.js
-import { capitalizeFirstLetter } from "../utils/helpers";
+import {
+	ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ,
+	ALLOWED_SERVICE_ATTRIBUTE_INPUT,
+	ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ,
+	capitalizeFirstLetter,
+} from "../utils/helpers";
 import Admin from "../models/admin";
 import Role from "../models/role";
 import Permission from "../models/permission";
@@ -50,6 +55,10 @@ import AdminNotification from "../models/adminnotification";
 import ProductCharge from "../models/productcharge";
 import ServiceCategories from "../models/serviceCategories";
 import ServiceSubCategories from "../models/serviceSubCategories";
+import AttributeDefinitions from "../models/attributeDefinitions";
+import sequelize from "../config/sequelize";
+import AttributeOptions from "../models/attributeOptions";
+import ServiceCategoryToAttributeMap from "../models/serviceCategoryToAttributeMap";
 
 // Extend the Express Request interface to include adminId and admin
 interface AuthenticatedRequest extends Request {
@@ -6768,3 +6777,561 @@ export const deleteServiceSubCategory = async (
 		});
 	}
 };
+
+export const createServiceAttribute = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const { attributes, categoryId } = req.body;
+
+	try {
+		if (!categoryId) {
+			res.status(400).json({ message: "Service category ID is required." });
+			return;
+		}
+
+		if (!attributes || !Array.isArray(attributes) || attributes.length === 0) {
+			res.status(400).json({
+				message: "Attributes must be a non-empty array.",
+			});
+			return;
+		}
+
+		const optionValuesMap: Map<string, string[]> = new Map();
+		const serviceAttributeDefinitions: {
+			name: string;
+			input_type: string;
+			data_type: string;
+			is_required: boolean;
+		}[] = [];
+		for (const attr of attributes) {
+			const { name, input_type, is_required, value } = attr;
+
+			if (!name ) {
+				res.status(400).json({
+					message: "Each attribute must include name.",
+				});
+				return;
+			}
+
+      if ((input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.MULTI_SELECT || input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.SINGLE_SELECT) && (!value || !Array.isArray(value) || value.length === 0)) {
+        res.status(400).json({
+          message: `Attribute ${name} of type ${input_type} must include non-empty value array.`,
+        });
+        return;
+      }
+
+			if (
+				!input_type ||
+				!ALLOWED_SERVICE_ATTRIBUTE_INPUT.includes(input_type)
+			) {
+				res.status(400).json({
+					message: `Input type must be one of the following: ${ALLOWED_SERVICE_ATTRIBUTE_INPUT.join(", ")}`,
+				});
+				return;
+			}
+
+			if (typeof is_required !== "boolean") {
+				res.status(400).json({
+					message: "is_required must be a boolean value.",
+				});
+				return;
+			}
+
+			switch (input_type) {
+				case ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.INT_INPUT:
+					if (!value || isNaN(Number(value))) {
+						res.status(400).json({
+							message: `Value for attribute ${name} must be a valid number.`,
+						});
+						return;
+					}
+					serviceAttributeDefinitions.push({
+						name,
+						input_type,
+						data_type: ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ.INT,
+						is_required,
+					});
+					break;
+				case ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.STR_INPUT:
+					if (typeof value !== "string" || value.trim() === "") {
+						res.status(400).json({
+							message: `Value for attribute ${name} must be a non-empty string.`,
+						});
+						return;
+					}
+					serviceAttributeDefinitions.push({
+						name,
+						input_type,
+						data_type: ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ.STR,
+						is_required,
+					});
+					break;
+				case ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.BOOL_INPUT:
+					if (typeof value !== "boolean") {
+						res.status(400).json({
+							message: `Value for attribute ${name} must be a boolean.`,
+						});
+						return;
+					}
+					serviceAttributeDefinitions.push({
+						name,
+						input_type,
+						data_type: ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ.BOOL,
+						is_required,
+					});
+					break;
+				case ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.MULTI_SELECT:
+					if (!Array.isArray(value) || value.length === 0) {
+						res.status(400).json({
+							message: `Value for attribute ${name} must be a non-empty array.`,
+						});
+						return;
+					}
+					optionValuesMap.set(name, value);
+					serviceAttributeDefinitions.push({
+						name,
+						input_type,
+						data_type: ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ.STR_ARRAY,
+						is_required,
+					});
+					break;
+				case ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.SINGLE_SELECT:
+					if (!Array.isArray(value) || value.length === 0) {
+						res.status(400).json({
+							message: `Value for attribute ${name} must be a non-empty array.`,
+						});
+						return;
+					}
+					if (value.length !== 1) {
+						res.status(400).json({
+							message: `Value for attribute ${name} must contain exactly one item.`,
+						});
+						return;
+					}
+					optionValuesMap.set(name, value);
+					serviceAttributeDefinitions.push({
+						name,
+						input_type,
+						data_type: ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ.STR_ARRAY,
+						is_required,
+					});
+					break;
+				default:
+					res.status(400).json({
+						message: `Unsupported input type: ${input_type} for attribute ${name}.`,
+					});
+					return;
+			}
+		}
+
+
+		let newAttribute;
+		try {
+			await sequelize.transaction(async (t) => {
+				newAttribute = await AttributeDefinitions.bulkCreate(
+					serviceAttributeDefinitions,
+					{
+						validate: false,
+						individualHooks: false,
+						ignoreDuplicates: true,
+						transaction: t,
+					},
+				);
+
+				for (let i = 0; i < serviceAttributeDefinitions.length; i++) {
+
+					const definition = serviceAttributeDefinitions[i];
+					const createdDefinition = newAttribute[i];
+
+					if (
+						definition.data_type ===
+						ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ.STR_ARRAY
+					) {
+						const options = optionValuesMap.get(definition.name) || [];
+
+						const optionRecords = options.map((opt) => ({
+							attribute_id: createdDefinition.id,
+							option_value: opt,
+						}));
+
+						if (optionRecords.length > 0) {
+							await AttributeOptions.bulkCreate(optionRecords, {
+								transaction: t,
+							});
+						}
+					}
+				}
+			});
+		} catch (error: Error | any) {
+			if (error.name === "SequelizeUniqueConstraintError") {
+				res.status(400).json({
+					message: "A service attribute with this name already exists.",
+				});
+				return;
+			}
+			if (error.name === "SequelizeForeignKeyConstraintError") {
+				res.status(400).json({
+					message: "The service category ID provided does not exist.",
+				});
+				return;
+			}
+			throw error;
+		}
+
+		res.status(200).json({
+			message: "Service attribute created successfully",
+			data: newAttribute,
+		});
+	} catch (error: any) {
+		if (error.name === "SequelizeUniqueConstraintError") {
+			res.status(400).json({
+				message: "A service attribute with this name already exists.",
+			});
+			return;
+		}
+
+		if (error.name === "SequelizeForeignKeyConstraintError") {
+			res.status(400).json({
+				message: "The service sub-category ID provided does not exist.",
+			});
+			return;
+		}
+
+		logger.error(`Error creating service attribute: ${error.message}`);
+		res.status(500).json({
+			message:
+				"An unexpected error occurred while creating the service attribute.",
+		});
+	}
+};
+
+export const deleteServiceAttribute = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const id = req.params.id;
+
+  try {
+    if (!id) {
+      res.status(400).json({ message: "Service attribute ID is required" });
+      return;
+    }
+
+    if (typeof Number(id) !== 'number') {
+      res.status(400).json({ message: "Service attribute ID must be a number" });
+      return;
+    }
+
+    const attribute = await AttributeDefinitions.findByPk(id);
+
+    if (!attribute) {
+      res.status(404).json({ message: "Service attribute not found" });
+      return;
+    }
+
+    await attribute.destroy();
+
+    res.status(200).json({
+      message: "Service attribute deleted successfully",
+    });
+  } catch (error: any) {
+    logger.error(`Error deleting service attribute: ${error.message}`);
+    res.status(500).json({
+      message:
+        "An error occurred while deleting the service attribute. Please try again later.",
+    });
+  }
+}
+
+export const addAttributeOptions = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const attributeId = req.params.id;
+  const { options } = req.body;
+
+  try {
+    if (!attributeId) {
+      res.status(400).json({ message: "Attribute ID is required." });
+      return;
+    }
+
+    if (!options || !Array.isArray(options) || options.length === 0) {
+      res.status(400).json({
+        message: "Options must be a non-empty array.",
+      });
+      return;
+    }
+
+    const attribute = await AttributeDefinitions.findByPk(attributeId);
+
+    if (!attribute) {
+      res.status(404).json({ message: "Attribute not found." });
+      return;
+    }
+
+    if (
+      attribute.data_type !== ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ.STR_ARRAY ||
+      (attribute.input_type !== ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.SINGLE_SELECT &&
+        attribute.input_type !== ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.MULTI_SELECT)
+    ) {
+      res.status(400).json({
+        message:
+          "Options can only be added to attributes with 'single_select' or 'multi_select' input types.",
+      });
+      return;
+    }
+
+    if (attribute.input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.SINGLE_SELECT && options.length !== 1) {
+      res.status(400).json({
+        message: "Only one option can be added for 'single_select' attributes.",
+      });
+      return;
+    }
+
+    if (attribute.input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.SINGLE_SELECT) {
+      const existingOptions = await AttributeOptions.findAll({
+        where: { attribute_id: attribute.id },
+      });
+
+      if (existingOptions.length + options.length > 1) {
+        res.status(400).json({
+          message: "A 'single_select' attribute can only have one option.",
+        });
+        return;
+      }
+    }
+
+    const optionRecords = options.map((opt: string) => ({
+      attribute_id: attribute.id,
+      option_value: opt,
+    }));
+
+    const newOptions = await AttributeOptions.bulkCreate(optionRecords, {
+      validate: true,
+      individualHooks: true,
+      ignoreDuplicates: true,
+    });
+
+    res.status(200).json({
+      message: "Options added successfully",
+      data: newOptions,
+    });
+  } catch (error: any) {
+    if (error.name === "SequelizeUniqueConstraintError") {
+      res.status(400).json({
+        message: "One or more options already exist for this attribute.",
+      });
+      return;
+    }
+
+    logger.error(`Error adding attribute options: ${error.message}`);
+    res.status(500).json({
+      message:
+        "An unexpected error occurred while adding attribute options.",
+    });
+  }
+}
+
+export const getAllServiceAttributes = async (
+  _req: Request,
+  res: Response,
+): Promise<void> => {
+
+  const { page, limit } = _req.query;
+
+  try {
+    const offset = (Number(page) - 1) * Number(limit);
+
+    const attributes = await AttributeDefinitions.findAll({
+      limit: Number(limit) || 10,
+      offset: offset || 0,
+      order: [["createdAt", "DESC"]],
+      include: [
+        {
+          model: AttributeOptions,
+          as: "options",
+          attributes: ["id", "option_value"],
+        },
+      ],
+    });
+    res.status(200).json({ data: attributes });
+  } catch (error: any) {
+    logger.error(`Error retrieving service attributes: ${error.message}`);
+    res.status(500).json({
+      message:
+        "An error occurred while retrieving service attributes. Please try again later.",
+    });
+  }
+}
+
+export const deleteAttributeOption = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const optionId = req.params.id;
+
+  try {
+    if (!optionId) {
+      res.status(400).json({ message: "Option ID is required." });
+      return;
+    }
+
+    const option = await AttributeOptions.findByPk(optionId);
+
+    if (!option) {
+      res.status(404).json({ message: "Option not found." });
+      return;
+    }
+
+    if (typeof Number(optionId) !== 'number') {
+      res.status(400).json({ message: "Option ID must be a number" });
+      return;
+    }
+
+    await option.destroy();
+
+    res.status(200).json({
+      message: "Option deleted successfully",
+    });
+  } catch (error: any) {
+    logger.error(`Error deleting attribute option: ${error.message}`);
+    res.status(500).json({
+      message:
+        "An error occurred while deleting the attribute option. Please try again later.",
+    });
+  }
+}
+
+export const addAttributeToServiceCategory = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const categoryId = req.params.categoryId;
+
+  const {  attributeIds } = req.body;
+
+  try {
+    if (!categoryId) {
+      res.status(400).json({ message: "Service category ID is required." });
+      return;
+    }
+
+    if (
+      !attributeIds ||
+      !Array.isArray(attributeIds) ||
+      attributeIds.length === 0
+    ) {
+      res.status(400).json({
+        message: "Attribute IDs must be a non-empty array.",
+      });
+      return;
+    }
+
+    const serviceCategory = await ServiceCategories.findByPk(categoryId);
+
+    if (!serviceCategory) {
+      res.status(404).json({ message: "Service category not found." });
+      return;
+    }
+
+    const attributes = await AttributeDefinitions.findAll({
+      where: {
+        id: {
+          [Op.in]: attributeIds,
+        },
+      }
+    });
+
+    if (attributes.length !== attributeIds.length) {
+      res.status(400).json({
+        message:
+          "One or more attribute IDs are invalid and do not exist.",
+      });
+      return;
+    }
+
+  const attributeToServiceCategoryRecords = attributeIds.map((attrId: string) => ({
+	 service_category_id: categoryId,
+  	attribute_id: attrId,
+    }));
+
+    await ServiceCategoryToAttributeMap.bulkCreate(attributeToServiceCategoryRecords, {
+      validate: true,
+      individualHooks: true,
+      ignoreDuplicates: true,
+    });
+
+    res.status(200).json({
+      message: "Attributes added to service category successfully",
+    });
+  } catch (error: any) {
+    logger.error(`Error adding attributes to service category: ${error.message}`);
+    res.status(500).json({
+      message:
+        "An unexpected error occurred while adding attributes to the service category.",
+    });
+  }
+}
+
+
+export const removeAttributeFromServiceCategory = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const categoryId = req.params.categoryId;
+  const {  attributeIds } = req.body;
+  
+  if(!categoryId) {
+    res.status(400).json({ message: "Service category ID is required." });
+    return;
+  }
+
+  if (
+    !attributeIds ||
+    !Array.isArray(attributeIds) ||
+    attributeIds.length === 0
+  ) {
+    res.status(400).json({
+      message: "Attribute IDs must be a non-empty array.",
+    });
+    return;
+  }
+
+  try {
+    const serviceCategory = await ServiceCategories.findByPk(categoryId);
+
+    if (!serviceCategory) {
+      res.status(404).json({ message: "Service category not found." });
+      return;
+    }
+
+    const deleteCount = await ServiceCategoryToAttributeMap.destroy({
+      where: {
+        service_category_id: categoryId,
+        attribute_id: {
+          [Op.in]: attributeIds,
+        },
+      },
+    });
+
+    if (deleteCount === 0) {
+      res.status(404).json({
+        message: "No matching attribute mappings found for deletion.",
+      });
+      return;
+    }
+
+    res.status(200).json({
+      message: "Attributes removed from service category successfully",
+    });
+  } catch (error: any) {
+    logger.error(`Error removing attributes from service category: ${error.message}`);
+    res.status(500).json({
+      message:
+        "An unexpected error occurred while removing attributes from the service category.",
+    });
+  }
+}
+

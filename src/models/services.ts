@@ -16,6 +16,7 @@ export class Services extends Model {
 	public status!: "active" | "inactive" | "draft";
 	public price!: number;
 	public discount_price!: number | null;
+	public attributes?: Array<object>;
 	public createdAt!: Date;
 	public updatedAt!: Date;
 
@@ -40,7 +41,7 @@ const initModel = (sequelize: Sequelize) => {
 	Services.init(
 		{
 			id: {
-				type: DataTypes.UUID,
+				type: DataTypes.UUIDV4,
 				primaryKey: true,
 				defaultValue: DataTypes.UUIDV4,
 			},
@@ -88,6 +89,10 @@ const initModel = (sequelize: Sequelize) => {
 				type: DataTypes.INTEGER,
 				defaultValue: 0,
 			},
+			is_negotiable: {
+				type: DataTypes.BOOLEAN,
+				defaultValue: false,
+			},
 			additional_images: {
 				type: DataTypes.JSON,
 				allowNull: true,
@@ -109,6 +114,15 @@ const initModel = (sequelize: Sequelize) => {
 				type: DataTypes.ENUM("active", "inactive", "draft"),
 				defaultValue: "active",
 				allowNull: false,
+			},
+			attributes: {
+				type: DataTypes.JSON,
+				allowNull: true,
+				defaultValue: [],
+				get() {
+					const value = this.getDataValue("attributes");
+					return typeof value === "string" ? JSON.parse(value) : value;
+				},
 			},
 		},
 		{

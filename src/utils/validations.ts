@@ -1,5 +1,6 @@
-import { check, param, validationResult } from "express-validator";
+import { body, check, param, validationResult } from "express-validator";
 import { Request, Response, NextFunction } from "express";
+import { ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ } from "./helpers";
 
 // Validation rules for different functionalities
 
@@ -1175,6 +1176,102 @@ export const ServiceSubCategoryValidation = () => {
 			.isString()
 			.withMessage("Image must be a valid string"),
 		check("categoryId")
+			.not()
+			.isEmpty()
+			.withMessage("Category ID is required")
+			.isNumeric()
+			.withMessage("Category ID must be a valid UUID"),
+	];
+};
+
+export const CreateServiceAttributeValidation = () => {
+	return [
+		body("categoryId")
+			.not()
+			.isEmpty()
+			.withMessage("Category ID is required")
+			.isUUID()
+			.withMessage("Category ID must be a valid UUID"),
+		body("attributes")
+			.isArray({ min: 1 })
+			.withMessage("Attributes must be a non-empty array"),
+		body("attributes.*").custom((fieldObj) => {
+			if (typeof fieldObj !== "object" || fieldObj === null) {
+				throw new Error(
+					"Each attribute must be an object of name, input_type, is_required, value (if input_type is single_select/multi_select)",
+				);
+			}
+
+			const { name, input_type, is_required, value } = fieldObj;
+
+			// name
+			if (typeof name !== "string" || name.trim() === "") {
+				throw new Error("attribute.name must be a non-empty string");
+			}
+
+			if (typeof is_required !== "boolean") {
+				if (
+					!(
+						typeof is_required === "string" &&
+						(is_required === "true" || is_required === "false")
+					)
+				) {
+					throw new Error("attribute.is_required must be a boolean");
+				}
+			}
+
+			if (
+				input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.SINGLE_SELECT ||
+				input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.MULTI_SELECT
+			) {
+				throw new Error(`attribute.value is required for ${name}`);
+			}
+
+			return true;
+		}),
+	];
+};
+
+export const AddServiceAttributeOptionsValidation = () => {
+	return [
+		body("attributeId")
+			.not()
+			.isEmpty()
+			.withMessage("Attribute ID is required")
+			.isUUID()
+			.withMessage("Attribute ID must be a valid UUID"),
+		body("options")
+			.isArray({ min: 1 })
+			.withMessage("Options must be a non-empty array"),
+		body("options.*").custom((option) => {
+			if (typeof option !== "string" || option.trim() === "") {
+				throw new Error("Each option must be a non-empty string");
+			}
+			return true;
+		}),
+	];
+};
+
+export const AddServiceCategoryToAttributeValidation = () => {
+	return [
+		body("attributeIds")
+			.isArray({ min: 1 })
+			.withMessage("Attribute IDs must be a non-empty array"),
+		param("categoryId")
+			.not()
+			.isEmpty()
+			.withMessage("Category ID is required")
+			.isUUID()
+			.withMessage("Category ID must be a valid UUID"),
+	];
+};
+
+export const RemoveServiceCategoryFromAttributeValidation = () => {
+	return [
+		body("attributeIds")
+			.isArray({ min: 1 })
+			.withMessage("Attribute IDs must be a non-empty array"),
+		param("categoryId")
 			.not()
 			.isEmpty()
 			.withMessage("Category ID is required")

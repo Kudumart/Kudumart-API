@@ -30,6 +30,9 @@ import BlockedVendor from "../models/blockedvendor";
 import BlockedProduct from "../models/blockedproduct";
 import ServiceCategories from "../models/serviceCategories";
 import ServiceSubCategories from "../models/serviceSubCategories";
+import ServiceCategoryToAttributeMap from "../models/serviceCategoryToAttributeMap";
+import AttributeDefinitions from "../models/attributeDefinitions";
+import AttributeOptions from "../models/attributeOptions";
 
 export const getAllCategories = async (
 	req: Request,
@@ -1271,6 +1274,62 @@ export const getAllServiceSubCategories = async (
 		logger.error(`Error fetching service subcategories: ${error.message}`);
 		res.status(500).json({
 			message: "An error occurred while fetching service subcategories.",
+		});
+	}
+};
+
+export const getAttributesForServiceCategory = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const { categoryId: serviceCategoryId } = req.params;
+
+	const { page, limit } = req.query;
+
+	const offset = (Number(page) - 1) * Number(limit);
+
+	try {
+		if (!serviceCategoryId) {
+			res.status(400).json({ message: "Service category ID is required." });
+			return;
+		}
+
+		const serviceCategory = await ServiceCategories.findByPk(serviceCategoryId);
+
+		if (!serviceCategory) {
+			res.status(404).json({ message: "Service category not found." });
+			return;
+		}
+
+		const attributeMappings = await ServiceCategoryToAttributeMap.findAll({
+			where: { service_category_id: serviceCategoryId },
+			limit: Number(limit) || 10,
+			offset: offset || 0,
+			include: [
+				{
+					model: AttributeDefinitions,
+					as: "attribute",
+					include: [
+						{
+							model: AttributeOptions,
+							as: "options",
+							attributes: ["id", "option_value"],
+						},
+					],
+				},
+			],
+		});
+
+		const attributes = attributeMappings.map((mapping) => mapping.attribute);
+
+		res.status(200).json({ data: attributes });
+	} catch (error: any) {
+		logger.error(
+			`Error retrieving attributes for service category: ${error.message}`,
+		);
+		res.status(500).json({
+			message:
+				"An error occurred while retrieving attributes for the service category. Please try again later.",
 		});
 	}
 };

@@ -14,6 +14,7 @@ import {
 	checkVendorProductLimit,
 	checkAdvertLimit,
 	verifyPayment,
+	ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ,
 } from "../utils/helpers";
 import AuctionProduct from "../models/auctionproduct";
 import Bid from "../models/bid";
@@ -36,6 +37,15 @@ import Withdrawal from "../models/withdrawal";
 import Admin from "../models/admin";
 import Role from "../models/role";
 import BlockedVendor from "../models/blockedvendor";
+import ServiceCategories from "../models/serviceCategories";
+import ServiceSubCategories from "../models/serviceSubCategories";
+import AttributeDefinitions from "../models/attributeDefinitions";
+import Services from "../models/services";
+import sequelize from "../config/sequelize";
+import ServiceAttributeOptionValues from "../models/serviceAttributeOptionValues";
+import ServiceAttributeTextValues from "../models/serviceAttributeTextValues";
+import ServiceAttributeNumberValues from "../models/serviceAttributeNumberValues";
+import ServiceAttributeBoolValues from "../models/serviceAttributeBoolValues";
 
 export const submitOrUpdateKYC = async (
 	req: Request,
@@ -2659,5 +2669,291 @@ export const cancelSubscription = async (
 		res.status(500).json({
 			message: "An error occurred while cancelling the subscription.",
 		});
+	}
+};
+
+export const createService = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const vendorId = (req as AuthenticatedRequest).user?.id as string; // Authenticated user ID from middleware
+
+	const {
+		title,
+		description,
+		image_url,
+		video_url,
+		service_category_id,
+		service_subcategory_id,
+		location_city,
+		location_state,
+		work_experience_years,
+		additional_images,
+		status,
+		price,
+		discount_price,
+		attributes,
+	} = req.body;
+
+	try {
+		// Check if categoryId exists
+		const serviceCategory =
+			await ServiceCategories.findByPk(service_category_id);
+		if (!serviceCategory) {
+			res.status(404).json({ message: "Service category not found." });
+			return;
+		}
+
+		// Check if subcategoryId exist
+		const serviceSubCategory = await ServiceSubCategories.findByPk(
+			service_subcategory_id,
+		);
+		if (!serviceSubCategory) {
+			res.status(404).json({ message: "Service subcategory not found." });
+			return;
+		}
+
+		if (discount_price && Number(discount_price) >= Number(price)) {
+			res.status(400).json({
+				message: "Discount price must be less than the regular price.",
+			});
+			return;
+		}
+
+		const attributeIds = attributes
+			? attributes.map((attr: any) => attr.attributeId)
+			: [];
+
+		// Validate that all attribute IDs exist
+		const existingAttributes = await AttributeDefinitions.findAll({
+			where: { id: attributeIds },
+		});
+
+		if (existingAttributes.length !== attributeIds.length) {
+			res.status(400).json({ message: "One or more attributes are invalid." });
+			return;
+		}
+
+		let newService: Services | null = null;
+		await sequelize.transaction(async (t) => {
+			const newService = await Services.create(
+				{
+					vendorId,
+					service_category_id,
+					service_subcategory_id,
+					description,
+					price,
+					discount_price,
+					title,
+					image_url,
+					video_url,
+					location_city,
+					location_state,
+					work_experience_years,
+					additional_images,
+					status: "inactive",
+				},
+				{
+					transaction: t,
+				},
+			);
+
+			const optionAttributes: {
+				attribute_id: number;
+				service_id: string;
+				option_value_id: string;
+			}[] = [];
+
+			const textAttributes: {
+				attribute_id: number;
+				service_id: string;
+				value: string;
+			}[] = [];
+
+			const numberAttributes: {
+				attribute_id: number;
+				service_id: string;
+				value: string;
+			}[] = [];
+
+			const booleanAttributes: {
+				attribute_id: number;
+				service_id: string;
+				value: string;
+			}[] = [];
+
+			for (const attr of existingAttributes) {
+				if (
+					attr.input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.MULTI_SELECT
+				) {
+					const attribute = attributes.find(
+						(a: any) => a.attributeId === attr.id,
+					);
+					if (attribute && Array.isArray(attribute.value)) {
+						for (const val of attribute.value) {
+							optionAttributes.push({
+								attribute_id: attr.id,
+								service_id: newService.id,
+								option_value_id: val,
+							});
+						}
+					} else {
+						res.status(400).json({
+							message: `Invalid value for attribute ID ${attr.id}. Expected an array.`,
+						});
+						return;
+					}
+				} else if (
+					attr.input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.SINGLE_SELECT
+				) {
+					const attribute = attributes.find(
+						(a: any) => a.attributeId === attr.id,
+					);
+					if (attribute && typeof attribute.value === "string") {
+						optionAttributes.push({
+							attribute_id: attr.id,
+							service_id: newService.id,
+							option_value_id: attribute.value,
+						});
+					} else {
+						res.status(400).json({
+							message: `Invalid value for attribute ID ${attr.id}. Expected an option id string.`,
+						});
+						return;
+					}
+				} else if (
+					attr.input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.STR_INPUT
+				) {
+					const attribute = attributes.find(
+						(a: any) => a.attributeId === attr.id,
+					);
+					if (attribute && typeof attribute.value === "string") {
+						textAttributes.push({
+							attribute_id: attr.id,
+							service_id: newService.id,
+							value: attribute.value,
+						});
+					} else {
+						res.status(400).json({
+							message: `Invalid value for attribute ID ${attr.id}. Expected a string.`,
+						});
+						return;
+					}
+				} else if (
+					attr.input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.INT_INPUT
+				) {
+					const attribute = attributes.find(
+						(a: any) => a.attributeId === attr.id,
+					);
+					if (attribute && typeof attribute.value === "string") {
+						numberAttributes.push({
+							attribute_id: attr.id,
+							service_id: newService.id,
+							value: attribute.value,
+						});
+					} else {
+						res.status(400).json({
+							message: `Invalid value for attribute ID ${attr.id}. Expected a number string.`,
+						});
+						return;
+					}
+				} else if (
+					attr.input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.BOOL_INPUT
+				) {
+					const attribute = attributes.find(
+						(a: any) => a.attributeId === attr.id,
+					);
+					if (attribute && typeof attribute.value === "string") {
+						booleanAttributes.push({
+							attribute_id: attr.id,
+							service_id: newService.id,
+							value: attribute.value,
+						});
+					} else {
+						res.status(400).json({
+							message: `Invalid value for attribute ID ${attr.id}. Expected a boolean string.`,
+						});
+						return;
+					}
+				}
+			}
+
+			let serviceTextAttributes;
+			let serviceNumberAttributes;
+			let serviceBooleanAttributes;
+			let serviceOptionAttributes;
+			// Bulk create attributes
+			if (optionAttributes.length > 0) {
+				serviceOptionAttributes = await ServiceAttributeOptionValues.bulkCreate(
+					optionAttributes,
+					{
+						transaction: t,
+						returning: true,
+						include: [
+							{
+								model: AttributeDefinitions,
+								as: "attribute_definition",
+							},
+						],
+					},
+				);
+			}
+
+			if (textAttributes.length > 0) {
+				serviceTextAttributes = await ServiceAttributeTextValues.bulkCreate(
+					textAttributes,
+					{
+						transaction: t,
+						returning: true,
+						include: [
+							{
+								model: AttributeDefinitions,
+								as: "attribute_definition",
+							},
+						],
+					},
+				);
+			}
+
+			if (numberAttributes.length > 0) {
+				serviceNumberAttributes = await ServiceAttributeNumberValues.bulkCreate(
+					numberAttributes,
+					{
+						transaction: t,
+						returning: true,
+						include: [
+							{
+								model: AttributeDefinitions,
+								as: "attribute_definition",
+							},
+						],
+					},
+				);
+			}
+
+			if (booleanAttributes.length > 0) {
+				serviceBooleanAttributes = await ServiceAttributeBoolValues.bulkCreate(
+					booleanAttributes,
+					{
+						transaction: t,
+						returning: true,
+						include: [
+							{
+								model: AttributeDefinitions,
+								as: "attribute_definition",
+							},
+						],
+					},
+				);
+			}
+		});
+
+		res.status(201).json({
+			message: "Service created successfully",
+			data: newService,
+		});
+	} catch (error: any) {
+		logger.error(error);
+		res.status(500).json({ message: "Failed to create service" });
 	}
 };
