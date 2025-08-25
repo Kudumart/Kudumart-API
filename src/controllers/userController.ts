@@ -42,6 +42,9 @@ import { sendPushNotificationSingle } from "../firebase/pushNotification";
 import { PushNotificationTypes } from "../types/index";
 import { createAuctionReminder } from "../services/reminder.service";
 import ProductCharge from "../models/productcharge";
+import Services from "../models/services";
+import ServiceBookings from "../models/servicebookings";
+import ServiceReviews from "../models/servicereview";
 
 export const logout = async (req: Request, res: Response): Promise<void> => {
 	try {
@@ -3874,5 +3877,414 @@ export const blockProduct = async (
 		res.status(200).json({ message: "Product blocked successfully." }); // Respond with success
 	} catch (error) {
 		res.status(500).json({ message: "Server error." }); // Handle server error
+	}
+};
+
+export const bookService = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const userId = (req as AuthenticatedRequest).user?.id; // Get the authenticated user's ID
+		const serviceId = req.params.serviceId;
+		const { message, vendorId, bookingDate } = req.body; // Get serviceId and message from request body
+
+		if (!serviceId || !message) {
+			// Check if serviceId and message are provided
+			res.status(400).json({ message: "serviceId and message are required." });
+			return;
+		}
+		if (!userId) {
+			// Check if user is authenticated
+			res.status(401).json({ message: "Unauthorized." });
+			return;
+		}
+
+		if (!vendorId) {
+			res.status(400).json({ message: "vendorId is required." });
+			return;
+		}
+
+		// Check if the service exists
+		const service = await Services.findOne({
+			where: { id: serviceId, status: "active" },
+			include: [
+				{
+					model: User,
+					as: "provider",
+					attributes: ["id", "firstName", "lastName", "email", "fcmToken"],
+				},
+			],
+		});
+		if (!service) {
+			res.status(404).json({ message: "Service not found." });
+			return;
+		}
+
+		// Create the booking
+		await ServiceBookings.create({
+			userId,
+			serviceId,
+			vendorId,
+			message,
+			bookingDate,
+		});
+
+		// Notify the service provider about the new inquiry
+		const provider = service.provider;
+		if (provider) {
+			await Notification.create({
+				userId: provider.id,
+				title: "New Service Inquiry",
+				message: `You have a new inquiry for your service '${service.title}'.`,
+				type: "service_inquiry",
+			});
+
+			if (provider.fcmToken) {
+				const notificationMessage = {
+					notification: {
+						title: "New Service Inquiry",
+						body: `You have a new inquiry for your service '${service.title}'.`,
+					},
+					data: {
+						serviceId: service.id.toString(),
+						type: PushNotificationTypes.SERVICE_INQUIRY,
+					},
+					token: provider.fcmToken,
+				};
+
+				try {
+					await sendPushNotificationSingle(notificationMessage);
+				} catch (pushError) {
+					logger.error("Error sending push notification:", pushError);
+				}
+			}
+		}
+
+		res.status(200).json({ message: "Inquiry sent successfully." });
+	} catch (error) {
+		res.status(500).json({ message: "Server error." }); // Handle server error
+	}
+};
+
+export const getUserServiceBookings = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const userId = (req as AuthenticatedRequest).user?.id; // Get the authenticated user's ID
+
+		if (!userId) {
+			// Check if user is authenticated
+			res.status(401).json({ message: "Unauthorized." });
+			return;
+		}
+
+		// Fetch all bookings for the authenticated user
+		const bookings = await ServiceBookings.findAll({
+			where: { userId },
+			include: [
+				{
+					model: Services,
+					as: "service",
+					include: [
+						{
+							model: User,
+							as: "provider",
+							attributes: ["id", "firstName", "lastName", "email"],
+						},
+					],
+				},
+			],
+			order: [["createdAt", "DESC"]],
+		});
+
+		res
+			.status(200)
+			.json({ message: "Bookings retrieved successfully.", data: bookings });
+	} catch (error) {
+		res.status(500).json({ message: "Server error." }); // Handle server error
+	}
+};
+
+export const addServiceReview = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const userId = (req as AuthenticatedRequest).user?.id; // Get the authenticated user's ID
+		const { serviceId, rating, comment } = req.body; // Get serviceId, rating, and comment from request body
+
+		if (!serviceId || !rating) {
+			// Check if serviceId and rating are provided
+			res.status(400).json({ message: "serviceId and rating are required." });
+			return;
+		}
+
+		if (!comment) {
+			res.status(400).json({ message: "comment is required." });
+			return;
+		}
+
+		if (
+			typeof rating !== "number" ||
+			isNaN(rating) ||
+			rating < 1 ||
+			rating > 5
+		) {
+			res
+				.status(400)
+				.json({ message: "Rating must be a numeric value between 1 and 5." });
+			return;
+		}
+		if (!userId) {
+			// Check if user is authenticated
+			res.status(401).json({ message: "Unauthorized." });
+			return;
+		}
+
+		// Check if the service exists
+		const service = await Services.findOne({
+			where: { id: serviceId, status: "active" },
+			include: [
+				{
+					model: User,
+					as: "provider",
+					attributes: ["id", "firstName", "lastName", "email", "fcmToken"],
+				},
+			],
+		});
+		if (!service) {
+			res.status(404).json({ message: "Service not found." });
+			return;
+		}
+
+		// Check if the user has already reviewed this service
+		const existingReview = await ServiceReviews.findOne({
+			where: { userId, serviceId },
+		});
+		if (existingReview) {
+			res
+				.status(400)
+				.json({ message: "You have already reviewed this service." });
+			return;
+		}
+
+		const hasBooked = await ServiceBookings.findOne({
+			where: { userId, serviceId, status: "completed" },
+		});
+
+		if (!hasBooked) {
+			res.status(403).json({
+				message: "You can only review services that you have booked.",
+			});
+			return;
+		}
+
+		// Create the review
+		await ServiceReviews.create({
+			userId,
+			serviceId,
+			rating,
+			comment,
+		});
+
+		// Notify the service provider about the new review
+		const provider = service.provider;
+		if (provider) {
+			await Notification.create({
+				userId: provider.id,
+				title: "New Service Review",
+				message: `Your service '${service.title}' has received a new review.`,
+				type: "service_review",
+			});
+
+			if (provider.fcmToken) {
+				const notificationMessage = {
+					notification: {
+						title: "New Service Review",
+						body: `Your service '${service.title}' has received a new review.`,
+					},
+					data: {
+						serviceId: service.id.toString(),
+						type: PushNotificationTypes.SERVICE_REVIEW,
+					},
+					token: provider.fcmToken,
+				};
+				try {
+					await sendPushNotificationSingle(notificationMessage);
+				} catch (pushError) {
+					logger.error("Error sending push notification:", pushError);
+				}
+			}
+		}
+
+		res.status(200).json({ message: "Review submitted successfully." });
+	} catch (error) {
+		logger.error("Error submitting service review:", error);
+		res.status(500).json({ message: "Server error." }); // Handle server error
+		return;
+	}
+};
+
+export const markServiceBookingComplete = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const bookingId = req.params.bookingId;
+	const userId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID
+
+	try {
+		// Find the booking
+		const booking = await ServiceBookings.findOne({
+			where: { id: bookingId, userId },
+			include: [
+				{
+					model: Services,
+					as: "service",
+				},
+				{
+					model: User,
+					as: "provider",
+					attributes: ["id", "firstName", "lastName", "email", "fcmToken"],
+				},
+			],
+		});
+
+		if (!booking) {
+			res.status(404).json({ message: "Booking not found." });
+			return;
+		}
+
+		if (booking.status === "completed") {
+			res.status(400).json({ message: "Booking is already completed." });
+			return;
+		}
+
+		// Update the booking status to completed
+		booking.status = "completed";
+		await booking.save();
+
+		// Notify the service provider about the completed booking
+		const service = booking.service;
+		const provider = booking.provider;
+		if (provider) {
+			await Notification.create({
+				userId: provider.id,
+				title: "Service Booking Completed",
+				message: `The booking for your service '${service.title}' has been marked as completed.`,
+				type: "service_booking_completed",
+			});
+
+			if (provider.fcmToken) {
+				const notificationMessage = {
+					notification: {
+						title: "Service Booking Completed",
+						body: `The booking for your service '${service.title}' has been marked as completed.`,
+					},
+					data: {
+						serviceId: service.id.toString(),
+						type: PushNotificationTypes.SERVICE_BOOKING_COMPLETED,
+					},
+					token: provider.fcmToken,
+				};
+
+				try {
+					await sendPushNotificationSingle(notificationMessage);
+				} catch (pushError) {
+					logger.error("Error sending push notification:", pushError);
+				}
+			}
+		}
+
+		res.status(200).json({ message: "Booking marked as completed." });
+	} catch (error) {
+		logger.error("Error marking booking as complete:", error);
+		res.status(500).json({ message: "Server error." });
+	}
+};
+
+export const cancelServiceBooking = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const bookingId = req.params.bookingId;
+	const userId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID
+
+	try {
+		// Find the booking
+		const booking = await ServiceBookings.findOne({
+			where: { id: bookingId, userId },
+			include: [
+				{
+					model: Services,
+					as: "service",
+				},
+				{
+					model: User,
+					as: "provider",
+					attributes: ["id", "firstName", "lastName", "email", "fcmToken"],
+				},
+			],
+		});
+
+		if (!booking) {
+			res.status(404).json({ message: "Booking not found." });
+			return;
+		}
+
+		if (booking.status === "completed") {
+			res
+				.status(400)
+				.json({ message: "Completed bookings cannot be cancelled." });
+			return;
+		}
+
+		if (booking.status === "cancelled") {
+			res.status(400).json({ message: "Booking is already cancelled." });
+			return;
+		}
+
+		// Update the booking status to cancelled
+		booking.status = "cancelled";
+		await booking.save();
+
+		// Notify the service provider about the cancelled booking
+		const service = booking.service;
+		const provider = booking.provider;
+		if (provider) {
+			await Notification.create({
+				userId: provider.id,
+				title: "Service Booking Cancelled",
+				message: `The booking for your service '${service.title}' has been cancelled.`,
+				type: "service_booking_cancelled",
+			});
+
+			if (provider.fcmToken) {
+				const notificationMessage = {
+					notification: {
+						title: "Service Booking Cancelled",
+						body: `The booking for your service '${service.title}' has been cancelled.`,
+					},
+					data: {
+						serviceId: service.id,
+						type: PushNotificationTypes.SERVICE_BOOKING_CANCELLED,
+					},
+					token: provider.fcmToken,
+				};
+
+				try {
+					await sendPushNotificationSingle(notificationMessage);
+				} catch (pushError) {
+					logger.error("Error sending push notification:", pushError);
+				}
+			}
+		}
+
+		res.status(200).json({ message: "Booking cancelled successfully." });
+	} catch (error) {
+		logger.error("Error cancelling booking:", error);
+		res.status(500).json({ message: "Server error." });
+		return;
 	}
 };
