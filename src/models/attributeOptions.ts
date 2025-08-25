@@ -27,7 +27,7 @@ const initModel = (sequelize: Sequelize) => {
 				type: DataTypes.INTEGER,
 				allowNull: false,
 				references: {
-					model: "service_attribute",
+					model: "attribute_definitions",
 					key: "id",
 				},
 			},
