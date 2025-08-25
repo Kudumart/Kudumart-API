@@ -31,6 +31,7 @@ import {
 	AddServiceAttributeOptionsValidation,
 	AddServiceCategoryToAttributeValidation,
 	RemoveServiceCategoryFromAttributeValidation,
+	validateUUIDParam,
 } from "../utils/validations"; // Import the service
 import checkPermission from "../middlewares/checkPermissionMiddleware";
 import {
@@ -844,7 +845,7 @@ adminRoutes.delete(
 );
 
 adminRoutes.post(
-	"/service/attributes/:id/options",
+	"/service/attributes/:attributeId/options",
 	adminAuthMiddleware,
 	AddServiceAttributeOptionsValidation(),
 	validate,
@@ -887,6 +888,30 @@ adminRoutes.delete(
 	RemoveServiceCategoryFromAttributeValidation(),
 	validate,
 	adminController.removeAttributeFromServiceCategory,
+);
+
+adminRoutes.post(
+	"/service/:serviceId/suspend",
+	validateUUIDParam("serviceId"),
+	validate,
+	adminAuthMiddleware,
+	adminController.suspendService,
+);
+
+adminRoutes.post(
+	"/service/:serviceId/activate",
+	validateUUIDParam("serviceId"),
+	validate,
+	adminAuthMiddleware,
+	adminController.activateService,
+);
+
+adminRoutes.get(
+	"/services",
+	adminAuthMiddleware,
+	paginationQueryParamsValidation(),
+	validate,
+	adminController.getAllServices,
 );
 
 export default adminRoutes; // Export the router
