@@ -30,6 +30,11 @@ import BlockedVendor from "../models/blockedvendor";
 import BlockedProduct from "../models/blockedproduct";
 import ServiceCategories from "../models/serviceCategories";
 import ServiceSubCategories from "../models/serviceSubCategories";
+import ServiceCategoryToAttributeMap from "../models/serviceCategoryToAttributeMap";
+import AttributeDefinitions from "../models/attributeDefinitions";
+import AttributeOptions from "../models/attributeOptions";
+import Services from "../models/services";
+import ServiceReviews from "../models/servicereview";
 
 export const getAllCategories = async (
 	req: Request,
@@ -1271,6 +1276,296 @@ export const getAllServiceSubCategories = async (
 		logger.error(`Error fetching service subcategories: ${error.message}`);
 		res.status(500).json({
 			message: "An error occurred while fetching service subcategories.",
+		});
+	}
+};
+
+export const getAttributesForServiceCategory = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const { categoryId: serviceCategoryId } = req.params;
+
+	const { page, limit } = req.query;
+
+	const offset = (Number(page) - 1) * Number(limit);
+
+	try {
+		if (!serviceCategoryId) {
+			res.status(400).json({ message: "Service category ID is required." });
+			return;
+		}
+
+		const serviceCategory = await ServiceCategories.findByPk(serviceCategoryId);
+
+		if (!serviceCategory) {
+			res.status(404).json({ message: "Service category not found." });
+			return;
+		}
+
+		const attributeMappings = await ServiceCategoryToAttributeMap.findAll({
+			where: { service_category_id: serviceCategoryId },
+			limit: Number(limit) || 10,
+			offset: offset || 0,
+			include: [
+				{
+					model: AttributeDefinitions,
+					as: "attribute",
+					include: [
+						{
+							model: AttributeOptions,
+							as: "options",
+							attributes: ["id", "option_value"],
+						},
+					],
+				},
+			],
+		});
+
+		const attributes = attributeMappings.map((mapping) => mapping.attribute);
+
+		res.status(200).json({ data: attributes });
+	} catch (error: any) {
+		logger.error(
+			`Error retrieving attributes for service category: ${error.message}`,
+		);
+		res.status(500).json({
+			message:
+				"An error occurred while retrieving attributes for the service category. Please try again later.",
+		});
+	}
+};
+
+export const getAllServices = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const { page, limit, categoryId, subCategoryId } = req.query;
+
+	try {
+		// Calculate pagination values
+		const currentPage = Number(page) || 1;
+		const currentLimit = Number(limit) || 10;
+		const offset = (currentPage - 1) * currentLimit;
+
+		// Build where clause
+		const whereClause: any = {};
+
+		if (categoryId) {
+			whereClause.categoryId = categoryId;
+		}
+
+		if (subCategoryId) {
+			whereClause.subCategoryId = subCategoryId;
+		}
+
+		whereClause.status = "active"; // Only fetch active services
+
+		// Fetch services with pagination
+		const { count, rows: services } = await Services.findAndCountAll({
+			where: whereClause,
+			include: [
+				{
+					model: User,
+					as: "provider",
+					include: [
+						{
+							model: KYC,
+							as: "kyc",
+							attributes: ["isVerified"], // Fetch isVerified from KYC
+						},
+					],
+				},
+				{
+					model: ServiceCategories,
+					as: "category",
+					attributes: ["id", "name"],
+				},
+				{
+					model: ServiceSubCategories,
+					as: "sub_category",
+					attributes: ["id", "name"],
+				},
+			],
+			limit: currentLimit,
+			offset,
+			order: [["createdAt", "DESC"]],
+		});
+
+		// Calculate total pages
+		const totalPages = Math.ceil(count / currentLimit);
+
+		// Generate next and previous page links
+		const nextPage =
+			currentPage < totalPages
+				? `${req.baseUrl}?page=${currentPage + 1}&limit=${currentLimit}`
+				: null;
+		const prevPage =
+			currentPage > 1
+				? `${req.baseUrl}?page=${currentPage - 1}&limit=${currentLimit}`
+				: null;
+
+		// Transform the response to include isVerified
+		const formattedServices = services.map((service: any) => {
+			let providerData = service.provider ? service.provider.toJSON() : null;
+
+			if (providerData) {
+				providerData.isVerified = providerData.kyc
+					? providerData.kyc.isVerified
+					: false;
+				delete providerData.kyc; // Remove nested kyc object if unnecessary
+			}
+
+			return {
+				...service.toJSON(),
+				provider: providerData ?? null, // Ensure provider is null if not present
+			};
+		});
+
+		// Send the response with services and pagination info
+		res.status(200).json({
+			message: "Services fetched successfully",
+			data: formattedServices,
+			pagination: {
+				totalItems: count,
+				totalPages,
+				currentPage,
+				nextPage,
+				prevPage,
+			},
+		});
+	} catch (error: any) {
+		logger.error("Error fetching services:", error);
+		res.status(500).json({
+			message: error.message || "An error occurred while fetching services.",
+		});
+	}
+};
+
+export const getServiceById = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const { serviceId } = req.params;
+
+	try {
+		if (!serviceId) {
+			res.status(400).json({ message: "Service ID is required" });
+			return;
+		}
+
+		// Fetch the service by ID
+		const service = await Services.findOne({
+			where: { id: serviceId, status: "active" },
+			include: [
+				{
+					model: User,
+					as: "provider",
+					include: [
+						{
+							model: KYC,
+							as: "kyc",
+							attributes: ["isVerified"], // Fetch isVerified from KYC
+						},
+					],
+				},
+				{
+					model: ServiceCategories,
+					as: "category",
+					attributes: ["id", "name"],
+				},
+				{
+					model: ServiceSubCategories,
+					as: "sub_category",
+					attributes: ["id", "name"],
+				},
+			],
+		});
+
+		if (!service) {
+			res.status(404).json({ message: "Service not found" });
+			return;
+		}
+
+		if (service && service.provider) {
+			const kyc = await KYC.findOne({
+				where: { vendorId: service.provider.id },
+			});
+			service.provider.setDataValue("isVerified", kyc ? kyc.isVerified : false);
+		}
+
+		// Send the service in the response
+		res.status(200).json({ data: service });
+	} catch (error: any) {
+		logger.error("Error fetching service:", error);
+		res.status(500).json({
+			message: error.message || "An error occurred while fetching the service.",
+		});
+	}
+};
+
+export const getServiceReviews = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const { serviceId } = req.params;
+		const { page = 1, limit = 10 } = req.query;
+
+		if (!serviceId) {
+			res.status(400).json({ message: "Service ID is required" });
+			return;
+		}
+
+		// Calculate pagination values
+		const currentPage = Number(page) || 1;
+		const currentLimit = Number(limit) || 10;
+		const offset = (currentPage - 1) * currentLimit;
+
+		// Fetch reviews with pagination
+		const { count, rows: reviews } = await ServiceReviews.findAndCountAll({
+			where: { serviceId },
+			include: [
+				{
+					model: User,
+					as: "user",
+					attributes: ["id", "firstName", "lastName", "email", "photo"],
+				},
+			],
+			limit: currentLimit,
+			offset,
+			order: [["createdAt", "DESC"]],
+		});
+
+		// Calculate total pages
+		const totalPages = Math.ceil(count / currentLimit);
+
+		// Generate next and previous page links
+		const nextPage =
+			currentPage < totalPages
+				? `${req.baseUrl}?page=${currentPage + 1}&limit=${currentLimit}`
+				: null;
+		const prevPage =
+			currentPage > 1
+				? `${req.baseUrl}?page=${currentPage - 1}&limit=${currentLimit}`
+				: null;
+
+		res.status(200).json({
+			message: "Service reviews fetched successfully",
+			data: reviews,
+			pagination: {
+				totalItems: count,
+				totalPages,
+				currentPage,
+				nextPage,
+				prevPage,
+			},
+		});
+	} catch (error: any) {
+		logger.error("Error fetching service reviews:", error);
+		res.status(500).json({
+			message:
+				error.message || "An error occurred while fetching service reviews.",
 		});
 	}
 };

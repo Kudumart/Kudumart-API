@@ -3,8 +3,6 @@ import { Request, Response, NextFunction } from "express";
 import User from "../models/user";
 import { v4 as uuidv4 } from "uuid";
 import { Op, ForeignKeyConstraintError, Sequelize } from "sequelize";
-import { sendMail } from "../services/mail.service";
-import { emailTemplates } from "../utils/messages";
 import logger from "../middlewares/logger"; // Adjust the path to your logger.js
 import { AuthenticatedRequest } from "../types/index";
 import KYC from "../models/kyc";
@@ -16,6 +14,7 @@ import {
 	checkVendorProductLimit,
 	checkAdvertLimit,
 	verifyPayment,
+	ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ,
 } from "../utils/helpers";
 import AuctionProduct from "../models/auctionproduct";
 import Bid from "../models/bid";
@@ -38,6 +37,17 @@ import Withdrawal from "../models/withdrawal";
 import Admin from "../models/admin";
 import Role from "../models/role";
 import BlockedVendor from "../models/blockedvendor";
+import ServiceCategories from "../models/serviceCategories";
+import ServiceSubCategories from "../models/serviceSubCategories";
+import AttributeDefinitions from "../models/attributeDefinitions";
+import Services from "../models/services";
+import sequelize from "../config/sequelize";
+import ServiceAttributeOptionValues from "../models/serviceAttributeOptionValues";
+import ServiceAttributeTextValues from "../models/serviceAttributeTextValues";
+import ServiceAttributeNumberValues from "../models/serviceAttributeNumberValues";
+import ServiceAttributeBoolValues from "../models/serviceAttributeBoolValues";
+import AttributeOptions from "../models/attributeOptions";
+import ServiceBookings from "../models/servicebookings";
 
 export const submitOrUpdateKYC = async (
 	req: Request,
@@ -2661,5 +2671,1140 @@ export const cancelSubscription = async (
 		res.status(500).json({
 			message: "An error occurred while cancelling the subscription.",
 		});
+	}
+};
+
+export const createService = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const vendorId = (req as AuthenticatedRequest).user?.id as string; // Authenticated user ID from middleware
+
+	const {
+		title,
+		description,
+		image_url,
+		video_url,
+		service_category_id,
+		service_subcategory_id,
+		location_city,
+		location_state,
+		location_country,
+		is_negotiable,
+		work_experience_years,
+		additional_images,
+		price,
+		discount_price,
+		attributes,
+	} = req.body;
+
+	try {
+		// Check if categoryId exists
+		const serviceCategory =
+			await ServiceCategories.findByPk(service_category_id);
+		if (!serviceCategory) {
+			res.status(404).json({ message: "Service category not found." });
+			return;
+		}
+
+		// Check if subcategoryId exist
+		const serviceSubCategory = await ServiceSubCategories.findByPk(
+			service_subcategory_id,
+		);
+		if (!serviceSubCategory) {
+			res.status(404).json({ message: "Service subcategory not found." });
+			return;
+		}
+
+		if (discount_price && Number(discount_price) >= Number(price)) {
+			res.status(400).json({
+				message: "Discount price must be less than the regular price.",
+			});
+			return;
+		}
+
+		const attributeIds = attributes
+			? attributes.map((attr: any) => attr.attributeId)
+			: [];
+
+		// Validate that all attribute IDs exist
+		const existingAttributes = await AttributeDefinitions.findAll({
+			where: { id: attributeIds },
+		});
+
+		if (existingAttributes.length !== attributeIds.length) {
+			res.status(400).json({ message: "One or more attributes are invalid." });
+			return;
+		}
+
+		let createdService: Services | null = null;
+		await sequelize.transaction(async (t) => {
+			const newService = await Services.create(
+				{
+					vendorId,
+					service_category_id,
+					service_subcategory_id,
+					description,
+					price,
+					discount_price,
+					title,
+					image_url,
+					video_url,
+					location_city,
+					location_state,
+					location_country,
+					is_negotiable,
+					work_experience_years,
+					additional_images,
+					status: "inactive",
+				},
+				{
+					transaction: t,
+				},
+			);
+
+			const optionAttributes: {
+				attribute_id: number;
+				service_id: string;
+				option_value_id: number;
+			}[] = [];
+
+			const textAttributes: {
+				attribute_id: number;
+				service_id: string;
+				text_value: string;
+			}[] = [];
+
+			const numberAttributes: {
+				attribute_id: number;
+				service_id: string;
+				value: string;
+			}[] = [];
+
+			const booleanAttributes: {
+				attribute_id: number;
+				service_id: string;
+				value: string;
+			}[] = [];
+
+			for (const attr of existingAttributes) {
+				if (
+					attr.input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.MULTI_SELECT
+				) {
+					const attribute = attributes.find(
+						(a: any) => a.attributeId === attr.id,
+					);
+					if (attribute && Array.isArray(attribute.value)) {
+						for (const val of attribute.value) {
+							if (typeof val !== "number") {
+								res.status(400).json({
+									message: `Invalid value in array for attribute ID ${attr.id}. Expected all values to be option id numbers.`,
+								});
+								return;
+							}
+
+							optionAttributes.push({
+								attribute_id: attr.id,
+								service_id: newService.id,
+								option_value_id: val,
+							});
+						}
+					} else {
+						res.status(400).json({
+							message: `Invalid value for attribute ID ${attr.id}. Expected an array.`,
+						});
+						return;
+					}
+				} else if (
+					attr.input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.SINGLE_SELECT
+				) {
+					const attribute = attributes.find(
+						(a: any) => a.attributeId === attr.id,
+					);
+					if (attribute && typeof attribute.value === "number") {
+						optionAttributes.push({
+							attribute_id: attr.id,
+							service_id: newService.id,
+							option_value_id: attribute.value,
+						});
+					} else {
+						res.status(400).json({
+							message: `Invalid value for attribute ID ${attr.id}. Expected an option id number.`,
+						});
+						return;
+					}
+				} else if (
+					attr.input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.STR_INPUT
+				) {
+					const attribute = attributes.find(
+						(a: any) => a.attributeId === attr.id,
+					);
+					if (attribute && typeof attribute.value === "string") {
+						textAttributes.push({
+							attribute_id: attr.id,
+							service_id: newService.id,
+							text_value: attribute.value,
+						});
+					} else {
+						res.status(400).json({
+							message: `Invalid value for attribute ID ${attr.id}. Expected a string.`,
+						});
+						return;
+					}
+				} else if (
+					attr.input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.INT_INPUT
+				) {
+					const attribute = attributes.find(
+						(a: any) => a.attributeId === attr.id,
+					);
+					if (attribute && typeof attribute.value === "string") {
+						numberAttributes.push({
+							attribute_id: attr.id,
+							service_id: newService.id,
+							value: attribute.value,
+						});
+					} else {
+						res.status(400).json({
+							message: `Invalid value for attribute ID ${attr.id}. Expected a number string.`,
+						});
+						return;
+					}
+				} else if (
+					attr.input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.BOOL_INPUT
+				) {
+					const attribute = attributes.find(
+						(a: any) => a.attributeId === attr.id,
+					);
+					if (attribute && typeof attribute.value === "string") {
+						booleanAttributes.push({
+							attribute_id: attr.id,
+							service_id: newService.id,
+							value: attribute.value,
+						});
+					} else {
+						res.status(400).json({
+							message: `Invalid value for attribute ID ${attr.id}. Expected a boolean string.`,
+						});
+						return;
+					}
+				}
+			}
+
+			const groupedOptions = new Map<string, string[]>();
+
+			const serviceAttributes: {
+				name: string;
+				values?: string[];
+				value?: string | number | boolean;
+			}[] = [];
+
+			// Bulk create attributes
+			if (optionAttributes.length > 0) {
+				await ServiceAttributeOptionValues.bulkCreate(optionAttributes, {
+					transaction: t,
+				});
+
+				const serviceOptionAttributes =
+					await ServiceAttributeOptionValues.findAll({
+						where: { service_id: newService.id },
+						include: [
+							{
+								model: AttributeDefinitions,
+								as: "attribute",
+							},
+							{
+								model: AttributeOptions,
+								as: "optionValue",
+							},
+						],
+						transaction: t,
+					});
+
+				for (const { attribute, optionValue } of serviceOptionAttributes) {
+					const key = attribute.name;
+					const val = optionValue.option_value;
+					const options = groupedOptions.get(key);
+					if (options) options.push(val);
+					else groupedOptions.set(key, [val]);
+				}
+
+				const optionsArray = Array.from(groupedOptions, ([name, values]) => ({
+					name,
+					values,
+				}));
+
+				serviceAttributes.push(...optionsArray);
+			}
+
+			if (textAttributes.length > 0) {
+				await ServiceAttributeTextValues.bulkCreate(textAttributes, {
+					transaction: t,
+				});
+
+				const serviceTextAttributes = await ServiceAttributeTextValues.findAll({
+					where: { service_id: newService.id },
+					include: [
+						{
+							model: AttributeDefinitions,
+							as: "attribute",
+						},
+					],
+					transaction: t,
+				});
+
+				for (const { attribute, text_value } of serviceTextAttributes) {
+					serviceAttributes.push({ name: attribute.name, value: text_value });
+				}
+			}
+
+			if (numberAttributes.length > 0) {
+				await ServiceAttributeNumberValues.bulkCreate(numberAttributes, {
+					transaction: t,
+				});
+
+				const serviceNumberAttributes =
+					await ServiceAttributeNumberValues.findAll({
+						where: { service_id: newService.id },
+						include: [
+							{
+								model: AttributeDefinitions,
+								as: "attribute",
+							},
+						],
+						transaction: t,
+					});
+
+				for (const { attribute, value } of serviceNumberAttributes) {
+					serviceAttributes.push({ name: attribute.name, value });
+				}
+			}
+
+			if (booleanAttributes.length > 0) {
+				await ServiceAttributeBoolValues.bulkCreate(booleanAttributes, {
+					transaction: t,
+				});
+
+				const serviceBooleanAttributes =
+					await ServiceAttributeBoolValues.findAll({
+						where: { service_id: newService.id },
+						include: [
+							{
+								model: AttributeDefinitions,
+								as: "attribute",
+							},
+						],
+						transaction: t,
+					});
+
+				for (const { attribute, value } of serviceBooleanAttributes) {
+					serviceAttributes.push({ name: attribute.name, value });
+				}
+			}
+
+			// Update service with attributes
+			newService.attributes = serviceAttributes;
+
+			const updatedService = await newService.save({ transaction: t });
+
+			createdService = updatedService || newService;
+		});
+
+		res.status(201).json({
+			message: "Service created successfully",
+			data: createdService,
+		});
+		return;
+	} catch (error: any) {
+		logger.error(error);
+		res.status(500).json({ message: "Failed to create service" });
+		return;
+	}
+};
+
+export const updateService = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const vendorId = (req as AuthenticatedRequest).user?.id as string; // Authenticated user ID from middleware
+
+	const serviceId = req.params.serviceId;
+
+	const {
+		title,
+		description,
+		image_url,
+		video_url,
+		service_category_id,
+		service_subcategory_id,
+		location_city,
+		location_state,
+		location_country,
+		work_experience_years,
+		additional_images,
+		price,
+		discount_price,
+		is_negotiable,
+		attributes,
+	} = req.body;
+
+	try {
+		// Check if categoryId exists
+		const serviceCategory =
+			await ServiceCategories.findByPk(service_category_id);
+		if (!serviceCategory) {
+			res.status(404).json({ message: "Service category not found." });
+			return;
+		}
+
+		// Check if subcategoryId exist
+		const serviceSubCategory = await ServiceSubCategories.findByPk(
+			service_subcategory_id,
+		);
+		if (!serviceSubCategory) {
+			res.status(404).json({ message: "Service subcategory not found." });
+			return;
+		}
+
+		if (discount_price && Number(discount_price) >= Number(price)) {
+			res.status(400).json({
+				message: "Discount price must be less than the regular price.",
+			});
+			return;
+		}
+
+		const attributeIds = attributes
+			? attributes.map((attr: any) => attr.attributeId)
+			: [];
+
+		// Validate that all attribute IDs exist
+		const existingAttributes = await AttributeDefinitions.findAll({
+			where: { id: attributeIds },
+		});
+
+		if (existingAttributes.length !== attributeIds.length) {
+			res.status(400).json({ message: "One or more attributes are invalid." });
+			return;
+		}
+
+		let updatedService: Services | null = null;
+		await sequelize.transaction(async (t) => {
+			const service = await Services.findOne({
+				where: { id: serviceId, vendorId },
+				transaction: t,
+				lock: true, // Prevent concurrent modifications
+			});
+
+			if (!service) {
+				res.status(404).json({ message: "Service not found." });
+				return;
+			}
+
+			if (service.status === "active") {
+				res.status(400).json({
+					message:
+						"Cannot update an active service. Please deactivate it first.",
+				});
+				return;
+			}
+			await service.update(
+				{
+					service_category_id,
+					service_subcategory_id,
+					description,
+					price,
+					discount_price,
+					title,
+					image_url,
+					video_url,
+					location_city,
+					location_state,
+					location_country,
+					work_experience_years,
+					is_negotiable,
+					additional_images,
+					status: "inactive",
+				},
+				{
+					transaction: t,
+				},
+			);
+
+			const optionAttributes: {
+				attribute_id: number;
+				service_id: string;
+				option_value_id: number;
+			}[] = [];
+
+			const textAttributes: {
+				attribute_id: number;
+				service_id: string;
+				text_value: string;
+			}[] = [];
+
+			const numberAttributes: {
+				attribute_id: number;
+				service_id: string;
+				value: string;
+			}[] = [];
+
+			const booleanAttributes: {
+				attribute_id: number;
+				service_id: string;
+				value: string;
+			}[] = [];
+
+			for (const attr of existingAttributes) {
+				if (
+					attr.input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.MULTI_SELECT
+				) {
+					const attribute = attributes.find(
+						(a: any) => a.attributeId === attr.id,
+					);
+					if (attribute && Array.isArray(attribute.value)) {
+						for (const val of attribute.value) {
+							if (typeof val !== "number") {
+								res.status(400).json({
+									message: `Invalid value in array for attribute ID ${attr.id}. Expected all values to be option id numbers.`,
+								});
+								return;
+							}
+							optionAttributes.push({
+								attribute_id: attr.id,
+								service_id: service.id,
+								option_value_id: val,
+							});
+						}
+					} else {
+						res.status(400).json({
+							message: `Invalid value for attribute ID ${attr.id}. Expected an array.`,
+						});
+						return;
+					}
+				} else if (
+					attr.input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.SINGLE_SELECT
+				) {
+					const attribute = attributes.find(
+						(a: any) => a.attributeId === attr.id,
+					);
+					if (attribute && typeof attribute.value === "number") {
+						optionAttributes.push({
+							attribute_id: attr.id,
+							service_id: service.id,
+							option_value_id: attribute.value,
+						});
+					} else {
+						res.status(400).json({
+							message: `Invalid value for attribute ID ${attr.id}. Expected an option id string.`,
+						});
+						return;
+					}
+				} else if (
+					attr.input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.STR_INPUT
+				) {
+					const attribute = attributes.find(
+						(a: any) => a.attributeId === attr.id,
+					);
+					if (attribute && typeof attribute.value === "string") {
+						textAttributes.push({
+							attribute_id: attr.id,
+							service_id: service.id,
+							text_value: attribute.value,
+						});
+					} else {
+						res.status(400).json({
+							message: `Invalid value for attribute ID ${attr.id}. Expected a string.`,
+						});
+						return;
+					}
+				} else if (
+					attr.input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.INT_INPUT
+				) {
+					const attribute = attributes.find(
+						(a: any) => a.attributeId === attr.id,
+					);
+					if (attribute && typeof attribute.value === "string") {
+						numberAttributes.push({
+							attribute_id: attr.id,
+							service_id: service.id,
+							value: attribute.value,
+						});
+					} else {
+						res.status(400).json({
+							message: `Invalid value for attribute ID ${attr.id}. Expected a number string.`,
+						});
+						return;
+					}
+				} else if (
+					attr.input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.BOOL_INPUT
+				) {
+					const attribute = attributes.find(
+						(a: any) => a.attributeId === attr.id,
+					);
+					if (attribute && typeof attribute.value === "string") {
+						booleanAttributes.push({
+							attribute_id: attr.id,
+							service_id: service.id,
+							value: attribute.value,
+						});
+					} else {
+						res.status(400).json({
+							message: `Invalid value for attribute ID ${attr.id}. Expected a boolean string.`,
+						});
+						return;
+					}
+				}
+			}
+
+			const groupedOptions = new Map<string, string[]>();
+
+			const serviceAttributes: {
+				name: string;
+				values?: string[];
+				value?: string | number | boolean;
+			}[] = [];
+
+			// Bulk create attribute
+			if (optionAttributes.length > 0) {
+				// First, delete existing option attributes for the service
+				await ServiceAttributeOptionValues.destroy({
+					where: { service_id: service.id },
+					transaction: t,
+				});
+
+				await ServiceAttributeOptionValues.bulkCreate(optionAttributes, {
+					transaction: t,
+					returning: true,
+				});
+
+				const serviceOptionAttributes =
+					await ServiceAttributeOptionValues.findAll({
+						where: { service_id: service.id },
+						include: [
+							{
+								model: AttributeDefinitions,
+								as: "attribute",
+							},
+							{
+								model: AttributeOptions,
+								as: "optionValue",
+							},
+						],
+						transaction: t,
+					});
+
+				for (const { attribute, optionValue } of serviceOptionAttributes) {
+					const key = attribute.name;
+					const val = optionValue.option_value;
+					const options = groupedOptions.get(key);
+					if (options) options.push(val);
+					else groupedOptions.set(key, [val]);
+				}
+
+				const optionsArray = Array.from(groupedOptions, ([name, values]) => ({
+					name,
+					values,
+				}));
+
+				serviceAttributes.push(...optionsArray);
+			}
+
+			if (textAttributes.length > 0) {
+				// First, delete existing text attributes for the service
+				await ServiceAttributeTextValues.destroy({
+					where: { service_id: service.id },
+					transaction: t,
+				});
+
+				await ServiceAttributeTextValues.bulkCreate(textAttributes, {
+					transaction: t,
+				});
+				const serviceTextAttributes = await ServiceAttributeTextValues.findAll({
+					where: { service_id: service.id },
+					include: [
+						{
+							model: AttributeDefinitions,
+							as: "attribute",
+						},
+					],
+					transaction: t,
+				});
+
+				for (const { attribute, text_value } of serviceTextAttributes) {
+					serviceAttributes.push({ name: attribute.name, value: text_value });
+				}
+			}
+
+			if (numberAttributes.length > 0) {
+				// First, delete existing number attributes for the service
+				await ServiceAttributeNumberValues.destroy({
+					where: { service_id: service.id },
+					transaction: t,
+				});
+
+				await ServiceAttributeNumberValues.bulkCreate(numberAttributes, {
+					transaction: t,
+					returning: true,
+				});
+
+				const serviceNumberAttributes =
+					await ServiceAttributeNumberValues.findAll({
+						where: { service_id: service.id },
+						include: [
+							{
+								model: AttributeDefinitions,
+								as: "attribute",
+							},
+						],
+						transaction: t,
+					});
+
+				for (const { attribute, value } of serviceNumberAttributes) {
+					serviceAttributes.push({ name: attribute.name, value });
+				}
+			}
+
+			if (booleanAttributes.length > 0) {
+				// First, delete existing boolean attributes for the service
+				await ServiceAttributeBoolValues.destroy({
+					where: { service_id: service.id },
+					transaction: t,
+				});
+
+				await ServiceAttributeBoolValues.bulkCreate(booleanAttributes, {
+					transaction: t,
+					returning: true,
+				});
+
+				const serviceBooleanAttributes =
+					await ServiceAttributeBoolValues.findAll({
+						where: { service_id: service.id },
+						include: [
+							{
+								model: AttributeDefinitions,
+								as: "attribute",
+							},
+						],
+						transaction: t,
+					});
+
+				for (const { attribute, value } of serviceBooleanAttributes) {
+					serviceAttributes.push({ name: attribute.name, value });
+				}
+			}
+
+			// Update service with attributes
+			service.attributes = serviceAttributes;
+
+			const serviceAfterUpdate = await service.save({ transaction: t });
+
+			updatedService = serviceAfterUpdate;
+		});
+
+		res.status(200).json({
+			message: "Service updated successfully",
+			data: updatedService,
+		});
+	} catch (error: any) {
+		logger.error(error);
+		console.error(error);
+		res.status(500).json({ message: "Failed to update service" });
+		return;
+	}
+};
+
+export const getService = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const serviceId = req.params.serviceId as string;
+
+	if (!serviceId) {
+		res.status(400).json({ message: "Service ID is required." });
+		return;
+	}
+
+	try {
+		const services = await Services.findAll({
+			where: { id: serviceId },
+			include: [
+				{
+					model: ServiceCategories,
+					as: "category",
+					attributes: ["id", "name"],
+				},
+				{
+					model: ServiceSubCategories,
+					as: "subCategory",
+					attributes: ["id", "name"],
+				},
+			],
+			order: [["createdAt", "DESC"]],
+		});
+
+		res
+			.status(200)
+			.json({ message: "Services fetched successfully", data: services });
+	} catch (error: any) {
+		logger.error(error);
+		res.status(500).json({ message: "Failed to fetch services" });
+	}
+};
+
+export const getVendorServices = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const vendorId = (req as AuthenticatedRequest).user?.id as string;
+
+	const { page, limit } = req.query;
+
+	const offset = page && limit ? (Number(page) - 1) * Number(limit) : 0;
+
+	try {
+		const services = await Services.findAll({
+			where: { vendorId },
+			limit: limit ? Number(limit) : 10,
+			offset: offset ? offset : 0,
+			include: [
+				{
+					model: ServiceCategories,
+					as: "category",
+					attributes: ["id", "name"],
+				},
+				{
+					model: ServiceSubCategories,
+					as: "subCategory",
+					attributes: ["id", "name"],
+				},
+			],
+			order: [["createdAt", "DESC"]],
+		});
+
+		res
+			.status(200)
+			.json({ message: "Services fetched successfully", data: services });
+	} catch (error: any) {
+		logger.error(error);
+		res.status(500).json({ message: "Failed to fetch services" });
+	}
+};
+
+export const deleteService = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const vendorId = (req as AuthenticatedRequest).user?.id as string;
+	const serviceId = req.params.serviceId as string;
+
+	try {
+		const service = await Services.findOne({
+			where: { id: serviceId, vendorId },
+		});
+		if (!service) {
+			res.status(404).json({ message: "Service not found." });
+			return;
+		}
+
+		if (service.status === "active") {
+			res.status(400).json({
+				message: "Cannot delete an active service. Deactivate it first.",
+			});
+			return;
+		}
+
+		await service.destroy();
+		res.status(200).json({ message: "Service deleted successfully." });
+	} catch (error: any) {
+		logger.error(error);
+		res.status(500).json({ message: "Failed to delete service." });
+	}
+};
+
+export const publishService = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const vendorId = (req as AuthenticatedRequest).user?.id as string;
+	const serviceId = req.params.serviceId as string;
+
+	try {
+		const vendorSubscription = await VendorSubscription.findOne({
+			where: { vendorId, isActive: true },
+			include: [
+				{
+					model: SubscriptionPlan,
+					as: "subscriptionPlans",
+					attributes: ["id", "name", "allowsServiceAds", "serviceAdsLimit"],
+				},
+			],
+		});
+
+		if (!vendorSubscription) {
+			res.status(403).json({
+				message:
+					"No active subscription found. Please subscribe to a plan to publish services.",
+			});
+			return;
+		}
+
+		if (!vendorSubscription.subscriptionPlans?.allowsServiceAds) {
+			res.status(403).json({
+				message:
+					"Your current subscription plan does not allow publishing services. Please upgrade your plan.",
+			});
+			return;
+		}
+
+		if (vendorSubscription.subscriptionPlans.serviceAdsLimit !== null) {
+			const publishedServiceCount = await Services.count({
+				where: { vendorId, status: "active" },
+			});
+			if (
+				publishedServiceCount >=
+				vendorSubscription.subscriptionPlans.serviceAdsLimit
+			) {
+				res.status(403).json({
+					message: `You have reached your service publication limit of ${vendorSubscription.subscriptionPlans.serviceAdsLimit}. Please upgrade your plan to publish more services.`,
+				});
+				return;
+			}
+		}
+
+		const service = await Services.findOne({
+			where: { id: serviceId, vendorId },
+		});
+		if (!service) {
+			res.status(404).json({ message: "Service not found." });
+			return;
+		}
+
+		if (service.status === "active") {
+			res.status(400).json({ message: "Service is already active." });
+			return;
+		}
+
+		if (service.status === "suspended") {
+			res.status(400).json({
+				message:
+					"Suspended services cannot be published. Please contact support.",
+			});
+			return;
+		}
+
+		await service.update({ status: "active" });
+
+		res.status(200).json({ message: "Service published successfully." });
+		return;
+	} catch (error: any) {
+		logger.error(error);
+		console.error(error);
+		res.status(500).json({ message: "Failed to publish service." });
+		return;
+	}
+};
+
+export const unpublishService = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const vendorId = (req as AuthenticatedRequest).user?.id as string;
+	const serviceId = req.params.serviceId as string;
+
+	try {
+		const service = await Services.findOne({
+			where: { id: serviceId, vendorId },
+		});
+		if (!service) {
+			res.status(404).json({ message: "Service not found." });
+			return;
+		}
+
+		if (service.status === "inactive") {
+			res.status(400).json({ message: "Service is already inactive." });
+			return;
+		}
+
+		await service.update({ status: "inactive" });
+		res.status(200).json({ message: "Service unpublished successfully." });
+	} catch (error: any) {
+		logger.error(error);
+		res.status(500).json({ message: "Failed to unpublish service." });
+	}
+};
+
+export const getServiceBookings = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const vendorId = (req as AuthenticatedRequest).user?.id as string;
+
+	if (!vendorId) {
+		res.status(403).json({ message: "Unauthorized. Vendor ID is required." });
+		return;
+	}
+
+	const { page, limit, status } = req.query;
+
+	const offset = page && limit ? (Number(page) - 1) * Number(limit) : 0;
+
+	const whereClause: any = {};
+	if (status) {
+		whereClause.status = status;
+	}
+
+	whereClause.vendorId = vendorId;
+
+	try {
+		const { rows: bookings, count: total } =
+			await ServiceBookings.findAndCountAll({
+				where: whereClause,
+				limit: limit ? Number(limit) : 10,
+				offset: offset ? offset : 0,
+				include: [
+					{
+						model: Services,
+						as: "service",
+					},
+					{
+						model: User,
+						as: "user",
+						attributes: ["id", "firstName", "lastName", "email", "photo"],
+					},
+				],
+				order: [["createdAt", "DESC"]],
+			});
+
+		res.status(200).json({
+			message: "Bookings fetched successfully",
+			data: bookings,
+			total,
+		});
+	} catch (error) {
+		logger.error("Error fetching service bookings:", error);
+		res.status(500).json({ message: "Internal server error" });
+	}
+};
+
+export const markServiceBookingAsConfirmed = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const vendorId = (req as AuthenticatedRequest).user?.id as string;
+
+	if (!vendorId) {
+		res.status(403).json({ message: "Unauthorized. Vendor ID is required." });
+		return;
+	}
+
+	const bookingId = req.params.bookingId;
+
+	try {
+		const booking = await ServiceBookings.findOne({
+			where: { id: bookingId, vendorId },
+			include: [
+				{
+					model: Services,
+					as: "service",
+				},
+				{
+					model: User,
+					as: "user",
+					attributes: ["id", "firstName", "lastName", "email", "photo"],
+				},
+			],
+		});
+
+		if (!booking) {
+			res.status(404).json({ message: "Booking not found." });
+			return;
+		}
+
+		if (booking.status !== "pending") {
+			res.status(400).json({
+				message: `Only pending bookings can be confirmed. Current status: ${booking.status}`,
+			});
+			return;
+		}
+
+		booking.status = "confirmed";
+		await booking.save();
+
+		// Notify User
+		await Notification.create({
+			userId: booking.userId,
+			title: "Service Booking Confirmed",
+			type: "service_booking",
+			message: `Your booking for the service "${booking.service?.title}" has been confirmed by the vendor.`,
+			isRead: false,
+		});
+
+		res
+			.status(200)
+			.json({ message: "Booking marked as confirmed.", data: booking });
+	} catch (error) {
+		logger.error("Error confirming service booking:", error);
+		res.status(500).json({ message: "Internal server error" });
+	}
+};
+
+export const markServiceBookingAsCancelled = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const vendorId = (req as AuthenticatedRequest).user?.id as string;
+
+	if (!vendorId) {
+		res.status(403).json({ message: "Unauthorized. Vendor ID is required." });
+		return;
+	}
+
+	const bookingId = req.params.bookingId;
+
+	try {
+		const booking = await ServiceBookings.findOne({
+			where: { id: bookingId, vendorId },
+			include: [
+				{
+					model: Services,
+					as: "service",
+				},
+				{
+					model: User,
+					as: "user",
+					attributes: ["id", "firstName", "lastName", "email", "photo"],
+				},
+			],
+		});
+
+		if (!booking) {
+			res.status(404).json({ message: "Booking not found." });
+			return;
+		}
+
+		if (booking.status !== "pending") {
+			res.status(400).json({
+				message: `Only pending bookings can be cancelled. Current status: ${booking.status}`,
+			});
+			return;
+		}
+
+		booking.status = "cancelled";
+		await booking.save();
+
+		// Notify User
+		await Notification.create({
+			userId: booking.userId,
+			title: "Service Booking Cancelled",
+			type: "service_booking",
+			message: `Your booking for the service "${booking.service?.title}" has been cancelled by the vendor.`,
+			isRead: false,
+		});
+
+		res
+			.status(200)
+			.json({ message: "Booking marked as cancelled.", data: booking });
+	} catch (error) {
+		logger.error("Error cancelling service booking:", error);
+		res.status(500).json({ message: "Internal server error" });
 	}
 };
