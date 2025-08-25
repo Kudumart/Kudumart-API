@@ -279,6 +279,15 @@ export const createSubscriptionPlanValidationRules = () => {
 			.optional({ checkFalsy: true })
 			.isInt({ min: 0 })
 			.withMessage("Auction product limit must be a non-negative integer"),
+
+		check("allowsServiceAds")
+			.isBoolean()
+			.withMessage("Allows service ads must be a boolean value"),
+
+		check("serviceAdsLimit")
+			.optional({ checkFalsy: true })
+			.isInt({ min: 0 })
+			.withMessage("Service ads limit must be a non-negative integer"),
 	];
 };
 
@@ -1161,6 +1170,16 @@ export const ServiceIdValidation = () => {
 	];
 };
 
+export const validateUUIDParam = (paramName: string) => {
+	return [
+		param(paramName)
+			.isUUID()
+			.withMessage(`${paramName} must be a valid UUID`)
+			.notEmpty()
+			.withMessage(`${paramName} is required`),
+	];
+};
+
 export const ServiceSubCategoryValidation = () => {
 	return [
 		check("name")
@@ -1186,12 +1205,6 @@ export const ServiceSubCategoryValidation = () => {
 
 export const CreateServiceAttributeValidation = () => {
 	return [
-		body("categoryId")
-			.not()
-			.isEmpty()
-			.withMessage("Category ID is required")
-			.isUUID()
-			.withMessage("Category ID must be a valid UUID"),
 		body("attributes")
 			.isArray({ min: 1 })
 			.withMessage("Attributes must be a non-empty array"),
@@ -1202,27 +1215,17 @@ export const CreateServiceAttributeValidation = () => {
 				);
 			}
 
-			const { name, input_type, is_required, value } = fieldObj;
+			const { name, input_type, value } = fieldObj;
 
 			// name
 			if (typeof name !== "string" || name.trim() === "") {
 				throw new Error("attribute.name must be a non-empty string");
 			}
 
-			if (typeof is_required !== "boolean") {
-				if (
-					!(
-						typeof is_required === "string" &&
-						(is_required === "true" || is_required === "false")
-					)
-				) {
-					throw new Error("attribute.is_required must be a boolean");
-				}
-			}
-
 			if (
-				input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.SINGLE_SELECT ||
-				input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.MULTI_SELECT
+				(input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.SINGLE_SELECT ||
+					input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.MULTI_SELECT) &&
+				!value
 			) {
 				throw new Error(`attribute.value is required for ${name}`);
 			}
@@ -1234,12 +1237,12 @@ export const CreateServiceAttributeValidation = () => {
 
 export const AddServiceAttributeOptionsValidation = () => {
 	return [
-		body("attributeId")
+		param("attributeId")
 			.not()
 			.isEmpty()
 			.withMessage("Attribute ID is required")
-			.isUUID()
-			.withMessage("Attribute ID must be a valid UUID"),
+			.isNumeric()
+			.withMessage("Attribute ID must be a valid number"),
 		body("options")
 			.isArray({ min: 1 })
 			.withMessage("Options must be a non-empty array"),
@@ -1261,8 +1264,8 @@ export const AddServiceCategoryToAttributeValidation = () => {
 			.not()
 			.isEmpty()
 			.withMessage("Category ID is required")
-			.isUUID()
-			.withMessage("Category ID must be a valid UUID"),
+			.isNumeric()
+			.withMessage("Category ID must be a valid number"),
 	];
 };
 
@@ -1277,6 +1280,144 @@ export const RemoveServiceCategoryFromAttributeValidation = () => {
 			.withMessage("Category ID is required")
 			.isNumeric()
 			.withMessage("Category ID must be a valid UUID"),
+	];
+};
+
+export const ServiceValidation = () => {
+	return [
+		check("title")
+			.not()
+			.isEmpty()
+			.withMessage("Title is required")
+			.isString()
+			.withMessage("Title must be a valid string")
+			.isLength({ min: 5, max: 100 })
+			.withMessage("Title must be between 5 and 100 characters"),
+		check("description")
+			.not()
+			.isEmpty()
+			.withMessage("Description is required")
+			.isString()
+			.withMessage("Description must be a valid string")
+			.isLength({ min: 10, max: 1000 })
+			.withMessage("Description must be between 10 and 1000 characters"),
+		check("price")
+			.not()
+			.isEmpty()
+			.withMessage("Price is required")
+			.isDecimal({ decimal_digits: "0,2" })
+			.withMessage(
+				"Price must be a valid decimal number with up to two decimal places",
+			),
+		check("discount_price")
+			.optional({ checkFalsy: true })
+			.isDecimal({ decimal_digits: "0,2" })
+			.withMessage(
+				"Discount price must be a valid decimal number with up to two decimal places",
+			),
+		check("image_url")
+			.isString()
+			.withMessage("Image URL must be a valid string"),
+		check("video_url")
+			.isString()
+			.withMessage("Video URL must be a valid string"),
+		check("additional_images")
+			.optional({ checkFalsy: true })
+			.isArray({ min: 1 })
+			.withMessage("Additional images must be an array of URLs.")
+			.custom((array) => {
+				// Ensure each item in the array is a valid URL
+				array.forEach((url: string) => {
+					if (typeof url !== "string" || !url.match(/^(https):\/\/[^ "]+$/)) {
+						throw new Error(
+							"Each item in additional images must be a valid URL.",
+						);
+					}
+				});
+				return true;
+			}),
+		check("location_city")
+			.not()
+			.isEmpty()
+			.withMessage("Location city is required")
+			.isString()
+			.withMessage("Location city must be a valid string"),
+		check("location_state")
+			.not()
+			.isEmpty()
+			.withMessage("Location state is required")
+			.isString()
+			.withMessage("Location state must be a valid string"),
+		check("location_country")
+			.not()
+			.isEmpty()
+			.withMessage("Location country is required")
+			.isString()
+			.withMessage("Location country must be a valid string"),
+		check("work_experience")
+			.not()
+			.isEmpty()
+			.withMessage("Work experience is required")
+			.isNumeric()
+			.withMessage("Work experience must be a valid number"),
+		check("service_category_id")
+			.not()
+			.isEmpty()
+			.withMessage("Category ID is required")
+			.isNumeric()
+			.withMessage("Category ID must be a valid number"),
+		check("service_subCategory_id")
+			.optional({ checkFalsy: true })
+			.isNumeric()
+			.withMessage("Sub-category ID must be a valid number"),
+		check("is_negotiable")
+			.isBoolean()
+			.withMessage("is_negotiable must be a boolean value"),
+		check("attributes")
+			.optional({ checkFalsy: true })
+			.isArray({ min: 1 })
+			.withMessage("Attributes must be a non-empty array"),
+		check("attributes.*").custom((attrObj) => {
+			if (typeof attrObj !== "object" || attrObj === null) {
+				throw new Error("Each attribute must be an object of id and value");
+			}
+
+			const { attributeId, value } = attrObj;
+
+			// id
+			if (!attributeId || typeof Number(attributeId) !== "number") {
+				throw new Error("attribute.id must be a non-empty string");
+			}
+
+			if (!value) {
+				throw new Error("attribute.value is required");
+			}
+
+			return true;
+		}),
+	];
+};
+
+export const ValidateServiceBooking = () => {
+	return [
+		check("vendorId")
+			.not()
+			.isEmpty()
+			.withMessage("Vendor ID is required")
+			.isUUID()
+			.withMessage("Vendor ID must be a valid UUID"),
+		check("message")
+			.optional({ checkFalsy: true })
+			.isString()
+			.withMessage("Message must be a valid string")
+			.isLength({ max: 500 })
+			.withMessage("Message should not exceed 500 characters"),
+		check("bookingDate")
+			.not()
+			.isEmpty()
+			.withMessage("Booking date is required")
+			.isISO8601()
+			.withMessage("Booking date must be a valid date in ISO 8601 format"),
 	];
 };
 
