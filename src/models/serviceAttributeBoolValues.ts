@@ -1,14 +1,17 @@
 import { DataTypes, Model, Sequelize } from "sequelize";
+import AttributeDefinitions from "./attributeDefinitions";
 
 export class ServiceAttributeBoolValues extends Model {
 	public id!: number;
 	public service_id!: string;
 	public attribute_id!: number;
 	public value!: boolean;
+	public attribute!: AttributeDefinitions;
 
 	public static associate(models: any) {
 		this.belongsTo(models.Services, {
 			foreignKey: "service_id",
+			onDelete: "CASCADE",
 			targetKey: "id",
 			as: "service",
 		});
@@ -26,6 +29,7 @@ const initModel = (sequelize: Sequelize) => {
 			id: {
 				type: DataTypes.UUIDV4,
 				primaryKey: true,
+				defaultValue: DataTypes.UUIDV4,
 			},
 			service_id: {
 				type: DataTypes.UUID,
@@ -49,13 +53,13 @@ const initModel = (sequelize: Sequelize) => {
 			},
 		},
 		{
-			tableName: "service_attribute_bool_values",
+			tableName: "attribute_bool_values",
 			timestamps: false,
 			sequelize,
 			indexes: [
 				{
 					unique: true,
-					name: "unique_service_attribute_bool_value",
+					name: "unique_attribute_bool_value",
 					fields: ["service_id", "attribute_id"],
 				},
 			],
