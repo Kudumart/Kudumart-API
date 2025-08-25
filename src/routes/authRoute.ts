@@ -14,6 +14,7 @@ import {
 	verificationTokenValidationRules,
 	paginationQueryParamsValidation,
 	ServiceIdValidation,
+	validateUUIDParam,
 } from "../utils/validations"; // Import the service
 import authMiddleware from "../middlewares/authMiddleware";
 
@@ -158,6 +159,34 @@ authRoutes.get(
 	paginationQueryParamsValidation(),
 	validate,
 	homeController.getAllServiceSubCategories,
+);
+
+authRoutes.get(
+	"/services",
+	paginationQueryParamsValidation(),
+	validate,
+	homeController.getAllServices,
+);
+
+authRoutes.get(
+	"/service/:serviceId",
+	validateUUIDParam("serviceId"),
+	validate,
+	homeController.getServiceById,
+);
+
+authRoutes.get(
+	"/services/:serviceId/reviews",
+	validateUUIDParam("serviceId"),
+	paginationQueryParamsValidation(),
+	validate,
+	homeController.getServiceReviews,
+);
+
+authRoutes.get(
+	"/services/categories/:categoryId/attributes",
+	paginationQueryParamsValidation(),
+	homeController.getAttributesForServiceCategory,
 );
 
 export default authRoutes; // Export the router
