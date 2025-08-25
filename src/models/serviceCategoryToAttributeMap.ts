@@ -32,7 +32,7 @@ const initModel = (sequelize: Sequelize) => {
 				type: DataTypes.INTEGER,
 				allowNull: false,
 				references: {
-					model: "ServiceCategories",
+					model: "service_categories",
 					key: "id",
 				},
 			},
@@ -40,7 +40,7 @@ const initModel = (sequelize: Sequelize) => {
 				type: DataTypes.INTEGER,
 				allowNull: false,
 				references: {
-					model: "service_attribute",
+					model: "attribute_definitions",
 					key: "id",
 				},
 			},
