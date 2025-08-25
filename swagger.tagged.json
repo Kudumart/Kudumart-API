@@ -20,7 +20,7 @@
           }
         },
         "tags": [
-          "Misc"
+          "root"
         ]
       }
     },
@@ -68,7 +68,8 @@
           }
         },
         "tags": [
-          "Auth"
+          "auth",
+          "auth/register"
         ]
       }
     },
@@ -116,7 +117,8 @@
           }
         },
         "tags": [
-          "Auth"
+          "auth",
+          "auth/register"
         ]
       }
     },
@@ -155,7 +157,8 @@
           }
         },
         "tags": [
-          "Auth"
+          "auth",
+          "auth/verify"
         ]
       }
     },
@@ -194,7 +197,8 @@
           }
         },
         "tags": [
-          "Auth"
+          "auth",
+          "auth/verify"
         ]
       }
     },
@@ -239,7 +243,8 @@
           }
         },
         "tags": [
-          "Auth"
+          "auth",
+          "auth/login"
         ]
       }
     },
@@ -278,7 +283,8 @@
           }
         },
         "tags": [
-          "Auth"
+          "auth",
+          "auth/resend"
         ]
       }
     },
@@ -314,7 +320,8 @@
           }
         },
         "tags": [
-          "Auth"
+          "auth",
+          "auth/password"
         ]
       }
     },
@@ -350,7 +357,8 @@
           }
         },
         "tags": [
-          "Auth"
+          "auth",
+          "auth/password"
         ]
       }
     },
@@ -392,7 +400,8 @@
           }
         },
         "tags": [
-          "Auth"
+          "auth",
+          "auth/password"
         ]
       }
     },
@@ -405,7 +414,8 @@
           }
         },
         "tags": [
-          "Auth"
+          "auth",
+          "auth/facebook"
         ]
       }
     },
@@ -427,7 +437,8 @@
           }
         },
         "tags": [
-          "Auth"
+          "auth",
+          "auth/facebook"
         ]
       }
     },
@@ -447,7 +458,8 @@
           }
         },
         "tags": [
-          "Auth"
+          "auth",
+          "auth/google"
         ]
       },
       "post": {
@@ -493,7 +505,8 @@
           }
         },
         "tags": [
-          "Auth"
+          "auth",
+          "auth/google"
         ]
       }
     },
@@ -515,7 +528,8 @@
           }
         },
         "tags": [
-          "Auth"
+          "auth",
+          "auth/google"
         ]
       }
     },
@@ -557,7 +571,8 @@
           }
         },
         "tags": [
-          "Auth"
+          "auth",
+          "auth/admin"
         ]
       }
     },
@@ -573,7 +588,7 @@
           }
         },
         "tags": [
-          "Categories"
+          "categories"
         ]
       }
     },
@@ -596,7 +611,8 @@
           }
         },
         "tags": [
-          "Categories"
+          "category",
+          "category/sub-categories"
         ]
       }
     },
@@ -612,7 +628,8 @@
           }
         },
         "tags": [
-          "Categories"
+          "categories",
+          "categories/with"
         ]
       }
     },
@@ -698,7 +715,7 @@
           }
         },
         "tags": [
-          "Products"
+          "products"
         ]
       }
     },
@@ -724,7 +741,7 @@
           }
         },
         "tags": [
-          "Products"
+          "product"
         ]
       }
     },
@@ -762,7 +779,7 @@
           }
         },
         "tags": [
-          "Stores"
+          "stores"
         ]
       }
     },
@@ -803,7 +820,8 @@
           }
         },
         "tags": [
-          "Products"
+          "store",
+          "store/products"
         ]
       }
     },
@@ -866,7 +884,8 @@
           }
         },
         "tags": [
-          "Products"
+          "auction",
+          "auction/products"
         ]
       }
     },
@@ -892,7 +911,8 @@
           }
         },
         "tags": [
-          "Products"
+          "auction",
+          "auction/product"
         ]
       }
     },
@@ -930,7 +950,7 @@
           }
         },
         "tags": [
-          "Banners & Adverts"
+          "adverts"
         ]
       }
     },
@@ -959,7 +979,7 @@
           }
         },
         "tags": [
-          "Banners & Adverts"
+          "advert"
         ]
       }
     },
@@ -975,7 +995,7 @@
           }
         },
         "tags": [
-          "Banners & Adverts"
+          "testimonials"
         ]
       }
     },
@@ -994,7 +1014,8 @@
           }
         },
         "tags": [
-          "Categories"
+          "faq",
+          "faq/categories"
         ]
       }
     },
@@ -1033,7 +1054,8 @@
           }
         },
         "tags": [
-          "FAQs/Support"
+          "submit",
+          "submit/contact"
         ]
       }
     },
@@ -1061,7 +1083,8 @@
           }
         },
         "tags": [
-          "Jobs"
+          "fetch",
+          "fetch/jobs"
         ]
       }
     },
@@ -1087,7 +1110,8 @@
           }
         },
         "tags": [
-          "Jobs"
+          "view",
+          "view/job"
         ]
       }
     },
@@ -1138,7 +1162,8 @@
           }
         },
         "tags": [
-          "Jobs"
+          "apply",
+          "apply/job"
         ]
       }
     },
@@ -1154,7 +1179,7 @@
           }
         },
         "tags": [
-          "Banners & Adverts"
+          "banners"
         ]
       }
     },
@@ -1190,7 +1215,7 @@
           }
         },
         "tags": [
-          "Payments"
+          "create-payment-intent"
         ]
       }
     },
@@ -1224,7 +1249,8 @@
           }
         },
         "tags": [
-          "Categories"
+          "service",
+          "service/categories"
         ]
       }
     },
@@ -1264,7 +1290,159 @@
           }
         },
         "tags": [
-          "Categories"
+          "service",
+          "service/subcategories"
+        ]
+      }
+    },
+    "/api/services": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "categoryId",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "subCategoryId",
+            "in": "query",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "services"
+        ]
+      }
+    },
+    "/api/service/{serviceId}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "serviceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "service",
+          "service/{serviceid}"
+        ]
+      }
+    },
+    "/api/services/{serviceId}/reviews": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "serviceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "services",
+          "services/{serviceid}"
+        ]
+      }
+    },
+    "/api/services/categories/{categoryId}/attributes": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "categoryId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "services",
+          "services/categories"
         ]
       }
     },
@@ -1283,7 +1461,7 @@
           }
         },
         "tags": [
-          "Auth"
+          "logout"
         ]
       },
       "post": {
@@ -1300,7 +1478,7 @@
           }
         },
         "tags": [
-          "Auth"
+          "logout"
         ]
       }
     },
@@ -1348,7 +1526,8 @@
           }
         },
         "tags": [
-          "Auth"
+          "profile",
+          "profile/update"
         ]
       }
     },
@@ -1390,7 +1569,8 @@
           }
         },
         "tags": [
-          "Auth"
+          "profile",
+          "profile/update"
         ]
       }
     },
@@ -1421,7 +1601,7 @@
           }
         },
         "tags": [
-          "Sub-admins"
+          "sub-admins"
         ]
       }
     },
@@ -1463,7 +1643,8 @@
           }
         },
         "tags": [
-          "Sub-admins"
+          "sub-admin",
+          "sub-admin/create"
         ]
       }
     },
@@ -1508,7 +1689,8 @@
           }
         },
         "tags": [
-          "Sub-admins"
+          "sub-admin",
+          "sub-admin/update"
         ]
       }
     },
@@ -1541,7 +1723,8 @@
           }
         },
         "tags": [
-          "Sub-admins"
+          "sub-admin",
+          "sub-admin/status"
         ]
       }
     },
@@ -1570,7 +1753,8 @@
           }
         },
         "tags": [
-          "Sub-admins"
+          "sub-admin",
+          "sub-admin/delete"
         ]
       }
     },
@@ -1603,7 +1787,8 @@
           }
         },
         "tags": [
-          "Sub-admins"
+          "sub-admin",
+          "sub-admin/resend-login"
         ]
       }
     },
@@ -1619,7 +1804,7 @@
           }
         },
         "tags": [
-          "Roles & Permissions"
+          "roles"
         ]
       }
     },
@@ -1655,7 +1840,8 @@
           }
         },
         "tags": [
-          "Roles & Permissions"
+          "role",
+          "role/create"
         ]
       }
     },
@@ -1697,7 +1883,8 @@
           }
         },
         "tags": [
-          "Roles & Permissions"
+          "role",
+          "role/update"
         ]
       }
     },
@@ -1723,7 +1910,8 @@
           }
         },
         "tags": [
-          "Roles & Permissions"
+          "role",
+          "role/view"
         ]
       }
     },
@@ -1762,7 +1950,8 @@
           }
         },
         "tags": [
-          "Roles & Permissions"
+          "role",
+          "role/assign"
         ]
       }
     },
@@ -1793,7 +1982,8 @@
           }
         },
         "tags": [
-          "Roles & Permissions"
+          "role",
+          "role/delete"
         ]
       }
     },
@@ -1809,7 +1999,7 @@
           }
         },
         "tags": [
-          "Roles & Permissions"
+          "permissions"
         ]
       }
     },
@@ -1845,7 +2035,8 @@
           }
         },
         "tags": [
-          "Roles & Permissions"
+          "permission",
+          "permission/create"
         ]
       }
     },
@@ -1887,7 +2078,8 @@
           }
         },
         "tags": [
-          "Roles & Permissions"
+          "permission",
+          "permission/update"
         ]
       }
     },
@@ -1913,7 +2105,8 @@
           }
         },
         "tags": [
-          "Roles & Permissions"
+          "permission",
+          "permission/delete"
         ]
       }
     },
@@ -1936,7 +2129,8 @@
           }
         },
         "tags": [
-          "Subscriptions"
+          "subscription",
+          "subscription/plans"
         ]
       }
     },
@@ -1971,6 +2165,12 @@
                 "auctionProductLimit": {
                   "example": "any"
                 },
+                "allowsServiceAds": {
+                  "example": "any"
+                },
+                "serviceAdsLimit": {
+                  "example": "any"
+                },
                 "maxAds": {
                   "example": "any"
                 },
@@ -1996,7 +2196,8 @@
           }
         },
         "tags": [
-          "Subscriptions"
+          "subscription",
+          "subscription/plan"
         ]
       }
     },
@@ -2059,7 +2260,8 @@
           }
         },
         "tags": [
-          "Subscriptions"
+          "subscription",
+          "subscription/plan"
         ]
       }
     },
@@ -2088,7 +2290,8 @@
           }
         },
         "tags": [
-          "Subscriptions"
+          "subscription",
+          "subscription/plan"
         ]
       }
     },
@@ -2124,7 +2327,7 @@
           }
         },
         "tags": [
-          "Categories"
+          "categories"
         ]
       },
       "put": {
@@ -2164,7 +2367,7 @@
           }
         },
         "tags": [
-          "Categories"
+          "categories"
         ]
       },
       "delete": {
@@ -2191,7 +2394,7 @@
           }
         },
         "tags": [
-          "Categories"
+          "categories"
         ]
       },
       "get": {
@@ -2212,7 +2415,7 @@
           }
         },
         "tags": [
-          "Categories"
+          "categories"
         ]
       }
     },
@@ -2228,7 +2431,8 @@
           }
         },
         "tags": [
-          "Categories"
+          "categories",
+          "categories/sub"
         ]
       }
     },
@@ -2270,7 +2474,8 @@
           }
         },
         "tags": [
-          "Categories"
+          "sub",
+          "sub/categories"
         ]
       },
       "put": {
@@ -2313,7 +2518,8 @@
           }
         },
         "tags": [
-          "Categories"
+          "sub",
+          "sub/categories"
         ]
       },
       "delete": {
@@ -2340,7 +2546,8 @@
           }
         },
         "tags": [
-          "Categories"
+          "sub",
+          "sub/categories"
         ]
       },
       "get": {
@@ -2361,7 +2568,8 @@
           }
         },
         "tags": [
-          "Categories"
+          "sub",
+          "sub/categories"
         ]
       }
     },
@@ -2377,7 +2585,7 @@
           }
         },
         "tags": [
-          "KYC"
+          "kyc"
         ]
       },
       "post": {
@@ -2394,7 +2602,7 @@
           }
         },
         "tags": [
-          "KYC"
+          "kyc"
         ]
       }
     },
@@ -2436,7 +2644,8 @@
           }
         },
         "tags": [
-          "KYC"
+          "kyc",
+          "kyc/approve-reject"
         ]
       }
     },
@@ -2475,7 +2684,7 @@
           }
         },
         "tags": [
-          "Payments"
+          "payment-gateway"
         ]
       },
       "put": {
@@ -2518,7 +2727,7 @@
           }
         },
         "tags": [
-          "Payments"
+          "payment-gateway"
         ]
       },
       "delete": {
@@ -2542,7 +2751,7 @@
           }
         },
         "tags": [
-          "Payments"
+          "payment-gateway"
         ]
       },
       "get": {
@@ -2566,7 +2775,7 @@
           }
         },
         "tags": [
-          "Payments"
+          "payment-gateway"
         ]
       }
     },
@@ -2582,7 +2791,7 @@
           }
         },
         "tags": [
-          "Payments"
+          "payment-gateways"
         ]
       }
     },
@@ -2608,7 +2817,8 @@
           }
         },
         "tags": [
-          "Payments"
+          "payment-gateways",
+          "payment-gateways/status"
         ]
       }
     },
@@ -2644,7 +2854,7 @@
           }
         },
         "tags": [
-          "Currency"
+          "currency"
         ]
       },
       "put": {
@@ -2684,7 +2894,7 @@
           }
         },
         "tags": [
-          "Currency"
+          "currency"
         ]
       },
       "delete": {
@@ -2711,7 +2921,7 @@
           }
         },
         "tags": [
-          "Currency"
+          "currency"
         ]
       }
     },
@@ -2727,7 +2937,7 @@
           }
         },
         "tags": [
-          "Currency"
+          "currencies"
         ]
       }
     },
@@ -2760,7 +2970,7 @@
           }
         },
         "tags": [
-          "Users"
+          "customers"
         ]
       }
     },
@@ -2793,7 +3003,7 @@
           }
         },
         "tags": [
-          "Users"
+          "vendors"
         ]
       }
     },
@@ -2819,7 +3029,8 @@
           }
         },
         "tags": [
-          "Users"
+          "user",
+          "user/details"
         ]
       }
     },
@@ -2845,7 +3056,8 @@
           }
         },
         "tags": [
-          "Users"
+          "toggle",
+          "toggle/user"
         ]
       }
     },
@@ -2874,7 +3086,7 @@
           }
         },
         "tags": [
-          "Stores"
+          "store"
         ]
       },
       "post": {
@@ -2926,7 +3138,7 @@
           }
         },
         "tags": [
-          "Stores"
+          "store"
         ]
       },
       "put": {
@@ -2981,7 +3193,7 @@
           }
         },
         "tags": [
-          "Stores"
+          "store"
         ]
       },
       "delete": {
@@ -3008,7 +3220,7 @@
           }
         },
         "tags": [
-          "Stores"
+          "store"
         ]
       }
     },
@@ -3094,7 +3306,7 @@
           }
         },
         "tags": [
-          "Products"
+          "products"
         ]
       },
       "post": {
@@ -3140,7 +3352,7 @@
           }
         },
         "tags": [
-          "Products"
+          "products"
         ]
       },
       "put": {
@@ -3177,7 +3389,7 @@
           }
         },
         "tags": [
-          "Products"
+          "products"
         ]
       },
       "delete": {
@@ -3204,7 +3416,7 @@
           }
         },
         "tags": [
-          "Products"
+          "products"
         ]
       }
     },
@@ -3230,7 +3442,7 @@
           }
         },
         "tags": [
-          "Products"
+          "product"
         ]
       }
     },
@@ -3259,7 +3471,8 @@
           }
         },
         "tags": [
-          "Products"
+          "products",
+          "products/move-to-draft"
         ]
       }
     },
@@ -3298,7 +3511,8 @@
           }
         },
         "tags": [
-          "Products"
+          "products",
+          "products/change-status"
         ]
       }
     },
@@ -3344,7 +3558,8 @@
           }
         },
         "tags": [
-          "Products"
+          "auction",
+          "auction/products"
         ]
       },
       "post": {
@@ -3423,7 +3638,8 @@
           }
         },
         "tags": [
-          "Products"
+          "auction",
+          "auction/products"
         ]
       },
       "put": {
@@ -3505,7 +3721,8 @@
           }
         },
         "tags": [
-          "Products"
+          "auction",
+          "auction/products"
         ]
       },
       "delete": {
@@ -3532,7 +3749,8 @@
           }
         },
         "tags": [
-          "Products"
+          "auction",
+          "auction/products"
         ]
       },
       "patch": {
@@ -3562,7 +3780,8 @@
           }
         },
         "tags": [
-          "Products"
+          "auction",
+          "auction/products"
         ]
       }
     },
@@ -3588,7 +3807,8 @@
           }
         },
         "tags": [
-          "Products"
+          "auction",
+          "auction/product"
         ]
       }
     },
@@ -3617,7 +3837,8 @@
           }
         },
         "tags": [
-          "Products"
+          "auction",
+          "auction/product"
         ]
       }
     },
@@ -3642,7 +3863,8 @@
           }
         },
         "tags": [
-          "Orders"
+          "order",
+          "order/items"
         ]
       }
     },
@@ -3668,7 +3890,8 @@
           }
         },
         "tags": [
-          "Orders"
+          "order",
+          "order/item"
         ]
       }
     },
@@ -3691,7 +3914,8 @@
           }
         },
         "tags": [
-          "Orders"
+          "order",
+          "order/item"
         ]
       }
     },
@@ -3733,7 +3957,8 @@
           }
         },
         "tags": [
-          "Orders"
+          "order",
+          "order/item"
         ]
       }
     },
@@ -3764,7 +3989,8 @@
           }
         },
         "tags": [
-          "Stores"
+          "general",
+          "general/stores"
         ]
       }
     },
@@ -3790,7 +4016,8 @@
           }
         },
         "tags": [
-          "Stores"
+          "general",
+          "general/store"
         ]
       }
     },
@@ -3846,7 +4073,8 @@
           }
         },
         "tags": [
-          "Products"
+          "general",
+          "general/products"
         ]
       }
     },
@@ -3872,7 +4100,8 @@
           }
         },
         "tags": [
-          "Products"
+          "general",
+          "general/product"
         ]
       }
     },
@@ -3901,7 +4130,8 @@
           }
         },
         "tags": [
-          "Products"
+          "general",
+          "general/product"
         ]
       }
     },
@@ -3930,7 +4160,8 @@
           }
         },
         "tags": [
-          "Products"
+          "general",
+          "general/product"
         ]
       }
     },
@@ -3959,7 +4190,8 @@
           }
         },
         "tags": [
-          "Products"
+          "general",
+          "general/product"
         ]
       }
     },
@@ -4015,7 +4247,8 @@
           }
         },
         "tags": [
-          "Products"
+          "general",
+          "general/auction"
         ]
       }
     },
@@ -4041,7 +4274,8 @@
           }
         },
         "tags": [
-          "Products"
+          "general",
+          "general/auction"
         ]
       }
     },
@@ -4070,7 +4304,8 @@
           }
         },
         "tags": [
-          "Products"
+          "general",
+          "general/auction"
         ]
       }
     },
@@ -4096,7 +4331,8 @@
           }
         },
         "tags": [
-          "Products"
+          "general",
+          "general/auction"
         ]
       }
     },
@@ -4132,7 +4368,8 @@
           }
         },
         "tags": [
-          "Orders"
+          "general",
+          "general/orders"
         ]
       }
     },
@@ -4171,7 +4408,8 @@
           }
         },
         "tags": [
-          "Orders"
+          "general",
+          "general/order"
         ]
       }
     },
@@ -4210,7 +4448,8 @@
           }
         },
         "tags": [
-          "Orders"
+          "general",
+          "general/order"
         ]
       }
     },
@@ -4246,7 +4485,8 @@
           }
         },
         "tags": [
-          "Banners & Adverts"
+          "general",
+          "general/adverts"
         ]
       }
     },
@@ -4272,7 +4512,8 @@
           }
         },
         "tags": [
-          "Banners & Adverts"
+          "general",
+          "general/advert"
         ]
       }
     },
@@ -4313,7 +4554,7 @@
           }
         },
         "tags": [
-          "Misc"
+          "subscribers"
         ]
       }
     },
@@ -4364,7 +4605,7 @@
           }
         },
         "tags": [
-          "Misc"
+          "transactions"
         ]
       }
     },
@@ -4387,7 +4628,8 @@
           }
         },
         "tags": [
-          "Products"
+          "active",
+          "active/products"
         ]
       }
     },
@@ -4444,7 +4686,7 @@
           }
         },
         "tags": [
-          "Banners & Adverts"
+          "adverts"
         ]
       },
       "put": {
@@ -4499,7 +4741,7 @@
           }
         },
         "tags": [
-          "Banners & Adverts"
+          "adverts"
         ]
       },
       "get": {
@@ -4533,7 +4775,7 @@
           }
         },
         "tags": [
-          "Banners & Adverts"
+          "adverts"
         ]
       },
       "delete": {
@@ -4557,7 +4799,7 @@
           }
         },
         "tags": [
-          "Banners & Adverts"
+          "adverts"
         ]
       }
     },
@@ -4586,7 +4828,7 @@
           }
         },
         "tags": [
-          "Banners & Adverts"
+          "advert"
         ]
       }
     },
@@ -4628,7 +4870,8 @@
           }
         },
         "tags": [
-          "Banners & Adverts"
+          "approved-reject",
+          "approved-reject/advert"
         ]
       }
     },
@@ -4670,7 +4913,7 @@
           }
         },
         "tags": [
-          "Banners & Adverts"
+          "testimonial"
         ]
       },
       "put": {
@@ -4713,7 +4956,7 @@
           }
         },
         "tags": [
-          "Banners & Adverts"
+          "testimonial"
         ]
       },
       "get": {
@@ -4737,7 +4980,7 @@
           }
         },
         "tags": [
-          "Banners & Adverts"
+          "testimonial"
         ]
       },
       "delete": {
@@ -4761,7 +5004,7 @@
           }
         },
         "tags": [
-          "Banners & Adverts"
+          "testimonial"
         ]
       }
     },
@@ -4777,7 +5020,7 @@
           }
         },
         "tags": [
-          "Banners & Adverts"
+          "testimonials"
         ]
       }
     },
@@ -4810,7 +5053,8 @@
           }
         },
         "tags": [
-          "FAQs/Support"
+          "faq",
+          "faq/category"
         ]
       },
       "get": {
@@ -4834,7 +5078,8 @@
           }
         },
         "tags": [
-          "FAQs/Support"
+          "faq",
+          "faq/category"
         ]
       },
       "put": {
@@ -4868,7 +5113,8 @@
           }
         },
         "tags": [
-          "FAQs/Support"
+          "faq",
+          "faq/category"
         ]
       },
       "delete": {
@@ -4892,7 +5138,8 @@
           }
         },
         "tags": [
-          "FAQs/Support"
+          "faq",
+          "faq/category"
         ]
       }
     },
@@ -4908,7 +5155,8 @@
           }
         },
         "tags": [
-          "Categories"
+          "faq",
+          "faq/categories"
         ]
       }
     },
@@ -4950,7 +5198,7 @@
           }
         },
         "tags": [
-          "FAQs/Support"
+          "faq"
         ]
       },
       "get": {
@@ -4974,7 +5222,7 @@
           }
         },
         "tags": [
-          "FAQs/Support"
+          "faq"
         ]
       },
       "put": {
@@ -5014,7 +5262,7 @@
           }
         },
         "tags": [
-          "FAQs/Support"
+          "faq"
         ]
       },
       "delete": {
@@ -5038,7 +5286,7 @@
           }
         },
         "tags": [
-          "FAQs/Support"
+          "faq"
         ]
       }
     },
@@ -5054,7 +5302,7 @@
           }
         },
         "tags": [
-          "FAQs/Support"
+          "faqs"
         ]
       }
     },
@@ -5080,7 +5328,8 @@
           }
         },
         "tags": [
-          "FAQs/Support"
+          "contact",
+          "contact/us"
         ]
       }
     },
@@ -5106,7 +5355,8 @@
           }
         },
         "tags": [
-          "FAQs/Support"
+          "contact",
+          "contact/us"
         ]
       },
       "delete": {
@@ -5130,7 +5380,8 @@
           }
         },
         "tags": [
-          "FAQs/Support"
+          "contact",
+          "contact/us"
         ]
       }
     },
@@ -5175,7 +5426,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "job",
+          "job/post"
         ]
       }
     },
@@ -5226,7 +5478,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "job",
+          "job/update"
         ]
       }
     },
@@ -5254,7 +5507,7 @@
           }
         },
         "tags": [
-          "Jobs"
+          "jobs"
         ]
       }
     },
@@ -5283,7 +5536,7 @@
           }
         },
         "tags": [
-          "Misc"
+          "job"
         ]
       }
     },
@@ -5309,7 +5562,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "job",
+          "job/close"
         ]
       }
     },
@@ -5338,7 +5592,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "job",
+          "job/delete"
         ]
       }
     },
@@ -5371,7 +5626,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "job",
+          "job/repost"
         ]
       }
     },
@@ -5397,7 +5653,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "job",
+          "job/applicants"
         ]
       }
     },
@@ -5423,7 +5680,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "job",
+          "job/view"
         ]
       }
     },
@@ -5449,7 +5707,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "job",
+          "job/download"
         ]
       }
     },
@@ -5494,7 +5753,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "withdrawal",
+          "withdrawal/update"
         ]
       }
     },
@@ -5517,7 +5777,7 @@
           }
         },
         "tags": [
-          "Misc"
+          "withdrawals"
         ]
       }
     },
@@ -5543,7 +5803,7 @@
           }
         },
         "tags": [
-          "Misc"
+          "withdrawal"
         ]
       },
       "post": {
@@ -5583,7 +5843,7 @@
           }
         },
         "tags": [
-          "Misc"
+          "withdrawal"
         ]
       },
       "put": {
@@ -5620,7 +5880,7 @@
           }
         },
         "tags": [
-          "Misc"
+          "withdrawal"
         ]
       }
     },
@@ -5653,7 +5913,7 @@
           }
         },
         "tags": [
-          "Banners & Adverts"
+          "banner"
         ]
       },
       "get": {
@@ -5677,7 +5937,7 @@
           }
         },
         "tags": [
-          "Banners & Adverts"
+          "banner"
         ]
       },
       "put": {
@@ -5711,7 +5971,7 @@
           }
         },
         "tags": [
-          "Banners & Adverts"
+          "banner"
         ]
       },
       "delete": {
@@ -5735,7 +5995,7 @@
           }
         },
         "tags": [
-          "Banners & Adverts"
+          "banner"
         ]
       }
     },
@@ -5751,7 +6011,7 @@
           }
         },
         "tags": [
-          "Banners & Adverts"
+          "banners"
         ]
       }
     },
@@ -5787,7 +6047,7 @@
           }
         },
         "tags": [
-          "Misc"
+          "notifications"
         ]
       }
     },
@@ -5814,7 +6074,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "notifications",
+          "notifications/{id}"
         ]
       }
     },
@@ -5868,7 +6129,8 @@
           }
         },
         "tags": [
-          "Products"
+          "product",
+          "product/charges"
         ]
       },
       "get": {
@@ -5882,7 +6144,8 @@
           }
         },
         "tags": [
-          "Products"
+          "product",
+          "product/charges"
         ]
       }
     },
@@ -5945,7 +6208,8 @@
           }
         },
         "tags": [
-          "Products"
+          "product",
+          "product/charges"
         ]
       },
       "delete": {
@@ -5970,7 +6234,8 @@
           }
         },
         "tags": [
-          "Products"
+          "product",
+          "product/charges"
         ]
       }
     },
@@ -6000,7 +6265,8 @@
           }
         },
         "tags": [
-          "Products"
+          "product",
+          "product/charges"
         ]
       }
     },
@@ -6030,7 +6296,8 @@
           }
         },
         "tags": [
-          "Products"
+          "product",
+          "product/charges"
         ]
       }
     },
@@ -6066,7 +6333,8 @@
           }
         },
         "tags": [
-          "Categories"
+          "service",
+          "service/categories"
         ]
       },
       "get": {
@@ -6098,7 +6366,8 @@
           }
         },
         "tags": [
-          "Categories"
+          "service",
+          "service/categories"
         ]
       }
     },
@@ -6143,7 +6412,8 @@
           }
         },
         "tags": [
-          "Categories"
+          "service",
+          "service/categories"
         ]
       },
       "delete": {
@@ -6171,7 +6441,8 @@
           }
         },
         "tags": [
-          "Categories"
+          "service",
+          "service/categories"
         ]
       }
     },
@@ -6210,7 +6481,8 @@
           }
         },
         "tags": [
-          "Categories"
+          "service",
+          "service/subcategories"
         ]
       }
     },
@@ -6258,7 +6530,8 @@
           }
         },
         "tags": [
-          "Categories"
+          "service",
+          "service/subcategories"
         ]
       },
       "get": {
@@ -6296,7 +6569,8 @@
           }
         },
         "tags": [
-          "Categories"
+          "service",
+          "service/subcategories"
         ]
       },
       "delete": {
@@ -6324,7 +6598,469 @@
           }
         },
         "tags": [
-          "Categories"
+          "service",
+          "service/subcategories"
+        ]
+      }
+    },
+    "/service/attributes": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "attributes": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "service",
+          "service/attributes"
+        ]
+      },
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "service",
+          "service/attributes"
+        ]
+      }
+    },
+    "/service/attributes/{id}": {
+      "delete": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "service",
+          "service/attributes"
+        ]
+      }
+    },
+    "/service/attributes/{attributeId}/options": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "attributeId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "options": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "service",
+          "service/attributes"
+        ]
+      }
+    },
+    "/service/attributes/options/{optionId}": {
+      "delete": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "optionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "service",
+          "service/attributes"
+        ]
+      }
+    },
+    "/service/categories/{categoryId}/attributes": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "categoryId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "attributeIds": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "service",
+          "service/categories"
+        ]
+      },
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "categoryId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "service",
+          "service/categories"
+        ]
+      },
+      "delete": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "categoryId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "attributeIds": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "service",
+          "service/categories"
+        ]
+      }
+    },
+    "/service/{serviceId}/suspend": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "serviceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "service",
+          "service/{serviceid}"
+        ]
+      }
+    },
+    "/service/{serviceId}/activate": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "serviceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "service",
+          "service/{serviceid}"
+        ]
+      }
+    },
+    "/services": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "services"
+        ]
+      },
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "example": "any"
+                },
+                "description": {
+                  "example": "any"
+                },
+                "image_url": {
+                  "example": "any"
+                },
+                "video_url": {
+                  "example": "any"
+                },
+                "service_category_id": {
+                  "example": "any"
+                },
+                "service_subcategory_id": {
+                  "example": "any"
+                },
+                "location_city": {
+                  "example": "any"
+                },
+                "location_state": {
+                  "example": "any"
+                },
+                "location_country": {
+                  "example": "any"
+                },
+                "is_negotiable": {
+                  "example": "any"
+                },
+                "work_experience_years": {
+                  "example": "any"
+                },
+                "additional_images": {
+                  "example": "any"
+                },
+                "price": {
+                  "example": "any"
+                },
+                "discount_price": {
+                  "example": "any"
+                },
+                "attributes": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "services"
         ]
       }
     },
@@ -6337,7 +7073,7 @@
           }
         },
         "tags": [
-          "Misc"
+          "root"
         ]
       }
     },
@@ -6385,7 +7121,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "auth",
+          "auth/register"
         ]
       }
     },
@@ -6433,7 +7170,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "auth",
+          "auth/register"
         ]
       }
     },
@@ -6472,7 +7210,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "auth",
+          "auth/verify"
         ]
       }
     },
@@ -6511,7 +7250,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "auth",
+          "auth/verify"
         ]
       }
     },
@@ -6556,7 +7296,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "auth",
+          "auth/login"
         ]
       }
     },
@@ -6595,7 +7336,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "auth",
+          "auth/resend"
         ]
       }
     },
@@ -6631,7 +7373,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "auth",
+          "auth/password"
         ]
       }
     },
@@ -6667,7 +7410,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "auth",
+          "auth/password"
         ]
       }
     },
@@ -6709,7 +7453,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "auth",
+          "auth/password"
         ]
       }
     },
@@ -6722,7 +7467,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "auth",
+          "auth/facebook"
         ]
       }
     },
@@ -6744,7 +7490,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "auth",
+          "auth/facebook"
         ]
       }
     },
@@ -6764,7 +7511,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "auth",
+          "auth/google"
         ]
       },
       "post": {
@@ -6810,7 +7558,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "auth",
+          "auth/google"
         ]
       }
     },
@@ -6832,7 +7581,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "auth",
+          "auth/google"
         ]
       }
     },
@@ -6874,7 +7624,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "auth",
+          "auth/admin"
         ]
       }
     },
@@ -6897,7 +7648,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "category",
+          "category/sub-categories"
         ]
       }
     },
@@ -6913,7 +7665,8 @@
           }
         },
         "tags": [
-          "Categories"
+          "categories",
+          "categories/with"
         ]
       }
     },
@@ -6951,7 +7704,7 @@
           }
         },
         "tags": [
-          "Stores"
+          "stores"
         ]
       }
     },
@@ -6992,7 +7745,8 @@
           }
         },
         "tags": [
-          "Products"
+          "store",
+          "store/products"
         ]
       }
     },
@@ -7011,7 +7765,8 @@
           }
         },
         "tags": [
-          "Categories"
+          "faq",
+          "faq/categories"
         ]
       }
     },
@@ -7050,7 +7805,8 @@
           }
         },
         "tags": [
-          "FAQs/Support"
+          "submit",
+          "submit/contact"
         ]
       }
     },
@@ -7078,7 +7834,8 @@
           }
         },
         "tags": [
-          "Jobs"
+          "fetch",
+          "fetch/jobs"
         ]
       }
     },
@@ -7104,7 +7861,8 @@
           }
         },
         "tags": [
-          "Jobs"
+          "view",
+          "view/job"
         ]
       }
     },
@@ -7155,7 +7913,8 @@
           }
         },
         "tags": [
-          "Jobs"
+          "apply",
+          "apply/job"
         ]
       }
     },
@@ -7191,7 +7950,117 @@
           }
         },
         "tags": [
-          "Payments"
+          "create-payment-intent"
+        ]
+      }
+    },
+    "/service/{serviceId}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "serviceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "service",
+          "service/{serviceid}"
+        ]
+      }
+    },
+    "/services/{serviceId}/reviews": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "serviceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "services",
+          "services/{serviceid}"
+        ]
+      }
+    },
+    "/services/categories/{categoryId}/attributes": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "categoryId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "services",
+          "services/categories"
         ]
       }
     },
@@ -7217,7 +8086,7 @@
           }
         },
         "tags": [
-          "Misc"
+          "file"
         ]
       }
     },
@@ -7240,7 +8109,7 @@
           }
         },
         "tags": [
-          "Misc"
+          "delete"
         ]
       }
     },
@@ -7259,7 +8128,7 @@
           }
         },
         "tags": [
-          "Auth"
+          "profile"
         ]
       }
     },
@@ -7292,7 +8161,8 @@
           }
         },
         "tags": [
-          "Auth"
+          "profile",
+          "profile/photo"
         ]
       }
     },
@@ -7328,7 +8198,8 @@
           }
         },
         "tags": [
-          "Auth"
+          "profile",
+          "profile/update"
         ]
       }
     },
@@ -7367,7 +8238,8 @@
           }
         },
         "tags": [
-          "Auth"
+          "profile",
+          "profile/confirm"
         ]
       }
     },
@@ -7403,7 +8275,8 @@
           }
         },
         "tags": [
-          "Auth"
+          "profile",
+          "profile/update"
         ]
       }
     },
@@ -7442,7 +8315,8 @@
           }
         },
         "tags": [
-          "Auth"
+          "profile",
+          "profile/confirm"
         ]
       }
     },
@@ -7461,7 +8335,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "notification",
+          "notification/settings"
         ]
       }
     },
@@ -7500,7 +8375,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "update",
+          "update/notification"
         ]
       }
     },
@@ -7522,7 +8398,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "delete",
+          "delete/account"
         ]
       }
     },
@@ -7561,7 +8438,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "cart",
+          "cart/add"
         ]
       }
     },
@@ -7600,7 +8478,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "cart",
+          "cart/update"
         ]
       }
     },
@@ -7629,7 +8508,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "cart",
+          "cart/remove"
         ]
       }
     },
@@ -7645,7 +8525,7 @@
           }
         },
         "tags": [
-          "Misc"
+          "cart"
         ]
       }
     },
@@ -7661,7 +8541,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "cart",
+          "cart/clear"
         ]
       }
     },
@@ -7677,7 +8558,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "cart",
+          "cart/charges"
         ]
       }
     },
@@ -7696,7 +8578,8 @@
           }
         },
         "tags": [
-          "Payments"
+          "payment",
+          "payment/gateway"
         ]
       }
     },
@@ -7735,7 +8618,7 @@
           }
         },
         "tags": [
-          "Misc"
+          "checkout"
         ]
       }
     },
@@ -7774,7 +8657,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "checkout",
+          "checkout/dollar"
         ]
       }
     },
@@ -7793,7 +8677,7 @@
           }
         },
         "tags": [
-          "Misc"
+          "conversations"
         ]
       }
     },
@@ -7822,7 +8706,7 @@
           }
         },
         "tags": [
-          "Misc"
+          "messages"
         ]
       },
       "post": {
@@ -7868,7 +8752,7 @@
           }
         },
         "tags": [
-          "Misc"
+          "messages"
         ]
       },
       "delete": {
@@ -7898,7 +8782,7 @@
           }
         },
         "tags": [
-          "Misc"
+          "messages"
         ]
       }
     },
@@ -7930,7 +8814,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "mark",
+          "mark/message"
         ]
       }
     },
@@ -7969,7 +8854,8 @@
           }
         },
         "tags": [
-          "Auctions"
+          "auction",
+          "auction/interest"
         ]
       }
     },
@@ -7988,7 +8874,8 @@
           }
         },
         "tags": [
-          "Products"
+          "auction",
+          "auction/products"
         ]
       }
     },
@@ -8030,7 +8917,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "place",
+          "place/bid"
         ]
       }
     },
@@ -8052,7 +8940,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "become",
+          "become/vendor"
         ]
       }
     },
@@ -8081,7 +8970,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "mark",
+          "mark/notification"
         ]
       }
     },
@@ -8110,7 +9000,7 @@
           }
         },
         "tags": [
-          "Orders"
+          "orders"
         ]
       }
     },
@@ -8146,7 +9036,8 @@
           }
         },
         "tags": [
-          "Orders"
+          "order",
+          "order/payment"
         ]
       }
     },
@@ -8179,7 +9070,8 @@
           }
         },
         "tags": [
-          "Products"
+          "save",
+          "save/product"
         ]
       }
     },
@@ -8198,7 +9090,8 @@
           }
         },
         "tags": [
-          "Products"
+          "saved",
+          "saved/products"
         ]
       }
     },
@@ -8246,7 +9139,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "add",
+          "add/review"
         ]
       }
     },
@@ -8288,7 +9182,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "update",
+          "update/review"
         ]
       }
     },
@@ -8311,7 +9206,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "get",
+          "get/review"
         ]
       }
     },
@@ -8337,7 +9233,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "view",
+          "view/review"
         ]
       }
     },
@@ -8379,7 +9276,8 @@
           }
         },
         "tags": [
-          "Products"
+          "products",
+          "products/{productid}"
         ]
       }
     },
@@ -8418,7 +9316,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "block",
+          "block/vendor"
         ]
       },
       "delete": {
@@ -8452,7 +9351,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "block",
+          "block/vendor"
         ]
       }
     },
@@ -8471,7 +9371,8 @@
           }
         },
         "tags": [
-          "Users"
+          "blocked",
+          "blocked/vendors"
         ]
       }
     },
@@ -8510,7 +9411,217 @@
           }
         },
         "tags": [
-          "Products"
+          "block",
+          "block/product"
+        ]
+      }
+    },
+    "/service/review": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "serviceId": {
+                  "example": "any"
+                },
+                "rating": {
+                  "example": "any"
+                },
+                "comment": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "service",
+          "service/review"
+        ]
+      }
+    },
+    "/service/{serviceId}/bookings": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "serviceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "example": "any"
+                },
+                "vendorId": {
+                  "example": "any"
+                },
+                "bookingDate": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "service",
+          "service/{serviceid}"
+        ]
+      }
+    },
+    "/service/bookings": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "service",
+          "service/bookings"
+        ]
+      }
+    },
+    "/service/bookings/{bookingId}/complete": {
+      "patch": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "bookingId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "service",
+          "service/bookings"
+        ]
+      }
+    },
+    "/service/bookings/{bookingId}/cancel": {
+      "patch": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "bookingId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "service",
+          "service/bookings"
         ]
       }
     },
@@ -8536,7 +9647,8 @@
           }
         },
         "tags": [
-          "Stores"
+          "view",
+          "view/store"
         ]
       }
     },
@@ -8579,7 +9691,8 @@
           }
         },
         "tags": [
-          "Products"
+          "vendors",
+          "vendors/products"
         ]
       }
     },
@@ -8621,7 +9734,7 @@
           }
         },
         "tags": [
-          "Misc"
+          "subscribe"
         ]
       }
     },
@@ -8663,7 +9776,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "subscribe",
+          "subscribe/dollar"
         ]
       }
     },
@@ -8688,7 +9802,8 @@
           }
         },
         "tags": [
-          "Subscriptions"
+          "subscription",
+          "subscription/cancel"
         ]
       }
     },
@@ -8707,7 +9822,7 @@
           }
         },
         "tags": [
-          "Misc"
+          "verifycac"
         ]
       }
     },
@@ -8743,7 +9858,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "bank",
+          "bank/informations"
         ]
       },
       "put": {
@@ -8777,7 +9893,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "bank",
+          "bank/informations"
         ]
       },
       "get": {
@@ -8794,7 +9911,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "bank",
+          "bank/informations"
         ]
       }
     },
@@ -8820,7 +9938,8 @@
           }
         },
         "tags": [
-          "Misc"
+          "bank",
+          "bank/information"
         ]
       },
       "delete": {
@@ -8844,79 +9963,999 @@
           }
         },
         "tags": [
-          "Misc"
+          "bank",
+          "bank/information"
+        ]
+      }
+    },
+    "/services/{serviceId}": {
+      "put": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "serviceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "example": "any"
+                },
+                "description": {
+                  "example": "any"
+                },
+                "image_url": {
+                  "example": "any"
+                },
+                "video_url": {
+                  "example": "any"
+                },
+                "service_category_id": {
+                  "example": "any"
+                },
+                "service_subcategory_id": {
+                  "example": "any"
+                },
+                "location_city": {
+                  "example": "any"
+                },
+                "location_state": {
+                  "example": "any"
+                },
+                "location_country": {
+                  "example": "any"
+                },
+                "work_experience_years": {
+                  "example": "any"
+                },
+                "additional_images": {
+                  "example": "any"
+                },
+                "price": {
+                  "example": "any"
+                },
+                "discount_price": {
+                  "example": "any"
+                },
+                "is_negotiable": {
+                  "example": "any"
+                },
+                "attributes": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "services",
+          "services/{serviceid}"
+        ]
+      },
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "serviceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "services",
+          "services/{serviceid}"
+        ]
+      },
+      "delete": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "serviceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "services",
+          "services/{serviceid}"
+        ]
+      }
+    },
+    "/services/{serviceId}/publish": {
+      "patch": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "serviceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "services",
+          "services/{serviceid}"
+        ]
+      }
+    },
+    "/services/{serviceId}/unpublish": {
+      "patch": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "serviceId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "services",
+          "services/{serviceid}"
+        ]
+      }
+    },
+    "/service/bookings/{bookingId}/confirm": {
+      "patch": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "bookingId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "service",
+          "service/bookings"
         ]
       }
     }
   },
   "tags": [
     {
-      "name": "Auth",
-      "description": "Authentication, login, register, social callbacks"
+      "name": "root",
+      "description": "Endpoints for root"
     },
     {
-      "name": "Categories",
-      "description": "Categories & sub-categories"
+      "name": "auth",
+      "description": "Endpoints for auth"
     },
     {
-      "name": "Products",
-      "description": "Products (create/update/list/detail)"
+      "name": "auth/register",
+      "description": "Endpoints for auth/register"
     },
     {
-      "name": "Stores",
-      "description": "Store operations"
+      "name": "auth/verify",
+      "description": "Endpoints for auth/verify"
     },
     {
-      "name": "Auctions",
-      "description": "Auction products and bidders"
+      "name": "auth/login",
+      "description": "Endpoints for auth/login"
     },
     {
-      "name": "Orders",
-      "description": "Order and order item endpoints"
+      "name": "auth/resend",
+      "description": "Endpoints for auth/resend"
     },
     {
-      "name": "Payments",
-      "description": "Payment intents / payment gateways"
+      "name": "auth/password",
+      "description": "Endpoints for auth/password"
     },
     {
-      "name": "KYC",
-      "description": "Know-your-customer endpoints"
+      "name": "auth/facebook",
+      "description": "Endpoints for auth/facebook"
     },
     {
-      "name": "Roles & Permissions",
-      "description": "Role/permission management"
+      "name": "auth/google",
+      "description": "Endpoints for auth/google"
     },
     {
-      "name": "Sub-admins",
-      "description": "Sub-admin management"
+      "name": "auth/admin",
+      "description": "Endpoints for auth/admin"
     },
     {
-      "name": "Subscriptions",
-      "description": "Subscription plans & billing"
+      "name": "categories",
+      "description": "Endpoints for categories"
     },
     {
-      "name": "Users",
-      "description": "User details and toggle status"
+      "name": "category",
+      "description": "Endpoints for category"
     },
     {
-      "name": "Jobs",
-      "description": "Job fetch/apply/view"
+      "name": "category/sub-categories",
+      "description": "Endpoints for category/sub-categories"
     },
     {
-      "name": "Banners & Adverts",
-      "description": "Banners, adverts and testimonials"
+      "name": "categories/with",
+      "description": "Endpoints for categories/with"
     },
     {
-      "name": "FAQs/Support",
-      "description": "FAQ categories & contact form"
+      "name": "products",
+      "description": "Endpoints for products"
     },
     {
-      "name": "Currency",
-      "description": "Currency endpoints"
+      "name": "product",
+      "description": "Endpoints for product"
     },
     {
-      "name": "Misc",
-      "description": "Miscellaneous endpoints (not matched)"
+      "name": "stores",
+      "description": "Endpoints for stores"
+    },
+    {
+      "name": "store",
+      "description": "Endpoints for store"
+    },
+    {
+      "name": "store/products",
+      "description": "Endpoints for store/products"
+    },
+    {
+      "name": "auction",
+      "description": "Endpoints for auction"
+    },
+    {
+      "name": "auction/products",
+      "description": "Endpoints for auction/products"
+    },
+    {
+      "name": "auction/product",
+      "description": "Endpoints for auction/product"
+    },
+    {
+      "name": "adverts",
+      "description": "Endpoints for adverts"
+    },
+    {
+      "name": "advert",
+      "description": "Endpoints for advert"
+    },
+    {
+      "name": "testimonials",
+      "description": "Endpoints for testimonials"
+    },
+    {
+      "name": "faq",
+      "description": "Endpoints for faq"
+    },
+    {
+      "name": "faq/categories",
+      "description": "Endpoints for faq/categories"
+    },
+    {
+      "name": "submit",
+      "description": "Endpoints for submit"
+    },
+    {
+      "name": "submit/contact",
+      "description": "Endpoints for submit/contact"
+    },
+    {
+      "name": "fetch",
+      "description": "Endpoints for fetch"
+    },
+    {
+      "name": "fetch/jobs",
+      "description": "Endpoints for fetch/jobs"
+    },
+    {
+      "name": "view",
+      "description": "Endpoints for view"
+    },
+    {
+      "name": "view/job",
+      "description": "Endpoints for view/job"
+    },
+    {
+      "name": "apply",
+      "description": "Endpoints for apply"
+    },
+    {
+      "name": "apply/job",
+      "description": "Endpoints for apply/job"
+    },
+    {
+      "name": "banners",
+      "description": "Endpoints for banners"
+    },
+    {
+      "name": "create-payment-intent",
+      "description": "Endpoints for create-payment-intent"
+    },
+    {
+      "name": "service",
+      "description": "Endpoints for service"
+    },
+    {
+      "name": "service/categories",
+      "description": "Endpoints for service/categories"
+    },
+    {
+      "name": "service/subcategories",
+      "description": "Endpoints for service/subcategories"
+    },
+    {
+      "name": "services",
+      "description": "Endpoints for services"
+    },
+    {
+      "name": "service/{serviceid}",
+      "description": "Endpoints for service/{serviceid}"
+    },
+    {
+      "name": "services/{serviceid}",
+      "description": "Endpoints for services/{serviceid}"
+    },
+    {
+      "name": "services/categories",
+      "description": "Endpoints for services/categories"
+    },
+    {
+      "name": "logout",
+      "description": "Endpoints for logout"
+    },
+    {
+      "name": "profile",
+      "description": "Endpoints for profile"
+    },
+    {
+      "name": "profile/update",
+      "description": "Endpoints for profile/update"
+    },
+    {
+      "name": "sub-admins",
+      "description": "Endpoints for sub-admins"
+    },
+    {
+      "name": "sub-admin",
+      "description": "Endpoints for sub-admin"
+    },
+    {
+      "name": "sub-admin/create",
+      "description": "Endpoints for sub-admin/create"
+    },
+    {
+      "name": "sub-admin/update",
+      "description": "Endpoints for sub-admin/update"
+    },
+    {
+      "name": "sub-admin/status",
+      "description": "Endpoints for sub-admin/status"
+    },
+    {
+      "name": "sub-admin/delete",
+      "description": "Endpoints for sub-admin/delete"
+    },
+    {
+      "name": "sub-admin/resend-login",
+      "description": "Endpoints for sub-admin/resend-login"
+    },
+    {
+      "name": "roles",
+      "description": "Endpoints for roles"
+    },
+    {
+      "name": "role",
+      "description": "Endpoints for role"
+    },
+    {
+      "name": "role/create",
+      "description": "Endpoints for role/create"
+    },
+    {
+      "name": "role/update",
+      "description": "Endpoints for role/update"
+    },
+    {
+      "name": "role/view",
+      "description": "Endpoints for role/view"
+    },
+    {
+      "name": "role/assign",
+      "description": "Endpoints for role/assign"
+    },
+    {
+      "name": "role/delete",
+      "description": "Endpoints for role/delete"
+    },
+    {
+      "name": "permissions",
+      "description": "Endpoints for permissions"
+    },
+    {
+      "name": "permission",
+      "description": "Endpoints for permission"
+    },
+    {
+      "name": "permission/create",
+      "description": "Endpoints for permission/create"
+    },
+    {
+      "name": "permission/update",
+      "description": "Endpoints for permission/update"
+    },
+    {
+      "name": "permission/delete",
+      "description": "Endpoints for permission/delete"
+    },
+    {
+      "name": "subscription",
+      "description": "Endpoints for subscription"
+    },
+    {
+      "name": "subscription/plans",
+      "description": "Endpoints for subscription/plans"
+    },
+    {
+      "name": "subscription/plan",
+      "description": "Endpoints for subscription/plan"
+    },
+    {
+      "name": "categories/sub",
+      "description": "Endpoints for categories/sub"
+    },
+    {
+      "name": "sub",
+      "description": "Endpoints for sub"
+    },
+    {
+      "name": "sub/categories",
+      "description": "Endpoints for sub/categories"
+    },
+    {
+      "name": "kyc",
+      "description": "Endpoints for kyc"
+    },
+    {
+      "name": "kyc/approve-reject",
+      "description": "Endpoints for kyc/approve-reject"
+    },
+    {
+      "name": "payment-gateway",
+      "description": "Endpoints for payment-gateway"
+    },
+    {
+      "name": "payment-gateways",
+      "description": "Endpoints for payment-gateways"
+    },
+    {
+      "name": "payment-gateways/status",
+      "description": "Endpoints for payment-gateways/status"
+    },
+    {
+      "name": "currency",
+      "description": "Endpoints for currency"
+    },
+    {
+      "name": "currencies",
+      "description": "Endpoints for currencies"
+    },
+    {
+      "name": "customers",
+      "description": "Endpoints for customers"
+    },
+    {
+      "name": "vendors",
+      "description": "Endpoints for vendors"
+    },
+    {
+      "name": "user",
+      "description": "Endpoints for user"
+    },
+    {
+      "name": "user/details",
+      "description": "Endpoints for user/details"
+    },
+    {
+      "name": "toggle",
+      "description": "Endpoints for toggle"
+    },
+    {
+      "name": "toggle/user",
+      "description": "Endpoints for toggle/user"
+    },
+    {
+      "name": "products/move-to-draft",
+      "description": "Endpoints for products/move-to-draft"
+    },
+    {
+      "name": "products/change-status",
+      "description": "Endpoints for products/change-status"
+    },
+    {
+      "name": "order",
+      "description": "Endpoints for order"
+    },
+    {
+      "name": "order/items",
+      "description": "Endpoints for order/items"
+    },
+    {
+      "name": "order/item",
+      "description": "Endpoints for order/item"
+    },
+    {
+      "name": "general",
+      "description": "Endpoints for general"
+    },
+    {
+      "name": "general/stores",
+      "description": "Endpoints for general/stores"
+    },
+    {
+      "name": "general/store",
+      "description": "Endpoints for general/store"
+    },
+    {
+      "name": "general/products",
+      "description": "Endpoints for general/products"
+    },
+    {
+      "name": "general/product",
+      "description": "Endpoints for general/product"
+    },
+    {
+      "name": "general/auction",
+      "description": "Endpoints for general/auction"
+    },
+    {
+      "name": "general/orders",
+      "description": "Endpoints for general/orders"
+    },
+    {
+      "name": "general/order",
+      "description": "Endpoints for general/order"
+    },
+    {
+      "name": "general/adverts",
+      "description": "Endpoints for general/adverts"
+    },
+    {
+      "name": "general/advert",
+      "description": "Endpoints for general/advert"
+    },
+    {
+      "name": "subscribers",
+      "description": "Endpoints for subscribers"
+    },
+    {
+      "name": "transactions",
+      "description": "Endpoints for transactions"
+    },
+    {
+      "name": "active",
+      "description": "Endpoints for active"
+    },
+    {
+      "name": "active/products",
+      "description": "Endpoints for active/products"
+    },
+    {
+      "name": "approved-reject",
+      "description": "Endpoints for approved-reject"
+    },
+    {
+      "name": "approved-reject/advert",
+      "description": "Endpoints for approved-reject/advert"
+    },
+    {
+      "name": "testimonial",
+      "description": "Endpoints for testimonial"
+    },
+    {
+      "name": "faq/category",
+      "description": "Endpoints for faq/category"
+    },
+    {
+      "name": "faqs",
+      "description": "Endpoints for faqs"
+    },
+    {
+      "name": "contact",
+      "description": "Endpoints for contact"
+    },
+    {
+      "name": "contact/us",
+      "description": "Endpoints for contact/us"
+    },
+    {
+      "name": "job",
+      "description": "Endpoints for job"
+    },
+    {
+      "name": "job/post",
+      "description": "Endpoints for job/post"
+    },
+    {
+      "name": "job/update",
+      "description": "Endpoints for job/update"
+    },
+    {
+      "name": "jobs",
+      "description": "Endpoints for jobs"
+    },
+    {
+      "name": "job/close",
+      "description": "Endpoints for job/close"
+    },
+    {
+      "name": "job/delete",
+      "description": "Endpoints for job/delete"
+    },
+    {
+      "name": "job/repost",
+      "description": "Endpoints for job/repost"
+    },
+    {
+      "name": "job/applicants",
+      "description": "Endpoints for job/applicants"
+    },
+    {
+      "name": "job/view",
+      "description": "Endpoints for job/view"
+    },
+    {
+      "name": "job/download",
+      "description": "Endpoints for job/download"
+    },
+    {
+      "name": "withdrawal",
+      "description": "Endpoints for withdrawal"
+    },
+    {
+      "name": "withdrawal/update",
+      "description": "Endpoints for withdrawal/update"
+    },
+    {
+      "name": "withdrawals",
+      "description": "Endpoints for withdrawals"
+    },
+    {
+      "name": "banner",
+      "description": "Endpoints for banner"
+    },
+    {
+      "name": "notifications",
+      "description": "Endpoints for notifications"
+    },
+    {
+      "name": "notifications/{id}",
+      "description": "Endpoints for notifications/{id}"
+    },
+    {
+      "name": "product/charges",
+      "description": "Endpoints for product/charges"
+    },
+    {
+      "name": "service/attributes",
+      "description": "Endpoints for service/attributes"
+    },
+    {
+      "name": "file",
+      "description": "Endpoints for file"
+    },
+    {
+      "name": "delete",
+      "description": "Endpoints for delete"
+    },
+    {
+      "name": "profile/photo",
+      "description": "Endpoints for profile/photo"
+    },
+    {
+      "name": "profile/confirm",
+      "description": "Endpoints for profile/confirm"
+    },
+    {
+      "name": "notification",
+      "description": "Endpoints for notification"
+    },
+    {
+      "name": "notification/settings",
+      "description": "Endpoints for notification/settings"
+    },
+    {
+      "name": "update",
+      "description": "Endpoints for update"
+    },
+    {
+      "name": "update/notification",
+      "description": "Endpoints for update/notification"
+    },
+    {
+      "name": "delete/account",
+      "description": "Endpoints for delete/account"
+    },
+    {
+      "name": "cart",
+      "description": "Endpoints for cart"
+    },
+    {
+      "name": "cart/add",
+      "description": "Endpoints for cart/add"
+    },
+    {
+      "name": "cart/update",
+      "description": "Endpoints for cart/update"
+    },
+    {
+      "name": "cart/remove",
+      "description": "Endpoints for cart/remove"
+    },
+    {
+      "name": "cart/clear",
+      "description": "Endpoints for cart/clear"
+    },
+    {
+      "name": "cart/charges",
+      "description": "Endpoints for cart/charges"
+    },
+    {
+      "name": "payment",
+      "description": "Endpoints for payment"
+    },
+    {
+      "name": "payment/gateway",
+      "description": "Endpoints for payment/gateway"
+    },
+    {
+      "name": "checkout",
+      "description": "Endpoints for checkout"
+    },
+    {
+      "name": "checkout/dollar",
+      "description": "Endpoints for checkout/dollar"
+    },
+    {
+      "name": "conversations",
+      "description": "Endpoints for conversations"
+    },
+    {
+      "name": "messages",
+      "description": "Endpoints for messages"
+    },
+    {
+      "name": "mark",
+      "description": "Endpoints for mark"
+    },
+    {
+      "name": "mark/message",
+      "description": "Endpoints for mark/message"
+    },
+    {
+      "name": "auction/interest",
+      "description": "Endpoints for auction/interest"
+    },
+    {
+      "name": "place",
+      "description": "Endpoints for place"
+    },
+    {
+      "name": "place/bid",
+      "description": "Endpoints for place/bid"
+    },
+    {
+      "name": "become",
+      "description": "Endpoints for become"
+    },
+    {
+      "name": "become/vendor",
+      "description": "Endpoints for become/vendor"
+    },
+    {
+      "name": "mark/notification",
+      "description": "Endpoints for mark/notification"
+    },
+    {
+      "name": "orders",
+      "description": "Endpoints for orders"
+    },
+    {
+      "name": "order/payment",
+      "description": "Endpoints for order/payment"
+    },
+    {
+      "name": "save",
+      "description": "Endpoints for save"
+    },
+    {
+      "name": "save/product",
+      "description": "Endpoints for save/product"
+    },
+    {
+      "name": "saved",
+      "description": "Endpoints for saved"
+    },
+    {
+      "name": "saved/products",
+      "description": "Endpoints for saved/products"
+    },
+    {
+      "name": "add",
+      "description": "Endpoints for add"
+    },
+    {
+      "name": "add/review",
+      "description": "Endpoints for add/review"
+    },
+    {
+      "name": "update/review",
+      "description": "Endpoints for update/review"
+    },
+    {
+      "name": "get",
+      "description": "Endpoints for get"
+    },
+    {
+      "name": "get/review",
+      "description": "Endpoints for get/review"
+    },
+    {
+      "name": "view/review",
+      "description": "Endpoints for view/review"
+    },
+    {
+      "name": "products/{productid}",
+      "description": "Endpoints for products/{productid}"
+    },
+    {
+      "name": "block",
+      "description": "Endpoints for block"
+    },
+    {
+      "name": "block/vendor",
+      "description": "Endpoints for block/vendor"
+    },
+    {
+      "name": "blocked",
+      "description": "Endpoints for blocked"
+    },
+    {
+      "name": "blocked/vendors",
+      "description": "Endpoints for blocked/vendors"
+    },
+    {
+      "name": "block/product",
+      "description": "Endpoints for block/product"
+    },
+    {
+      "name": "service/review",
+      "description": "Endpoints for service/review"
+    },
+    {
+      "name": "service/bookings",
+      "description": "Endpoints for service/bookings"
+    },
+    {
+      "name": "view/store",
+      "description": "Endpoints for view/store"
+    },
+    {
+      "name": "vendors/products",
+      "description": "Endpoints for vendors/products"
+    },
+    {
+      "name": "subscribe",
+      "description": "Endpoints for subscribe"
+    },
+    {
+      "name": "subscribe/dollar",
+      "description": "Endpoints for subscribe/dollar"
+    },
+    {
+      "name": "subscription/cancel",
+      "description": "Endpoints for subscription/cancel"
+    },
+    {
+      "name": "verifycac",
+      "description": "Endpoints for verifycac"
+    },
+    {
+      "name": "bank",
+      "description": "Endpoints for bank"
+    },
+    {
+      "name": "bank/informations",
+      "description": "Endpoints for bank/informations"
+    },
+    {
+      "name": "bank/information",
+      "description": "Endpoints for bank/information"
     }
   ]
 }
