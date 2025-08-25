@@ -5,10 +5,9 @@ export class AttributeDefinitions extends Model {
 	public name!: string;
 	public input_type!: string;
 	public data_type!: string;
-	public is_required!: boolean;
 
 	public static associate(model: any) {
-		this.hasMany(model.ServiceAttributeOptions, {
+		this.hasMany(model.AttributeOptions, {
 			foreignKey: "attribute_id",
 			as: "options",
 		});
@@ -35,13 +34,9 @@ const initModel = (sequelize: Sequelize) => {
 				type: DataTypes.STRING,
 				allowNull: false,
 			},
-			is_required: {
-				type: DataTypes.BOOLEAN,
-				defaultValue: false,
-			},
 		},
 		{
-			tableName: "service_attribute",
+			tableName: "attribute_definitions",
 			timestamps: false,
 			sequelize,
 			indexes: [
