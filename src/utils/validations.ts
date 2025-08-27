@@ -1367,7 +1367,7 @@ export const ServiceValidation = () => {
 			.withMessage("Category ID is required")
 			.isNumeric()
 			.withMessage("Category ID must be a valid number"),
-		check("service_subCategory_id")
+		check("service_subcategory_id")
 			.not()
 			.isEmpty()
 			.withMessage("Sub-category ID is required")
