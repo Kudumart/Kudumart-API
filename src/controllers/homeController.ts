@@ -1352,11 +1352,11 @@ export const getAllServices = async (
 		const whereClause: any = {};
 
 		if (categoryId) {
-			whereClause.categoryId = categoryId;
+			whereClause.service_category_id = categoryId;
 		}
 
 		if (subCategoryId) {
-			whereClause.subCategoryId = subCategoryId;
+			whereClause.service_subcategory_id = subCategoryId;
 		}
 
 		whereClause.status = "active"; // Only fetch active services
