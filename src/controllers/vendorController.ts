@@ -3528,47 +3528,48 @@ export const publishService = async (
 	const serviceId = req.params.serviceId as string;
 
 	try {
-		const vendorSubscription = await VendorSubscription.findOne({
-			where: { vendorId, isActive: true },
-			include: [
-				{
-					model: SubscriptionPlan,
-					as: "subscriptionPlans",
-					attributes: ["id", "name", "allowsServiceAds", "serviceAdsLimit"],
-				},
-			],
-		});
-
-		if (!vendorSubscription) {
-			res.status(403).json({
-				message:
-					"No active subscription found. Please subscribe to a plan to publish services.",
-			});
-			return;
-		}
-
-		if (!vendorSubscription.subscriptionPlans?.allowsServiceAds) {
-			res.status(403).json({
-				message:
-					"Your current subscription plan does not allow publishing services. Please upgrade your plan.",
-			});
-			return;
-		}
-
-		if (vendorSubscription.subscriptionPlans.serviceAdsLimit !== null) {
-			const publishedServiceCount = await Services.count({
-				where: { vendorId, status: "active" },
-			});
-			if (
-				publishedServiceCount >=
-				vendorSubscription.subscriptionPlans.serviceAdsLimit
-			) {
-				res.status(403).json({
-					message: `You have reached your service publication limit of ${vendorSubscription.subscriptionPlans.serviceAdsLimit}. Please upgrade your plan to publish more services.`,
-				});
-				return;
-			}
-		}
+		// TO BE ENABLED WHEN PRODUCTION IS READY FOR SUBSCRIPTION RESTRICTIONS
+		// const vendorSubscription = await VendorSubscription.findOne({
+		// 	where: { vendorId, isActive: true },
+		// 	include: [
+		// 		{
+		// 			model: SubscriptionPlan,
+		// 			as: "subscriptionPlans",
+		// 			attributes: ["id", "name", "allowsServiceAds", "serviceAdsLimit"],
+		// 		},
+		// 	],
+		// });
+		//
+		// if (!vendorSubscription) {
+		// 	res.status(403).json({
+		// 		message:
+		// 			"No active subscription found. Please subscribe to a plan to publish services.",
+		// 	});
+		// 	return;
+		// }
+		//
+		// if (!vendorSubscription.subscriptionPlans?.allowsServiceAds) {
+		// 	res.status(403).json({
+		// 		message:
+		// 			"Your current subscription plan does not allow publishing services. Please upgrade your plan.",
+		// 	});
+		// 	return;
+		// }
+		//
+		// if (vendorSubscription.subscriptionPlans.serviceAdsLimit !== null) {
+		// 	const publishedServiceCount = await Services.count({
+		// 		where: { vendorId, status: "active" },
+		// 	});
+		// 	if (
+		// 		publishedServiceCount >=
+		// 		vendorSubscription.subscriptionPlans.serviceAdsLimit
+		// 	) {
+		// 		res.status(403).json({
+		// 			message: `You have reached your service publication limit of ${vendorSubscription.subscriptionPlans.serviceAdsLimit}. Please upgrade your plan to publish more services.`,
+		// 		});
+		// 		return;
+		// 	}
+		// }
 
 		const service = await Services.findOne({
 			where: { id: serviceId, vendorId },
