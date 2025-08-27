@@ -1319,6 +1319,7 @@ export const ServiceValidation = () => {
 			.isString()
 			.withMessage("Image URL must be a valid string"),
 		check("video_url")
+			.optional({ checkFalsy: true })
 			.isString()
 			.withMessage("Video URL must be a valid string"),
 		check("additional_images")
@@ -1354,12 +1355,12 @@ export const ServiceValidation = () => {
 			.withMessage("Location country is required")
 			.isString()
 			.withMessage("Location country must be a valid string"),
-		check("work_experience")
+		check("work_experience_years")
 			.not()
 			.isEmpty()
-			.withMessage("Work experience is required")
+			.withMessage("Work experience years is required")
 			.isNumeric()
-			.withMessage("Work experience must be a valid number"),
+			.withMessage("Work experience years must be a valid number"),
 		check("service_category_id")
 			.not()
 			.isEmpty()
