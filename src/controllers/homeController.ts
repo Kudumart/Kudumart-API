@@ -1383,7 +1383,7 @@ export const getAllServices = async (
 				},
 				{
 					model: ServiceSubCategories,
-					as: "sub_category",
+					as: "subCategory",
 					attributes: ["id", "name"],
 				},
 			],
@@ -1476,7 +1476,7 @@ export const getServiceById = async (
 				},
 				{
 					model: ServiceSubCategories,
-					as: "sub_category",
+					as: "subCategory",
 					attributes: ["id", "name"],
 				},
 			],

@@ -1368,7 +1368,9 @@ export const ServiceValidation = () => {
 			.isNumeric()
 			.withMessage("Category ID must be a valid number"),
 		check("service_subCategory_id")
-			.optional({ checkFalsy: true })
+			.not()
+			.isEmpty()
+			.withMessage("Sub-category ID is required")
 			.isNumeric()
 			.withMessage("Sub-category ID must be a valid number"),
 		check("is_negotiable")
