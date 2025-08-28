@@ -3963,6 +3963,7 @@ export const bookService = async (
 
 		res.status(200).json({ message: "Inquiry sent successfully." });
 	} catch (error) {
+		console.error(error);
 		res.status(500).json({ message: "Server error." }); // Handle server error
 	}
 };
