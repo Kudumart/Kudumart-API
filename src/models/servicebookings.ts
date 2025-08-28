@@ -49,7 +49,7 @@ const initModel = (sequelize: any) => {
 				allowNull: false,
 			},
 			bookingDate: {
-				type: "DATE",
+				type: DataTypes.DATE,
 				allowNull: false,
 			},
 			status: {
@@ -59,11 +59,11 @@ const initModel = (sequelize: any) => {
 			},
 			createdAt: {
 				type: "DATE",
-				defaultValue: "NOW",
+				defaultValue: DataTypes.NOW,
 			},
 			updatedAt: {
 				type: "DATE",
-				defaultValue: "NOW",
+				defaultValue: DataTypes.NOW,
 			},
 		},
 		{
