@@ -2724,7 +2724,7 @@ export const createService = async (
 		}
 
 		const attributeIds = attributes
-			? attributes.map((attr: any) => attr.attributeId)
+			? [...new Set(attributes.map((attr: any) => attr.attributeId))]
 			: [];
 
 		// Validate that all attribute IDs exist
@@ -2733,7 +2733,9 @@ export const createService = async (
 		});
 
 		if (existingAttributes.length !== attributeIds.length) {
-			res.status(400).json({ message: "One or more attributes are invalid." });
+			res.status(400).json({
+				message: "One or more attributes does not exist for this category.",
+			});
 			return;
 		}
 
@@ -2857,7 +2859,7 @@ export const createService = async (
 					const attribute = attributes.find(
 						(a: any) => a.attributeId === attr.id,
 					);
-					if (attribute && typeof attribute.value === "string") {
+					if (attribute && typeof attribute.value === "number") {
 						numberAttributes.push({
 							attribute_id: attr.id,
 							service_id: newService.id,
@@ -2865,7 +2867,7 @@ export const createService = async (
 						});
 					} else {
 						res.status(400).json({
-							message: `Invalid value for attribute ID ${attr.id}. Expected a number string.`,
+							message: `Invalid value for attribute ID ${attr.id}. Expected a number.`,
 						});
 						return;
 					}
@@ -2875,7 +2877,7 @@ export const createService = async (
 					const attribute = attributes.find(
 						(a: any) => a.attributeId === attr.id,
 					);
-					if (attribute && typeof attribute.value === "string") {
+					if (attribute && typeof attribute.value === "boolean") {
 						booleanAttributes.push({
 							attribute_id: attr.id,
 							service_id: newService.id,
@@ -2883,7 +2885,7 @@ export const createService = async (
 						});
 					} else {
 						res.status(400).json({
-							message: `Invalid value for attribute ID ${attr.id}. Expected a boolean string.`,
+							message: `Invalid value for attribute ID ${attr.id}. Expected a boolean`,
 						});
 						return;
 					}
