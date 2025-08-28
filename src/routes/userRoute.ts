@@ -247,6 +247,7 @@ userRoutes.post(
 userRoutes.post(
 	"/service/:serviceId/bookings",
 	validateUUIDParam("serviceId"),
+  validate,
 	ValidateServiceBooking(),
 	validate,
 	authMiddleware,
