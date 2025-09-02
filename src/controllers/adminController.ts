@@ -6138,15 +6138,17 @@ export const getAdminNotifications = async (
 	try {
 		const { limit, page } = req.query;
 
-		const offset = (Number(page) - 1) * Number(limit);
+		const offset = (Number(page || 1) - 1) * Number(limit || 10);
+
 
 		const notifications = await AdminNotification.findAll({
 			limit: Number(limit) || 10, // Default to 10 if not provided
 			offset: offset || 0, // Default to 0 if page or limit is invalid
 			order: [["createdAt", "DESC"]],
 		});
-		res.status(200).json({ data: notifications, pagination: { limit, page } });
+		res.status(200).json({ data: notifications  , pagination: { limit, page } });
 	} catch (error) {
+    console.log(error);
 		res.status(500).json({ message: "Failed to fetch notifications" });
 	}
 };
