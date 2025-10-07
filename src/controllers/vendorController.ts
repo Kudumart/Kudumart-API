@@ -3242,7 +3242,7 @@ export const updateService = async (
 					const attribute = attributes.find(
 						(a: any) => a.attributeId === attr.id,
 					);
-					if (attribute && typeof attribute.value === "string") {
+					if (attribute && typeof attribute.value === "boolean") {
 						booleanAttributes.push({
 							attribute_id: attr.id,
 							service_id: service.id,
@@ -3250,7 +3250,7 @@ export const updateService = async (
 						});
 					} else {
 						res.status(400).json({
-							message: `Invalid value for attribute ID ${attr.id}. Expected a boolean string.`,
+							message: `Invalid value for attribute ID ${attr.id}. Expected a boolean.`,
 						});
 						return;
 					}
