@@ -1003,6 +1003,8 @@ export const aliExpressAuthCallback = async (
 		// Call the service to get the access token
 		const accessTokenData = await dropShippingService.getAccessToken(code);
 
+		console.log(`Access Token Data: ${JSON.stringify(accessTokenData)}`);
+
 		await DropShippingCred.create({
 			accessToken: accessTokenData.accessToken,
 			refreshToken: accessTokenData.refreshToken,
@@ -1013,7 +1015,6 @@ export const aliExpressAuthCallback = async (
 			refreshExpiresIn: accessTokenData.refreshExpiresIn,
 			refreshTokenValidTime: accessTokenData.refreshTokenValidTime,
 			locale: accessTokenData.locale,
-			accountId: accessTokenData.accountId,
 			accountPlatform: accessTokenData.accountPlatform,
 			sellerId: accessTokenData.sellerId,
 		});
