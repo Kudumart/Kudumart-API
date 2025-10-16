@@ -1,4 +1,6 @@
 import { DropshipperClient } from "ae_sdk";
+import crypto from "node:crypto";
+import axios from "axios";
 
 interface ProductSearchOptions {
 	keywords: string;
@@ -35,6 +37,26 @@ interface OrderCreateData {
 	businessModel: "retail" | "wholesale";
 }
 
+interface AES_GENERATE_TOKEN_RESULT {
+	refresh_token_valid_time: string;
+	havana_id: number;
+	expire_time: string;
+	locale: string;
+	user_nick: string;
+	access_token: string;
+	refresh_token: string;
+	user_id: number;
+	account_platform: number;
+	refresh_expires_in: number;
+	expires_in: number;
+	sp: string;
+	seller_id: number;
+	account: string;
+	code: string;
+	request_id: string;
+	_trace_id_: string;
+}
+
 export class DropShippingService {
 	private readonly dropShipperClient: DropshipperClient;
 
@@ -49,25 +71,20 @@ export class DropShippingService {
 	async getAuthorizationUrl(): Promise<string> {
 		const redirectUri = `${process.env.ALIEXPRESS_AUTH_REDIRECT_URI}?response_type=code&redirect_uri=${encodeURIComponent(
 			process.env.ALIEXPRESS_AUTH_CALLBACK_URL || "",
-		)}&client_id=${process.env.DROPSHIPPER_APP_KEY}`;
+		)}&client_id=${process.env.ALIEXPRESS_APP_KEY}`;
 
 		return redirectUri;
 	}
 
 	async getAccessToken(code: string) {
-		const response = await this.dropShipperClient.generateToken({
-			code,
-		});
-		if (!response.ok) {
+		const response = await generateToken(code);
+		if (!response) {
 			throw new Error(
 				"Failed to generate access token from the dropshipper API",
 			);
 		}
 
-		if (!response.data) {
-			throw new Error("No data returned from the dropshipper API");
-		}
-		const accessTokenData = response.data;
+		const accessTokenData = response;
 		if (!accessTokenData) {
 			throw new Error("No token data found in the response");
 		}
@@ -84,7 +101,6 @@ export class DropShippingService {
 			sp: accessTokenData.sp,
 			locale: accessTokenData.locale,
 			account: accessTokenData.account,
-			accountId: accessTokenData.account_id,
 			accountPlatform: accessTokenData.account_platform,
 			havanaId: accessTokenData.havana_id,
 			sellerId: accessTokenData.seller_id,
@@ -287,4 +303,71 @@ export class DropShippingService {
 
 		return responseData.data;
 	}
+}
+
+async function generateToken(code: string) {
+	const apiName = "/auth/token/create";
+	const signMethod = "sha256";
+
+	// A timestamp is needed to use their API
+	const timestamp = new Date().getTime();
+	console.log(`Timestamp: ${timestamp}`);
+
+	// Include the signature in your API request
+	const url = "https://api-sg.aliexpress.com/rest/auth/token/create";
+	const params = {
+		app_key: process.env.ALIEXPRESS_APP_KEY,
+		timestamp: timestamp,
+		sign_method: signMethod,
+		code,
+	};
+
+	// Sort all parameters and values according to the parameter name in ASCII table
+	const sortedParams = Object.keys(params)
+		.sort()
+		.reduce((acc, key) => {
+			//@ts-ignore
+			acc[key] = params[key];
+			return acc;
+		}, {});
+
+	//  Concatenate the sorted parameters and their values into a string
+	var sortedParamsString = Object.entries(sortedParams)
+		.map(([key, value]) => `${key}${value}`)
+		.join("");
+	sortedParamsString = apiName + sortedParamsString;
+
+	console.log(sortedParamsString);
+	// Create the signature using HMAC-SHA256
+	const signature = crypto
+		.createHmac(signMethod, process.env.ALIEXPRESS_APP_SECRET || "")
+		.update(sortedParamsString)
+		.digest("hex")
+		.toUpperCase();
+
+	// Add the signature to the parameters
+	// @ts-ignore
+	params["sign"] = signature;
+
+	let data = null;
+	try {
+		data = (
+			await axios.get(url, {
+				params,
+				transformRequest: [
+					(data, headers) => {
+						const out = typeof data === "string" ? data : JSON.stringify(data);
+						console.log("final body:", out);
+						console.log("final headers:", headers);
+						return out;
+					},
+				],
+			})
+		).data;
+		console.log(data);
+	} catch (error) {
+		console.log(error);
+	}
+
+	return data as AES_GENERATE_TOKEN_RESULT;
 }
