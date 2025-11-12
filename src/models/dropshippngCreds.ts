@@ -11,6 +11,7 @@ class DropShippingCred extends Model {
 	userId!: string;
 	userNick!: string;
 	locale!: string | null;
+	vendorId!: string | null;
 	accountId!: string | null;
 	accountPlatform!: string | null;
 	sellerId!: string | null;
@@ -69,6 +70,14 @@ const initModel = (sequelize: Sequelize) => {
 				type: DataTypes.STRING,
 				allowNull: true,
 			},
+			vendorId: {
+				type: DataTypes.STRING,
+				allowNull: false,
+			},
+			account: {
+				type: DataTypes.STRING,
+				allowNull: false,
+			}, // The user valid aliexpress email account
 			accountPlatform: {
 				type: DataTypes.STRING,
 				allowNull: true,
