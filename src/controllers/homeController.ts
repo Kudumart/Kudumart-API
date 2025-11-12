@@ -4,7 +4,16 @@ import { sendMail } from "../services/mail.service";
 import { emailTemplates } from "../utils/messages";
 import logger from "../middlewares/logger"; // Adjust the path to your logger.js
 import Product from "../models/product";
-import { Op, ForeignKeyConstraintError, Sequelize, Order } from "sequelize";
+import {
+	Op,
+	ForeignKeyConstraintError,
+	Sequelize,
+	Order,
+	where,
+	fn,
+	col,
+	literal,
+} from "sequelize";
 import SubCategory from "../models/subcategory";
 import Category from "../models/category";
 import User from "../models/user";
@@ -174,6 +183,8 @@ export const products = async (req: Request, res: Response): Promise<void> => {
 			subCategoryWhereClause.categoryId = categoryId; // Filter by categoryId
 		}
 
+		const countryFilter = country?.toString().toLowerCase();
+
 		// Include the subCategory relation with name and id filtering
 		const includeClause = [
 			{
@@ -204,6 +215,25 @@ export const products = async (req: Request, res: Response): Promise<void> => {
 			{
 				model: Store,
 				as: "store",
+				where: countryFilter
+					? where(
+							fn(
+								"LOWER",
+								fn(
+									"JSON_UNQUOTE",
+									fn(
+										"JSON_EXTRACT",
+										col("store.location"),
+										literal("'$.country'"),
+									),
+								),
+							),
+							{
+								[Op.like]: `%${countryFilter}%`,
+							},
+						)
+					: undefined,
+
 				include: [
 					{
 						model: Currency,
