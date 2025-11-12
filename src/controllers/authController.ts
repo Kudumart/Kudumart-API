@@ -24,7 +24,6 @@ import UserNotificationSetting from "../models/usernotificationsetting";
 import Notification from "../models/notification";
 import passport from "passport";
 import { sendPushNotificationToTopic } from "../firebase/pushNotification";
-import { PushNotificationTypes } from "../types";
 import { DropShippingService } from "../services/dropShipping.service";
 import DropShippingCred from "../models/dropshippngCreds";
 
@@ -965,6 +964,50 @@ export const adminLogin = async (
 	}
 };
 
+export const createAliexpressAccount = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const {} = req.user;
+
+	const { account } = req.body;
+
+	try {
+		// Validate input
+		if (!account) {
+			res.status(400).json({ message: "Account is required" });
+			return;
+		}
+
+		// Check if the dropshipping account already exists
+		const existingAccount = await DropShippingCred.findOne({
+			where: { account },
+		});
+		if (existingAccount) {
+			res.status(400).json({ message: "Account already exists" });
+			return;
+		}
+
+		// Create the new dropshipping account
+		await DropShippingCred.create({
+			account,
+			vendorId,
+		});
+
+		// Return a success response
+		res.status(200).json({
+			message: "Dropshipping account created successfully.",
+		});
+	} catch (error: any) {
+		logger.error("Error during dropshipping account creation:", error);
+		if (error.message) {
+			res.status(400).json({ message: error.message });
+		} else {
+			res.status(500).json({ message: "Server error" });
+		}
+	}
+};
+
 export const aliExpressAuth = async (
 	_: Request,
 	res: Response,
@@ -1005,19 +1048,35 @@ export const aliExpressAuthCallback = async (
 
 		console.log(`Access Token Data: ${JSON.stringify(accessTokenData)}`);
 
-		await DropShippingCred.create({
-			accessToken: accessTokenData.accessToken,
-			refreshToken: accessTokenData.refreshToken,
-			expiresIn: accessTokenData.expiresIn,
-			expireTime: accessTokenData.expireTime,
-			userId: accessTokenData.userId,
-			userNick: accessTokenData.userNick,
-			refreshExpiresIn: accessTokenData.refreshExpiresIn,
-			refreshTokenValidTime: accessTokenData.refreshTokenValidTime,
-			locale: accessTokenData.locale,
-			accountPlatform: accessTokenData.accountPlatform,
-			sellerId: accessTokenData.sellerId,
+		const existingCred = await DropShippingCred.findOne({
+			where: { account: accessTokenData.account },
 		});
+
+		if (!existingCred) {
+			res.status(400).json({
+				message: "No matching account found for the provided credentials.",
+			});
+			return;
+		}
+
+		await DropShippingCred.update(
+			{
+				accessToken: accessTokenData.accessToken,
+				refreshToken: accessTokenData.refreshToken,
+				expiresIn: accessTokenData.expiresIn,
+				expireTime: accessTokenData.expireTime,
+				userId: accessTokenData.userId,
+				userNick: accessTokenData.userNick,
+				refreshExpiresIn: accessTokenData.refreshExpiresIn,
+				refreshTokenValidTime: accessTokenData.refreshTokenValidTime,
+				locale: accessTokenData.locale,
+				accountPlatform: accessTokenData.accountPlatform,
+				sellerId: accessTokenData.sellerId,
+			},
+			{
+				where: { account: accessTokenData.account },
+			},
+		);
 
 		res.status(200).json({
 			message: "AliExpress authentication successful. Access token saved.",
