@@ -117,6 +117,12 @@ userRoutes.post(
 	userController.checkoutDollar,
 );
 
+userRoutes.post(
+	"/checkout/dollar/prepare",
+	authMiddleware,
+	userController.prepareCheckoutDollar,
+);
+
 // Conversation and Message
 userRoutes.get(
 	"/conversations",
@@ -247,7 +253,7 @@ userRoutes.post(
 userRoutes.post(
 	"/service/:serviceId/bookings",
 	validateUUIDParam("serviceId"),
-  validate,
+	validate,
 	ValidateServiceBooking(),
 	validate,
 	authMiddleware,
