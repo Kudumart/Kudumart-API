@@ -968,7 +968,7 @@ export const createAliexpressAccount = async (
 	req: Request,
 	res: Response,
 ): Promise<void> => {
-	const {} = req.user;
+	// const {} = req.user;
 
 	const { account } = req.body;
 
@@ -991,7 +991,7 @@ export const createAliexpressAccount = async (
 		// Create the new dropshipping account
 		await DropShippingCred.create({
 			account,
-			vendorId,
+			// vendorId,
 		});
 
 		// Return a success response
