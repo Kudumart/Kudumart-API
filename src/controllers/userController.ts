@@ -2,7 +2,7 @@
 import { Request, Response } from "express";
 import User from "../models/user";
 import { Op, Sequelize } from "sequelize";
-import { generateOTP, verifyPayment } from "../utils/helpers";
+import { generateOTP, initStripe, verifyPayment } from "../utils/helpers";
 import { sendMail } from "../services/mail.service";
 import { emailTemplates } from "../utils/messages";
 import JwtService from "../services/jwt.service";
@@ -45,6 +45,7 @@ import ProductCharge from "../models/productcharge";
 import Services from "../models/services";
 import ServiceBookings from "../models/servicebookings";
 import ServiceReviews from "../models/servicereview";
+import Decimal from "decimal.js";
 
 export const logout = async (req: Request, res: Response): Promise<void> => {
 	try {
@@ -1830,6 +1831,176 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 	}
 };
 
+export const prepareCheckoutDollar = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const userId = (req as AuthenticatedRequest).user?.id; // Get authenticated user ID
+
+	const userCart = await Cart.findAll({
+		where: { userId },
+		include: [
+			{
+				model: Product,
+				as: "product",
+				include: [
+					{
+						model: Store,
+						as: "store",
+						include: [
+							{
+								model: Currency,
+								as: "currency",
+								attributes: ["name", "symbol"],
+							},
+						],
+					},
+				],
+			},
+		],
+	});
+
+	try {
+		if (!userCart || userCart.length === 0) {
+			res.status(400).json({ message: "Cart is empty" });
+			return;
+		}
+
+		let chargeAmount = new Decimal(0);
+
+		userCart.forEach((cartItem) => {
+			const product = cartItem.product;
+			if (!product || !product.store || !product.store.currency) {
+				throw new Error(
+					`Product with ID ${cartItem.productId} not found or invalid currency data`,
+				);
+			}
+
+			const productCurrency = product.store.currency;
+
+			// Ensure product currency is either $, #, or ₦
+			const allowedCurrencies = ["$", "#", "₦"];
+			if (!allowedCurrencies.includes(productCurrency.symbol)) {
+				res.status(400).json({
+					message: `Only products with currencies ${allowedCurrencies.join(", ")} are allowed.`,
+				});
+				return;
+			}
+
+			if (
+				!userCart.every(
+					(item) =>
+						item.product &&
+						item.product.store &&
+						item.product.store.currency &&
+						item.product.store.currency.name === productCurrency.name &&
+						item.product.store.currency.symbol === productCurrency.symbol,
+				)
+			) {
+				res.status(400).json({
+					message: `Your cart contains products in different currencies. Please ensure all products are in the same currency before proceeding to checkout.`,
+				});
+				return;
+			}
+		});
+
+		// Get Admin's product charges
+		const productCharges = await ProductCharge.findAll({
+			where: { is_active: true },
+		});
+
+		// Calculate total price and validate inventory
+		let totalAmount = new Decimal(0);
+		for (const cartItem of userCart) {
+			const product = cartItem.product;
+			if (!product) {
+				throw new Error(`Product with ID ${cartItem.productId} not found`);
+			}
+
+			// Check if product.quantity is defined and if there's enough stock before proceeding
+			const availableQuantity = product.quantity ?? 0; // If quantity is undefined, fallback to 0
+			if (availableQuantity < cartItem.quantity) {
+				throw new Error(`Insufficient stock for product: ${product.name}`);
+			}
+
+			// Check for product charge percentage
+			const productChargePercentage = productCharges.find(
+				(charge) =>
+					charge.charge_currency === "USD" &&
+					charge.calculation_type === "percentage" &&
+					new Decimal(product.price).greaterThanOrEqualTo(
+						charge.minimum_product_amount,
+					) &&
+					new Decimal(product.price).lessThanOrEqualTo(
+						charge.maximum_product_amount,
+					),
+			);
+
+			// Check for product charge amount
+			const productChargeAmount = productCharges.find(
+				(charge) =>
+					charge.charge_currency === "USD" &&
+					charge.calculation_type === "fixed" &&
+					new Decimal(product.price).greaterThanOrEqualTo(
+						charge.minimum_product_amount,
+					) &&
+					new Decimal(product.price).lessThanOrEqualTo(
+						charge.maximum_product_amount,
+					),
+			);
+
+			if (productChargePercentage) {
+				// Calculate percentage charge
+				chargeAmount = chargeAmount
+					.plus(new Decimal(product.price ?? 0))
+					.mul(new Decimal(productChargePercentage.charge_percentage).div(100))
+					.toNearest(0.01);
+			} else if (productChargeAmount) {
+				// Use fixed amount charge
+				chargeAmount = chargeAmount
+					.plus(productChargeAmount.charge_amount ?? 0)
+					.toNearest(0.01);
+			}
+
+			// console.log(`Charge amount for product ${product.name}: ${chargeAmount}`);
+
+			// Calculate total amount for this cart item
+			totalAmount = totalAmount
+				.plus(
+					new Decimal(product.price).plus(chargeAmount).mul(cartItem.quantity),
+				)
+				.toNearest(0.01);
+
+			// totalAmount += product.price * cartItem.quantity;
+		}
+
+		const stripe = await initStripe();
+
+		const paymentIntent = await stripe.paymentIntents.create({
+			amount: totalAmount.mul(100).toNumber(), // amount in cents
+			currency: "usd",
+			metadata: { userId: userId!.toString() },
+		});
+
+		res.status(200).json({
+			id: paymentIntent.id,
+			clientSecret: paymentIntent.client_secret,
+			totalAmount: totalAmount.toNumber(),
+			paymentBreakdown: {
+				currency: "USD",
+				chargeAmount: chargeAmount.toNearest(0.01).toNumber(),
+				subtotal: totalAmount.minus(chargeAmount).toNearest(0.01).toNumber(),
+			},
+		});
+	} catch (error: any) {
+		logger.error(error);
+		res
+			.status(500)
+			.json({ message: error.message || "Error during checkout." });
+		return;
+	}
+};
+
 export const checkoutDollar = async (
 	req: Request,
 	res: Response,
@@ -1856,6 +2027,15 @@ export const checkoutDollar = async (
 	let transactionCommitted = false;
 
 	try {
+		const stripe = await initStripe();
+
+		const paymentIntent = await stripe.paymentIntents.retrieve(refId);
+
+		if (paymentIntent.status !== "succeeded") {
+			res.status(400).json({ message: "Payment verification failed." });
+			return;
+		}
+
 		// Fetch cart items
 		const cartItems = await Cart.findAll({
 			where: { userId },
@@ -1873,8 +2053,75 @@ export const checkoutDollar = async (
 			return;
 		}
 
-		// Calculate total price
-		let totalAmount = 0;
+		// Get Admin's product charges
+		const productCharges = await ProductCharge.findAll({
+			where: { is_active: true },
+		});
+
+		// Calculate total price and validate inventory
+		let totalAmount = new Decimal(0);
+		for (const cartItem of cartItems) {
+			const product = cartItem.product;
+			if (!product) {
+				throw new Error(`Product with ID ${cartItem.productId} not found`);
+			}
+
+			// Check if product.quantity is defined and if there's enough stock before proceeding
+			const availableQuantity = product.quantity ?? 0; // If quantity is undefined, fallback to 0
+			if (availableQuantity < cartItem.quantity) {
+				throw new Error(`Insufficient stock for product: ${product.name}`);
+			}
+
+			// Check for product charge percentage
+			const productChargePercentage = productCharges.find(
+				(charge) =>
+					charge.charge_currency === "USD" &&
+					charge.calculation_type === "percentage" &&
+					new Decimal(product.price).greaterThanOrEqualTo(
+						charge.minimum_product_amount,
+					) &&
+					new Decimal(product.price).lessThanOrEqualTo(
+						charge.maximum_product_amount,
+					),
+			);
+
+			// Check for product charge amount
+			const productChargeAmount = productCharges.find(
+				(charge) =>
+					charge.charge_currency === "USD" &&
+					charge.calculation_type === "fixed" &&
+					new Decimal(product.price).greaterThanOrEqualTo(
+						charge.minimum_product_amount,
+					) &&
+					new Decimal(product.price).lessThanOrEqualTo(
+						charge.maximum_product_amount,
+					),
+			);
+
+			let chargeAmount = new Decimal(0);
+			if (productChargePercentage) {
+				// Calculate percentage charge
+				chargeAmount = chargeAmount
+					.plus(new Decimal(product.price ?? 0))
+					.mul(new Decimal(productChargePercentage.charge_percentage).div(100))
+					.toNearest(0.01);
+			} else if (productChargeAmount) {
+				// Use fixed amount charge
+				chargeAmount = chargeAmount
+					.plus(productChargeAmount.charge_amount ?? 0)
+					.toNearest(0.01);
+			}
+
+			// Calculate total amount for this cart item
+			totalAmount = totalAmount
+				.plus(
+					new Decimal(product.price).plus(chargeAmount).mul(cartItem.quantity),
+				)
+				.toNearest(0.01);
+
+			// totalAmount += product.price * cartItem.quantity;
+		}
+
 		const vendorOrders: { [key: string]: OrderItem[] } = {}; // Stores vendor-specific order items
 
 		for (const cartItem of cartItems) {
@@ -1918,7 +2165,7 @@ export const checkoutDollar = async (
 			const newQuantity = availableQuantity - cartItem.quantity;
 			await product.update({ quantity: newQuantity }, { transaction });
 
-			totalAmount += product.price * cartItem.quantity;
+			//totalAmount += product.price * cartItem.quantity;
 
 			// Organize order items by vendor
 			if (!vendorOrders[product.vendorId]) {
@@ -1930,6 +2177,10 @@ export const checkoutDollar = async (
 				quantity: cartItem.quantity,
 				price: product.price,
 			} as unknown as OrderItem);
+		}
+
+		if (!new Decimal(paymentIntent.amount_received).div(100).eq(totalAmount)) {
+			throw new Error("Payment amount does not match cart total");
 		}
 
 		// Create a single order for the buyer
@@ -1992,6 +2243,27 @@ export const checkoutDollar = async (
 						`${process.env.APP_NAME} - New Order Received`,
 						message,
 					);
+
+					if (vendor.fcmToken) {
+						try {
+							// Send push notification to the vendor
+							const notificationMessage = {
+								notification: {
+									title: "New Order Received",
+									body: `You have received a new order (TRACKING NO: ${order.trackingNumber}) for your product.`,
+								},
+								data: {
+									orderId: order.id,
+									type: PushNotificationTypes.ORDER_CREATED,
+								},
+								token: vendor.fcmToken, // FCM token of the vendor
+							};
+
+							await sendPushNotificationSingle(notificationMessage);
+						} catch (pushError) {
+							logger.error("Error sending push notification:", pushError);
+						}
+					}
 				} catch (emailError) {
 					logger.error("Error sending email:", emailError);
 				}
@@ -2027,10 +2299,6 @@ export const checkoutDollar = async (
 			},
 			{ transaction },
 		);
-
-		// Commit transaction before sending notifications
-		await transaction.commit();
-		transactionCommitted = true; // Mark as committed
 
 		// Notify Each Vendor/Admin
 		for (const vendorId in vendorOrders) {
@@ -2085,6 +2353,10 @@ export const checkoutDollar = async (
 						{ transaction },
 					);
 
+					// Commit transaction before sending notifications
+					await transaction.commit();
+					transactionCommitted = true; // Mark as committed
+
 					const message = emailTemplates.newOrderAdminNotification(
 						admin,
 						order,
@@ -2098,6 +2370,27 @@ export const checkoutDollar = async (
 							`${process.env.APP_NAME} - New Order Received`,
 							message,
 						);
+
+						if (admin.fcmToken) {
+							try {
+								// Send push notification to the admin
+								const notificationMessage = {
+									notification: {
+										title: "New Order Received",
+										body: `A new order (TRACKING NO: ${order.trackingNumber}) has been placed.`,
+									},
+									data: {
+										orderId: order.id,
+										type: PushNotificationTypes.ORDER_CREATED,
+									},
+									token: admin.fcmToken, // FCM token of the admin
+								};
+
+								await sendPushNotificationSingle(notificationMessage);
+							} catch (pushError) {
+								logger.error("Error sending push notification:", pushError);
+							}
+						}
 					} catch (emailError) {
 						logger.error("Error sending email:", emailError);
 					}
@@ -2118,6 +2411,27 @@ export const checkoutDollar = async (
 				`${process.env.APP_NAME} - Order Confirmation`,
 				message,
 			);
+
+			if (user.fcmToken) {
+				try {
+					// Send push notification to the user
+					const notificationMessage = {
+						notification: {
+							title: "Order Confirmation",
+							body: `Your order (TRACKING NO: ${order.trackingNumber}) has been successfully placed.`,
+						},
+						data: {
+							orderId: order.id,
+							type: PushNotificationTypes.ORDER_CONFIRMATION,
+						},
+						token: user.fcmToken, // FCM token of the user
+					};
+
+					await sendPushNotificationSingle(notificationMessage);
+				} catch (pushError) {
+					logger.error("Error sending push notification:", pushError);
+				}
+			}
 		} catch (emailError) {
 			logger.error("Error sending email:", emailError);
 		}

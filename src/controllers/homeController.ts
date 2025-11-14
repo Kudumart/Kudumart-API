@@ -639,6 +639,7 @@ export const getAuctionProducts = async (
 		storeId,
 		name, // Product name
 		subCategoryName, // Subcategory name filter
+		country,
 		condition, // Product condition filter
 		auctionStatus, // 'upcoming' or 'ongoing'
 		startDate, // Filter by today's date
@@ -732,6 +733,24 @@ export const getAuctionProducts = async (
 							attributes: ["symbol"],
 						},
 					],
+					where: country
+						? where(
+								fn(
+									"LOWER",
+									fn(
+										"JSON_UNQUOTE",
+										fn(
+											"JSON_EXTRACT",
+											col("store.location"),
+											literal("'$.country'"),
+										),
+									),
+								),
+								{
+									[Op.like]: `%${country.toString().toLowerCase()}%`,
+								},
+							)
+						: undefined,
 				},
 				{
 					model: SubCategory,

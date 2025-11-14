@@ -6219,6 +6219,7 @@ export const createProductCharge = async (req: Request, res: Response) => {
 
 		const chargeOverlap = await ProductCharge.findOne({
 			where: {
+        charge_currency,
 				minimum_product_amount: { [Op.lte]: maximum_product_amount },
 				maximum_product_amount: { [Op.gte]: minimum_product_amount },
 			},
@@ -6311,6 +6312,7 @@ export const updateProductCharge = async (req: Request, res: Response) => {
 		const chargeOverlap = await ProductCharge.findOne({
 			where: {
 				id: { [Op.ne]: productChargeId },
+        charge_currency,
 				minimum_product_amount: { [Op.lte]: maximum_product_amount },
 				maximum_product_amount: { [Op.gte]: minimum_product_amount },
 			},
