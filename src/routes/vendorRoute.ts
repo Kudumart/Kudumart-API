@@ -241,11 +241,25 @@ vendorRoutes.post(
 	authMiddleware,
 	vendorController.addBankInformation,
 );
+
+vendorRoutes.post(
+	"/bank/informations/v2",
+	authMiddleware,
+	vendorController.addBankInformationV2,
+);
+
 vendorRoutes.put(
 	"/bank/informations",
 	authMiddleware,
 	vendorController.updateBankInformation,
 );
+
+vendorRoutes.put(
+	"/bank/informations/v2",
+	authMiddleware,
+	vendorController.updateBankInformationV2,
+);
+
 vendorRoutes.get(
 	"/bank/informations",
 	authMiddleware,
