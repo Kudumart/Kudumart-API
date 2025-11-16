@@ -1359,6 +1359,13 @@ export const getActivePaymentGateways = async (
 			},
 		});
 
+		// reorder to have Paystack first, then Stripe second
+		paymentGateways.sort((a, b) => {
+			if (a.name.toLowerCase() === "paystack") return -1;
+			if (b.name.toLowerCase() === "paystack") return 1;
+			return 0;
+		});
+
 		if (!paymentGateways.length) {
 			res.status(404).json({ message: "No active payment gateways found" });
 			return;
