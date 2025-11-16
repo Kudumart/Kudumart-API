@@ -2152,6 +2152,64 @@ export const addBankInformation = async (
 	}
 };
 
+export const addBankInformationV2 = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const {
+		bankName,
+		accountNumber,
+		accountHolderName,
+		swiftCode,
+		routingNumber,
+		bankAddress,
+	} = req.body; // bankInfo contains bankName, accountNumber, accountName
+
+	const vendorId = (req as AuthenticatedRequest).user?.id as string; // Authenticated user ID from middleware
+
+	try {
+		// Ensure required fields are provided
+		if (!bankName || !accountNumber || !accountHolderName) {
+			res.status(400).json({ message: "All bank details are required" });
+			return;
+		}
+
+		// Check if vendorId exists in the User table (Vendor)
+		const vendor = await User.findByPk(vendorId);
+
+		if (!vendor) {
+			res.status(404).json({ message: "Owner not found" });
+			return;
+		}
+
+		// If it's a vendor, ensure they are verified
+		if (vendor && !vendor.isVerified) {
+			res.status(400).json({
+				message: "Cannot add bank information. You are not verified.",
+			});
+			return;
+		}
+
+		// Create bank information entry
+		const bankData = await BankInformation.create({
+			vendorId,
+			bankName,
+			accountNumber,
+			accountHolderName,
+			...(swiftCode && { swiftCode }),
+			...(routingNumber && { routingNumber }),
+			...(bankAddress && { bankAddress }),
+		});
+
+		res
+			.status(200)
+			.json({ message: "Bank information added successfully", data: bankData });
+	} catch (error: any) {
+		logger.error("Error adding bank information:", error);
+		res.status(500).json({ message: "Server error" });
+	}
+};
+
 /**
  * Update bank account details for a vendor
  */
@@ -2172,6 +2230,48 @@ export const updateBankInformation = async (
 		// Update bank details
 		await bankData.update({
 			bankInfo,
+		});
+
+		res.status(200).json({
+			message: "Bank information updated successfully",
+			data: bankData,
+		});
+	} catch (error: any) {
+		logger.error("Error updating bank information:", error);
+		res.status(500).json({ message: "Server error" });
+	}
+};
+
+export const updateBankInformationV2 = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const {
+		bankId,
+		bankName,
+		accountNumber,
+		accountHolderName,
+		swiftCode,
+		routingNumber,
+		bankAddress,
+	} = req.body;
+
+	try {
+		// Find the bank record
+		const bankData = await BankInformation.findOne({ where: { id: bankId } });
+		if (!bankData) {
+			res.status(404).json({ message: "Bank information not found" });
+			return;
+		}
+
+		// Update bank details
+		await bankData.update({
+			bankName: bankName || bankData.bankName,
+			accountNumber: accountNumber || bankData.accountNumber,
+			accountHolderName: accountHolderName || bankData.accountHolderName,
+			swiftCode: swiftCode || bankData.swiftCode,
+			routingNumber: routingNumber || bankData.routingNumber,
+			bankAddress: bankAddress || bankData.bankAddress,
 		});
 
 		res.status(200).json({
