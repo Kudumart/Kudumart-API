@@ -1900,12 +1900,13 @@ export const prepareCheckoutDollar = async (
 						item.product &&
 						item.product.store &&
 						item.product.store.currency &&
-						item.product.store.currency.name === productCurrency.name &&
-						item.product.store.currency.symbol === productCurrency.symbol,
+						item.product.store.currency.name === "USD" &&
+						item.product.store.currency.symbol === "$",
 				)
 			) {
 				res.status(400).json({
-					message: `Your cart contains products in different currencies. Please ensure all products are in the same currency before proceeding to checkout.`,
+					message:
+						"All products in the cart must be priced in USD for this checkout.",
 				});
 				return;
 			}
@@ -1930,15 +1931,21 @@ export const prepareCheckoutDollar = async (
 				throw new Error(`Insufficient stock for product: ${product.name}`);
 			}
 
+			const productPrice = new Decimal(
+				(product.discount_price ?? 0) > 0
+					? product.discount_price ?? 0
+					: product.price ?? 0,
+			);
+
 			// Check for product charge percentage
 			const productChargePercentage = productCharges.find(
 				(charge) =>
 					charge.charge_currency === "USD" &&
 					charge.calculation_type === "percentage" &&
-					new Decimal(product.price).greaterThanOrEqualTo(
+					new Decimal(productPrice).greaterThanOrEqualTo(
 						charge.minimum_product_amount,
 					) &&
-					new Decimal(product.price).lessThanOrEqualTo(
+					new Decimal(productPrice).lessThanOrEqualTo(
 						charge.maximum_product_amount,
 					),
 			);
@@ -1948,10 +1955,10 @@ export const prepareCheckoutDollar = async (
 				(charge) =>
 					charge.charge_currency === "USD" &&
 					charge.calculation_type === "fixed" &&
-					new Decimal(product.price).greaterThanOrEqualTo(
+					new Decimal(productPrice).greaterThanOrEqualTo(
 						charge.minimum_product_amount,
 					) &&
-					new Decimal(product.price).lessThanOrEqualTo(
+					new Decimal(productPrice).lessThanOrEqualTo(
 						charge.maximum_product_amount,
 					),
 			);
@@ -1959,7 +1966,7 @@ export const prepareCheckoutDollar = async (
 			if (productChargePercentage) {
 				// Calculate percentage charge
 				chargeAmount = chargeAmount
-					.plus(new Decimal(product.price ?? 0))
+					.plus(new Decimal(productPrice ?? 0))
 					.mul(new Decimal(productChargePercentage.charge_percentage).div(100))
 					.toNearest(0.01);
 			} else if (productChargeAmount) {
@@ -1974,7 +1981,7 @@ export const prepareCheckoutDollar = async (
 			// Calculate total amount for this cart item
 			totalAmount = totalAmount
 				.plus(
-					new Decimal(product.price).plus(chargeAmount).mul(cartItem.quantity),
+					new Decimal(productPrice).plus(chargeAmount).mul(cartItem.quantity),
 				)
 				.toNearest(0.01);
 
