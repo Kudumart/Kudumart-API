@@ -2454,6 +2454,9 @@ export const checkoutDollar = async (
 			}
 		}
 
+		transactionCommitted = true; // Mark as committed
+		transaction.commit();
+
 		// Send mail (outside of transaction)
 		const message = emailTemplates.orderConfirmationNotification(
 			user,
