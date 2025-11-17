@@ -1914,8 +1914,7 @@ export const prepareCheckoutDollar = async (
 						item.product &&
 						item.product.store &&
 						item.product.store.currency &&
-						item.product.store.currency.name === "Dollar" &&
-						item.product.store.currency.symbol === "$",
+						item.product.store.currency.name.toLowerCase() === "dollar",
 				)
 			) {
 				res.status(400).json({
