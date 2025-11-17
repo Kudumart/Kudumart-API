@@ -1469,13 +1469,19 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 				throw new Error(`Insufficient stock for product: ${product.name}`);
 			}
 
+			const productPrice = new Decimal(
+				(product.discount_price ?? 0) > 0
+					? product.discount_price ?? 0
+					: product.price ?? 0,
+			);
+
 			// Check for product charge percentage
 			const productChargePercentage = productCharges.find(
 				(charge) =>
 					charge.charge_currency === "NGN" &&
 					charge.calculation_type === "percentage" &&
-					Number(product.price) >= Number(charge.minimum_product_amount) &&
-					Number(product.price) <= Number(charge.maximum_product_amount),
+					Number(productPrice) >= Number(charge.minimum_product_amount) &&
+					Number(productPrice) <= Number(charge.maximum_product_amount),
 			);
 
 			// Check for product charge amount
@@ -1483,8 +1489,8 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 				(charge) =>
 					charge.charge_currency === "NGN" &&
 					charge.calculation_type === "fixed" &&
-					Number(product.price) >= Number(charge.minimum_product_amount) &&
-					Number(product.price) <= Number(charge.maximum_product_amount),
+					Number(productPrice) >= Number(charge.minimum_product_amount) &&
+					Number(productPrice) <= Number(charge.maximum_product_amount),
 			);
 
 			let chargeAmount = 0;
@@ -1497,7 +1503,7 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 				// );
 				// Calculate percentage charge
 				chargeAmount +=
-					Number(product.price ?? 0) *
+					Number(productPrice ?? 0) *
 					(Number(productChargePercentage.charge_percentage) / 100);
 			} else if (productChargeAmount) {
 				// console.log(
@@ -1514,7 +1520,7 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 
 			// Calculate total amount for this cart item
 			totalAmount +=
-				(Number(product.price) + Number(chargeAmount)) *
+				(Number(productPrice) + Number(chargeAmount)) *
 				Number(cartItem.quantity);
 
 			// totalAmount += product.price * cartItem.quantity;
@@ -1605,7 +1611,10 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 					orderId: order.id,
 					product: product,
 					quantity: cartItem.quantity,
-					price: product.price,
+					price:
+						product.discount_price && product.discount_price > 0
+							? product.discount_price
+							: product.price,
 				},
 				{ transaction },
 			);
@@ -1755,10 +1764,17 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 					id: cartItem.product.id,
 					sku: cartItem.product.sku,
 					name: cartItem.product.name,
-					price: cartItem.product.price,
+					price:
+						cartItem.product.discount_price &&
+						cartItem.product.discount_price > 0
+							? cartItem.product.discount_price
+							: cartItem.product.price,
 				}, // Ensure product is an object
 				quantity: cartItem.quantity,
-				price: cartItem.product.price,
+				price:
+					cartItem.product.discount_price && cartItem.product.discount_price > 0
+						? cartItem.product.discount_price
+						: cartItem.product.price,
 				status: "pending", // Default status (if required)
 				createdAt: new Date(), // Ensure timestamps if needed
 			} as OrderItem);
@@ -1873,8 +1889,6 @@ export const prepareCheckoutDollar = async (
 			return;
 		}
 
-		let chargeAmount = new Decimal(0);
-
 		userCart.forEach((cartItem) => {
 			const product = cartItem.product;
 			if (!product || !product.store || !product.store.currency) {
@@ -1900,7 +1914,7 @@ export const prepareCheckoutDollar = async (
 						item.product &&
 						item.product.store &&
 						item.product.store.currency &&
-						item.product.store.currency.name === "USD" &&
+						item.product.store.currency.name === "Dollar" &&
 						item.product.store.currency.symbol === "$",
 				)
 			) {
@@ -1919,6 +1933,7 @@ export const prepareCheckoutDollar = async (
 
 		// Calculate total price and validate inventory
 		let totalAmount = new Decimal(0);
+		let totalChargeAmount = new Decimal(0);
 		for (const cartItem of userCart) {
 			const product = cartItem.product;
 			if (!product) {
@@ -1963,6 +1978,8 @@ export const prepareCheckoutDollar = async (
 					),
 			);
 
+			let chargeAmount = new Decimal(0);
+
 			if (productChargePercentage) {
 				// Calculate percentage charge
 				chargeAmount = chargeAmount
@@ -1984,6 +2001,7 @@ export const prepareCheckoutDollar = async (
 					new Decimal(productPrice).plus(chargeAmount).mul(cartItem.quantity),
 				)
 				.toNearest(0.01);
+			totalChargeAmount = totalChargeAmount.plus(chargeAmount).toNearest(0.01);
 
 			// totalAmount += product.price * cartItem.quantity;
 		}
@@ -2002,8 +2020,11 @@ export const prepareCheckoutDollar = async (
 			totalAmount: totalAmount.toNumber(),
 			paymentBreakdown: {
 				currency: "USD",
-				chargeAmount: chargeAmount.toNearest(0.01).toNumber(),
-				subtotal: totalAmount.minus(chargeAmount).toNearest(0.01).toNumber(),
+				chargeAmount: totalChargeAmount.toNearest(0.01).toNumber(),
+				subtotal: totalAmount
+					.minus(totalChargeAmount)
+					.toNearest(0.01)
+					.toNumber(),
 			},
 		});
 	} catch (error: any) {
@@ -2086,6 +2107,12 @@ export const checkoutDollar = async (
 				throw new Error(`Insufficient stock for product: ${product.name}`);
 			}
 
+			const productPrice = new Decimal(
+				(product.discount_price ?? 0) > 0
+					? product.discount_price ?? 0
+					: product.price ?? 0,
+			);
+
 			// Check for product charge percentage
 			const productChargePercentage = productCharges.find(
 				(charge) =>
@@ -2104,10 +2131,10 @@ export const checkoutDollar = async (
 				(charge) =>
 					charge.charge_currency === "USD" &&
 					charge.calculation_type === "fixed" &&
-					new Decimal(product.price).greaterThanOrEqualTo(
+					new Decimal(productPrice).greaterThanOrEqualTo(
 						charge.minimum_product_amount,
 					) &&
-					new Decimal(product.price).lessThanOrEqualTo(
+					new Decimal(productPrice).lessThanOrEqualTo(
 						charge.maximum_product_amount,
 					),
 			);
@@ -2116,7 +2143,7 @@ export const checkoutDollar = async (
 			if (productChargePercentage) {
 				// Calculate percentage charge
 				chargeAmount = chargeAmount
-					.plus(new Decimal(product.price ?? 0))
+					.plus(new Decimal(productPrice ?? 0))
 					.mul(new Decimal(productChargePercentage.charge_percentage).div(100))
 					.toNearest(0.01);
 			} else if (productChargeAmount) {
@@ -2129,11 +2156,15 @@ export const checkoutDollar = async (
 			// Calculate total amount for this cart item
 			totalAmount = totalAmount
 				.plus(
-					new Decimal(product.price).plus(chargeAmount).mul(cartItem.quantity),
+					new Decimal(productPrice).plus(chargeAmount).mul(cartItem.quantity),
 				)
 				.toNearest(0.01);
 
 			// totalAmount += product.price * cartItem.quantity;
+		}
+
+		if (!new Decimal(paymentIntent.amount_received).div(100).eq(totalAmount)) {
+			throw new Error("Payment amount does not match cart total");
 		}
 
 		const vendorOrders: { [key: string]: OrderItem[] } = {}; // Stores vendor-specific order items
@@ -2189,12 +2220,11 @@ export const checkoutDollar = async (
 				vendorId: product.vendorId,
 				product: productInfo,
 				quantity: cartItem.quantity,
-				price: product.price,
+				price:
+					product.discount_price && product.discount_price > 0
+						? product.discount_price
+						: product.price,
 			} as unknown as OrderItem);
-		}
-
-		if (!new Decimal(paymentIntent.amount_received).div(100).eq(totalAmount)) {
-			throw new Error("Payment amount does not match cart total");
 		}
 
 		// Create a single order for the buyer

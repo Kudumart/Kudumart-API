@@ -2256,6 +2256,11 @@ export const updateBankInformationV2 = async (
 		bankAddress,
 	} = req.body;
 
+	if (!bankId) {
+		res.status(400).json({ message: "bankId field is required" });
+		return;
+	}
+
 	try {
 		// Find the bank record
 		const bankData = await BankInformation.findOne({ where: { id: bankId } });
