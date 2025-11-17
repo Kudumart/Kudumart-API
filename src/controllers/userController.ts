@@ -2117,10 +2117,10 @@ export const checkoutDollar = async (
 				(charge) =>
 					charge.charge_currency === "USD" &&
 					charge.calculation_type === "percentage" &&
-					new Decimal(product.price).greaterThanOrEqualTo(
+					new Decimal(productPrice).greaterThanOrEqualTo(
 						charge.minimum_product_amount,
 					) &&
-					new Decimal(product.price).lessThanOrEqualTo(
+					new Decimal(productPrice).lessThanOrEqualTo(
 						charge.maximum_product_amount,
 					),
 			);
