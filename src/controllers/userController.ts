@@ -1440,7 +1440,15 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 				{
 					model: Product,
 					as: "product",
-					attributes: ["id", "name", "price", "vendorId", "quantity", "sku"],
+					attributes: [
+						"id",
+						"name",
+						"price",
+						"discount_price",
+						"vendorId",
+						"quantity",
+						"sku",
+					],
 				},
 			],
 		});
