@@ -1992,14 +1992,11 @@ export const prepareCheckoutDollar = async (
 					.toNearest(0.01);
 			}
 
-			// console.log(`Charge amount for product ${product.name}: ${chargeAmount}`);
-
 			// Calculate total amount for this cart item
 			totalAmount = totalAmount
-				.plus(
-					new Decimal(productPrice).plus(chargeAmount).mul(cartItem.quantity),
-				)
+				.plus(productPrice.plus(chargeAmount).mul(cartItem.quantity))
 				.toNearest(0.01);
+
 			totalChargeAmount = totalChargeAmount.plus(chargeAmount).toNearest(0.01);
 
 			// totalAmount += product.price * cartItem.quantity;
@@ -2077,7 +2074,14 @@ export const checkoutDollar = async (
 				{
 					model: Product,
 					as: "product",
-					attributes: ["id", "name", "price", "vendorId", "quantity"],
+					attributes: [
+						"id",
+						"name",
+						"price",
+						"discount_price",
+						"vendorId",
+						"quantity",
+					],
 				},
 			],
 		});
@@ -2154,16 +2158,17 @@ export const checkoutDollar = async (
 
 			// Calculate total amount for this cart item
 			totalAmount = totalAmount
-				.plus(
-					new Decimal(productPrice).plus(chargeAmount).mul(cartItem.quantity),
-				)
+				.plus(productPrice.plus(chargeAmount).mul(cartItem.quantity))
 				.toNearest(0.01);
 
 			// totalAmount += product.price * cartItem.quantity;
 		}
 
 		if (!new Decimal(paymentIntent.amount_received).div(100).eq(totalAmount)) {
-			throw new Error("Payment amount does not match cart total");
+			res
+				.status(400)
+				.json({ message: "Payment amount does not match cart total." });
+			return;
 		}
 
 		const vendorOrders: { [key: string]: OrderItem[] } = {}; // Stores vendor-specific order items
