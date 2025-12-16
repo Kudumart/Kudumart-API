@@ -1,14 +1,17 @@
 // src/controllers/userController.ts
-import { Request, Response, NextFunction } from "express";
-import bcrypt from "bcrypt";
+import { Request, Response } from "express";
 import { Op, Sequelize, ForeignKeyConstraintError } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
-import { generateOTP } from "../utils/helpers";
 import { sendMail } from "../services/mail.service";
 import { emailTemplates } from "../utils/messages";
 import JwtService from "../services/jwt.service";
 import logger from "../middlewares/logger"; // Adjust the path to your logger.js
-import { capitalizeFirstLetter } from "../utils/helpers";
+import {
+	ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ,
+	ALLOWED_SERVICE_ATTRIBUTE_INPUT,
+	ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ,
+	capitalizeFirstLetter,
+} from "../utils/helpers";
 import Admin from "../models/admin";
 import Role from "../models/role";
 import Permission from "../models/permission";
@@ -50,6 +53,18 @@ import crypto from "crypto";
 import AdminNotification from "../models/adminnotification";
 import ProductCharge from "../models/productcharge";
 import { DropShippingService } from "../services/dropShipping.service";
+import ServiceCategories from "../models/serviceCategories";
+import ServiceSubCategories from "../models/serviceSubCategories";
+import AttributeDefinitions from "../models/attributeDefinitions";
+import sequelize from "../config/sequelize";
+import AttributeOptions from "../models/attributeOptions";
+import ServiceCategoryToAttributeMap from "../models/serviceCategoryToAttributeMap";
+import Services from "../models/services";
+import { AE_Currency } from "ae_sdk";
+import { title } from "process";
+import DropshipProducts from "../models/dropshipProducts";
+import { on } from "events";
+import Decimal from "decimal.js";
 
 // Extend the Express Request interface to include adminId and admin
 interface AuthenticatedRequest extends Request {
@@ -813,6 +828,8 @@ export const createSubscriptionPlan = async (
 		productLimit,
 		allowsAuction,
 		auctionProductLimit,
+    allowsServiceAds,
+    serviceAdsLimit,
 		maxAds,
 		adsDurationDays,
 	} = req.body;
@@ -844,6 +861,8 @@ export const createSubscriptionPlan = async (
 			productLimit,
 			allowsAuction,
 			auctionProductLimit,
+      allowsServiceAds,
+      serviceAdsLimit,
 			maxAds,
 			adsDurationDays,
 			currencyId: currency.id,
@@ -6126,15 +6145,17 @@ export const getAdminNotifications = async (
 	try {
 		const { limit, page } = req.query;
 
-		const offset = (Number(page) - 1) * Number(limit);
+		const offset = (Number(page || 1) - 1) * Number(limit || 10);
+
 
 		const notifications = await AdminNotification.findAll({
 			limit: Number(limit) || 10, // Default to 10 if not provided
 			offset: offset || 0, // Default to 0 if page or limit is invalid
 			order: [["createdAt", "DESC"]],
 		});
-		res.status(200).json({ data: notifications, pagination: { limit, page } });
+		res.status(200).json({ data: notifications  , pagination: { limit, page } });
 	} catch (error) {
+    console.log(error);
 		res.status(500).json({ message: "Failed to fetch notifications" });
 	}
 };
@@ -6173,29 +6194,50 @@ export const createProductCharge = async (req: Request, res: Response) => {
 
 	try {
 		if (!name || !description || !charge_currency || !calculation_type) {
-			return res.status(400).json({
+			res.status(400).json({
 				message:
 					"Name, description, currency, and calculation type are required.",
 			});
+
+			return;
 		}
 
 		if (calculation_type !== "fixed" && calculation_type !== "percentage") {
-			return res.status(400).json({
+			res.status(400).json({
 				message: "Calculation type must be either 'fixed' or 'percentage'.",
 			});
+			return;
 		}
 
 		if (calculation_type === "fixed" && !charge_amount) {
-			return res.status(400).json({
+			res.status(400).json({
 				message: "Charge amount is required for fixed calculation type.",
 			});
+			return;
 		}
 
 		if (calculation_type === "percentage" && !charge_percentage) {
-			return res.status(400).json({
+			res.status(400).json({
 				message:
 					"Charge percentage is required for percentage calculation type.",
 			});
+			return;
+		}
+
+		const chargeOverlap = await ProductCharge.findOne({
+			where: {
+        charge_currency,
+				minimum_product_amount: { [Op.lte]: maximum_product_amount },
+				maximum_product_amount: { [Op.gte]: minimum_product_amount },
+			},
+		});
+
+		if (chargeOverlap) {
+			res.status(400).json({
+				message:
+					"The minimum and maximum product amounts overlap with an existing charge.",
+			});
+			return;
 		}
 
 		const newCharge = await ProductCharge.create({
@@ -6210,7 +6252,7 @@ export const createProductCharge = async (req: Request, res: Response) => {
 			maximum_product_amount: maximum_product_amount || 0,
 		});
 
-		return res.status(200).json({
+		res.status(200).json({
 			message: "Product charge created successfully",
 			data: newCharge,
 		});
@@ -6218,12 +6260,14 @@ export const createProductCharge = async (req: Request, res: Response) => {
 		logger.error(`Error creating product charge: ${error.message}`);
 
 		if (error.name === "SequelizeUniqueConstraintError") {
-			return res.status(400).json({
+			res.status(400).json({
 				message: "A product charge with this name already exists.",
 			});
+
+			return;
 		}
 
-		return res.status(500).json({
+		res.status(500).json({
 			message:
 				"An unexpected error occurred while creating the product charge.",
 		});
@@ -6243,11 +6287,50 @@ export const updateProductCharge = async (req: Request, res: Response) => {
 		maximum_product_amount,
 	} = req.body;
 
+	if (calculation_type !== "fixed" && calculation_type !== "percentage") {
+		res.status(400).json({
+			message: "Calculation type must be either 'fixed' or 'percentage'.",
+		});
+		return;
+	}
+
+	if (calculation_type === "fixed" && !charge_amount) {
+		res.status(400).json({
+			message: "Charge amount is required for fixed calculation type.",
+		});
+		return;
+	}
+
+	if (calculation_type === "percentage" && !charge_percentage) {
+		res.status(400).json({
+			message: "Charge percentage is required for percentage calculation type.",
+		});
+		return;
+	}
+
 	try {
 		const charge = await ProductCharge.findByPk(productChargeId);
 
 		if (!charge) {
-			return res.status(404).json({ message: "Product charge not found" });
+			res.status(404).json({ message: "Product charge not found" });
+			return;
+		}
+
+		const chargeOverlap = await ProductCharge.findOne({
+			where: {
+				id: { [Op.ne]: productChargeId },
+        charge_currency,
+				minimum_product_amount: { [Op.lte]: maximum_product_amount },
+				maximum_product_amount: { [Op.gte]: minimum_product_amount },
+			},
+		});
+
+		if (chargeOverlap) {
+			res.status(400).json({
+				message:
+					"The minimum and maximum product amounts overlap with an existing charge.",
+			});
+			return;
 		}
 
 		await charge.update(
@@ -6267,27 +6350,30 @@ export const updateProductCharge = async (req: Request, res: Response) => {
 			},
 		);
 
-		return res.status(200).json({
+		res.status(200).json({
 			message: "Product charge updated successfully",
 			data: charge,
 		});
 	} catch (error: any) {
 		logger.error(`Error updating product charge: ${error.message}`);
-		return res.status(500).json({
+		res.status(500).json({
 			message:
 				"An error occurred while updating the product charge. Please try again later.",
 		});
 	}
 };
 
-export const getAllProductCharges = async (_req: Request, res: Response) => {
+export const getAllProductCharges = async (
+	_req: Request,
+	res: Response,
+): Promise<void> => {
 	try {
 		const charges = await ProductCharge.findAll({});
 
-		return res.status(200).json({ data: charges });
+		res.status(200).json({ data: charges });
 	} catch (error: any) {
 		logger.error(`Error retrieving product charges: ${error.message}`);
-		return res.status(500).json({
+		res.status(500).json({
 			message:
 				"An error occurred while retrieving product charges. Please try again later.",
 		});
@@ -6301,17 +6387,18 @@ export const deleteProductCharge = async (req: Request, res: Response) => {
 		const charge = await ProductCharge.findByPk(productChargeId);
 
 		if (!charge) {
-			return res.status(404).json({ message: "Product charge not found" });
+			res.status(404).json({ message: "Product charge not found" });
+			return;
 		}
 
 		await charge.destroy();
 
-		return res.status(200).json({
+		res.status(200).json({
 			message: "Product charge deleted successfully",
 		});
 	} catch (error: any) {
 		logger.error(`Error deleting product charge: ${error.message}`);
-		return res.status(500).json({
+		res.status(500).json({
 			message:
 				"An error occurred while deleting the product charge. Please try again later.",
 		});
@@ -6328,13 +6415,13 @@ export const markProductChargeAsInactive = async (
 		const charge = await ProductCharge.findByPk(productChargeId);
 
 		if (!charge) {
-			return res.status(404).json({ message: "Product charge not found" });
+			res.status(404).json({ message: "Product charge not found" });
+			return;
 		}
 
 		if (!charge.is_active) {
-			return res
-				.status(400)
-				.json({ message: "Product charge is already inactive" });
+			res.status(400).json({ message: "Product charge is already inactive" });
+			return;
 		}
 
 		await charge.update(
@@ -6346,14 +6433,14 @@ export const markProductChargeAsInactive = async (
 			},
 		);
 
-		return res.status(200).json({
+		res.status(200).json({
 			message: "Product charge marked as inactive successfully",
 			data: charge,
 		});
 	} catch (error: any) {
 		console.error(error);
 		logger.error(`Error marking product charge as inactive: ${error.message}`);
-		return res.status(500).json({
+		res.status(500).json({
 			message:
 				"An error occurred while marking the product charge as inactive. Please try again later.",
 		});
@@ -6370,13 +6457,15 @@ export const markProductChargeAsActive = async (
 		const charge = await ProductCharge.findByPk(productChargeId);
 
 		if (!charge) {
-			return res.status(404).json({ message: "Product charge not found" });
+			res.status(404).json({ message: "Product charge not found" });
+			return;
 		}
 
 		if (charge.is_active) {
-			return res.status(400).json({
+			res.status(400).json({
 				message: "Product charge is already active",
 			});
+			return;
 		}
 
 		await charge.update(
@@ -6386,25 +6475,970 @@ export const markProductChargeAsActive = async (
 			},
 		);
 
-		return res.status(200).json({
+		res.status(200).json({
 			message: "Product charge marked as active successfully",
 			data: charge,
 		});
 	} catch (error: any) {
 		logger.error(`Error marking product charge as active: ${error.message}`);
-		return res.status(500).json({
+		res.status(500).json({
 			message:
 				"An error occurred while marking the product charge as active. Please try again later.",
 		});
 	}
 };
 
-export const getAliExpressCategories = async (
-	_: Request,
+  export const createServiceCategory = async (req: Request, res: Response) => {
+	const { name, image } = req.body;
+
+	try {
+		if (!name) {
+			res.status(400).json({ message: "Name is required" });
+			return;
+		}
+
+		const newService = await ServiceCategories.create({ name, image });
+
+		res.status(200).json({
+			message: "Service category created successfully",
+			data: newService,
+		});
+	} catch (error: any) {
+		if (error.name === "SequelizeUniqueConstraintError") {
+			res.status(400).json({
+				message: "A service category with this name already exists.",
+			});
+			return;
+		}
+		logger.error(`Error creating service: ${error.message}`);
+		res.status(500).json({
+			message: "An unexpected error occurred while creating the service.",
+		});
+	}
+};
+
+export const updateServiceCategory = async (req: Request, res: Response) => {
+	const id = req.params.id;
+
+	const { name, image } = req.body;
+
+	try {
+		if (!id) {
+			res.status(400).json({ message: "Service category ID is required" });
+			return;
+		}
+
+		if (!name) {
+			res.status(400).json({ message: "Name is required" });
+			return;
+		}
+
+		const service = await ServiceCategories.findByPk(id);
+
+		if (!service) {
+			res.status(404).json({ message: "Service category not found" });
+			return;
+		}
+
+		await service.update(
+			{ name, image },
+			{
+				where: { id },
+			},
+		);
+
+		res.status(200).json({
+			message: "Service category updated successfully",
+			data: service,
+		});
+	} catch (error: any) {
+		if (error.name === "SequelizeUniqueConstraintError") {
+			res.status(400).json({
+				message: "A service category with this name already exists.",
+			});
+			return;
+		}
+		logger.error(`Error updating service category: ${error.message}`);
+		res.status(500).json({
+			message:
+				"An error occurred while updating the service category. Please try again later.",
+		});
+	}
+};
+
+export const getAllServiceCategories = async (
+	_req: Request,
 	res: Response,
 ): Promise<void> => {
+	const { page, limit } = _req.query;
 	try {
-		const categories = await dropShippingService.getProductCategories();
+		const offset = (Number(page) - 1) * Number(limit);
+
+		const services = await ServiceCategories.findAll({
+			limit: Number(limit) || 10,
+			offset: offset || 0,
+			order: [["createdAt", "DESC"]],
+		});
+		res.status(200).json({ data: services });
+	} catch (error: any) {
+		logger.error(`Error retrieving service categories: ${error.message}`);
+		res.status(500).json({
+			message:
+				"An error occurred while retrieving service categories. Please try again later.",
+		});
+	}
+};
+
+export const deleteServiceCategory = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const id = req.params.id; // Get the service category ID from the request parameters
+
+	try {
+		if (!id) {
+			res.status(400).json({ message: "Service category ID is required" });
+			return;
+		}
+
+		const service = await ServiceCategories.findByPk(id);
+
+		if (!service) {
+			res.status(404).json({ message: "Service category not found" });
+			return;
+		}
+
+		await service.destroy();
+
+		res.status(200).json({
+			message: "Service category deleted successfully",
+		});
+	} catch (error: any) {
+		logger.error(`Error deleting service category: ${error.message}`);
+		res.status(500).json({
+			message:
+				"An error occurred while deleting the service category. Please try again later.",
+		});
+	}
+};
+
+export const createServiceSubCategory = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const { name, image, categoryId: serviceCategoryId } = req.body;
+
+	try {
+		if (!name || !serviceCategoryId) {
+			res.status(400).json({
+				message: "Name and category ID are required.",
+			});
+			return;
+		}
+
+		const newSubCategory = await ServiceSubCategories.create({
+			name,
+			image,
+			serviceCategoryId,
+		});
+
+		res.status(200).json({
+			message: "Service sub-category created successfully",
+			data: newSubCategory,
+		});
+	} catch (error: any) {
+		if (error.name === "SequelizeUniqueConstraintError") {
+			res.status(400).json({
+				message: "A service sub-category with this name already exists.",
+			});
+			return;
+		}
+
+		if (error.name === "SequelizeForeignKeyConstraintError") {
+			res.status(400).json({
+				message: "The service category ID provided does not exist.",
+			});
+			return;
+		}
+
+		logger.error(`Error creating service sub-category: ${error.message}`);
+		res.status(500).json({
+			message:
+				"An unexpected error occurred while creating the service sub-category.",
+		});
+	}
+};
+
+export const updateServiceSubCategory = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const id = req.params.id;
+
+	const { name, image, categoryId: serviceCategoryId } = req.body;
+
+	try {
+		if (!id) {
+			res.status(400).json({ message: "Service sub-category ID is required" });
+			return;
+		}
+
+		if (!name || !serviceCategoryId) {
+			res.status(400).json({
+				message: "Name and category ID are required.",
+			});
+			return;
+		}
+
+		const subCategory = await ServiceSubCategories.findByPk(id);
+
+		if (!subCategory) {
+			res.status(404).json({ message: "Service sub-category not found" });
+			return;
+		}
+
+		await subCategory.update(
+			{ name, image, serviceCategoryId },
+			{
+				where: { id },
+			},
+		);
+
+		res.status(200).json({
+			message: "Service sub-category updated successfully",
+			data: subCategory,
+		});
+	} catch (error: any) {
+		logger.error(`Error updating service sub-category: ${error.message}`);
+
+		if (error.name === "SequelizeUniqueConstraintError") {
+			res.status(400).json({
+				message: "A service sub-category with this name already exists.",
+			});
+			return;
+		}
+
+		if (error.name === "SequelizeForeignKeyConstraintError") {
+			res.status(400).json({
+				message: "The service category ID provided does not exist.",
+			});
+			return;
+		}
+
+		res.status(500).json({
+			message:
+				"An error occurred while updating the service sub-category. Please try again later.",
+		});
+	}
+};
+
+export const getAllServiceSubCategories = async (
+	_req: Request,
+	res: Response,
+): Promise<void> => {
+	const { id: serviceCategoryId } = _req.params;
+
+	const { page, limit } = _req.query;
+
+	try {
+		const offset = (Number(page) - 1) * Number(limit);
+
+		const subCategories = await ServiceSubCategories.findAll({
+			limit: Number(limit) || 10,
+			offset: offset || 0,
+			order: [["createdAt", "DESC"]],
+			where: {
+				serviceCategoryId,
+			},
+		});
+		res.status(200).json({ data: subCategories });
+	} catch (error: any) {
+		logger.error(`Error retrieving service sub-categories: ${error.message}`);
+		res.status(500).json({
+			message:
+				"An error occurred while retrieving service sub-categories. Please try again later.",
+		});
+	}
+};
+
+export const deleteServiceSubCategory = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const id = req.params.id;
+
+	try {
+		if (!id) {
+			res.status(400).json({ message: "Service sub-category ID is required" });
+			return;
+		}
+
+		const subCategory = await ServiceSubCategories.findByPk(id);
+
+		if (!subCategory) {
+			res.status(404).json({ message: "Service sub-category not found" });
+			return;
+		}
+
+		await subCategory.destroy();
+
+		res.status(200).json({
+			message: "Service sub-category deleted successfully",
+		});
+	} catch (error: any) {
+		logger.error(`Error deleting service sub-category: ${error.message}`);
+		res.status(500).json({
+			message:
+				"An error occurred while deleting the service sub-category. Please try again later.",
+		});
+	}
+};
+
+export const createServiceAttribute = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const { attributes, } = req.body;
+
+	try {
+
+		if (!attributes || !Array.isArray(attributes) || attributes.length === 0) {
+			res.status(400).json({
+				message: "Attributes must be a non-empty array.",
+			});
+			return;
+		}
+
+		const optionValuesMap: Map<string, string[]> = new Map();
+		const serviceAttributeDefinitions: {
+			name: string;
+			input_type: string;
+			data_type: string;
+		}[] = [];
+		for (const attr of attributes) {
+			const { name, input_type,  value } = attr;
+
+			if (!name ) {
+				res.status(400).json({
+					message: "Each attribute must include name.",
+				});
+				return;
+			}
+
+      if ((input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.MULTI_SELECT || input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.SINGLE_SELECT) && (!value || !Array.isArray(value) || value.length === 0)) {
+        res.status(400).json({
+          message: `Attribute ${name} of type ${input_type} must include non-empty value array.`,
+        });
+        return;
+      }
+
+			if (
+				!input_type ||
+				!ALLOWED_SERVICE_ATTRIBUTE_INPUT.includes(input_type)
+			) {
+				res.status(400).json({
+					message: `Input type must be one of the following: ${ALLOWED_SERVICE_ATTRIBUTE_INPUT.join(", ")}`,
+				});
+				return;
+			}
+
+
+			switch (input_type) {
+				case ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.INT_INPUT:
+					serviceAttributeDefinitions.push({
+						name,
+						input_type,
+						data_type: ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ.INT,
+					});
+					break;
+				case ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.STR_INPUT:
+					serviceAttributeDefinitions.push({
+						name,
+						input_type,
+						data_type: ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ.STR,
+					});
+					break;
+				case ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.BOOL_INPUT:
+					serviceAttributeDefinitions.push({
+						name,
+						input_type,
+						data_type: ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ.BOOL,
+					});
+					break;
+				case ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.MULTI_SELECT:
+					if (!Array.isArray(value) || value.length === 0) {
+						res.status(400).json({
+							message: `Value for attribute ${name} must be a non-empty array.`,
+						});
+						return;
+					}
+					optionValuesMap.set(name, value);
+					serviceAttributeDefinitions.push({
+						name,
+						input_type,
+						data_type: ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ.STR_ARRAY,
+					});
+					break;
+				case ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.SINGLE_SELECT:
+					if (!Array.isArray(value) || value.length === 0) {
+						res.status(400).json({
+							message: `Value for attribute ${name} must be a non-empty array.`,
+						});
+						return;
+					}
+					optionValuesMap.set(name, value);
+					serviceAttributeDefinitions.push({
+						name,
+						input_type,
+						data_type: ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ.STR_ARRAY,
+					});
+					break;
+				default:
+					res.status(400).json({
+						message: `Unsupported input type: ${input_type} for attribute ${name}.`,
+					});
+					return;
+			}
+		}
+
+
+		let newAttribute;
+		try {
+			await sequelize.transaction(async (t) => {
+				newAttribute = await AttributeDefinitions.bulkCreate(
+					serviceAttributeDefinitions,
+					{
+						validate: true,
+						individualHooks: true,
+          	transaction: t,
+					},
+				);
+
+
+				for (let i = 0; i < serviceAttributeDefinitions.length; i++) {
+
+					const definition = serviceAttributeDefinitions[i];
+					const createdDefinition = newAttribute[i];
+
+					if (
+						definition.data_type ===
+						ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ.STR_ARRAY
+					) {
+						const options = optionValuesMap.get(definition.name) || [];
+
+						const optionRecords = options.map((opt) => ({
+							attribute_id: createdDefinition.id,
+							option_value: opt,
+						}));
+
+						if (optionRecords.length > 0) {
+							await AttributeOptions.bulkCreate(optionRecords, {
+								transaction: t,
+							});
+						}
+					}
+				}
+			});
+		} catch (error: Error | any) {
+			if (error.name === "SequelizeUniqueConstraintError") {
+				res.status(400).json({
+					message: "A service attribute with this name already exists.",
+				});
+				return;
+			}
+			if (error.name === "SequelizeForeignKeyConstraintError") {
+				res.status(400).json({
+					message: "The service category ID provided does not exist.",
+				});
+				return;
+			}
+			throw error;
+		}
+
+		res.status(200).json({
+			message: "Service attribute created successfully",
+			data: newAttribute,
+		});
+	} catch (error: any) {
+		if (error.name === "SequelizeUniqueConstraintError") {
+			res.status(400).json({
+				message: "A service attribute with this name already exists.",
+			});
+			return;
+		}
+
+		if (error.name === "SequelizeForeignKeyConstraintError") {
+			res.status(400).json({
+				message: "The service sub-category ID provided does not exist.",
+			});
+			return;
+		}
+
+		logger.error(`Error creating service attribute: ${error.message}`);
+		res.status(500).json({
+			message:
+				"An unexpected error occurred while creating the service attribute.",
+		});
+	}
+};
+
+export const deleteServiceAttribute = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const id = req.params.id;
+
+  try {
+    if (!id) {
+      res.status(400).json({ message: "Service attribute ID is required" });
+      return;
+    }
+
+    if (typeof Number(id) !== 'number') {
+      res.status(400).json({ message: "Service attribute ID must be a number" });
+      return;
+    }
+
+    const attribute = await AttributeDefinitions.findByPk(id);
+
+    if (!attribute) {
+      res.status(404).json({ message: "Service attribute not found" });
+      return;
+    }
+
+    await attribute.destroy();
+
+    res.status(200).json({
+      message: "Service attribute deleted successfully",
+    });
+  } catch (error: any) {
+    logger.error(`Error deleting service attribute: ${error.message}`);
+    res.status(500).json({
+      message:
+        "An error occurred while deleting the service attribute. Please try again later.",
+    });
+  }
+}
+
+export const addAttributeOptions = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const attributeId = req.params.attributeId;
+  const { options } = req.body;
+
+  try {
+    if (!attributeId) {
+      res.status(400).json({ message: "Attribute ID is required." });
+      return;
+    }
+
+    if (!options || !Array.isArray(options) || options.length === 0) {
+      res.status(400).json({
+        message: "Options must be a non-empty array.",
+      });
+      return;
+    }
+
+    const attribute = await AttributeDefinitions.findByPk(attributeId);
+
+    if (!attribute) {
+      res.status(404).json({ message: "Attribute not found." });
+      return;
+    }
+
+    if (
+      attribute.data_type !== ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ.STR_ARRAY ||
+      (attribute.input_type !== ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.SINGLE_SELECT &&
+        attribute.input_type !== ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.MULTI_SELECT)
+    ) {
+      res.status(400).json({
+        message:
+          "Options can only be added to attributes with 'single_select' or 'multi_select' input types.",
+      });
+      return;
+    }
+
+
+
+    const optionRecords = options.map((opt: string) => ({
+      attribute_id: attribute.id,
+      option_value: opt,
+    }));
+
+    const newOptions = await AttributeOptions.bulkCreate(optionRecords, {
+      validate: true,
+      individualHooks: true,
+      ignoreDuplicates: true,
+    });
+
+    res.status(200).json({
+      message: "Options added successfully",
+      data: newOptions,
+    });
+  } catch (error: any) {
+    if (error.name === "SequelizeUniqueConstraintError") {
+      res.status(400).json({
+        message: "One or more options already exist for this attribute.",
+      });
+      return;
+    }
+
+    logger.error(`Error adding attribute options: ${error.message}`);
+    res.status(500).json({
+      message:
+        "An unexpected error occurred while adding attribute options.",
+    });
+  }
+}
+
+export const getAllServiceAttributes = async (
+  _req: Request,
+  res: Response,
+): Promise<void> => {
+
+  const { page, limit } = _req.query;
+
+  try {
+    const offset = (Number(page) - 1) * Number(limit);
+
+    const attributes = await AttributeDefinitions.findAll({
+      limit: Number(limit) || 10,
+      offset: offset || 0,
+      order: [["id", "ASC"]],
+      include: [
+        {
+          model: AttributeOptions,
+          as: "options",
+          attributes: ["id", "option_value"],
+        },
+      ],
+    });
+    res.status(200).json({ data: attributes });
+  } catch (error: any) {
+    logger.error(`Error retrieving service attributes: ${error.message}`);
+    res.status(500).json({
+      message:
+        "An error occurred while retrieving service attributes. Please try again later.",
+    });
+  }
+}
+
+export const deleteAttributeOption = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const optionId = req.params.optionId;
+
+  try {
+    if (!optionId) {
+      res.status(400).json({ message: "Option ID is required." });
+      return;
+    }
+
+    const option = await AttributeOptions.findByPk(optionId);
+
+    if (!option) {
+      res.status(404).json({ message: "Option not found." });
+      return;
+    }
+
+    if (typeof Number(optionId) !== 'number') {
+      res.status(400).json({ message: "Option ID must be a number" });
+      return;
+    }
+
+    await option.destroy();
+
+    res.status(200).json({
+      message: "Option deleted successfully",
+    });
+  } catch (error: any) {
+    logger.error(`Error deleting attribute option: ${error.message}`);
+    res.status(500).json({
+      message:
+        "An error occurred while deleting the attribute option. Please try again later.",
+    });
+  }
+}
+
+export const addAttributeToServiceCategory = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const categoryId = req.params.categoryId;
+
+  const {  attributeIds } = req.body;
+
+  try {
+    if (!categoryId) {
+      res.status(400).json({ message: "Service category ID is required." });
+      return;
+    }
+
+    if (
+      !attributeIds ||
+      !Array.isArray(attributeIds) ||
+      attributeIds.length === 0
+    ) {
+      res.status(400).json({
+        message: "Attribute IDs must be a non-empty array.",
+      });
+      return;
+    }
+
+    const serviceCategory = await ServiceCategories.findByPk(categoryId);
+
+    if (!serviceCategory) {
+      res.status(404).json({ message: "Service category not found." });
+      return;
+    }
+
+    const attributes = await AttributeDefinitions.findAll({
+      where: {
+        id: {
+          [Op.in]: attributeIds,
+        },
+      }
+    });
+
+    if (attributes.length !== attributeIds.length) {
+      res.status(400).json({
+        message:
+          "One or more attribute IDs are invalid and do not exist.",
+      });
+      return;
+    }
+
+  const attributeToServiceCategoryRecords = attributeIds.map((attrId: string) => ({
+	 service_category_id: categoryId,
+  	attribute_id: attrId,
+    }));
+
+    await ServiceCategoryToAttributeMap.bulkCreate(attributeToServiceCategoryRecords, {
+      validate: true,
+      individualHooks: true,
+      ignoreDuplicates: true,
+    });
+
+    res.status(200).json({
+      message: "Attributes added to service category successfully",
+    });
+  } catch (error: any) {
+    if (error.name === "SequelizeForeignKeyConstraintError") {
+      res.status(400).json({
+        message: "One or more attribute IDs are invalid and do not exist.",
+      });
+      return;
+    }
+    if (error.name === "SequelizeUniqueConstraintError") {
+      res.status(400).json({
+        message: "One or more attributes are already associated with this service category.",
+      });
+      return;
+    }
+    logger.error(`Error adding attributes to service category: ${error.message}`);
+    res.status(500).json({
+      message:
+        "An unexpected error occurred while adding attributes to the service category.",
+    });
+  }
+}
+
+
+export const removeAttributeFromServiceCategory = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const categoryId = req.params.categoryId;
+  const {  attributeIds } = req.body;
+  
+  if(!categoryId) {
+    res.status(400).json({ message: "Service category ID is required." });
+    return;
+  }
+
+  if (
+    !attributeIds ||
+    !Array.isArray(attributeIds) ||
+    attributeIds.length === 0
+  ) {
+    res.status(400).json({
+      message: "Attribute IDs must be a non-empty array.",
+    });
+    return;
+  }
+
+  try {
+    const serviceCategory = await ServiceCategories.findByPk(categoryId);
+
+    if (!serviceCategory) {
+      res.status(404).json({ message: "Service category not found." });
+      return;
+    }
+
+    const deleteCount = await ServiceCategoryToAttributeMap.destroy({
+      where: {
+        service_category_id: categoryId,
+        attribute_id: {
+          [Op.in]: attributeIds,
+        },
+      },
+    });
+
+    if (deleteCount === 0) {
+      res.status(404).json({
+        message: "No matching attribute mappings found for deletion.",
+      });
+      return;
+    }
+
+    res.status(200).json({
+      message: "Attributes removed from service category successfully",
+    });
+  } catch (error: any) {
+    logger.error(`Error removing attributes from service category: ${error.message}`);
+    res.status(500).json({
+      message:
+        "An unexpected error occurred while removing attributes from the service category.",
+    });
+  }
+}
+
+export const suspendService = async (req: Request, res: Response): Promise<void> => {
+  const serviceId = req.params.serviceId;
+
+  try {
+    if (!serviceId) {
+      res.status(400).json({ message: "Service ID is required." });
+      return;
+    }
+
+    const service = await Services.findByPk(serviceId);
+
+    if (!service) {
+      res.status(404).json({ message: "Service not found." });
+      return;
+    }
+
+    if (service.status === 'suspended') {
+      res.status(400).json({ message: "Service is already suspended." });
+      return;
+    }
+
+    service.status = 'suspended';
+    await service.save();
+
+    res.status(200).json({
+      message: "Service suspended successfully",
+      data: service,
+    });
+  } catch (error: any) {
+    logger.error(`Error suspending service: ${error.message}`);
+    res.status(500).json({
+      message:
+        "An unexpected error occurred while suspending the service.",
+    });
+  }
+}
+
+export const activateService = async (req: Request, res: Response): Promise<void> => {
+  const serviceId = req.params.serviceId;
+
+  try {
+    if (!serviceId) {
+      res.status(400).json({ message: "Service ID is required." });
+      return;
+    }
+
+    const service = await Services.findByPk(serviceId);
+
+    if (!service) {
+      res.status(404).json({ message: "Service not found." });
+      return;
+    }
+
+    if (service.status === 'active') {
+      res.status(400).json({ message: "Service is already active." });
+      return;
+    }
+
+    service.status = 'active';
+    await service.save();
+
+    res.status(200).json({
+      message: "Service activated successfully",
+      data: service,
+    });
+  } catch (error: any) {
+    logger.error(`Error activating service: ${error.message}`);
+    res.status(500).json({
+      message:
+        "An unexpected error occurred while activating the service.",
+    });
+  }
+}
+
+export const getAllServices = async (req: Request, res: Response): Promise<void> => {
+  const { page, limit, status, categoryId, subCategoryId } = req.query;
+
+  try {
+    const offset = (Number(page) - 1) * Number(limit);
+
+    const whereClause: any = {};
+
+    if (status && (status === 'active' || status === 'suspended')) {
+      whereClause.status = status;
+    }
+
+    if (categoryId) {
+      whereClause.serviceCategoryId = categoryId;
+    }
+
+    if (subCategoryId) {
+      whereClause.serviceSubCategoryId = subCategoryId;
+    }
+
+    const services = await Services.findAll({
+      where: whereClause,
+      limit: Number(limit) || 10,
+      offset: offset || 0,
+      order: [["createdAt", "DESC"]],
+      include: [
+        {
+          model: ServiceCategories,
+          as: "category",
+          attributes: ["id", "name"],
+        },
+        {
+          model: ServiceSubCategories,
+          as: "subCategory",
+          attributes: ["id", "name"],
+        },
+        {
+          model: User,
+          as: "provider",
+        }
+      ],
+    });
+    res.status(200).json({ data: services });
+  } catch (error: any) {
+    logger.error(`Error retrieving services: ${error.message}`);
+    res.status(500).json({
+      message:
+        "An error occurred while retrieving services. Please try again later.",
+    });
+  }
+}
+
+export const getAliExpressCategories = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+  const vendorId = (req as any).adminId;
+
+	try {
+		const categories = await dropShippingService.getProductCategories(vendorId);
 
 		if (categories.length === 0) {
 			res.status(404).json({ message: "No categories found" });
@@ -6421,4 +7455,305 @@ export const getAliExpressCategories = async (
 				"An error occurred while retrieving dropshipping product categories.",
 		});
 	}
-};
+} 
+
+export const getAliExpressProducts = async (
+req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const vendorId = (req as any).adminId;
+
+  const keywords = req.query.keywords as string;  
+  const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
+
+    const categoryId = req.query.categoryId as string;
+
+    const currency = req.query.currency as string;
+
+  const pageSize = req.query.pageSize ? parseInt(req.query.pageSize as string, 10) : 20;
+    const shippingCountry = req.query.shippingCountry as string;
+
+    // if (!categoryId ) {
+    //   res.status(400).json({ message: "Category ID is required" });
+    //   return;
+    // }
+     
+    if (currency && currency !== 'USD' && currency !== "NGN" ) {
+      res.status(400).json({ message: "Currency must be either 'USD' or 'NGN'" });
+      return;
+    }
+
+
+    if (keywords && keywords.trim().length === 0) {
+      res.status(400).json({ message: "Keywords cannot be empty" });
+      return;
+    }
+
+    if (!shippingCountry) {
+      res.status(400).json({ message: "Shipping country is required" });
+      return;
+    }
+
+    const products = await dropShippingService.getProducts({
+      keywords, 
+      pageNo: page, 
+      pageSize,
+      categoryId,
+      shipToCountry: shippingCountry, 
+      currency: currency as AE_Currency,
+      vendorId,
+    });
+
+  
+
+    res.status(200).json({ data: products });
+  } catch (error: any) {
+    logger.error(
+      `Error retrieving dropshipping products: ${error.message}`,
+    );
+    res.status(500).json({
+      message:
+        "An error occurred while retrieving dropshipping products.",
+    });
+  }
+
+
+}
+
+export async function getAliExpressProductDetails(req: Request, res: Response): Promise<void> {
+  try {
+const vendorId = (req as any).adminId;
+
+const productId = req.params.productId 
+
+    const shipToCountry = req.query.shippingCountry as string;
+
+    const currency = req.query.currency as string;
+
+    if (!productId) {
+      res.status(400).json({ message: "Product ID is required" });
+      return;
+    }
+
+    if (!shipToCountry) {
+      res.status(400).json({ message: "Shipping country is required" });
+      return;
+    }
+
+    if (currency && currency !== 'USD' && currency !== "NGN" ) {
+      res.status(400).json({ message: "Currency must be either 'USD' or 'NGN'" });
+      return;
+    }
+
+    const productDetails = await dropShippingService.getProductById(vendorId,Number(productId),shipToCountry,currency as AE_Currency);
+
+    if (!productDetails) {
+      res.status(404).json({ message: "Product not found" });
+      return;
+    }
+
+    res.status(200).json({ data: productDetails });
+  } catch (error: any) {
+    logger.error(
+      `Error retrieving dropshipping product details: ${error.message}`,
+    );
+    res.status(500).json({
+      message:
+        "An error occurred while retrieving dropshipping product details.",
+    });
+  }
+}
+
+export async function addAliexpressProductToInventory(req: Request, res: Response): Promise<void> {
+
+	const transaction = await sequelizeService.connection!.transaction();
+  try {
+    const { productId, shippingCountry, currency , storeId , categoryId, priceIncrementPercent } = req.body;
+    // @ts-ignore
+    const vendorId = req.adminId ;
+
+    if (!productId) {
+
+      res.status(400).json({ message: "Product ID is required" });
+
+      await transaction.rollback();
+
+      return;
+    }
+
+    if (!shippingCountry) {
+
+      res.status(400).json({ message: "Shipping country is required" });
+
+      await transaction.rollback();
+
+      return;
+    }
+
+    if (shippingCountry.trim() === "") {
+      res.status(400).json({ message: "Shipping country cannot be empty" });
+
+      await transaction.rollback();
+
+      return;
+    }
+
+    if(shippingCountry !== "US" && shippingCountry !== "NG" && shippingCountry !== "UK" ) {
+      res.status(400).json({ message: "Shipping country must be either 'US', 'NG' or 'UK'" });
+
+      await transaction.rollback();
+
+      return;
+    }
+
+    if (currency && currency !== 'USD' && currency !== "NGN" ) {
+
+      res.status(400).json({ message: "Currency must be either 'USD' or 'NGN'" });
+
+      await transaction.rollback();
+
+      return;
+    } 
+
+    if (!storeId) {
+
+      res.status(400).json({ message: "Store ID is required" });
+
+      await transaction.rollback();
+
+      return;
+    }
+
+  const store = await Store.findByPk(storeId, {
+      include: [
+        {
+          model: Currency,
+          as: "currency",
+        },
+      ],
+    });
+
+    if (!store) {
+
+      res.status(404).json({ message: "Store not found" });
+
+      await transaction.rollback();
+
+      return;
+    }
+
+    if (!store.currency) {
+
+      res.status(400).json({ message: "Store does not have a currency set" });
+
+      await transaction.rollback();
+
+      return;
+    }
+
+    if (store.currency.name.toLowerCase() === "dollar" && currency !== 'USD' || store.currency.name.toLowerCase() === "naira" && currency !== 'NGN') {
+
+      res.status(400).json({ message: `Currency mismatch: Store currency is ${store.currency.name}, but received ${currency}` });
+
+      await transaction.rollback();
+
+      return;
+    }
+
+    const productDetails = await dropShippingService.getProductById(vendorId,Number(productId),shippingCountry,currency as AE_Currency);
+
+    if (!productDetails) {
+
+      res.status(404).json({ message: "Product not found" });
+      
+      await transaction.rollback();
+
+      return;
+    }
+
+    const lowestPricedVariant = productDetails.ae_item_sku_info_dtos.reduce((prev, curr) => {
+      return (prev.offer_sale_price < curr.offer_sale_price) ? prev : curr;
+    });
+
+    const productImages = productDetails.ae_multimedia_info_dto.image_urls.split(';');
+
+    //@ts-ignore
+    const productVideoUrl = productDetails.ae_multimedia_info_dto.ae_video_dtos[0]?.media_url as string | undefined;
+
+    const productPrice = new Decimal(lowestPricedVariant.offer_sale_price).plus(
+      new Decimal(lowestPricedVariant.offer_sale_price)
+        .mul(new Decimal(priceIncrementPercent))
+        .div(new Decimal(100)),
+    ).toFixed(2);
+
+    const variantIncrementedPrices = productDetails.ae_item_sku_info_dtos.map(variant => {
+      const incrementedPrice = new Decimal(variant.offer_sale_price).plus(
+        new Decimal(variant.offer_sale_price)
+          .mul(new Decimal(priceIncrementPercent))
+          .div(new Decimal(100)),
+      ).toFixed(2);
+
+      return {
+        ...variant,
+        offer_sale_price: incrementedPrice,
+      };
+    });
+
+    const newProduct = await Product.create({
+      storeId: store.id,
+      vendorId,
+      categoryId: categoryId || null,
+      name: productDetails.ae_item_base_info_dto.subject,
+      description: productDetails.ae_item_base_info_dto.detail,
+      specification: productDetails.ae_item_base_info_dto.mobile_detail,
+      sku: `KDM-${uuidv4()}`,
+      type: 'dropship',
+      price: lowestPricedVariant.sku_price,
+      discount_price: productPrice,
+      condition: "brand_new",
+      quantity: lowestPricedVariant.sku_available_stock,
+      image_url: productImages[0],
+      video_url: productVideoUrl || null,
+      additional_images: productImages,
+      variants: variantIncrementedPrices,
+    }, { transaction });
+
+    await DropshipProducts.create({
+      productId: newProduct.id,
+      dropshipProductId: productDetails.ae_item_base_info_dto.product_id,
+      vendorId,
+      priceIncrementPercent,
+    }, { transaction });
+
+    await transaction.commit();
+
+    res.status(200).json({
+      message: "Dropshipping product added to inventory successfully",
+      data: newProduct,
+    });
+
+  } catch (error: any) {
+
+    logger.error(
+      `Error adding dropshipping product to catalog: ${error.message}`,
+    );
+
+    await transaction.rollback();
+
+    res.status(500).json({
+      message:
+        "An error occurred while adding dropshipping product to catalog.",
+    });
+  }
+}
+
+
+
+    
+
+
+
+
+
+

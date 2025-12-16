@@ -12,8 +12,12 @@ import {
 	resetPasswordValidationRules,
 	validate,
 	verificationTokenValidationRules,
+	paginationQueryParamsValidation,
+	ServiceIdValidation,
+	validateUUIDParam,
 } from "../utils/validations"; // Import the service
 import authMiddleware from "../middlewares/authMiddleware";
+import adminAuthMiddleware from "../middlewares/adminAuthMiddleware";
 
 const authRoutes = Router();
 
@@ -142,6 +146,55 @@ authRoutes.post("/apply/job", homeController.applyJob);
 authRoutes.get("/banners", homeController.getAllBanners); // Get all banners
 
 authRoutes.post("/create-payment-intent", homeController.createPaymentIntent);
+
+authRoutes.get(
+	"/service/categories",
+	paginationQueryParamsValidation(),
+	validate,
+	homeController.getAllServiceCategories,
+);
+
+authRoutes.get(
+	"/service/subcategories/:id",
+	ServiceIdValidation(),
+	paginationQueryParamsValidation(),
+	validate,
+	homeController.getAllServiceSubCategories,
+);
+
+authRoutes.get(
+	"/services",
+	paginationQueryParamsValidation(),
+	validate,
+	homeController.getAllServices,
+);
+
+authRoutes.get(
+	"/service/:serviceId",
+	validateUUIDParam("serviceId"),
+	validate,
+	homeController.getServiceById,
+);
+
+authRoutes.get(
+	"/services/:serviceId/reviews",
+	validateUUIDParam("serviceId"),
+	paginationQueryParamsValidation(),
+	validate,
+	homeController.getServiceReviews,
+);
+
+authRoutes.get(
+	"/services/categories/:categoryId/attributes",
+	paginationQueryParamsValidation(),
+	homeController.getAttributesForServiceCategory,
+);
+
+authRoutes.post(
+	"/aliexpress/create-account",
+	adminAuthMiddleware,
+	authController.createAliexpressAccount,
+);
 
 authRoutes.get("/aliexpress/auth", authController.aliExpressAuth);
 

@@ -34,6 +34,8 @@ export const index = async (_: Request, res: Response) => {
 	});
 };
 
+const dropShippingService = new DropShippingService();
+
 export const vendorRegister = async (
 	req: Request,
 	res: Response,
@@ -859,8 +861,15 @@ export const handleGoogleAuth = async (
 	res: Response,
 ): Promise<void> => {
 	try {
-		const { firstName, lastName, email, phoneNumber, accountType, providerId } =
-			req.body;
+		const {
+			firstName,
+			lastName,
+			email,
+			phoneNumber,
+			accountType,
+			fcmToken,
+			providerId,
+		} = req.body;
 
 		if (!firstName || !lastName || !email || !accountType || !providerId) {
 			res.status(400).json({ message: "All fields are required." });
@@ -881,12 +890,24 @@ export const handleGoogleAuth = async (
 				email,
 				firstName,
 				lastName,
+				fcmToken: fcmToken || "",
 				accountType,
 				password: await generateUniquePhoneNumber(), // Generate unique phone number
 				phoneNumber: await generateUniquePhoneNumber(), // Generate unique phone number
 				googleId: providerId, // Storing provider ID as Google ID
 				email_verified_at: new Date(),
 			});
+		} else {
+			await User.update(
+				{
+					fcmToken: fcmToken || user.fcmToken,
+				},
+				{
+					where: { email },
+				},
+			);
+
+			user.fcmToken = fcmToken; // Update FCM token if provided
 		}
 
 		// Attach user to req object for next function
@@ -969,6 +990,7 @@ export const createAliexpressAccount = async (
 	res: Response,
 ): Promise<void> => {
 	// const {} = req.user;
+	const vendorId = (req as any).admin.id;
 
 	const { account } = req.body;
 
@@ -976,6 +998,11 @@ export const createAliexpressAccount = async (
 		// Validate input
 		if (!account) {
 			res.status(400).json({ message: "Account is required" });
+			return;
+		}
+
+		if (account && account.trim() === "") {
+			res.status(400).json({ message: "Account cannot be empty" });
 			return;
 		}
 
@@ -991,7 +1018,7 @@ export const createAliexpressAccount = async (
 		// Create the new dropshipping account
 		await DropShippingCred.create({
 			account,
-			// vendorId,
+			vendorId,
 		});
 
 		// Return a success response
@@ -1000,6 +1027,7 @@ export const createAliexpressAccount = async (
 		});
 	} catch (error: any) {
 		logger.error("Error during dropshipping account creation:", error);
+
 		if (error.message) {
 			res.status(400).json({ message: error.message });
 		} else {
@@ -1034,8 +1062,6 @@ export const aliExpressAuthCallback = async (
 	res: Response,
 ): Promise<void> => {
 	try {
-		const dropShippingService = new DropShippingService();
-
 		const code = req.query?.code as string;
 
 		if (!code) {
@@ -1046,8 +1072,6 @@ export const aliExpressAuthCallback = async (
 		// Call the service to get the access token
 		const accessTokenData = await dropShippingService.getAccessToken(code);
 
-		console.log(`Access Token Data: ${JSON.stringify(accessTokenData)}`);
-
 		const existingCred = await DropShippingCred.findOne({
 			where: { account: accessTokenData.account },
 		});
@@ -1056,6 +1080,7 @@ export const aliExpressAuthCallback = async (
 			res.status(400).json({
 				message: "No matching account found for the provided credentials.",
 			});
+
 			return;
 		}
 

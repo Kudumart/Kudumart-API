@@ -3183,12 +3183,14 @@ export const emailTemplates = {
 				const productId =
 					product.sku && product.sku.trim() ? product.sku : product.id;
 
+				const itemPrice = Number(item.price) * Number(item.quantity);
+
 				itemsHtml += `
                 <li><strong>Product ID:</strong> ${productId} </li>
                 <li><strong>Product:</strong> ${product.name} </li>
                 <li><strong>Quantity:</strong> ${item.quantity} </li>
                 <li><strong>Price:</strong> ${currency}${Number(
-									item.price,
+									itemPrice,
 								).toFixed(2)}</li>
             `;
 			}
@@ -4334,10 +4336,7 @@ export const emailTemplates = {
 																	productName ?? "your item"
 																}</strong> has been updated to <strong>${status}</strong>.</p>
 
-                                <p>${
-																	deliveryCode &&
-																	`Delivery code: ${deliveryCode}`
-																}</p>
+                                ${deliveryCode ? `<p>Delivery code: ${deliveryCode}</p>` : ""}
                                 <p>Thank you for shopping with us.</p>
                                 <p>For any questions, feel free to contact our support team.</p>
                                 <p>Best regards,<br> The ${process.env.APP_NAME} Team.</p>

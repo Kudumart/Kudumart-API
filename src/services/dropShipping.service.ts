@@ -1,8 +1,11 @@
-import { DropshipperClient } from "ae_sdk";
+import { AE_Currency, DropshipperClient } from "ae_sdk";
 import crypto from "node:crypto";
 import axios from "axios";
+import DropShippingCred from "../models/dropshippngCreds";
+import { NotFoundError } from "../utils/ApiError";
 
 interface ProductSearchOptions {
+	vendorId: string;
 	keywords: string;
 	categoryId: string;
 	minPrice?: number;
@@ -10,6 +13,7 @@ interface ProductSearchOptions {
 	shipToCountry?: string;
 	pageNo?: number;
 	pageSize?: number;
+	currency?: AE_Currency;
 }
 
 interface OrderCreateData {
@@ -58,13 +62,21 @@ interface AES_GENERATE_TOKEN_RESULT {
 }
 
 export class DropShippingService {
-	private readonly dropShipperClient: DropshipperClient;
+	// private dropShipperClient: DropshipperClient;
+	//
+	// constructor() {
+	// 	this.dropShipperClient = new DropshipperClient({
+	// 		app_key: process.env.ALIEXPRESS_APP_KEY || "",
+	// 		app_secret: process.env.ALIEXPRESS_APP_SECRET || "",
+	// 		session: process.env.DROPSHIPPER_SESSION || "",
+	// 	});
+	// }
 
-	constructor() {
-		this.dropShipperClient = new DropshipperClient({
+	private createClient(session?: string): DropshipperClient {
+		return new DropshipperClient({
 			app_key: process.env.ALIEXPRESS_APP_KEY || "",
 			app_secret: process.env.ALIEXPRESS_APP_SECRET || "",
-			session: process.env.DROPSHIPPER_SESSION || "",
+			session: session || process.env.DROPSHIPPER_SESSION || "",
 		});
 	}
 
@@ -107,8 +119,22 @@ export class DropShippingService {
 		};
 	}
 
-	async refreshAccessToken(refreshToken: string) {
-		const response = await this.dropShipperClient.refreshToken({
+	async refreshAccessToken(vendorId: string, refreshToken: string) {
+		const vendorAliexpressCreds = await DropShippingCred.findOne({
+			where: { vendorId },
+		});
+
+		if (!vendorAliexpressCreds) {
+			throw new NotFoundError(
+				"Dropshipping credentials not found for the vendor",
+			);
+		}
+
+		const dropShipperClient = this.createClient(
+			vendorAliexpressCreds?.accessToken,
+		);
+
+		const response = await dropShipperClient.refreshToken({
 			refresh_token: refreshToken,
 		});
 		if (!response.ok) {
@@ -146,9 +172,23 @@ export class DropShippingService {
 		};
 	}
 
-	async getProductCategories() {
+	async getProductCategories(vendorId: string) {
 		try {
-			const response = await this.dropShipperClient.getCategories({});
+			const vendorAliexpressCreds = await DropShippingCred.findOne({
+				where: { vendorId },
+			});
+
+			if (!vendorAliexpressCreds) {
+				throw new NotFoundError(
+					"Dropshipping credentials not found for the vendor",
+				);
+			}
+
+			const dropShipperClient = this.createClient(
+				vendorAliexpressCreds?.accessToken,
+			);
+
+			const response = await dropShipperClient.getCategories({});
 
 			if (!response.ok) {
 				// console.log(response);
@@ -184,20 +224,38 @@ export class DropShippingService {
 	}
 
 	async getProducts(options: ProductSearchOptions) {
-		const response = await this.dropShipperClient.callAPIDirectly(
+		const vendorAliexpressCreds = await DropShippingCred.findOne({
+			where: { vendorId: options.vendorId },
+		});
+
+		if (!vendorAliexpressCreds) {
+			throw new NotFoundError(
+				"Dropshipping credentials not found for the vendor",
+			);
+		}
+
+		const dropShipperClient = this.createClient(
+			vendorAliexpressCreds?.accessToken,
+		);
+
+		const params = {
+			// KeyWord: options.keywords || "",
+			categoryId: options.categoryId,
+			countryCode: options.shipToCountry || "NG",
+			currency: options.currency || "USD",
+			pageIndex: options.pageNo || 1,
+			pageSize: options.pageSize || 20,
+			local: "en_US",
+			// signature: this.dropShipperClient.app_secret,
+		};
+
+		const response = await dropShipperClient.callAPIDirectly(
 			"aliexpress.ds.text.search",
-			{
-				KeyWord: options.keywords || "",
-				categoryId: options.categoryId,
-				countryCode: options.shipToCountry || "NG",
-				currency: "USD",
-				pageIndex: options.pageNo || 1,
-				pageSize: options.pageSize || 20,
-				local: "en_US",
-			},
+			params,
 		);
 
 		if (!response.ok) {
+			console.log(response);
 			throw new Error("Failed to fetch products from the dropshipper API");
 		}
 
@@ -205,13 +263,46 @@ export class DropShippingService {
 			throw new Error("No data returned from the dropshipper API");
 		}
 
+		// const response = await getRequest(
+		// 	"https://api-sg.aliexpress.com/rest/aliexpress.ds.text.search",
+		// 	{
+		// 		KeyWord: options.keywords || "",
+		// 		// categoryId: options.categoryId,
+		// 		countryCode: options.shipToCountry || "NG",
+		// 		currency: "USD",
+		// 		pageIndex: options.pageNo || 1,
+		// 		pageSize: options.pageSize || 20,
+		// 		local: "en_US",
+		// 	},
+		// );
+
 		return response.data;
 	}
 
-	async getProductById(productId: number, shipToCountry: string) {
-		const response = await this.dropShipperClient.productDetails({
+	async getProductById(
+		vendorId: string,
+		productId: number,
+		shipToCountry: string,
+		targetCurrency: AE_Currency = "USD",
+	) {
+		const vendorAliexpressCreds = await DropShippingCred.findOne({
+			where: { vendorId },
+		});
+
+		if (!vendorAliexpressCreds) {
+			throw new NotFoundError(
+				"Dropshipping credentials not found for the vendor",
+			);
+		}
+
+		const dropShipperClient = this.createClient(
+			vendorAliexpressCreds?.accessToken,
+		);
+
+		const response = await dropShipperClient.productDetails({
 			product_id: productId,
 			ship_to_country: shipToCountry,
+			target_currency: targetCurrency,
 		});
 
 		if (!response.ok) {
@@ -227,7 +318,7 @@ export class DropShippingService {
 		const { aliexpress_ds_product_get_response } = response.data;
 
 		if (!aliexpress_ds_product_get_response) {
-			throw new Error("No product data found in the response");
+			throw new NotFoundError("No product data found in the response");
 		}
 
 		const { result } = aliexpress_ds_product_get_response;
@@ -240,8 +331,22 @@ export class DropShippingService {
 		return product;
 	}
 
-	async createOrder(createOrderData: OrderCreateData) {
-		const response = await this.dropShipperClient.createOrder({
+	async createOrder(vendorId: string, createOrderData: OrderCreateData) {
+		const vendorAliexpressCreds = await DropShippingCred.findOne({
+			where: { vendorId },
+		});
+
+		if (!vendorAliexpressCreds) {
+			throw new NotFoundError(
+				"Dropshipping credentials not found for the vendor",
+			);
+		}
+
+		const dropShipperClient = this.createClient(
+			vendorAliexpressCreds?.accessToken,
+		);
+
+		const response = await dropShipperClient.createOrder({
 			logistics_address: createOrderData.shippingAddress,
 			product_items: createOrderData.products,
 			promo_and_payment: {
@@ -280,12 +385,22 @@ export class DropShippingService {
 		return orderList;
 	}
 
-	async getOrderStatus(orderId: number) {
-		// const response = await this.dropShipperClient.orderDetails({
-		// 	order_id: orderId,
-		// });
+	async getOrderStatus(vendorId: string, orderId: number) {
+		const vendorAliexpressCreds = await DropShippingCred.findOne({
+			where: { vendorId },
+		});
 
-		const responseData = await this.dropShipperClient.callAPIDirectly(
+		if (!vendorAliexpressCreds) {
+			throw new NotFoundError(
+				"Dropshipping credentials not found for the vendor",
+			);
+		}
+
+		const dropShipperClient = this.createClient(
+			vendorAliexpressCreds?.accessToken,
+		);
+
+		const responseData = await dropShipperClient.callAPIDirectly(
 			"aliexpress.ds.order.tracking.get",
 			{
 				ae_order_id: orderId,
@@ -370,4 +485,46 @@ async function generateToken(code: string) {
 	}
 
 	return data as AES_GENERATE_TOKEN_RESULT;
+}
+
+async function getRequest(url: string, params: any) {
+	// Add the signature to the parameters
+	const apiName = url.replace("https://api-sg.aliexpress.com/rest", "");
+
+	const signMethod = "sha256";
+
+	const sortedParams = Object.keys(params)
+		.sort()
+		.reduce((acc, key) => {
+			//@ts-ignore
+			acc[key] = params[key];
+			return acc;
+		}, {});
+
+	//  Concatenate the sorted parameters and their values into a string
+	var sortedParamsString = Object.entries(sortedParams)
+		.map(([key, value]) => `${key}${value}`)
+		.join("");
+	sortedParamsString = apiName + sortedParamsString;
+
+	console.log(sortedParamsString);
+	// Create the signature using HMAC-SHA256
+	const signature = crypto
+		.createHmac(signMethod, process.env.ALIEXPRESS_APP_SECRET || "")
+		.update(sortedParamsString)
+		.digest("hex")
+		.toUpperCase();
+
+	// Add the signature to the parameters
+	// @ts-ignore
+	params["sign"] = signature;
+
+	try {
+		const response = await axios.get(url, { params });
+
+		return response.data;
+	} catch (error) {
+		console.error("GET request error:", error);
+		throw error;
+	}
 }

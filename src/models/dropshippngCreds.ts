@@ -8,7 +8,6 @@ class DropShippingCred extends Model {
 	refreshToken!: string;
 	refreshExpiresIn!: number;
 	refreshTokenValidTime!: number;
-	userId!: string;
 	userNick!: string;
 	locale!: string | null;
 	vendorId!: string | null;
@@ -26,41 +25,37 @@ const initModel = (sequelize: Sequelize) => {
 		{
 			id: {
 				type: DataTypes.UUID,
-				autoIncrement: true,
+				defaultValue: DataTypes.UUIDV4,
 				primaryKey: true,
 				allowNull: false,
 			},
 			accessToken: {
 				type: DataTypes.STRING,
-				allowNull: false,
+				allowNull: true,
 			},
 			expiresIn: {
 				type: DataTypes.INTEGER,
-				allowNull: false,
+				allowNull: true,
 			},
 			expireTime: {
-				type: DataTypes.NUMBER,
-				allowNull: false,
+				type: DataTypes.BIGINT,
+				allowNull: true,
 			},
 			refreshToken: {
 				type: DataTypes.STRING,
-				allowNull: false,
+				allowNull: true,
 			},
 			refreshExpiresIn: {
 				type: DataTypes.INTEGER,
-				allowNull: false,
+				allowNull: true,
 			},
 			refreshTokenValidTime: {
-				type: DataTypes.NUMBER,
-				allowNull: false,
-			},
-			userId: {
-				type: DataTypes.STRING,
-				allowNull: false,
+				type: DataTypes.BIGINT,
+				allowNull: true,
 			},
 			userNick: {
 				type: DataTypes.STRING,
-				allowNull: false,
+				allowNull: true,
 			},
 			locale: {
 				type: DataTypes.STRING,
@@ -89,10 +84,10 @@ const initModel = (sequelize: Sequelize) => {
 		},
 		{
 			sequelize,
-			modelName: "Product",
+			modelName: "DropShippingCred",
 			timestamps: true,
 			paranoid: false,
-			tableName: "products",
+			tableName: "dropshipping_creds",
 		},
 	);
 };

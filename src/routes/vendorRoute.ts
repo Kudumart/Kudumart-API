@@ -14,6 +14,10 @@ import {
 	createAdvertValidation,
 	updateAdvertValidation,
 	validate,
+	ServiceValidation,
+	ServiceIdValidation,
+	validateUUIDParam,
+	paginationQueryParamsValidation,
 } from "../utils/validations";
 
 const vendorRoutes = Router();
@@ -138,6 +142,12 @@ vendorRoutes.patch(
 	vendorController.cancelAuctionProduct,
 );
 vendorRoutes.get(
+	"/auction/product",
+	authMiddleware,
+	authorizeVendor,
+	vendorController.viewAuctionProduct,
+);
+vendorRoutes.get(
 	"/auction/product/bidders",
 	authMiddleware,
 	authorizeVendor,
@@ -231,11 +241,25 @@ vendorRoutes.post(
 	authMiddleware,
 	vendorController.addBankInformation,
 );
+
+vendorRoutes.post(
+	"/bank/informations/v2",
+	authMiddleware,
+	vendorController.addBankInformationV2,
+);
+
 vendorRoutes.put(
 	"/bank/informations",
 	authMiddleware,
 	vendorController.updateBankInformation,
 );
+
+vendorRoutes.put(
+	"/bank/informations/v2",
+	authMiddleware,
+	vendorController.updateBankInformationV2,
+);
+
 vendorRoutes.get(
 	"/bank/informations",
 	authMiddleware,
@@ -272,6 +296,98 @@ vendorRoutes.get(
 	"/withdrawal",
 	authMiddleware,
 	vendorController.getWithdrawalById,
+);
+
+// Services
+vendorRoutes.post(
+	"/services",
+	ServiceValidation(),
+	validate,
+	authMiddleware,
+	authorizeVendor,
+	vendorController.createService,
+);
+
+vendorRoutes.put(
+	"/services/:serviceId",
+	ServiceValidation(),
+	validateUUIDParam("serviceId"),
+	validate,
+	authMiddleware,
+	authorizeVendor,
+	vendorController.updateService,
+);
+
+vendorRoutes.get(
+	"/services/:serviceId",
+	validateUUIDParam("serviceId"),
+	validate,
+	authMiddleware,
+	authorizeVendor,
+	vendorController.getService,
+);
+
+vendorRoutes.get(
+	"/services",
+	paginationQueryParamsValidation(),
+	validate,
+	authMiddleware,
+	authorizeVendor,
+	vendorController.getVendorServices,
+);
+
+vendorRoutes.delete(
+	"/services/:serviceId",
+	validateUUIDParam("serviceId"),
+	validate,
+	authMiddleware,
+	authorizeVendor,
+	vendorController.deleteService,
+);
+
+vendorRoutes.patch(
+	"/services/:serviceId/publish",
+	validateUUIDParam("serviceId"),
+	validate,
+	authMiddleware,
+	authorizeVendor,
+	vendorController.publishService,
+);
+
+vendorRoutes.patch(
+	"/services/:serviceId/unpublish",
+	validateUUIDParam("serviceId"),
+	validate,
+	authMiddleware,
+	authorizeVendor,
+	vendorController.unpublishService,
+);
+
+vendorRoutes.get(
+	"/service/bookings",
+	paginationQueryParamsValidation(),
+	validate,
+	authMiddleware,
+	authorizeVendor,
+	vendorController.getServiceBookings,
+);
+
+vendorRoutes.patch(
+	"/service/bookings/:bookingId/confirm",
+	validateUUIDParam("bookingId"),
+	validate,
+	authMiddleware,
+	authorizeVendor,
+	vendorController.markServiceBookingAsConfirmed,
+);
+
+vendorRoutes.patch(
+	"/service/bookings/:bookingId/cancel",
+	validateUUIDParam("bookingId"),
+	validate,
+	authMiddleware,
+	authorizeVendor,
+	vendorController.markServiceBookingAsCancelled,
 );
 
 export default vendorRoutes;

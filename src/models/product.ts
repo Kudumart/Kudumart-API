@@ -22,6 +22,7 @@ class Product extends Model {
 	public quantity?: number | 0;
 	public price!: number;
 	public discount_price!: number | null;
+	public type!: "dropship" | "in_stock";
 	public image_url!: string | null;
 	public video_url!: string | null;
 	public additional_images!: object | null; // JSON array or object for additional images
@@ -33,6 +34,7 @@ class Product extends Model {
 	public views!: number | null;
 	public status!: "active" | "inactive" | "draft";
 	public vendor?: User; // Declare the relationship to User (vendor)
+	public variants!: object | null; // JSON array or object for product variants
 	public createdAt!: Date;
 	public updatedAt!: Date;
 
@@ -129,6 +131,11 @@ const initModel = (sequelize: Sequelize) => {
 				),
 				allowNull: false,
 			},
+			type: {
+				type: DataTypes.ENUM("dropship", "in_stock"),
+				allowNull: false,
+				defaultValue: "in_stock",
+			},
 			description: {
 				type: DataTypes.TEXT,
 				allowNull: true,
@@ -196,6 +203,15 @@ const initModel = (sequelize: Sequelize) => {
 				type: DataTypes.ENUM("active", "inactive", "draft"),
 				defaultValue: "active",
 				allowNull: false,
+			},
+			variants: {
+				type: DataTypes.JSON,
+				allowNull: true,
+				defaultValue: [],
+				get() {
+					const value = this.getDataValue("variants");
+					return typeof value === "string" ? JSON.parse(value) : value;
+				},
 			},
 		},
 		{

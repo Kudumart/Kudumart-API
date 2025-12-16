@@ -2,7 +2,7 @@
 import { Request, Response } from "express";
 import User from "../models/user";
 import { Op, Sequelize } from "sequelize";
-import { generateOTP, verifyPayment } from "../utils/helpers";
+import { generateOTP, initStripe, verifyPayment } from "../utils/helpers";
 import { sendMail } from "../services/mail.service";
 import { emailTemplates } from "../utils/messages";
 import JwtService from "../services/jwt.service";
@@ -42,6 +42,10 @@ import { sendPushNotificationSingle } from "../firebase/pushNotification";
 import { PushNotificationTypes } from "../types/index";
 import { createAuctionReminder } from "../services/reminder.service";
 import ProductCharge from "../models/productcharge";
+import Services from "../models/services";
+import ServiceBookings from "../models/servicebookings";
+import ServiceReviews from "../models/servicereview";
+import Decimal from "decimal.js";
 
 export const logout = async (req: Request, res: Response): Promise<void> => {
 	try {
@@ -845,8 +849,10 @@ export const sendMessageHandler = async (
 		if (receiver?.fcmToken) {
 			// Send push notification to the receiver
 			const notificationMessage = {
-				title: "New Message",
-				body: `You have a new message from ${user.firstName} ${user.lastName} for product ${product.name}`,
+				notification: {
+					title: "New Message",
+					body: `You have a new message from ${user.firstName} ${user.lastName} for product ${product.name}`,
+				},
 				data: {
 					conversationId: conversation.id,
 					messageId: message.id,
@@ -1353,6 +1359,13 @@ export const getActivePaymentGateways = async (
 			},
 		});
 
+		// reorder to have Paystack first, then Stripe second
+		paymentGateways.sort((a, b) => {
+			if (a.name.toLowerCase() === "paystack") return -1;
+			if (b.name.toLowerCase() === "paystack") return 1;
+			return 0;
+		});
+
 		if (!paymentGateways.length) {
 			res.status(404).json({ message: "No active payment gateways found" });
 			return;
@@ -1427,7 +1440,15 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 				{
 					model: Product,
 					as: "product",
-					attributes: ["id", "name", "price", "vendorId", "quantity", "sku"],
+					attributes: [
+						"id",
+						"name",
+						"price",
+						"discount_price",
+						"vendorId",
+						"quantity",
+						"sku",
+					],
 				},
 			],
 		});
@@ -1436,6 +1457,11 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 			res.status(400).json({ message: "Cart is empty" });
 			return;
 		}
+
+		// Get Admin's product charges
+		const productCharges = await ProductCharge.findAll({
+			where: { is_active: true },
+		});
 
 		// Calculate total price and validate inventory
 		let totalAmount = 0;
@@ -1451,11 +1477,70 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 				throw new Error(`Insufficient stock for product: ${product.name}`);
 			}
 
-			totalAmount += product.price * cartItem.quantity;
+			const productPrice = new Decimal(
+				(product.discount_price ?? 0) > 0
+					? product.discount_price ?? 0
+					: product.price ?? 0,
+			);
+
+			// Check for product charge percentage
+			const productChargePercentage = productCharges.find(
+				(charge) =>
+					charge.charge_currency === "NGN" &&
+					charge.calculation_type === "percentage" &&
+					Number(productPrice) >= Number(charge.minimum_product_amount) &&
+					Number(productPrice) <= Number(charge.maximum_product_amount),
+			);
+
+			// Check for product charge amount
+			const productChargeAmount = productCharges.find(
+				(charge) =>
+					charge.charge_currency === "NGN" &&
+					charge.calculation_type === "fixed" &&
+					Number(productPrice) >= Number(charge.minimum_product_amount) &&
+					Number(productPrice) <= Number(charge.maximum_product_amount),
+			);
+
+			let chargeAmount = 0;
+			if (productChargePercentage) {
+				// console.log(
+				// 	`Applying charge percentage: ${productChargePercentage.charge_percentage}% for product ${product.name}`,
+				// );
+				// console.log(
+				// 	`Type of charge percentage: ${typeof productChargePercentage.charge_percentage}`,
+				// );
+				// Calculate percentage charge
+				chargeAmount +=
+					Number(productPrice ?? 0) *
+					(Number(productChargePercentage.charge_percentage) / 100);
+			} else if (productChargeAmount) {
+				// console.log(
+				// 	`Applying fixed charge: ${productChargeAmount.charge_amount} for product ${product.name}`,
+				// );
+				// console.log(
+				// 	`Type of charge amount: ${typeof productChargeAmount.charge_amount}`,
+				// );
+				// Use fixed amount charge
+				chargeAmount += Number(productChargeAmount.charge_amount ?? 0);
+			}
+
+			// console.log(`Charge amount for product ${product.name}: ${chargeAmount}`);
+
+			// Calculate total amount for this cart item
+			totalAmount +=
+				(Number(productPrice) + Number(chargeAmount)) *
+				Number(cartItem.quantity);
+
+			// totalAmount += product.price * cartItem.quantity;
 		}
 
 		// Validate that the total amount matches the Paystack transaction amount
 		if (paymentData.amount / 100 !== totalAmount) {
+			console.log("Payment amount does not match cart total");
+			console.log(`Payment amount From Paystack: ${paymentData.amount}`);
+			console.log(
+				`Payment amount: ${paymentData.amount / 100}, Cart total: ${totalAmount}`,
+			);
 			throw new Error("Payment amount does not match cart total");
 		}
 
@@ -1534,7 +1619,10 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 					orderId: order.id,
 					product: product,
 					quantity: cartItem.quantity,
-					price: product.price,
+					price:
+						product.discount_price && product.discount_price > 0
+							? product.discount_price
+							: product.price,
 				},
 				{ transaction },
 			);
@@ -1579,8 +1667,10 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 					try {
 						// Send push notification to the vendor
 						const notificationMessage = {
-							title: "New Order Received",
-							body: `You have received a new order (TRACKING NO: ${order.trackingNumber}) for your product.`,
+							notification: {
+								title: "New Order Received",
+								body: `You have received a new order (TRACKING NO: ${order.trackingNumber}) for your product.`,
+							},
 							data: {
 								orderId: order.id,
 								type: PushNotificationTypes.ORDER_CREATED,
@@ -1624,8 +1714,10 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 					try {
 						// Send push notification to the admin
 						const notificationMessage = {
-							title: "New Order Received",
-							body: `A new order (TRACKING NO: ${order.trackingNumber}) has been placed.`,
+							notification: {
+								title: "New Order Received",
+								body: `A new order (TRACKING NO: ${order.trackingNumber}) has been placed.`,
+							},
 							data: {
 								orderId: order.id,
 								type: PushNotificationTypes.ORDER_CREATED,
@@ -1680,10 +1772,17 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 					id: cartItem.product.id,
 					sku: cartItem.product.sku,
 					name: cartItem.product.name,
-					price: cartItem.product.price,
+					price:
+						cartItem.product.discount_price &&
+						cartItem.product.discount_price > 0
+							? cartItem.product.discount_price
+							: cartItem.product.price,
 				}, // Ensure product is an object
 				quantity: cartItem.quantity,
-				price: cartItem.product.price,
+				price:
+					cartItem.product.discount_price && cartItem.product.discount_price > 0
+						? cartItem.product.discount_price
+						: cartItem.product.price,
 				status: "pending", // Default status (if required)
 				createdAt: new Date(), // Ensure timestamps if needed
 			} as OrderItem);
@@ -1734,8 +1833,10 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 			try {
 				// Send push notification to the user
 				const notificationMessage = {
-					title: "Order Confirmation",
-					body: `Your order (TRACKING NO: ${order.trackingNumber}) has been successfully placed.`,
+					notification: {
+						title: "Order Confirmation",
+						body: `Your order (TRACKING NO: ${order.trackingNumber}) has been successfully placed.`,
+					},
 					data: {
 						orderId: order.id,
 						type: PushNotificationTypes.ORDER_CONFIRMATION,
@@ -1758,6 +1859,184 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 		}
 		logger.error("Error during checkout:", error);
 		res.status(500).json({ message: error.message || "Checkout failed" });
+	}
+};
+
+export const prepareCheckoutDollar = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const userId = (req as AuthenticatedRequest).user?.id; // Get authenticated user ID
+
+	const userCart = await Cart.findAll({
+		where: { userId },
+		include: [
+			{
+				model: Product,
+				as: "product",
+				include: [
+					{
+						model: Store,
+						as: "store",
+						include: [
+							{
+								model: Currency,
+								as: "currency",
+								attributes: ["name", "symbol"],
+							},
+						],
+					},
+				],
+			},
+		],
+	});
+
+	try {
+		if (!userCart || userCart.length === 0) {
+			res.status(400).json({ message: "Cart is empty" });
+			return;
+		}
+
+		userCart.forEach((cartItem) => {
+			const product = cartItem.product;
+			if (!product || !product.store || !product.store.currency) {
+				throw new Error(
+					`Product with ID ${cartItem.productId} not found or invalid currency data`,
+				);
+			}
+
+			const productCurrency = product.store.currency;
+
+			// Ensure product currency is either $, #, or ₦
+			const allowedCurrencies = ["$", "#", "₦"];
+			if (!allowedCurrencies.includes(productCurrency.symbol)) {
+				res.status(400).json({
+					message: `Only products with currencies ${allowedCurrencies.join(", ")} are allowed.`,
+				});
+				return;
+			}
+
+			if (
+				!userCart.every(
+					(item) =>
+						item.product &&
+						item.product.store &&
+						item.product.store.currency &&
+						item.product.store.currency.name.toLowerCase() === "dollar",
+				)
+			) {
+				res.status(400).json({
+					message:
+						"All products in the cart must be priced in USD for this checkout.",
+				});
+				return;
+			}
+		});
+
+		// Get Admin's product charges
+		const productCharges = await ProductCharge.findAll({
+			where: { is_active: true },
+		});
+
+		// Calculate total price and validate inventory
+		let totalAmount = new Decimal(0);
+		let totalChargeAmount = new Decimal(0);
+		for (const cartItem of userCart) {
+			const product = cartItem.product;
+			if (!product) {
+				throw new Error(`Product with ID ${cartItem.productId} not found`);
+			}
+
+			// Check if product.quantity is defined and if there's enough stock before proceeding
+			const availableQuantity = product.quantity ?? 0; // If quantity is undefined, fallback to 0
+			if (availableQuantity < cartItem.quantity) {
+				throw new Error(`Insufficient stock for product: ${product.name}`);
+			}
+
+			const productPrice = new Decimal(
+				(product.discount_price ?? 0) > 0
+					? product.discount_price ?? 0
+					: product.price ?? 0,
+			);
+
+			// Check for product charge percentage
+			const productChargePercentage = productCharges.find(
+				(charge) =>
+					charge.charge_currency === "USD" &&
+					charge.calculation_type === "percentage" &&
+					new Decimal(productPrice).greaterThanOrEqualTo(
+						charge.minimum_product_amount,
+					) &&
+					new Decimal(productPrice).lessThanOrEqualTo(
+						charge.maximum_product_amount,
+					),
+			);
+
+			// Check for product charge amount
+			const productChargeAmount = productCharges.find(
+				(charge) =>
+					charge.charge_currency === "USD" &&
+					charge.calculation_type === "fixed" &&
+					new Decimal(productPrice).greaterThanOrEqualTo(
+						charge.minimum_product_amount,
+					) &&
+					new Decimal(productPrice).lessThanOrEqualTo(
+						charge.maximum_product_amount,
+					),
+			);
+
+			let chargeAmount = new Decimal(0);
+
+			if (productChargePercentage) {
+				// Calculate percentage charge
+				chargeAmount = chargeAmount
+					.plus(new Decimal(productPrice ?? 0))
+					.mul(new Decimal(productChargePercentage.charge_percentage).div(100))
+					.toNearest(0.01);
+			} else if (productChargeAmount) {
+				// Use fixed amount charge
+				chargeAmount = chargeAmount
+					.plus(productChargeAmount.charge_amount ?? 0)
+					.toNearest(0.01);
+			}
+
+			// Calculate total amount for this cart item
+			totalAmount = totalAmount
+				.plus(productPrice.plus(chargeAmount).mul(cartItem.quantity))
+				.toNearest(0.01);
+
+			totalChargeAmount = totalChargeAmount.plus(chargeAmount).toNearest(0.01);
+
+			// totalAmount += product.price * cartItem.quantity;
+		}
+
+		const stripe = await initStripe();
+
+		const paymentIntent = await stripe.paymentIntents.create({
+			amount: totalAmount.mul(100).toNumber(), // amount in cents
+			currency: "usd",
+			metadata: { userId: userId!.toString() },
+		});
+
+		res.status(200).json({
+			id: paymentIntent.id,
+			clientSecret: paymentIntent.client_secret,
+			totalAmount: totalAmount.toNumber(),
+			paymentBreakdown: {
+				currency: "USD",
+				chargeAmount: totalChargeAmount.toNearest(0.01).toNumber(),
+				subtotal: totalAmount
+					.minus(totalChargeAmount)
+					.toNearest(0.01)
+					.toNumber(),
+			},
+		});
+	} catch (error: any) {
+		logger.error(error);
+		res
+			.status(500)
+			.json({ message: error.message || "Error during checkout." });
+		return;
 	}
 };
 
@@ -1787,6 +2066,15 @@ export const checkoutDollar = async (
 	let transactionCommitted = false;
 
 	try {
+		const stripe = await initStripe();
+
+		const paymentIntent = await stripe.paymentIntents.retrieve(refId);
+
+		if (paymentIntent.status !== "succeeded") {
+			res.status(400).json({ message: "Payment verification failed." });
+			return;
+		}
+
 		// Fetch cart items
 		const cartItems = await Cart.findAll({
 			where: { userId },
@@ -1794,7 +2082,14 @@ export const checkoutDollar = async (
 				{
 					model: Product,
 					as: "product",
-					attributes: ["id", "name", "price", "vendorId", "quantity"],
+					attributes: [
+						"id",
+						"name",
+						"price",
+						"discount_price",
+						"vendorId",
+						"quantity",
+					],
 				},
 			],
 		});
@@ -1804,8 +2099,86 @@ export const checkoutDollar = async (
 			return;
 		}
 
-		// Calculate total price
-		let totalAmount = 0;
+		// Get Admin's product charges
+		const productCharges = await ProductCharge.findAll({
+			where: { is_active: true },
+		});
+
+		// Calculate total price and validate inventory
+		let totalAmount = new Decimal(0);
+		for (const cartItem of cartItems) {
+			const product = cartItem.product;
+			if (!product) {
+				throw new Error(`Product with ID ${cartItem.productId} not found`);
+			}
+
+			// Check if product.quantity is defined and if there's enough stock before proceeding
+			const availableQuantity = product.quantity ?? 0; // If quantity is undefined, fallback to 0
+			if (availableQuantity < cartItem.quantity) {
+				throw new Error(`Insufficient stock for product: ${product.name}`);
+			}
+
+			const productPrice = new Decimal(
+				(product.discount_price ?? 0) > 0
+					? product.discount_price ?? 0
+					: product.price ?? 0,
+			);
+
+			// Check for product charge percentage
+			const productChargePercentage = productCharges.find(
+				(charge) =>
+					charge.charge_currency === "USD" &&
+					charge.calculation_type === "percentage" &&
+					new Decimal(productPrice).greaterThanOrEqualTo(
+						charge.minimum_product_amount,
+					) &&
+					new Decimal(productPrice).lessThanOrEqualTo(
+						charge.maximum_product_amount,
+					),
+			);
+
+			// Check for product charge amount
+			const productChargeAmount = productCharges.find(
+				(charge) =>
+					charge.charge_currency === "USD" &&
+					charge.calculation_type === "fixed" &&
+					new Decimal(productPrice).greaterThanOrEqualTo(
+						charge.minimum_product_amount,
+					) &&
+					new Decimal(productPrice).lessThanOrEqualTo(
+						charge.maximum_product_amount,
+					),
+			);
+
+			let chargeAmount = new Decimal(0);
+			if (productChargePercentage) {
+				// Calculate percentage charge
+				chargeAmount = chargeAmount
+					.plus(new Decimal(productPrice ?? 0))
+					.mul(new Decimal(productChargePercentage.charge_percentage).div(100))
+					.toNearest(0.01);
+			} else if (productChargeAmount) {
+				// Use fixed amount charge
+				chargeAmount = chargeAmount
+					.plus(productChargeAmount.charge_amount ?? 0)
+					.toNearest(0.01);
+			}
+
+			// Calculate total amount for this cart item
+			totalAmount = totalAmount
+				.plus(productPrice.plus(chargeAmount).mul(cartItem.quantity))
+				.toNearest(0.01);
+
+			// totalAmount += product.price * cartItem.quantity;
+		}
+
+		if (!new Decimal(paymentIntent.amount_received).div(100).eq(totalAmount)) {
+			res
+				.status(400)
+				.json({ message: "Payment amount does not match cart total." });
+			return;
+		}
+
 		const vendorOrders: { [key: string]: OrderItem[] } = {}; // Stores vendor-specific order items
 
 		for (const cartItem of cartItems) {
@@ -1849,7 +2222,7 @@ export const checkoutDollar = async (
 			const newQuantity = availableQuantity - cartItem.quantity;
 			await product.update({ quantity: newQuantity }, { transaction });
 
-			totalAmount += product.price * cartItem.quantity;
+			//totalAmount += product.price * cartItem.quantity;
 
 			// Organize order items by vendor
 			if (!vendorOrders[product.vendorId]) {
@@ -1859,7 +2232,10 @@ export const checkoutDollar = async (
 				vendorId: product.vendorId,
 				product: productInfo,
 				quantity: cartItem.quantity,
-				price: product.price,
+				price:
+					product.discount_price && product.discount_price > 0
+						? product.discount_price
+						: product.price,
 			} as unknown as OrderItem);
 		}
 
@@ -1923,6 +2299,27 @@ export const checkoutDollar = async (
 						`${process.env.APP_NAME} - New Order Received`,
 						message,
 					);
+
+					if (vendor.fcmToken) {
+						try {
+							// Send push notification to the vendor
+							const notificationMessage = {
+								notification: {
+									title: "New Order Received",
+									body: `You have received a new order (TRACKING NO: ${order.trackingNumber}) for your product.`,
+								},
+								data: {
+									orderId: order.id,
+									type: PushNotificationTypes.ORDER_CREATED,
+								},
+								token: vendor.fcmToken, // FCM token of the vendor
+							};
+
+							await sendPushNotificationSingle(notificationMessage);
+						} catch (pushError) {
+							logger.error("Error sending push notification:", pushError);
+						}
+					}
 				} catch (emailError) {
 					logger.error("Error sending email:", emailError);
 				}
@@ -1958,10 +2355,6 @@ export const checkoutDollar = async (
 			},
 			{ transaction },
 		);
-
-		// Commit transaction before sending notifications
-		await transaction.commit();
-		transactionCommitted = true; // Mark as committed
 
 		// Notify Each Vendor/Admin
 		for (const vendorId in vendorOrders) {
@@ -2016,6 +2409,10 @@ export const checkoutDollar = async (
 						{ transaction },
 					);
 
+					// Commit transaction before sending notifications
+					await transaction.commit();
+					transactionCommitted = true; // Mark as committed
+
 					const message = emailTemplates.newOrderAdminNotification(
 						admin,
 						order,
@@ -2029,12 +2426,36 @@ export const checkoutDollar = async (
 							`${process.env.APP_NAME} - New Order Received`,
 							message,
 						);
+
+						if (admin.fcmToken) {
+							try {
+								// Send push notification to the admin
+								const notificationMessage = {
+									notification: {
+										title: "New Order Received",
+										body: `A new order (TRACKING NO: ${order.trackingNumber}) has been placed.`,
+									},
+									data: {
+										orderId: order.id,
+										type: PushNotificationTypes.ORDER_CREATED,
+									},
+									token: admin.fcmToken, // FCM token of the admin
+								};
+
+								await sendPushNotificationSingle(notificationMessage);
+							} catch (pushError) {
+								logger.error("Error sending push notification:", pushError);
+							}
+						}
 					} catch (emailError) {
 						logger.error("Error sending email:", emailError);
 					}
 				}
 			}
 		}
+
+		transactionCommitted = true; // Mark as committed
+		transaction.commit();
 
 		// Send mail (outside of transaction)
 		const message = emailTemplates.orderConfirmationNotification(
@@ -2049,6 +2470,27 @@ export const checkoutDollar = async (
 				`${process.env.APP_NAME} - Order Confirmation`,
 				message,
 			);
+
+			if (user.fcmToken) {
+				try {
+					// Send push notification to the user
+					const notificationMessage = {
+						notification: {
+							title: "Order Confirmation",
+							body: `Your order (TRACKING NO: ${order.trackingNumber}) has been successfully placed.`,
+						},
+						data: {
+							orderId: order.id,
+							type: PushNotificationTypes.ORDER_CONFIRMATION,
+						},
+						token: user.fcmToken, // FCM token of the user
+					};
+
+					await sendPushNotificationSingle(notificationMessage);
+				} catch (pushError) {
+					logger.error("Error sending push notification:", pushError);
+				}
+			}
 		} catch (emailError) {
 			logger.error("Error sending email:", emailError);
 		}
@@ -2741,7 +3183,7 @@ export const getAllOrderItems = async (
 	req: Request,
 	res: Response,
 ): Promise<void> => {
-	const { orderId, page = 1, limit = 10 } = req.query;
+	const { orderId, vendorId, page = 1, limit = 10 } = req.query;
 
 	// Convert `page` and `limit` to numbers and ensure they are valid
 	const pageNumber = parseInt(page as string, 10);
@@ -2757,7 +3199,10 @@ export const getAllOrderItems = async (
 
 		// Query for order items with pagination and required associations
 		const { rows: orderItems, count } = await OrderItem.findAndCountAll({
-			where: { orderId },
+			where: {
+				orderId,
+				...(vendorId != null && { vendorId }),
+			},
 			limit: limitNumber,
 			offset,
 			order: [["createdAt", "DESC"]],
@@ -2871,6 +3316,8 @@ export const updateOrderStatus = async (
 	const transaction = await sequelizeService.connection!.transaction();
 
 	try {
+		let newDeliveryCode: string | null = null;
+
 		// Find the order item
 		const order = await OrderItem.findOne({
 			where: { id: orderItemId },
@@ -2951,6 +3398,7 @@ export const updateOrderStatus = async (
 		// If status is shipped, generate delivery code and email customer
 		if (status === "shipped") {
 			const deliveryCode = crypto.randomBytes(6).toString("hex").toUpperCase();
+			newDeliveryCode = deliveryCode; // Store the new delivery code
 			const mainOrder = await Order.findOne({
 				where: { id: order.orderId },
 				transaction,
@@ -3103,7 +3551,7 @@ export const updateOrderStatus = async (
 			buyer,
 			status,
 			productData?.name,
-			deliveryCode,
+			deliveryCode || newDeliveryCode,
 		);
 		try {
 			await sendMail(
@@ -3802,5 +4250,415 @@ export const blockProduct = async (
 		res.status(200).json({ message: "Product blocked successfully." }); // Respond with success
 	} catch (error) {
 		res.status(500).json({ message: "Server error." }); // Handle server error
+	}
+};
+
+export const bookService = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const userId = (req as AuthenticatedRequest).user?.id; // Get the authenticated user's ID
+		const serviceId = req.params.serviceId;
+		const { message, vendorId, bookingDate } = req.body; // Get serviceId and message from request body
+
+		if (!serviceId || !message) {
+			// Check if serviceId and message are provided
+			res.status(400).json({ message: "serviceId and message are required." });
+			return;
+		}
+		if (!userId) {
+			// Check if user is authenticated
+			res.status(401).json({ message: "Unauthorized." });
+			return;
+		}
+
+		if (!vendorId) {
+			res.status(400).json({ message: "vendorId is required." });
+			return;
+		}
+
+		// Check if the service exists
+		const service = await Services.findOne({
+			where: { id: serviceId, status: "active" },
+			include: [
+				{
+					model: User,
+					as: "provider",
+					attributes: ["id", "firstName", "lastName", "email", "fcmToken"],
+				},
+			],
+		});
+		if (!service) {
+			res.status(404).json({ message: "Service not found." });
+			return;
+		}
+
+		// Create the booking
+		await ServiceBookings.create({
+			userId,
+			serviceId,
+			vendorId,
+			message,
+			bookingDate,
+		});
+
+		// Notify the service provider about the new inquiry
+		const provider = service.provider;
+		if (provider) {
+			await Notification.create({
+				userId: provider.id,
+				title: "New Service Inquiry",
+				message: `You have a new inquiry for your service '${service.title}'.`,
+				type: "service_inquiry",
+			});
+
+			if (provider.fcmToken) {
+				const notificationMessage = {
+					notification: {
+						title: "New Service Inquiry",
+						body: `You have a new inquiry for your service '${service.title}'.`,
+					},
+					data: {
+						serviceId: service.id.toString(),
+						type: PushNotificationTypes.SERVICE_INQUIRY,
+					},
+					token: provider.fcmToken,
+				};
+
+				try {
+					await sendPushNotificationSingle(notificationMessage);
+				} catch (pushError) {
+					logger.error("Error sending push notification:", pushError);
+				}
+			}
+		}
+
+		res.status(200).json({ message: "Inquiry sent successfully." });
+	} catch (error) {
+		console.error(error);
+		res.status(500).json({ message: "Server error." }); // Handle server error
+	}
+};
+
+export const getUserServiceBookings = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const userId = (req as AuthenticatedRequest).user?.id; // Get the authenticated user's ID
+
+		if (!userId) {
+			// Check if user is authenticated
+			res.status(401).json({ message: "Unauthorized." });
+			return;
+		}
+
+		// Fetch all bookings for the authenticated user
+		const bookings = await ServiceBookings.findAll({
+			where: { userId },
+			include: [
+				{
+					model: Services,
+					as: "service",
+					include: [
+						{
+							model: User,
+							as: "provider",
+							attributes: ["id", "firstName", "lastName", "email"],
+						},
+					],
+				},
+			],
+			order: [["createdAt", "DESC"]],
+		});
+
+		res
+			.status(200)
+			.json({ message: "Bookings retrieved successfully.", data: bookings });
+	} catch (error) {
+		res.status(500).json({ message: "Server error." }); // Handle server error
+	}
+};
+
+export const addServiceReview = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const userId = (req as AuthenticatedRequest).user?.id; // Get the authenticated user's ID
+		const { serviceId, rating, comment } = req.body; // Get serviceId, rating, and comment from request body
+
+		if (!serviceId || !rating) {
+			// Check if serviceId and rating are provided
+			res.status(400).json({ message: "serviceId and rating are required." });
+			return;
+		}
+
+		if (!comment) {
+			res.status(400).json({ message: "comment is required." });
+			return;
+		}
+
+		if (
+			typeof rating !== "number" ||
+			isNaN(rating) ||
+			rating < 1 ||
+			rating > 5
+		) {
+			res
+				.status(400)
+				.json({ message: "Rating must be a numeric value between 1 and 5." });
+			return;
+		}
+		if (!userId) {
+			// Check if user is authenticated
+			res.status(401).json({ message: "Unauthorized." });
+			return;
+		}
+
+		// Check if the service exists
+		const service = await Services.findOne({
+			where: { id: serviceId, status: "active" },
+			include: [
+				{
+					model: User,
+					as: "provider",
+					attributes: ["id", "firstName", "lastName", "email", "fcmToken"],
+				},
+			],
+		});
+		if (!service) {
+			res.status(404).json({ message: "Service not found." });
+			return;
+		}
+
+		// Check if the user has already reviewed this service
+		const existingReview = await ServiceReviews.findOne({
+			where: { userId, serviceId },
+		});
+		if (existingReview) {
+			res
+				.status(400)
+				.json({ message: "You have already reviewed this service." });
+			return;
+		}
+
+		const hasBooked = await ServiceBookings.findOne({
+			where: { userId, serviceId, status: "completed" },
+		});
+
+		if (!hasBooked) {
+			res.status(403).json({
+				message: "You can only review services that you have booked.",
+			});
+			return;
+		}
+
+		// Create the review
+		await ServiceReviews.create({
+			userId,
+			serviceId,
+			rating,
+			comment,
+		});
+
+		// Notify the service provider about the new review
+		const provider = service.provider;
+		if (provider) {
+			await Notification.create({
+				userId: provider.id,
+				title: "New Service Review",
+				message: `Your service '${service.title}' has received a new review.`,
+				type: "service_review",
+			});
+
+			if (provider.fcmToken) {
+				const notificationMessage = {
+					notification: {
+						title: "New Service Review",
+						body: `Your service '${service.title}' has received a new review.`,
+					},
+					data: {
+						serviceId: service.id.toString(),
+						type: PushNotificationTypes.SERVICE_REVIEW,
+					},
+					token: provider.fcmToken,
+				};
+				try {
+					await sendPushNotificationSingle(notificationMessage);
+				} catch (pushError) {
+					logger.error("Error sending push notification:", pushError);
+				}
+			}
+		}
+
+		res.status(200).json({ message: "Review submitted successfully." });
+	} catch (error) {
+		logger.error("Error submitting service review:", error);
+		res.status(500).json({ message: "Server error." }); // Handle server error
+		return;
+	}
+};
+
+export const markServiceBookingComplete = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const bookingId = req.params.bookingId;
+	const userId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID
+
+	try {
+		// Find the booking
+		const booking = await ServiceBookings.findOne({
+			where: { id: bookingId, userId },
+			include: [
+				{
+					model: Services,
+					as: "service",
+				},
+				{
+					model: User,
+					as: "provider",
+					attributes: ["id", "firstName", "lastName", "email", "fcmToken"],
+				},
+			],
+		});
+
+		if (!booking) {
+			res.status(404).json({ message: "Booking not found." });
+			return;
+		}
+
+		if (booking.status === "completed") {
+			res.status(400).json({ message: "Booking is already completed." });
+			return;
+		}
+
+		// Update the booking status to completed
+		booking.status = "completed";
+		await booking.save();
+
+		// Notify the service provider about the completed booking
+		const service = booking.service;
+		const provider = booking.provider;
+		if (provider) {
+			await Notification.create({
+				userId: provider.id,
+				title: "Service Booking Completed",
+				message: `The booking for your service '${service.title}' has been marked as completed.`,
+				type: "service_booking_completed",
+			});
+
+			if (provider.fcmToken) {
+				const notificationMessage = {
+					notification: {
+						title: "Service Booking Completed",
+						body: `The booking for your service '${service.title}' has been marked as completed.`,
+					},
+					data: {
+						serviceId: service.id.toString(),
+						type: PushNotificationTypes.SERVICE_BOOKING_COMPLETED,
+					},
+					token: provider.fcmToken,
+				};
+
+				try {
+					await sendPushNotificationSingle(notificationMessage);
+				} catch (pushError) {
+					logger.error("Error sending push notification:", pushError);
+				}
+			}
+		}
+
+		res.status(200).json({ message: "Booking marked as completed." });
+	} catch (error) {
+		logger.error("Error marking booking as complete:", error);
+		res.status(500).json({ message: "Server error." });
+	}
+};
+
+export const cancelServiceBooking = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const bookingId = req.params.bookingId;
+	const userId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID
+
+	try {
+		// Find the booking
+		const booking = await ServiceBookings.findOne({
+			where: { id: bookingId, userId },
+			include: [
+				{
+					model: Services,
+					as: "service",
+				},
+				{
+					model: User,
+					as: "provider",
+					attributes: ["id", "firstName", "lastName", "email", "fcmToken"],
+				},
+			],
+		});
+
+		if (!booking) {
+			res.status(404).json({ message: "Booking not found." });
+			return;
+		}
+
+		if (booking.status === "completed") {
+			res
+				.status(400)
+				.json({ message: "Completed bookings cannot be cancelled." });
+			return;
+		}
+
+		if (booking.status === "cancelled") {
+			res.status(400).json({ message: "Booking is already cancelled." });
+			return;
+		}
+
+		// Update the booking status to cancelled
+		booking.status = "cancelled";
+		await booking.save();
+
+		// Notify the service provider about the cancelled booking
+		const service = booking.service;
+		const provider = booking.provider;
+		if (provider) {
+			await Notification.create({
+				userId: provider.id,
+				title: "Service Booking Cancelled",
+				message: `The booking for your service '${service.title}' has been cancelled.`,
+				type: "service_booking_cancelled",
+			});
+
+			if (provider.fcmToken) {
+				const notificationMessage = {
+					notification: {
+						title: "Service Booking Cancelled",
+						body: `The booking for your service '${service.title}' has been cancelled.`,
+					},
+					data: {
+						serviceId: service.id,
+						type: PushNotificationTypes.SERVICE_BOOKING_CANCELLED,
+					},
+					token: provider.fcmToken,
+				};
+
+				try {
+					await sendPushNotificationSingle(notificationMessage);
+				} catch (pushError) {
+					logger.error("Error sending push notification:", pushError);
+				}
+			}
+		}
+
+		res.status(200).json({ message: "Booking cancelled successfully." });
+	} catch (error) {
+		logger.error("Error cancelling booking:", error);
+		res.status(500).json({ message: "Server error." });
+		return;
 	}
 };

@@ -1,6 +1,7 @@
 // src/routes/adminRoute.ts
 import { Router } from "express";
 import * as adminController from "../controllers/adminController";
+import * as homeController from "../controllers/homeController";
 import adminAuthMiddleware from "../middlewares/adminAuthMiddleware";
 import {
 	adminUpdateProfileValidationRules,
@@ -23,9 +24,17 @@ import {
 	updateAuctionProductValidation,
 	paginationQueryParamsValidation,
 	productChargeValidation,
+	ServiceCategoryValidation,
+	ServiceIdValidation,
+	ServiceSubCategoryValidation,
+	CreateServiceAttributeValidation,
+	AddServiceAttributeOptionsValidation,
+	AddServiceCategoryToAttributeValidation,
+	RemoveServiceCategoryFromAttributeValidation,
+	validateUUIDParam,
+	addAliexpressProductValidation,
 } from "../utils/validations"; // Import the service
 import checkPermission from "../middlewares/checkPermissionMiddleware";
-import { updateAuctionProduct } from "../controllers/vendorController";
 import {
 	getAdminNotifications,
 	markAdminNotificationAsRead,
@@ -755,10 +764,181 @@ adminRoutes.patch(
 	adminController.markProductChargeAsInactive,
 );
 
+adminRoutes.post(
+	"/service/categories",
+	adminAuthMiddleware,
+	ServiceCategoryValidation(),
+	validate,
+	adminController.createServiceCategory,
+);
+
+adminRoutes.put(
+	"/service/categories/:id",
+	adminAuthMiddleware,
+	ServiceIdValidation(),
+	ServiceCategoryValidation(),
+	validate,
+	adminController.updateServiceCategory,
+);
+
+adminRoutes.get(
+	"/service/categories",
+	adminAuthMiddleware,
+	paginationQueryParamsValidation(),
+	validate,
+	adminController.getAllServiceCategories,
+);
+
+adminRoutes.delete(
+	"/service/categories/:id",
+	adminAuthMiddleware,
+	ServiceIdValidation(),
+	validate,
+	adminController.deleteServiceCategory,
+);
+
+adminRoutes.post(
+	"/service/subcategories",
+	adminAuthMiddleware,
+	ServiceSubCategoryValidation(),
+	validate,
+	adminController.createServiceSubCategory,
+);
+
+adminRoutes.put(
+	"/service/subcategories/:id",
+	adminAuthMiddleware,
+	ServiceIdValidation(),
+	ServiceSubCategoryValidation(),
+	validate,
+	adminController.updateServiceSubCategory,
+);
+
+adminRoutes.get(
+	"/service/subcategories/:id",
+	adminAuthMiddleware,
+	ServiceIdValidation(),
+	paginationQueryParamsValidation(),
+	validate,
+	adminController.getAllServiceSubCategories,
+);
+
+adminRoutes.delete(
+	"/service/subcategories/:id",
+	adminAuthMiddleware,
+	ServiceIdValidation(),
+	validate,
+	adminController.deleteServiceSubCategory,
+);
+
+adminRoutes.post(
+	"/service/attributes",
+	adminAuthMiddleware,
+	CreateServiceAttributeValidation(),
+	validate,
+	adminController.createServiceAttribute,
+);
+
+adminRoutes.delete(
+	"/service/attributes/:id",
+	adminAuthMiddleware,
+	adminController.deleteServiceAttribute,
+);
+
+adminRoutes.post(
+	"/service/attributes/:attributeId/options",
+	adminAuthMiddleware,
+	AddServiceAttributeOptionsValidation(),
+	validate,
+	adminController.addAttributeOptions,
+);
+
+adminRoutes.get(
+	"/service/attributes",
+	adminAuthMiddleware,
+	paginationQueryParamsValidation(),
+	validate,
+	adminController.getAllServiceAttributes,
+);
+
+adminRoutes.delete(
+	"/service/attributes/options/:optionId",
+	adminAuthMiddleware,
+	adminController.deleteAttributeOption,
+);
+
+adminRoutes.post(
+	"/service/categories/:categoryId/attributes",
+	adminAuthMiddleware,
+	AddServiceCategoryToAttributeValidation(),
+	validate,
+	adminController.addAttributeToServiceCategory,
+);
+
+adminRoutes.get(
+	"/service/categories/:categoryId/attributes",
+	adminAuthMiddleware,
+	paginationQueryParamsValidation(),
+	validate,
+	homeController.getAttributesForServiceCategory,
+);
+
+adminRoutes.delete(
+	"/service/categories/:categoryId/attributes",
+	adminAuthMiddleware,
+	RemoveServiceCategoryFromAttributeValidation(),
+	validate,
+	adminController.removeAttributeFromServiceCategory,
+);
+
+adminRoutes.post(
+	"/service/:serviceId/suspend",
+	validateUUIDParam("serviceId"),
+	validate,
+	adminAuthMiddleware,
+	adminController.suspendService,
+);
+
+adminRoutes.post(
+	"/service/:serviceId/activate",
+	validateUUIDParam("serviceId"),
+	validate,
+	adminAuthMiddleware,
+	adminController.activateService,
+);
+
+adminRoutes.get(
+	"/services",
+	adminAuthMiddleware,
+	paginationQueryParamsValidation(),
+	validate,
+	adminController.getAllServices,
+);
+
 adminRoutes.get(
 	"/aliexpress/categories",
 	adminAuthMiddleware,
 	adminController.getAliExpressCategories,
+);
+
+adminRoutes.get(
+	"/aliexpress/products",
+	adminAuthMiddleware,
+	adminController.getAliExpressProducts,
+);
+
+adminRoutes.get(
+	"/aliexpress/products/:productId/details",
+	adminAuthMiddleware,
+	adminController.getAliExpressProductDetails,
+);
+
+adminRoutes.post(
+	"/aliexpress/products/import",
+	adminAuthMiddleware,
+	addAliexpressProductValidation(),
+	validate,
+	adminController.addAliexpressProductToInventory,
 );
 
 export default adminRoutes; // Export the router

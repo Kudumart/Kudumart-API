@@ -14,6 +14,8 @@ import {
 	validateUpdateCartItem,
 	validateShowInterest,
 	validate,
+	validateUUIDParam,
+	ValidateServiceBooking,
 } from "../utils/validations";
 
 const userRoutes = Router();
@@ -113,6 +115,12 @@ userRoutes.post(
 	"/checkout/dollar",
 	authMiddleware,
 	userController.checkoutDollar,
+);
+
+userRoutes.post(
+	"/checkout/dollar/prepare",
+	authMiddleware,
+	userController.prepareCheckoutDollar,
 );
 
 // Conversation and Message
@@ -235,5 +243,39 @@ userRoutes.get(
 	userController.getBlockedVendors,
 );
 userRoutes.post("/block/product", authMiddleware, userController.blockProduct);
+
+userRoutes.post(
+	"/service/review",
+	authMiddleware,
+	userController.addServiceReview,
+);
+
+userRoutes.post(
+	"/service/:serviceId/bookings",
+	validateUUIDParam("serviceId"),
+	validate,
+	ValidateServiceBooking(),
+	validate,
+	authMiddleware,
+	userController.bookService,
+);
+
+userRoutes.get(
+	"/service/bookings",
+	authMiddleware,
+	userController.getUserServiceBookings,
+);
+
+userRoutes.patch(
+	"/service/bookings/:bookingId/complete",
+	authMiddleware,
+	userController.markServiceBookingComplete,
+);
+
+userRoutes.patch(
+	"/service/bookings/:bookingId/cancel",
+	authMiddleware,
+	userController.cancelServiceBooking,
+);
 
 export default userRoutes;
