@@ -24,7 +24,7 @@ interface OrderCreateData {
 		sku_attr?: string;
 	}>;
 	shippingAddress: {
-		contact_person: string;
+		contact_person?: string;
 		country: string;
 		province: string;
 		city: string;
@@ -59,6 +59,49 @@ interface AES_GENERATE_TOKEN_RESULT {
 	code: string;
 	request_id: string;
 	_trace_id_: string;
+}
+
+interface ShippingInfoArgs {
+	sku_id?: string;
+	ship_to_city_code?: string;
+	ship_to_country_code: string;
+	ship_to_province_code?: string;
+	product_id: number;
+	product_num: number;
+	price_currency?: AE_Currency;
+}
+
+interface DeliveryOption {
+	shipping_fee_format: string;
+	delivery_date_desc: string;
+	code: string;
+	free_shipping: boolean;
+	max_delivery_days: number;
+	estimated_delivery_time: string;
+	min_delivery_days: number;
+	shipping_fee_currency: string;
+	ship_from_country: string;
+	company: string;
+	shipping_fee_cent: string;
+	tracking: boolean;
+	mayHavePFS: boolean;
+	available_stock: string;
+	guaranteed_delivery_days: string;
+	ddpIncludeVATTax: string;
+	free_shipping_threshold: string;
+}
+
+interface Result {
+	msg: string;
+	delivery_options: {
+		delivery_option_d_t_o: DeliveryOption[];
+	};
+}
+
+interface AES_SHIPPING_INFO_RESULT {
+	aliexpress_ds_freight_query_response: { result: Result };
+	code: number;
+	success: boolean;
 }
 
 export class DropShippingService {
@@ -349,15 +392,15 @@ export class DropShippingService {
 		const response = await dropShipperClient.createOrder({
 			logistics_address: createOrderData.shippingAddress,
 			product_items: createOrderData.products,
-			promo_and_payment: {
-				payment: {
-					pay_currency: createOrderData.payment.pay_currency,
-					try_to_pay: createOrderData.payment.try_to_pay,
-				},
-				trade_extra_param: {
-					business_model: createOrderData.businessModel,
-				},
-			},
+			// promo_and_payment: {
+			// 	payment: {
+			// 		pay_currency: createOrderData.payment.pay_currency,
+			// 		try_to_pay: createOrderData.payment.try_to_pay,
+			// 	},
+			// 	trade_extra_param: {
+			// 		business_model: createOrderData.businessModel,
+			// 	},
+			// },
 		});
 
 		if (!response.ok) {
@@ -417,6 +460,60 @@ export class DropShippingService {
 		}
 
 		return responseData.data;
+	}
+
+	async calculateDeliveryFee(vendorId: string, args: ShippingInfoArgs) {
+		try {
+			const vendorAliexpressCreds = await DropShippingCred.findOne({
+				where: { vendorId },
+			});
+
+			if (!vendorAliexpressCreds) {
+				throw new NotFoundError(
+					"Dropshipping credentials not found for the vendor",
+				);
+			}
+
+			const dropShipperClient = this.createClient(
+				vendorAliexpressCreds?.accessToken,
+			);
+
+			const queryDeliveryReq = {
+				quantity: args.product_num,
+				shipToCountry: args.ship_to_country_code,
+				productId: args.product_id,
+				provinceCode: args.ship_to_province_code,
+				cityCode: args.ship_to_city_code,
+				selectedSkuId: args.sku_id,
+				language: "en_US",
+				currency: args.price_currency || "USD",
+				locale: "en_US",
+			};
+
+			const responseData = await dropShipperClient.callAPIDirectly(
+				"aliexpress.ds.freight.query",
+				{
+					queryDeliveryReq: JSON.stringify(queryDeliveryReq),
+				},
+			);
+
+			console.log("Delivery Fee Response:", responseData);
+
+			if (!responseData.ok) {
+				throw new Error(
+					"Failed to fetch shipping info from the dropshipper API",
+				);
+			}
+
+			if (!responseData.data) {
+				throw new Error("No data returned from the dropshipper API");
+			}
+
+			return responseData.data as AES_SHIPPING_INFO_RESULT;
+		} catch (error) {
+			console.log(error);
+			throw error;
+		}
 	}
 }
 

@@ -110,6 +110,11 @@ userRoutes.get(
 	authMiddleware,
 	userController.getActivePaymentGateways,
 );
+userRoutes.get(
+	"/delivery-fees",
+	authMiddleware,
+	userController.calculateAliexpressDeliveryFee,
+);
 userRoutes.post("/checkout", authMiddleware, userController.checkout);
 userRoutes.post(
 	"/checkout/dollar",

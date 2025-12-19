@@ -2403,6 +2403,10 @@ export const deleteGeneralProduct = async (
 			{ name: "carts", model: Cart, field: "productId" },
 		];
 
+    if (product.type === "dropship") {
+     await DropshipProducts.destroy({ where: { productId: product.id } });
+    }
+
 		// Check each related table
 		for (const table of relatedTables) {
 			const count = await (table.model as typeof SaveProduct).count({
@@ -7721,7 +7725,7 @@ export async function addAliexpressProductToInventory(req: Request, res: Respons
 
     await DropshipProducts.create({
       productId: newProduct.id,
-      dropshipProductId: productDetails.ae_item_base_info_dto.product_id,
+      dropshipProductId: String(productDetails.ae_item_base_info_dto.product_id),
       vendorId,
       priceIncrementPercent,
     }, { transaction });
@@ -7734,6 +7738,7 @@ export async function addAliexpressProductToInventory(req: Request, res: Respons
     });
 
   } catch (error: any) {
+    logger.error(error);
 
     logger.error(
       `Error adding dropshipping product to catalog: ${error.message}`,
@@ -7748,9 +7753,6 @@ export async function addAliexpressProductToInventory(req: Request, res: Respons
   }
 }
 
-
-
-    
 
 
 

@@ -4,6 +4,7 @@ import User from "./user";
 import Store from "./store";
 import SubCategory from "./subcategory";
 import ReviewProduct from "./reviewproduct";
+import DropshipProducts from "./dropshipProducts";
 
 class Product extends Model {
 	public id!: string;
@@ -41,6 +42,7 @@ class Product extends Model {
 	public store!: Store;
 	public sub_category!: SubCategory;
 	public reviews!: ReviewProduct;
+	public dropshipDetails!: DropshipProducts;
 
 	static associate(models: any) {
 		// Define associations here
@@ -78,6 +80,11 @@ class Product extends Model {
 			as: "carts",
 			foreignKey: "productId",
 			onDelete: "RESTRICT",
+		});
+		this.hasOne(models.DropshipProducts, {
+			as: "dropshipDetails",
+			foreignKey: "productId",
+			sourceKey: "id",
 		});
 	}
 }

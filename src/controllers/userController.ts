@@ -46,6 +46,10 @@ import Services from "../models/services";
 import ServiceBookings from "../models/servicebookings";
 import ServiceReviews from "../models/servicereview";
 import Decimal from "decimal.js";
+import { DropShippingService } from "../services/dropShipping.service";
+import DropshipProducts from "../models/dropshipProducts";
+
+const dropShippingService = new DropShippingService();
 
 export const logout = async (req: Request, res: Response): Promise<void> => {
 	try {
@@ -999,12 +1003,13 @@ export const addItemToCart = async (
 		return;
 	}
 
-	const { productId, quantity } = req.body;
+	const { productId, quantity, dropshipProductSkuId, dropshipProductSkuAttr } =
+		req.body;
 
 	try {
 		// Find the product by productId and include vendor and currency details
 		const product = await Product.findByPk(productId, {
-			attributes: ["vendorId", "name", "quantity"], // Include quantity in the attributes
+			attributes: ["vendorId", "name", "quantity", "type"], // Include quantity in the attributes
 			include: [
 				{
 					model: Store,
@@ -1019,6 +1024,18 @@ export const addItemToCart = async (
 				},
 			],
 		});
+
+		if (
+			product?.type === "dropship" &&
+			(!dropshipProductSkuId || !dropshipProductSkuAttr)
+		) {
+			res.status(400).json({
+				message:
+					"Dropship product SKU ID and attribute are required for dropship products.",
+			});
+
+			return;
+		}
 
 		if (!product || !product.store || !product.store.currency) {
 			res
@@ -1154,7 +1171,16 @@ export const addItemToCart = async (
 			});
 
 			// Add a new item to the cart
-			await Cart.create({ userId, productId, quantity });
+			await Cart.create({
+				userId,
+				productId,
+				quantity,
+				productType: product.type,
+				...(dropshipProductSkuAttr && { dropshipProductSkuAttr }),
+				...(dropshipProductSkuId && {
+					dropshipProductSkuId: String(dropshipProductSkuId),
+				}),
+			});
 		}
 
 		res.status(200).json({ message: "Item added to cart successfully." });
@@ -1383,9 +1409,172 @@ export const getActivePaymentGateways = async (
 	}
 };
 
+export const calculateAliexpressDeliveryFee = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const userId = (req as AuthenticatedRequest).user?.id; // Get the authenticated user's ID
+
+	const curreny = req.query.currency as string;
+	const shipToCountryCode = req.query.shipToCountryCode as string;
+	try {
+		if (!curreny) {
+			res.status(400).json({ message: "Currency is required" });
+			return;
+		}
+
+		if (curreny !== "NGN" && curreny !== "USD") {
+			res.status(400).json({ message: "Currency must be either NGN or USD" });
+			return;
+		}
+
+		if (!shipToCountryCode) {
+			res.status(400).json({ message: "Ship to country code is required" });
+			return;
+		}
+
+		if (
+			shipToCountryCode !== "NG" &&
+			shipToCountryCode !== "US" &&
+			shipToCountryCode !== "GB"
+		) {
+			res
+				.status(400)
+				.json({ message: "Ship to country code must be either NG, US, or GB" });
+			return;
+		}
+
+		const cartItems = await Cart.findAll({
+			where: { userId },
+			include: [
+				{
+					model: Product,
+					as: "product",
+					attributes: ["id", "vendorId", "name", "price"],
+					include: [
+						{
+							model: DropshipProducts,
+							as: "dropshipDetails",
+						},
+					],
+				},
+			],
+		});
+
+		const user = await User.findByPk(userId);
+
+		if (!user) {
+			res.status(404).json({ message: "User not found" });
+			return;
+		}
+
+		if (!user.location) {
+			res.status(400).json({
+				message: "User location is required to calculate delivery fee",
+			});
+			return;
+		}
+
+		if (!user.location.city) {
+			res.status(400).json({
+				message: "User city is required to calculate delivery fee",
+			});
+			return;
+		}
+
+		if (!user.location.state) {
+			res.status(400).json({
+				message: "User state is required to calculate delivery fee",
+			});
+			return;
+		}
+
+		if (!user.location.country) {
+			res.status(400).json({
+				message: "User country is required to calculate delivery fee",
+			});
+			return;
+		}
+
+		const dropShippedProducts = cartItems.filter(
+			(item) => item.productType === "dropship",
+		);
+
+		const totalDeliveryFee = await Promise.all(
+			dropShippedProducts.map(async (cartItem) => {
+				const product = cartItem.product;
+
+				if (!product) {
+					throw new Error(`Product with ID ${cartItem.productId} not found`);
+				}
+
+				const deliveryFee = await dropShippingService.calculateDeliveryFee(
+					product.vendorId!,
+					{
+						sku_id: String(cartItem.dropshipProductSkuId),
+						ship_to_country_code: shipToCountryCode,
+						ship_to_city_code: `${user.location?.city} ${user.location?.state}`,
+						ship_to_province_code: user.location?.state,
+						//@ts-ignore
+						product_id: product.dropshipDetails?.dropshipProductId,
+						product_num: cartItem.quantity,
+						//@ts-ignore
+						price_currency: curreny,
+					},
+				);
+
+				const response = deliveryFee.aliexpress_ds_freight_query_response;
+
+				if (!response) {
+					return {
+						deliveryFee: 0,
+					};
+				}
+
+				const result = response.result.delivery_options;
+
+				if (
+					!result.delivery_option_d_t_o ||
+					!result.delivery_option_d_t_o[0].shipping_fee_cent ||
+					result.delivery_option_d_t_o.length === 0
+				) {
+					return {
+						deliveryFee: 0,
+					};
+				}
+
+				return {
+					//@ts-ignore
+					deliveryFee:
+						//@ts-ignore
+						result.delivery_option_d_t_o[0].shipping_fee_cent || 0,
+				};
+			}),
+		);
+
+		const summedDeliveryFee = totalDeliveryFee.reduce(
+			(accumulator, current) =>
+				new Decimal(accumulator).plus(new Decimal(current.deliveryFee)),
+			new Decimal(0),
+		);
+
+		res.status(200).json({
+			message: "Aliexpress delivery fee calculated successfully",
+			data: {
+				totalDeliveryFee: summedDeliveryFee.toNearest(0.01).toNumber(),
+			},
+		});
+	} catch (error: any) {
+		logger.error("Error calculating Aliexpress delivery fee:", error);
+		res.status(500).json({
+			message: "An error occurred while calculating Aliexpress delivery fee",
+		});
+	}
+};
+
 export const checkout = async (req: Request, res: Response): Promise<void> => {
 	const userId = (req as AuthenticatedRequest).user?.id; // Get authenticated user ID
-	const { refId, shippingAddress } = req.body;
+	const { refId, shippingAddress, shippingAddressZipCode } = req.body;
 
 	if (!userId) {
 		res.status(400).json({ message: "User must be authenticated" });
@@ -1404,6 +1593,12 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 
 	const transaction = await sequelizeService.connection!.transaction();
 	let transactionCommitted = false;
+
+	// Fetch user before the for loop so it's available
+	const user = await User.findByPk(userId, { transaction });
+	if (!user) {
+		throw new Error(`User not found.`);
+	}
 
 	try {
 		// Fetch active Paystack secret key from PaymentGateway model
@@ -1449,6 +1644,12 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 						"quantity",
 						"sku",
 					],
+					include: [
+						{
+							model: DropshipProducts,
+							as: "dropshipDetails",
+						},
+					],
 				},
 			],
 		});
@@ -1462,6 +1663,70 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 		const productCharges = await ProductCharge.findAll({
 			where: { is_active: true },
 		});
+
+		const dropShippedProducts = cartItems.filter(
+			(item) => item.productType === "dropship",
+		);
+
+		const dropShippedVendorProducts = new Map<string, Cart[]>();
+
+		dropShippedProducts.forEach((cartItem) => {
+			const product = cartItem.product;
+			if (product) {
+				const vendorId = product.vendorId!;
+				if (!dropShippedVendorProducts.has(vendorId)) {
+					dropShippedVendorProducts.set(vendorId, []);
+				}
+				dropShippedVendorProducts.get(vendorId)!.push(cartItem);
+			}
+		});
+
+		if (dropShippedVendorProducts.size > 0) {
+			const placeDropshipOrders = await Promise.all(
+				Array.from(dropShippedVendorProducts.entries()).map(
+					async ([vendorId, cartItems]) => {
+						// Call the dropshipping service to place orders for these cart items
+						const productOrders = cartItems.map((cartItem) => ({
+							product_id: cartItem.product?.dropshipDetails.productId,
+							product_count: cartItem.quantity as number,
+							sku_attr: cartItem.dropshipProductSkuAttr as string,
+						}));
+
+						const userCountry =
+							user?.location?.country === "Nigeria"
+								? "NG"
+								: user?.location?.country == "United States"
+									? "US"
+									: "GB";
+						const userCity = user?.location?.city;
+
+						const dropshipOrderResponse = await dropShippingService.createOrder(
+							vendorId,
+							{
+								// @ts-ignore
+								products: productOrders,
+								shippingAddress: {
+									country: userCountry,
+									province: `${user.location?.city} ${user.location?.state}`,
+									city: userCity as string,
+									address: shippingAddress,
+									zip: shippingAddressZipCode,
+									mobile_no: user?.phoneNumber as string,
+								},
+							},
+						);
+
+						return dropshipOrderResponse;
+					},
+				),
+			);
+		}
+
+		// const deliveryFee = await calculateTotalDeliveryFee(
+		// 	userId,
+		// 	cartItems,
+		// 	user,
+		// );
 
 		// Calculate total price and validate inventory
 		let totalAmount = 0;
@@ -1801,12 +2066,6 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 			},
 			{ transaction },
 		);
-
-		// Fetch user before the for loop so it's available
-		const user = await User.findByPk(userId, { transaction });
-		if (!user) {
-			throw new Error(`User not found.`);
-		}
 
 		// Commit the transaction
 		await transaction.commit();
