@@ -4741,6 +4741,135 @@ export const viewOrderItem = async (
 	}
 };
 
+export const getDropshipedOrderItemDetails = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+
+  const adminId = (req as AuthenticatedRequest).admin?.id;
+
+  const { orderItemId } = req.query;
+
+  if (!orderItemId) {
+    res.status(400).json({ message: "Order item ID is required." });
+    return;
+  }
+
+  try {
+    // Fetch the order item along with its order and user details
+    const orderItem = await OrderItem.findOne({
+      where: { id: orderItemId },
+      include: [
+        {
+          model: Order,
+          as: "order",
+          include: [
+            {
+              model: User,
+              as: "user",
+              attributes: [
+                "id",
+                "firstName",
+                "lastName",
+                "email",
+                "phoneNumber",
+              ], // Include user details
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!orderItem) {
+      res.status(404).json({ message: "Order item not found." });
+      return;
+    }
+
+   if (!orderItem.dropshipProductId){
+      res.status(400).json({ message: "This order item is not dropshipped." });
+      return;
+    }
+
+    if (!orderItem.dropshipOrderItemIds || orderItem.dropshipOrderItemIds.length === 0){
+      res.status(404).json({ message: "No dropshipped order item IDs found." });
+      return;
+    }
+
+    //@ts-ignore
+  const dropshipOrderItemDetails = await Promise
+      .all(orderItem.dropshipOrderItemIds.map( (dropshipOrderItemId: string) =>
+      //@ts-ignore
+      dropShippingService.getOrderDetails(adminId!, dropshipOrderItemId )
+  ));
+
+    if (!dropshipOrderItemDetails || dropshipOrderItemDetails.length === 0 || dropshipOrderItemDetails.every(detail => !detail))     {
+      res.status(404).json({ message: "No dropshipped order item details found." });
+      return;
+    }
+
+    res.status(200).json({
+      message: "Dropshipped order item details retrieved successfully.",
+      data: dropshipOrderItemDetails,
+    });
+
+  } catch (error) {
+    logger.error("Error retrieving dropshipped order item details:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to retrieve dropshipped order item details." });
+  }
+}
+
+export const getDropshipOrderTrackingInfo = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+
+  const adminId = (req as AuthenticatedRequest).admin?.id;
+
+  const { orderItemId } = req.query;
+
+  if (!orderItemId) {
+    res.status(400).json({ message: "Dropship order item ID is required." });
+    return;
+  }
+
+  const orderItem = await OrderItem.findOne({
+    where: { id: orderItemId },
+  });
+
+  if (!orderItem) {
+    res.status(404).json({ message: "Order item not found." });
+    return;
+  }
+
+  try {
+    const trackingInfo = await Promise.all(orderItem.dropshipOrderItemIds!.map((dropshipOrderItemId: string) =>
+      dropShippingService.trackOrder(
+      adminId!,
+      //@ts-ignore
+      dropshipOrderItemId,
+  )))
+
+    if (!trackingInfo || trackingInfo.length === 0 || trackingInfo.every(info => !info)) {
+      res.status(404).json({ message: "No tracking information found." });
+      return;
+    }
+
+
+    res.status(200).json({
+      message: "Dropshipped order item tracking info retrieved successfully.",
+      data: trackingInfo,
+    });
+
+  } catch (error) {
+    logger.error("Error tracking dropshipped order item:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to track dropshipped order item." });
+  }
+}
+
 export const getOrderItemsInfo = async (
 	req: Request,
 	res: Response,
