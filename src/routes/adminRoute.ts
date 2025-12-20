@@ -429,6 +429,19 @@ adminRoutes.get(
 	adminAuthMiddleware,
 	adminController.viewOrderItem,
 );
+
+adminRoutes.get(
+	"/order/dropship/items",
+	adminAuthMiddleware,
+	adminController.getDropshipedOrderItemDetails,
+);
+
+adminRoutes.get(
+	"/order/dropship/tracking/info",
+	adminAuthMiddleware,
+	adminController.getDropshipOrderTrackingInfo,
+);
+
 adminRoutes.get(
 	"/order/item/details",
 	adminAuthMiddleware,
