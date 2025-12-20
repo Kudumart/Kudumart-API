@@ -24,14 +24,16 @@ interface OrderCreateData {
 		sku_attr?: string;
 	}>;
 	shippingAddress: {
-		contact_person?: string;
+		contact_person: string;
 		country: string;
 		province: string;
 		city: string;
 		address: string;
 		address2?: string;
+		locale: string;
 		zip: string;
 		mobile_no?: string;
+		phone_country: string;
 		full_name?: string;
 	};
 	payment: {
@@ -102,6 +104,147 @@ interface AES_SHIPPING_INFO_RESULT {
 	aliexpress_ds_freight_query_response: { result: Result };
 	code: number;
 	success: boolean;
+}
+
+interface Amount {
+	amount: string;
+	currency_code: string;
+}
+
+interface ChildOrder {
+	actual_tax_fee?: Amount[];
+	actual_shipping_fee?: Amount[];
+	already_include_tax?: string;
+	shipping_fee?: Amount[];
+	sale_discount_fee?: Amount[];
+	sale_fee?: Amount[];
+	actual_fee?: Amount[];
+	shipping_discount_fee?: Amount[];
+	end_reason?: string;
+	sku_id?: string;
+	product_id: number;
+	product_price?: Amount[];
+	product_name: string;
+	product_count: number;
+}
+
+interface LogisticsInfo {
+	logistics_no?: string;
+	logistics_service?: string;
+}
+
+interface StoreInfo {
+	store_id: number;
+	store_name: string;
+	store_url: string;
+}
+
+interface UserOrderAmount {
+	pay_timeout_second?: string;
+	order_paidtime_string?: string;
+	gmt_create?: string;
+	order_status?: string;
+	logistics_status?: string;
+	amount: string;
+	currency_code: string;
+}
+
+interface OrderAmount {
+	amount: string;
+	currency_code: string;
+}
+
+interface OrderDetailsResult {
+	user_order_amount?: UserOrderAmount[];
+	order_amount?: OrderAmount[];
+	child_order_list?: {
+		aeop_child_order_info: ChildOrder[];
+	};
+	logistics_info_list?: LogisticsInfo[];
+	store_info?: StoreInfo[];
+}
+
+interface AliExpressOrderDetailsResponse {
+	aliexpress_trade_ds_order_get_response: {
+		result: OrderDetailsResult;
+	};
+}
+
+export interface AddressChild {
+	hasChildren: boolean;
+	name: string;
+	type: string;
+	children?: AddressChild[];
+}
+
+// The main address data item
+export interface AddressDataItem {
+	country: string; // country code, e.g. "NG"
+	type: string; // address type, e.g. "country"
+	children: AddressChild[]; // JSON string of children (parse to AddressChild[])
+	msg?: string; // optional error message
+}
+
+// Result object in response
+export interface AddressGetResult {
+	ret: boolean; // is response successful
+	code: string; // error code
+	data: AddressDataItem; // array of addresses
+	msg?: string; // optional error message
+}
+
+// Full API response
+export interface AliExpressDsAddressGetResponse {
+	aliexpress_ds_address_get_response: {
+		result: AddressGetResult;
+		code: string;
+		request_id: string;
+	};
+}
+
+export interface AliExpressDsOrderCreateResponse {
+	aliexpress_ds_order_create_response: {
+		result: {
+			is_success: boolean;
+			order_list: {
+				number: number[];
+			};
+		};
+		request_id: string;
+	};
+}
+
+interface TrackingDetailNode {
+	tracking_name: string;
+	time_stamp: number;
+	tracking_detail_desc: string;
+	carrier_name: string;
+	eta_time_stamps?: number;
+}
+
+interface PackageItem {
+	item_id: number;
+	quantity: number;
+	item_title: string;
+	sku_desc: string;
+}
+
+interface TrackingDetail {
+	mail_no: string;
+	tracking_detail_line_list?: TrackingDetailNode[];
+	detail_node_list?: TrackingDetailNode[];
+	package_item_list?: PackageItem[];
+}
+
+interface TrackingResult {
+	ret: boolean;
+	code: string;
+	data?: TrackingDetail;
+	msg?: string;
+}
+
+interface AliExpressTrackingResponse {
+	result: TrackingResult;
 }
 
 export class DropShippingService {
@@ -389,46 +532,98 @@ export class DropShippingService {
 			vendorAliexpressCreds?.accessToken,
 		);
 
-		const response = await dropShipperClient.createOrder({
-			logistics_address: createOrderData.shippingAddress,
-			product_items: createOrderData.products,
-			// promo_and_payment: {
-			// 	payment: {
-			// 		pay_currency: createOrderData.payment.pay_currency,
-			// 		try_to_pay: createOrderData.payment.try_to_pay,
-			// 	},
-			// 	trade_extra_param: {
-			// 		business_model: createOrderData.businessModel,
-			// 	},
-			// },
-		});
+		const response = await dropShipperClient.callAPIDirectly(
+			"aliexpress.ds.order.create",
+			{
+				param_place_order_request4_open_api_d_t_o: JSON.stringify({
+					logistics_address: JSON.stringify(createOrderData.shippingAddress),
+					product_items: JSON.stringify(createOrderData.products),
+					// promo_and_payment: JSON.stringify({
+					// 	payment: {
+					// 		pay_currency: createOrderData.payment.pay_currency,
+					// 		try_to_pay: createOrderData.payment.try_to_pay,
+					// 	},
+					// 	trade_extra_param: {
+					// 		business_model: createOrderData.businessModel,
+					// 	},
+					// }),
+				}),
+			},
+		);
 
 		if (!response.ok) {
+			console.log(response);
 			throw new Error("Failed to create order in the dropshipper API");
 		}
 
-		const { aliexpress_trade_buy_placeorder_response } = response.data;
-		if (!aliexpress_trade_buy_placeorder_response) {
+		const { aliexpress_ds_order_create_response } =
+			response.data as AliExpressDsOrderCreateResponse;
+		if (!aliexpress_ds_order_create_response) {
 			throw new Error("No order creation response found in the API response");
 		}
 
-		const { result } = aliexpress_trade_buy_placeorder_response;
+		const { result } = aliexpress_ds_order_create_response;
 		if (!result) {
 			throw new Error("No order creation result found in the API response");
 		}
 
 		if (!result.is_success) {
-			throw new Error(
-				`Order creation failed: ${result.error_msg || "Unknown error"}`,
+			throw new Error(`Order creation failed: ${result || "Unknown error"}`);
+		}
+
+		const order_list = result.order_list;
+
+		return order_list.number;
+	}
+
+	async getOrderDetails(vendorId: string, orderId: number) {
+		const vendorAliexpressCreds = await DropShippingCred.findOne({
+			where: { vendorId },
+		});
+
+		if (!vendorAliexpressCreds) {
+			throw new NotFoundError(
+				"Dropshipping credentials not found for the vendor",
 			);
 		}
 
-		const orderList = result.order_list;
+		const dropShipperClient = this.createClient(
+			vendorAliexpressCreds?.accessToken,
+		);
 
-		return orderList;
+		const responseData = await dropShipperClient.callAPIDirectly(
+			"aliexpress.trade.ds.order.get",
+			{
+				single_order_query: JSON.stringify({
+					order_id: orderId,
+				}),
+			},
+		);
+
+		if (!responseData.ok) {
+			console.log(responseData);
+			throw new Error("Failed to fetch order details from the dropshipper API");
+		}
+
+		if (!responseData.data) {
+			throw new Error("No data returned from the dropshipper API");
+		}
+
+		const { aliexpress_trade_ds_order_get_response } =
+			responseData.data as AliExpressOrderDetailsResponse;
+
+		if (!aliexpress_trade_ds_order_get_response) {
+			throw new NotFoundError("No order data found in the response");
+		}
+
+		const { result } = aliexpress_trade_ds_order_get_response;
+
+		return result;
 	}
 
-	async getOrderStatus(vendorId: string, orderId: number) {
+	async trackOrder(vendorId: string, orderId: number) {
+		console.log(`Tracking order ${orderId} for vendor ${vendorId}`);
+
 		const vendorAliexpressCreds = await DropShippingCred.findOne({
 			where: { vendorId },
 		});
@@ -455,11 +650,17 @@ export class DropShippingService {
 			throw new Error("Failed to fetch order status from the dropshipper API");
 		}
 
-		if (!responseData.data) {
+		const trackingResponse = responseData.data as AliExpressTrackingResponse;
+
+		if (!trackingResponse) {
 			throw new Error("No data returned from the dropshipper API");
 		}
 
-		return responseData.data;
+		console.log("Tracking Response:", trackingResponse);
+
+		const { result } = trackingResponse;
+
+		return result;
 	}
 
 	async calculateDeliveryFee(vendorId: string, args: ShippingInfoArgs) {
@@ -497,8 +698,6 @@ export class DropShippingService {
 				},
 			);
 
-			console.log("Delivery Fee Response:", responseData);
-
 			if (!responseData.ok) {
 				throw new Error(
 					"Failed to fetch shipping info from the dropshipper API",
@@ -514,6 +713,60 @@ export class DropShippingService {
 			console.log(error);
 			throw error;
 		}
+	}
+
+	async getAddressSuggestions(
+		vendorId: string,
+		params: { language: string; countryCode: string; isMultiLanguage: boolean },
+	) {
+		const vendorAliexpressCreds = await DropShippingCred.findOne({
+			where: { vendorId },
+		});
+
+		if (!vendorAliexpressCreds) {
+			throw new NotFoundError(
+				"Dropshipping credentials not found for the vendor",
+			);
+		}
+
+		const dropShipperClient = this.createClient(
+			vendorAliexpressCreds?.accessToken,
+		);
+
+		const response = await dropShipperClient.callAPIDirectly(
+			"aliexpress.ds.address.get",
+			{
+				language: params.language,
+				countryCode: params.countryCode,
+				isMultiLanguage: params.isMultiLanguage,
+			},
+		);
+
+		if (!response.ok) {
+			throw new Error(
+				"Failed to fetch address suggestions from the dropshipper API",
+			);
+		}
+
+		if (!response.data) {
+			throw new Error("No data returned from the dropshipper API");
+		}
+
+		const { aliexpress_ds_address_get_response } =
+			response.data as AliExpressDsAddressGetResponse;
+
+		if (!aliexpress_ds_address_get_response) {
+			throw new NotFoundError("No address data found in the response");
+		}
+
+		console.log("Address Get Response:", aliexpress_ds_address_get_response);
+
+		const { result } = aliexpress_ds_address_get_response;
+		if (!result) {
+			throw new Error("No address result found in the response");
+		}
+
+		return result.data;
 	}
 }
 
