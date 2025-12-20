@@ -110,12 +110,25 @@ userRoutes.get(
 	authMiddleware,
 	userController.getActivePaymentGateways,
 );
+
+userRoutes.get(
+	"/shipping/addresses",
+	authMiddleware,
+	userController.getAliexpressAddressOptions,
+);
+
 userRoutes.get(
 	"/delivery-fees",
 	authMiddleware,
 	userController.calculateAliexpressDeliveryFee,
 );
 userRoutes.post("/checkout", authMiddleware, userController.checkout);
+userRoutes.post(
+	"/checkout/naira/prepare",
+	authMiddleware,
+	userController.prepareCheckoutNaira,
+);
+
 userRoutes.post(
 	"/checkout/dollar",
 	authMiddleware,
