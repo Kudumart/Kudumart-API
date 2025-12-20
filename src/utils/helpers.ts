@@ -334,6 +334,58 @@ const checkAdvertLimit = async (
 	}
 };
 
+const initializePaystackPayment = (
+	refId: string,
+	amount: number,
+	email: string,
+	paystackSecretKey: string,
+): Promise<any> => {
+	return new Promise((resolve, reject) => {
+		const postData = JSON.stringify({
+			reference: refId,
+			amount: amount * 100, // Paystack expects amount in kobo
+			email: email,
+		});
+
+		const options = {
+			hostname: "api.paystack.co",
+			path: "/transaction/initialize",
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${paystackSecretKey}`, // Use dynamic key
+				"Content-Type": "application/json",
+				"Content-Length": Buffer.byteLength(postData),
+			},
+		};
+		const req = https.request(options, (res) => {
+			let data = "";
+
+			res.on("data", (chunk) => {
+				data += chunk;
+			});
+
+			res.on("end", () => {
+				try {
+					const response: PaystackResponse = JSON.parse(data);
+
+					if (response.status) {
+						resolve(response.data);
+					} else {
+						reject(new Error(`Paystack Error: ${response.message}`));
+					}
+				} catch (err) {
+					reject(new Error("Invalid response from Paystack"));
+				}
+			});
+		});
+		req.on("error", (e) => {
+			reject(new Error(`Error initializing payment: ${e.message}`));
+		});
+		req.write(postData);
+		req.end();
+	});
+};
+
 const verifyPayment = (
 	refId: string,
 	paystackSecretKey: string,
@@ -473,6 +525,34 @@ const initStripe = async () => {
 	});
 };
 
+type PhoneSplit = {
+	phone_country: string; // e.g. '+234', '+1', '+44'
+	phone_number: string; // digits only, no +
+};
+
+/**
+ * Normalize phone numbers for AliExpress.
+ * Supports Nigeria (+234), USA (+1), UK (+44)
+ */
+function splitPhoneNumber(raw: string): PhoneSplit {
+	// Remove spaces, hyphens, parentheses
+	const cleaned = raw.replace(/[\s()-]/g, "");
+
+	// Match +countryCode at start
+	const match = cleaned.match(/^\+(\d{1,3})(\d+)$/);
+	if (!match) {
+		throw new Error("Invalid phone number format");
+	}
+
+	const countryCode = "+" + match[1];
+	const number = match[2];
+
+	return {
+		phone_country: countryCode,
+		phone_number: number,
+	};
+}
+
 // Export functions
 export {
 	generateOTP,
@@ -482,6 +562,7 @@ export {
 	checkVendorProductLimit,
 	checkVendorAuctionProductLimit,
 	checkAdvertLimit,
+	initializePaystackPayment,
 	verifyPayment,
 	shuffleArray,
 	hasPurchasedProduct,
@@ -490,4 +571,5 @@ export {
 	initStripe,
 	generateOTPToken,
 	generateHashedOTPToken,
+	splitPhoneNumber,
 };
