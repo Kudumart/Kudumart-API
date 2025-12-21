@@ -88,7 +88,7 @@ const initModel = (sequelize: Sequelize) => {
 			},
 			dropshipOrderItemIds: {
 				type: DataTypes.JSON,
-				allowNull: false,
+				allowNull: true,
 				defaultValue: [],
 			},
 		},
