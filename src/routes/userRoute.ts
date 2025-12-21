@@ -123,6 +123,7 @@ userRoutes.get(
 	userController.calculateAliexpressDeliveryFee,
 );
 userRoutes.post("/checkout", authMiddleware, userController.checkout);
+
 userRoutes.post(
 	"/checkout/naira/prepare",
 	authMiddleware,
