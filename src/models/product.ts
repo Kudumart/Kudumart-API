@@ -242,6 +242,10 @@ const initModel = (sequelize: Sequelize) => {
 					return typeof value === "string" ? JSON.parse(value) : value;
 				},
 			},
+			last_synced_at: {
+				type: DataTypes.DATE,
+				allowNull: true,
+			},
 		},
 		{
 			sequelize,
