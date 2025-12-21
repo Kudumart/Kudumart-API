@@ -954,4 +954,10 @@ adminRoutes.post(
 	adminController.addAliexpressProductToInventory,
 );
 
+adminRoutes.get(
+	"/aliexpress/credentials/status",
+	adminAuthMiddleware,
+	adminController.getAliExpressDropshipCredsStatus,
+);
+
 export default adminRoutes; // Export the router
