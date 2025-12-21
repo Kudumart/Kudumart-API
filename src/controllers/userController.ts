@@ -1728,8 +1728,6 @@ export const prepareCheckoutNaira = async (
 				);
 			}
 
-			const productCurrency = product.store.currency;
-
 			if (
 				!userCart.every(
 					(item) =>
@@ -1786,7 +1784,9 @@ export const prepareCheckoutNaira = async (
 				// Check if product.quantity is defined and if there's enough stock before proceeding
 				const availableQuantity = product.quantity ?? 0; // If quantity is undefined, fallback to 0
 				if (availableQuantity < cartItem.quantity) {
-					throw new Error(`Insufficient stock for product: ${product.name}`);
+					throw new BadRequestError(
+						`Insufficient stock for product: ${product.name}`,
+					);
 				}
 
 				productPrice = new Decimal(
@@ -1809,7 +1809,7 @@ export const prepareCheckoutNaira = async (
 					dropshipProductVariant.sku_available_stock ?? 0;
 
 				if (availableQuantity < cartItem.quantity) {
-					throw new Error(
+					throw new BadRequestError(
 						`Insufficient stock for dropship product variant with SKU ID ${cartItem.dropshipProductSkuId} for product: ${product.name}`,
 					);
 				}
@@ -1948,6 +1948,10 @@ export const prepareCheckoutDollar = async (
 							},
 						],
 					},
+					{
+						model: DropshipProducts,
+						as: "dropshipDetails",
+					},
 				],
 			},
 		],
@@ -2010,7 +2014,11 @@ export const prepareCheckoutDollar = async (
 		if (dropshipItems.length > 0) {
 			deliveryFee = await getTotalAliexpressDeliveryFee(
 				dropshipItems,
-				"NG",
+				user.location?.country === "united states" ||
+					user.location?.country === "usa" ||
+					user.location?.country === "united states of america"
+					? "US"
+					: "UK",
 				user,
 			);
 		}
@@ -2029,7 +2037,7 @@ export const prepareCheckoutDollar = async (
 				throw new Error(`Product with ID ${cartItem.productId} not found`);
 			}
 
-			let productPrice: Decimal;
+			let productPrice = new Decimal(0);
 			if (product.type === "in_stock") {
 				// Check if product.quantity is defined and if there's enough stock before proceeding
 				const availableQuantity = product.quantity ?? 0; // If quantity is undefined, fallback to 0
@@ -2103,7 +2111,7 @@ export const prepareCheckoutDollar = async (
 			if (productChargePercentage) {
 				// Calculate percentage charge
 				chargeAmount = chargeAmount
-					.plus(new Decimal(productPrice ?? 0))
+					.plus(new Decimal(productPrice))
 					.mul(new Decimal(productChargePercentage.charge_percentage).div(100))
 					.toNearest(0.01);
 			} else if (productChargeAmount) {
@@ -2364,7 +2372,7 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 				throw new Error(`Product with ID ${cartItem.productId} not found`);
 			}
 
-			let productPrice: Decimal;
+			let productPrice = new Decimal(0);
 
 			if (product.type === "in_stock") {
 				// Check if product.quantity is defined and if there's enough stock before proceeding
@@ -2415,8 +2423,8 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 				(charge) =>
 					charge.charge_currency === "NGN" &&
 					charge.calculation_type === "percentage" &&
-					Number(productPrice) >= Number(charge.minimum_product_amount) &&
-					Number(productPrice) <= Number(charge.maximum_product_amount),
+					productPrice.gte(charge.minimum_product_amount) &&
+					productPrice.lte(charge.maximum_product_amount),
 			);
 
 			// Check for product charge amount
@@ -2424,25 +2432,28 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 				(charge) =>
 					charge.charge_currency === "NGN" &&
 					charge.calculation_type === "fixed" &&
-					Number(productPrice) >= Number(charge.minimum_product_amount) &&
-					Number(productPrice) <= Number(charge.maximum_product_amount),
+					productPrice.gte(charge.minimum_product_amount) &&
+					productPrice.lte(charge.maximum_product_amount),
 			);
 
 			let chargeAmount = 0;
 			if (productChargePercentage) {
 				// Calculate percentage charge
-				chargeAmount +=
-					Number(productPrice ?? 0) *
-					(Number(productChargePercentage.charge_percentage) / 100);
+				chargeAmount += productPrice
+					.mul(Number(productChargePercentage.charge_percentage) / 100)
+					.toNearest(0.01)
+					.toNumber();
 			} else if (productChargeAmount) {
 				// Use fixed amount charge
 				chargeAmount += Number(productChargeAmount.charge_amount ?? 0);
 			}
 
 			// Calculate total amount for this cart item
-			totalAmount +=
-				(Number(productPrice) + Number(chargeAmount)) *
-				Number(cartItem.quantity);
+			totalAmount += productPrice
+				.plus(chargeAmount)
+				.mul(cartItem.quantity)
+				.toNearest(0.01)
+				.toNumber();
 
 			// totalAmount += product.price * cartItem.quantity;
 		}
@@ -2450,6 +2461,7 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 		// Add total Aliexpress delivery fee to total amount
 		totalAmount = new Decimal(totalAmount)
 			.plus(new Decimal(totalAliexpressDeliveryFee))
+			.toNearest(0.01)
 			.toNumber();
 
 		// Validate that the total amount matches the Paystack transaction amount
@@ -2906,6 +2918,12 @@ export const checkoutDollar = async (
 						"type",
 						"variants",
 					],
+					include: [
+						{
+							model: DropshipProducts,
+							as: "dropshipDetails",
+						},
+					],
 				},
 			],
 		});
@@ -3035,21 +3053,54 @@ export const checkoutDollar = async (
 		let totalAmount = new Decimal(0);
 		for (const cartItem of cartItems) {
 			const product = cartItem.product;
+
 			if (!product) {
 				throw new Error(`Product with ID ${cartItem.productId} not found`);
 			}
 
-			// Check if product.quantity is defined and if there's enough stock before proceeding
-			const availableQuantity = product.quantity ?? 0; // If quantity is undefined, fallback to 0
-			if (availableQuantity < cartItem.quantity) {
-				throw new Error(`Insufficient stock for product: ${product.name}`);
-			}
+			let productPrice: Decimal;
+			if (product.type === "in_stock") {
+				// Check if product.quantity is defined and if there's enough stock before proceeding
+				const availableQuantity = product.quantity ?? 0; // If quantity is undefined, fallback to 0
+				if (availableQuantity < cartItem.quantity) {
+					throw new Error(`Insufficient stock for product: ${product.name}`);
+				}
 
-			const productPrice = new Decimal(
-				(product.discount_price ?? 0) > 0
-					? product.discount_price ?? 0
-					: product.price ?? 0,
-			);
+				productPrice = new Decimal(
+					(product.discount_price ?? 0) > 0
+						? product.discount_price ?? 0
+						: product.price ?? 0,
+				);
+			} else if (product.type === "dropship") {
+				const dropshipProductVariant = product.variants?.find(
+					(variant) => variant.sku_id === cartItem.dropshipProductSkuId,
+				);
+				if (!dropshipProductVariant) {
+					throw new Error(
+						`Dropship product variant with SKU ID ${cartItem.dropshipProductSkuId} not found for product: ${product.name}`,
+					);
+				}
+
+				const availableQuantity =
+					dropshipProductVariant.sku_available_stock ?? 0;
+
+				if (availableQuantity < cartItem.quantity) {
+					throw new Error(
+						`Insufficient stock for dropship product variant with SKU ID ${cartItem.dropshipProductSkuId} for product: ${product.name}`,
+					);
+				}
+
+				productPrice = new Decimal(
+					//@ts-ignore
+					(dropshipProductVariant.offer_sale_price ?? 0) > 0
+						? dropshipProductVariant.offer_sale_price ?? 0
+						: dropshipProductVariant.sku_price ?? 0,
+				);
+			} else {
+				throw new Error(
+					`Unknown product type for product: ${product.name}, type: ${product.type}`,
+				);
+			}
 
 			// Check for product charge percentage
 			const productChargePercentage = productCharges.find(
@@ -3117,7 +3168,7 @@ export const checkoutDollar = async (
 			const product = cartItem.product;
 			if (!product)
 				throw new Error(`Product with ID ${cartItem.productId} not found`);
-
+			//
 			let availableQuantity = 0;
 			let productPrice: Decimal = new Decimal(0);
 			if (product.type === "in_stock") {
@@ -3249,86 +3300,129 @@ export const checkoutDollar = async (
 		for (const vendorId in vendorOrders) {
 			const vendorOrderItems = vendorOrders[vendorId];
 
-			let dropshipOrderIds = null;
 			// Loop through each order item for the current vendor
 			for (const item of vendorOrderItems) {
+				let dropshipOrderIds = null;
+				let dropshipProductId = null;
 				//@ts-ignore
 				if (item.product.type === "dropship") {
 					dropshipOrderIds = vendorsDropshipOrders?.find(
 						(order) => order?.vendorId === item.vendorId,
 					)?.dropshipOrderResponse;
+
+					dropshipProductId =
+						//@ts-ignore
+						item.product.dropshipDetails.dropshipProductId;
 				}
 
 				// Create the order item in the database
 				await OrderItem.create(
 					{
-						vendorId: item.vendorId,
+						vendorId: vendorId,
 						orderId: order.id,
 						product: item.product,
 						quantity: item.quantity,
 						price: item.price,
-						dropshipProductId:
-							//@ts-ignore
-							item.product.type === "dropship"
-								? //@ts-ignore
-									item.product.dropshipDetails.dropshipProductId
-								: null,
-						dropshipOrderItemIds:
-							//@ts-ignore
-							item.product.type === "dropship" ? dropshipOrderIds : null,
+						dropshipProductId,
+						dropshipOrderItemIds: dropshipOrderIds,
 					},
 					{ transaction },
 				);
 
 				// Fetch vendor object
-				const vendor = await User.findByPk(item.vendorId, { transaction });
-				if (!vendor) {
-					throw new Error(`Vendor not found.`);
+				const vendor = await User.findByPk(vendorId, { transaction });
+
+				const admin = await Admin.findByPk(vendorId, { transaction });
+
+				if (!vendor && !admin) {
+					throw new Error(`Owner not found`);
 				}
+
 				// Fetch user (customer) object
 				const user = await User.findByPk(order.userId, { transaction });
 				if (!user) {
 					throw new Error(`User not found.`);
 				}
 
-				// Create the email message for the current order item
-				const message = emailTemplates.newOrderNotification(
-					vendor,
-					order,
-					user,
-					item.product,
-					item.quantity,
-				);
-				try {
-					// Send the email to the vendor
-					await sendMail(
-						vendor.email,
-						`${process.env.APP_NAME} - New Order Received`,
-						message,
-					);
+				if (vendor) {
+					try {
+						// Create the email message for the current order item
+						const message = emailTemplates.newOrderNotification(
+							vendor,
+							order,
+							user,
+							item.product,
+							item.quantity,
+						);
+						// Send the email to the vendor
+						await sendMail(
+							vendor.email,
+							`${process.env.APP_NAME} - New Order Received`,
+							message,
+						);
 
-					if (vendor.fcmToken) {
-						try {
-							// Send push notification to the vendor
-							const notificationMessage = {
-								notification: {
-									title: "New Order Received",
-									body: `You have received a new order (TRACKING NO: ${order.trackingNumber}) for your product.`,
-								},
-								data: {
-									orderId: order.id,
-									type: PushNotificationTypes.ORDER_CREATED,
-								},
-								token: vendor.fcmToken, // FCM token of the vendor
-							};
+						if (vendor.fcmToken) {
+							try {
+								// Send push notification to the vendor
+								const notificationMessage = {
+									notification: {
+										title: "New Order Received",
+										body: `You have received a new order (TRACKING NO: ${order.trackingNumber}) for your product.`,
+									},
+									data: {
+										orderId: order.id,
+										type: PushNotificationTypes.ORDER_CREATED,
+									},
+									token: vendor.fcmToken, // FCM token of the vendor
+								};
 
-							await sendPushNotificationSingle(notificationMessage);
-						} catch (pushError) {
-							logger.error("Error sending push notification:", pushError);
+								await sendPushNotificationSingle(notificationMessage);
+							} catch (pushError) {
+								logger.error("Error sending push notification:", pushError);
+							}
 						}
+					} catch (emailError) {
+						logger.error("Error sending email:", emailError);
 					}
-				} catch (emailError) {
-					logger.error("Error sending email:", emailError);
+				} else if (admin) {
+					// Create the email message for the current order item
+					const message = emailTemplates.newOrderAdminNotification(
+						admin,
+						order,
+						user,
+						item.product,
+					);
+					try {
+						// Send the email to the admin
+						await sendMail(
+							admin.email,
+							`${process.env.APP_NAME} - New Order Received`,
+							message,
+						);
+
+						if (admin.fcmToken) {
+							try {
+								// Send push notification to the admin
+								const notificationMessage = {
+									notification: {
+										title: "New Order Received",
+										body: `A new order (TRACKING NO: ${order.trackingNumber}) has been placed.`,
+									},
+									data: {
+										orderId: order.id,
+										type: PushNotificationTypes.ORDER_CREATED,
+									},
+									token: admin.fcmToken, // FCM token of the admin
+								};
+
+								await sendPushNotificationSingle(notificationMessage);
+							} catch (pushError) {
+								logger.error("Error sending push notification:", pushError);
+							}
+						}
+					} catch (emailError) {
+						logger.error("Error sending email:", emailError);
+					}
 				}
 			}
 		}
@@ -3369,7 +3463,9 @@ export const checkoutDollar = async (
 			for (const item of vendorOrderItems) {
 				// Loop through each order item for the current vendor
 
+				console.log("Vendor ID: ", vendorId);
 				const vendor = await User.findByPk(vendorId);
+
 				const admin = await Admin.findByPk(vendorId);
 
 				if (!vendor && !admin) {
