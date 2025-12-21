@@ -65,6 +65,7 @@ import { title } from "process";
 import DropshipProducts from "../models/dropshipProducts";
 import { on } from "events";
 import Decimal from "decimal.js";
+import DropShippingCred from "../models/dropshippngCreds";
 
 // Extend the Express Request interface to include adminId and admin
 interface AuthenticatedRequest extends Request {
@@ -7607,10 +7608,10 @@ req: Request,
   const pageSize = req.query.pageSize ? parseInt(req.query.pageSize as string, 10) : 20;
     const shippingCountry = req.query.shippingCountry as string;
 
-    // if (!categoryId ) {
-    //   res.status(400).json({ message: "Category ID is required" });
-    //   return;
-    // }
+    if (!categoryId ) {
+      res.status(400).json({ message: "Category ID is required" });
+      return;
+    }
      
     if (currency && currency !== 'USD' && currency !== "NGN" ) {
       res.status(400).json({ message: "Currency must be either 'USD' or 'NGN'" });
@@ -7637,7 +7638,6 @@ req: Request,
       currency: currency as AE_Currency,
       vendorId,
     });
-
   
 
     res.status(200).json({ data: products });
@@ -7812,7 +7812,7 @@ export async function addAliexpressProductToInventory(req: Request, res: Respons
     const productImages = productDetails.ae_multimedia_info_dto.image_urls.split(';');
 
     //@ts-ignore
-    const productVideoUrl = productDetails.ae_multimedia_info_dto.ae_video_dtos[0]?.media_url as string | undefined;
+    const productVideoUrl = productDetails?.ae_multimedia_info_dto.ae_video_dtos?.[0]?.media_url as string ?? "";
 
     const productPrice = new Decimal(lowestPricedVariant.offer_sale_price).plus(
       new Decimal(lowestPricedVariant.offer_sale_price)
@@ -7867,6 +7867,7 @@ export async function addAliexpressProductToInventory(req: Request, res: Respons
     });
 
   } catch (error: any) {
+    console.error(error);
     logger.error(error);
 
     logger.error(
@@ -7882,8 +7883,182 @@ export async function addAliexpressProductToInventory(req: Request, res: Respons
   }
 }
 
+// export async function getAliExpressDropshipCredsStatus(req: Request, res: Response): Promise<void> {
+//   try {
+//     const vendorId = (req as any).adminId;
+//
+//     const credsStatus = await DropShippingCred.findOne({
+//       where: {
+//         vendorId,
+//       },
+//     });
+//
+//     if (!credsStatus) {
+//       res.status(200).json({ data: { message: "No credentials found", isSet: false } });
+//       return;
+//     }
+//
+//     res.status(200)
+//       .json({  data: { message: "Credentials found", creds: credsStatus, isSet: true } });
+//   }
+//   catch (error: any) {
+//     logger.error(
+//       `Error retrieving dropshipping credentials status: ${error.message}`,
+//     );
+//     res.status(500).json({
+//       message:
+//         "An error occurred while retrieving dropshipping credentials status.",
+//     });
+//   }
+// }
 
 
+export async function getAliExpressDropshipCredsStatus(
+	req: Request,
+	res: Response,
+): Promise<void> {
+	try {
+		const vendorId = (req as any).adminId;
+
+		const credsStatus = await DropShippingCred.findOne({
+			where: {
+				vendorId,
+			},
+		});
+
+		if (!credsStatus) {
+			res.status(200).json({
+				data: {
+					isConnected: false,
+					message:  "No AliExpress account connected",
+					statusColor: "gray",
+				},
+			});
+			return;
+		}
+
+		// Check if tokens are expired
+		const now = Date.now();
+		const isAccessTokenExpired = credsStatus.expireTime < now;
+		const isRefreshTokenExpired = credsStatus.refreshTokenValidTime < now;
+
+		// Calculate time remaining
+		const accessTokenMinutes = Math.max(
+			0,
+			Math.floor((credsStatus.expireTime - now) / 1000 / 60),
+		);
+		const refreshTokenHours = Math.max(
+			0,
+			Math.floor((credsStatus.refreshTokenValidTime - now) / 1000 / 60 / 60),
+		);
+
+		// Format expiry times in human-readable format
+		const formatExpiryTime = (minutes: number): string => {
+			if (minutes === 0) return "Expired";
+			if (minutes < 60) return `${minutes} minute${minutes !== 1 ? "s" : ""}`;
+			const hours = Math.floor(minutes / 60);
+			const mins = minutes % 60;
+			if (mins === 0) return `${hours} hour${hours !== 1 ? "s" : ""}`;
+			return `${hours} hour${hours !== 1 ? "s" : ""} ${mins} minute${mins !== 1 ? "s" : ""}`;
+		};
+
+		const formatRefreshExpiryTime = (hours: number): string => {
+			if (hours === 0) return "Expired";
+			if (hours < 24) return `${hours} hour${hours !== 1 ? "s" : ""}`;
+			const days = Math.floor(hours / 24);
+			const remainingHours = hours % 24;
+			if (remainingHours === 0)
+				return `${days} day${days !== 1 ? "s" : ""}`;
+			return `${days} day${days !== 1 ? "s" : ""} ${remainingHours} hour${remainingHours !== 1 ?  "s" : ""}`;
+		};
+
+		// Format dates
+		const formatDate = (date: Date): string => {
+			return new Date(date).toLocaleDateString("en-US", {
+				year: "numeric",
+				month:  "long",
+				day: "numeric",
+				hour: "2-digit",
+				minute: "2-digit",
+			});
+		};
+
+		// Determine connection status
+		let status:  "active" | "expiring_soon" | "expired";
+		let statusMessage: string;
+		let statusBadge: string;
+		let statusColor: string;
+		let showReconnectButton: boolean;
+
+		if (isRefreshTokenExpired) {
+			status = "expired";
+			statusBadge = "✗ Expired";
+			statusMessage =
+				"Your AliExpress connection has expired. Please reconnect your account to continue dropshipping.";
+			statusColor = "red";
+			showReconnectButton = true;
+		} else if (accessTokenMinutes < 60) {
+			// Less than 1 hour
+			status = "expiring_soon";
+			statusBadge = "⚠ Expiring Soon";
+			statusMessage =
+				"Your AliExpress connection will expire soon. It will automatically refresh. ";
+			statusColor = "orange";
+			showReconnectButton = false;
+		} else {
+			status = "active";
+			statusBadge = "✓ Active";
+			statusMessage =
+				"Your AliExpress account is connected and working properly.";
+			statusColor = "green";
+			showReconnectButton = false;
+		}
+
+		res.status(200).json({
+			data: {
+				isConnected: true,
+				status,
+				statusBadge,
+				statusColor,
+				message: statusMessage,
+				showReconnectButton,
+				account: {
+					email: credsStatus.account,
+					nickname: credsStatus.userNick,
+					sellerId: credsStatus.sellerId,
+					platform:
+						credsStatus.accountPlatform === "seller_center"
+							? "Seller Center"
+							: credsStatus.accountPlatform,
+				},
+				expiryInfo: {
+					accessToken: {
+						label: "Access Token",
+						expiresIn: formatExpiryTime(accessTokenMinutes),
+						isExpired: isAccessTokenExpired,
+					},
+					refreshToken: {
+						label: "Refresh Token",
+						expiresIn: formatRefreshExpiryTime(refreshTokenHours),
+						isExpired: isRefreshTokenExpired,
+					},
+				},
+				timestamps: {
+					connectedAt: formatDate(credsStatus.createdAt),
+					lastUpdated: formatDate(credsStatus.updatedAt),
+				},
+			},
+		});
+	} catch (error: any) {
+		logger.error(
+			`Error retrieving dropshipping credentials status: ${error. message}`,
+		);
+		res.status(500).json({
+			message:
+				"An error occurred while retrieving dropshipping credentials status.",
+		});
+	}
+}
 
 
 
