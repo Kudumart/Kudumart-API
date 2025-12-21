@@ -12,6 +12,7 @@ class DropShippingCred extends Model {
 	locale!: string | null;
 	vendorId!: string | null;
 	accountId!: string | null;
+	account!: string;
 	accountPlatform!: string | null;
 	sellerId!: string | null;
 	createdAt!: Date;
