@@ -18,7 +18,10 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/api/auth/register/vendor": {
@@ -63,7 +66,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Auth"
+        ]
       }
     },
     "/api/auth/register/customer": {
@@ -108,7 +114,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Auth"
+        ]
       }
     },
     "/api/auth/verify/email": {
@@ -144,7 +153,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Auth"
+        ]
       }
     },
     "/api/auth/verify/email-token": {
@@ -180,7 +192,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Auth"
+        ]
       }
     },
     "/api/auth/login": {
@@ -222,7 +237,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Auth"
+        ]
       }
     },
     "/api/auth/resend/verification/email": {
@@ -258,7 +276,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Auth"
+        ]
       }
     },
     "/api/auth/password/forgot": {
@@ -291,7 +312,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Auth"
+        ]
       }
     },
     "/api/auth/password/code/check": {
@@ -324,7 +348,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Auth"
+        ]
       }
     },
     "/api/auth/password/reset": {
@@ -363,7 +390,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Auth"
+        ]
       }
     },
     "/api/auth/facebook": {
@@ -373,7 +403,10 @@
           "default": {
             "description": ""
           }
-        }
+        },
+        "tags": [
+          "Auth"
+        ]
       }
     },
     "/api/auth/facebook/callback": {
@@ -392,7 +425,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Auth"
+        ]
       }
     },
     "/api/auth/google": {
@@ -409,7 +445,10 @@
           "400": {
             "description": "Bad Request"
           }
-        }
+        },
+        "tags": [
+          "Auth"
+        ]
       },
       "post": {
         "description": "",
@@ -435,9 +474,6 @@
                 "accountType": {
                   "example": "any"
                 },
-                "fcmToken": {
-                  "example": "any"
-                },
                 "providerId": {
                   "example": "any"
                 }
@@ -452,7 +488,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Auth"
+        ]
       }
     },
     "/api/auth/google/callback": {
@@ -471,7 +510,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Auth"
+        ]
       }
     },
     "/api/auth/admin/login": {
@@ -510,7 +552,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Auth"
+        ]
       }
     },
     "/api/categories": {
@@ -523,7 +568,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Categories"
+        ]
       }
     },
     "/api/category/sub-categories": {
@@ -543,7 +591,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Category"
+        ]
       }
     },
     "/api/categories/with/sub-categories": {
@@ -556,7 +607,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Categories"
+        ]
       }
     },
     "/api/products": {
@@ -639,7 +693,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Products"
+        ]
       }
     },
     "/api/product": {
@@ -662,7 +719,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Product"
+        ]
       }
     },
     "/api/stores": {
@@ -697,7 +757,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Stores"
+        ]
       }
     },
     "/api/store/products": {
@@ -735,7 +798,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Store"
+        ]
       }
     },
     "/api/auction/products": {
@@ -795,7 +861,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Auction"
+        ]
       }
     },
     "/api/auction/product": {
@@ -818,7 +887,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Auction"
+        ]
       }
     },
     "/api/adverts": {
@@ -853,7 +925,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Adverts"
+        ]
       }
     },
     "/api/advert": {
@@ -879,7 +954,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Advert"
+        ]
       }
     },
     "/api/testimonials": {
@@ -892,7 +970,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Testimonials"
+        ]
       }
     },
     "/api/faq/categories/with/faqs": {
@@ -908,7 +989,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Faq"
+        ]
       }
     },
     "/api/submit/contact/form": {
@@ -944,7 +1028,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Submit"
+        ]
       }
     },
     "/api/fetch/jobs": {
@@ -969,7 +1056,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Fetch"
+        ]
       }
     },
     "/api/view/job": {
@@ -992,7 +1082,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "View"
+        ]
       }
     },
     "/api/apply/job": {
@@ -1040,7 +1133,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Apply"
+        ]
       }
     },
     "/api/banners": {
@@ -1053,7 +1149,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Banners"
+        ]
       }
     },
     "/api/create-payment-intent": {
@@ -1086,211 +1185,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
-      }
-    },
-    "/api/service/categories": {
-      "get": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/api/service/subcategories/{id}": {
-      "get": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/api/services": {
-      "get": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "categoryId",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "subCategoryId",
-            "in": "query",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/api/service/{serviceId}": {
-      "get": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "serviceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/api/services/{serviceId}/reviews": {
-      "get": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "serviceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/api/services/categories/{categoryId}/attributes": {
-      "get": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "categoryId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
+        },
+        "tags": [
+          "Create-payment-intent"
+        ]
       }
     },
     "/logout": {
@@ -1306,7 +1204,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "post": {
         "description": "",
@@ -1320,7 +1221,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/profile/update": {
@@ -1365,7 +1269,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Update"
+        ]
       }
     },
     "/profile/update/password": {
@@ -1404,7 +1311,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Update"
+        ]
       }
     },
     "/sub-admins": {
@@ -1432,7 +1342,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/sub-admin/create": {
@@ -1471,7 +1384,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Create"
+        ]
       }
     },
     "/sub-admin/update": {
@@ -1513,7 +1429,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Update"
+        ]
       }
     },
     "/sub-admin/status": {
@@ -1543,7 +1462,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Status"
+        ]
       }
     },
     "/sub-admin/delete": {
@@ -1569,7 +1491,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Delete"
+        ]
       }
     },
     "/sub-admin/resend-login": {
@@ -1599,7 +1524,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Resend-login"
+        ]
       }
     },
     "/roles": {
@@ -1612,7 +1540,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/role/create": {
@@ -1645,7 +1576,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Create"
+        ]
       }
     },
     "/role/update": {
@@ -1684,7 +1618,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Update"
+        ]
       }
     },
     "/role/view/permissions": {
@@ -1707,7 +1644,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "View"
+        ]
       }
     },
     "/role/assign/permission": {
@@ -1743,7 +1683,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Assign"
+        ]
       }
     },
     "/role/delete/permission": {
@@ -1771,7 +1714,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Delete"
+        ]
       }
     },
     "/permissions": {
@@ -1784,7 +1730,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/permission/create": {
@@ -1817,7 +1766,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Create"
+        ]
       }
     },
     "/permission/update": {
@@ -1856,7 +1808,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Update"
+        ]
       }
     },
     "/permission/delete": {
@@ -1879,7 +1834,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Delete"
+        ]
       }
     },
     "/subscription/plans": {
@@ -1899,7 +1857,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Plans"
+        ]
       }
     },
     "/subscription/plan/create": {
@@ -1933,12 +1894,6 @@
                 "auctionProductLimit": {
                   "example": "any"
                 },
-                "allowsServiceAds": {
-                  "example": "any"
-                },
-                "serviceAdsLimit": {
-                  "example": "any"
-                },
                 "maxAds": {
                   "example": "any"
                 },
@@ -1962,7 +1917,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Plan"
+        ]
       }
     },
     "/subscription/plan/update": {
@@ -2022,7 +1980,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Plan"
+        ]
       }
     },
     "/subscription/plan/delete": {
@@ -2048,7 +2009,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Plan"
+        ]
       }
     },
     "/categories": {
@@ -2081,7 +2045,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "put": {
         "description": "",
@@ -2118,7 +2085,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "delete": {
         "description": "",
@@ -2142,7 +2112,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "get": {
         "description": "",
@@ -2160,7 +2133,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/categories/sub/categories": {
@@ -2173,7 +2149,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Sub"
+        ]
       }
     },
     "/sub/categories": {
@@ -2212,7 +2191,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Categories"
+        ]
       },
       "put": {
         "description": "",
@@ -2252,7 +2234,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Categories"
+        ]
       },
       "delete": {
         "description": "",
@@ -2276,7 +2261,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Categories"
+        ]
       },
       "get": {
         "description": "",
@@ -2294,7 +2282,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Categories"
+        ]
       }
     },
     "/kyc": {
@@ -2307,7 +2298,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "post": {
         "description": "",
@@ -2321,7 +2315,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/kyc/approve-reject": {
@@ -2360,7 +2357,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Approve-reject"
+        ]
       }
     },
     "/payment-gateway": {
@@ -2396,7 +2396,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "put": {
         "description": "",
@@ -2436,7 +2439,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "delete": {
         "description": "",
@@ -2457,7 +2463,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "get": {
         "description": "",
@@ -2478,7 +2487,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/payment-gateways": {
@@ -2491,7 +2503,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/payment-gateways/status": {
@@ -2514,7 +2529,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Status"
+        ]
       }
     },
     "/currency": {
@@ -2547,7 +2565,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "put": {
         "description": "",
@@ -2584,7 +2605,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "delete": {
         "description": "",
@@ -2608,7 +2632,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/currencies": {
@@ -2621,7 +2648,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/customers": {
@@ -2651,7 +2681,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/vendors": {
@@ -2681,7 +2714,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/user/details": {
@@ -2704,7 +2740,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Details"
+        ]
       }
     },
     "/toggle/user/status": {
@@ -2727,7 +2766,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "User"
+        ]
       }
     },
     "/store": {
@@ -2753,7 +2795,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "post": {
         "description": "",
@@ -2802,7 +2847,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "put": {
         "description": "",
@@ -2854,7 +2902,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "delete": {
         "description": "",
@@ -2878,7 +2929,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/products": {
@@ -2961,7 +3015,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "post": {
         "description": "",
@@ -3004,7 +3061,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "put": {
         "description": "",
@@ -3038,7 +3098,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "delete": {
         "description": "",
@@ -3062,7 +3125,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/product": {
@@ -3085,7 +3151,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/products/move-to-draft": {
@@ -3111,7 +3180,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Move-to-draft"
+        ]
       }
     },
     "/products/change-status": {
@@ -3147,7 +3219,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Change-status"
+        ]
       }
     },
     "/auction/products": {
@@ -3190,7 +3265,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Products"
+        ]
       },
       "post": {
         "description": "",
@@ -3266,7 +3344,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Products"
+        ]
       },
       "put": {
         "description": "",
@@ -3345,7 +3426,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Products"
+        ]
       },
       "delete": {
         "description": "",
@@ -3369,7 +3453,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Products"
+        ]
       },
       "patch": {
         "description": "",
@@ -3396,7 +3483,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Products"
+        ]
       }
     },
     "/auction/product": {
@@ -3419,7 +3509,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Product"
+        ]
       }
     },
     "/auction/product/bidders": {
@@ -3445,7 +3538,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Product"
+        ]
       }
     },
     "/order/items": {
@@ -3467,7 +3563,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Items"
+        ]
       }
     },
     "/order/item": {
@@ -3490,7 +3589,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Item"
+        ]
       }
     },
     "/order/item/details": {
@@ -3510,7 +3612,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Item"
+        ]
       }
     },
     "/order/item/update/status": {
@@ -3549,7 +3654,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Item"
+        ]
       }
     },
     "/general/stores": {
@@ -3577,7 +3685,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Stores"
+        ]
       }
     },
     "/general/store/view": {
@@ -3600,7 +3711,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Store"
+        ]
       }
     },
     "/general/products": {
@@ -3653,7 +3767,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Products"
+        ]
       }
     },
     "/general/product/view": {
@@ -3676,7 +3793,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Product"
+        ]
       }
     },
     "/general/product/delete": {
@@ -3702,7 +3822,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Product"
+        ]
       }
     },
     "/general/product/unpublished": {
@@ -3728,7 +3851,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Product"
+        ]
       }
     },
     "/general/product/publish": {
@@ -3754,7 +3880,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Product"
+        ]
       }
     },
     "/general/auction/products": {
@@ -3807,7 +3936,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Auction"
+        ]
       }
     },
     "/general/auction/product/view": {
@@ -3830,7 +3962,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Auction"
+        ]
       }
     },
     "/general/auction/product/delete": {
@@ -3856,7 +3991,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Auction"
+        ]
       }
     },
     "/general/auction/product/bidders": {
@@ -3879,7 +4017,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Auction"
+        ]
       }
     },
     "/general/orders": {
@@ -3912,7 +4053,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Orders"
+        ]
       }
     },
     "/general/order/items": {
@@ -3948,7 +4092,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Order"
+        ]
       }
     },
     "/general/order/payment": {
@@ -3984,7 +4131,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Order"
+        ]
       }
     },
     "/general/adverts": {
@@ -4017,7 +4167,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Adverts"
+        ]
       }
     },
     "/general/advert/view": {
@@ -4040,7 +4193,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Advert"
+        ]
       }
     },
     "/subscribers": {
@@ -4078,7 +4234,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/transactions": {
@@ -4126,7 +4285,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/active/products": {
@@ -4146,7 +4308,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Products"
+        ]
       }
     },
     "/adverts": {
@@ -4200,7 +4365,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "put": {
         "description": "",
@@ -4252,7 +4420,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "get": {
         "description": "",
@@ -4283,7 +4454,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "delete": {
         "description": "",
@@ -4304,7 +4478,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/advert": {
@@ -4330,7 +4507,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/approved-reject/advert": {
@@ -4369,7 +4549,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Advert"
+        ]
       }
     },
     "/testimonial": {
@@ -4408,7 +4591,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "put": {
         "description": "",
@@ -4448,7 +4634,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "get": {
         "description": "",
@@ -4469,7 +4658,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "delete": {
         "description": "",
@@ -4490,7 +4682,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/testimonials": {
@@ -4503,7 +4698,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/faq/category": {
@@ -4533,7 +4731,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Category"
+        ]
       },
       "get": {
         "description": "",
@@ -4554,7 +4755,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Category"
+        ]
       },
       "put": {
         "description": "",
@@ -4585,7 +4789,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Category"
+        ]
       },
       "delete": {
         "description": "",
@@ -4606,7 +4813,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Category"
+        ]
       }
     },
     "/faq/categories": {
@@ -4619,7 +4829,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Categories"
+        ]
       }
     },
     "/faq": {
@@ -4658,7 +4871,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "get": {
         "description": "",
@@ -4679,7 +4895,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "put": {
         "description": "",
@@ -4716,7 +4935,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "delete": {
         "description": "",
@@ -4737,7 +4959,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/faqs": {
@@ -4750,7 +4975,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/contact/us/forms": {
@@ -4773,7 +5001,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Us"
+        ]
       }
     },
     "/contact/us/form": {
@@ -4796,7 +5027,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Us"
+        ]
       },
       "delete": {
         "description": "",
@@ -4817,7 +5051,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Us"
+        ]
       }
     },
     "/job/post": {
@@ -4859,7 +5096,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Post"
+        ]
       }
     },
     "/job/update": {
@@ -4907,7 +5147,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Update"
+        ]
       }
     },
     "/jobs": {
@@ -4932,7 +5175,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/job": {
@@ -4958,7 +5204,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/job/close": {
@@ -4981,7 +5230,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Close"
+        ]
       }
     },
     "/job/delete": {
@@ -5007,7 +5259,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Delete"
+        ]
       }
     },
     "/job/repost": {
@@ -5037,7 +5292,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Repost"
+        ]
       }
     },
     "/job/applicants": {
@@ -5060,7 +5318,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Applicants"
+        ]
       }
     },
     "/job/view/applicant": {
@@ -5083,7 +5344,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "View"
+        ]
       }
     },
     "/job/download/applicant/resume": {
@@ -5106,7 +5370,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Download"
+        ]
       }
     },
     "/withdrawal/update/status": {
@@ -5148,7 +5415,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Update"
+        ]
       }
     },
     "/withdrawals": {
@@ -5168,7 +5438,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/withdrawal": {
@@ -5191,7 +5464,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "post": {
         "description": "",
@@ -5228,7 +5504,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "put": {
         "description": "",
@@ -5262,7 +5541,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/banner": {
@@ -5292,7 +5574,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "get": {
         "description": "",
@@ -5313,7 +5598,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "put": {
         "description": "",
@@ -5344,7 +5632,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "delete": {
         "description": "",
@@ -5365,7 +5656,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/banners": {
@@ -5378,7 +5672,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/notifications": {
@@ -5411,7 +5708,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/notifications/{id}/read": {
@@ -5435,7 +5735,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "{id}"
+        ]
       }
     },
     "/product/charges": {
@@ -5486,7 +5789,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Charges"
+        ]
       },
       "get": {
         "description": "",
@@ -5497,7 +5803,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Charges"
+        ]
       }
     },
     "/product/charges/{id}": {
@@ -5557,7 +5866,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Charges"
+        ]
       },
       "delete": {
         "description": "",
@@ -5579,7 +5891,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Charges"
+        ]
       }
     },
     "/product/charges/{id}/status/activate": {
@@ -5606,7 +5921,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Charges"
+        ]
       }
     },
     "/product/charges/{id}/status/deactivate": {
@@ -5633,692 +5951,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
-      }
-    },
-    "/service/categories": {
-      "post": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "example": "any"
-                },
-                "image": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      },
-      "get": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/service/categories/{id}": {
-      "put": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "example": "any"
-                },
-                "image": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      },
-      "delete": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/service/subcategories": {
-      "post": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "example": "any"
-                },
-                "image": {
-                  "example": "any"
-                },
-                "categoryId": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/service/subcategories/{id}": {
-      "put": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "example": "any"
-                },
-                "image": {
-                  "example": "any"
-                },
-                "categoryId": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      },
-      "get": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      },
-      "delete": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/service/attributes": {
-      "post": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "attributes": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      },
-      "get": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/service/attributes/{id}": {
-      "delete": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/service/attributes/{attributeId}/options": {
-      "post": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "attributeId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "options": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/service/attributes/options/{optionId}": {
-      "delete": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "optionId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/service/categories/{categoryId}/attributes": {
-      "post": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "categoryId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "attributeIds": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      },
-      "get": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "categoryId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      },
-      "delete": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "categoryId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "attributeIds": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/service/{serviceId}/suspend": {
-      "post": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "serviceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/service/{serviceId}/activate": {
-      "post": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "serviceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/services": {
-      "get": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      },
-      "post": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "title": {
-                  "example": "any"
-                },
-                "description": {
-                  "example": "any"
-                },
-                "image_url": {
-                  "example": "any"
-                },
-                "video_url": {
-                  "example": "any"
-                },
-                "service_category_id": {
-                  "example": "any"
-                },
-                "service_subcategory_id": {
-                  "example": "any"
-                },
-                "location_city": {
-                  "example": "any"
-                },
-                "location_state": {
-                  "example": "any"
-                },
-                "location_country": {
-                  "example": "any"
-                },
-                "is_negotiable": {
-                  "example": "any"
-                },
-                "work_experience_years": {
-                  "example": "any"
-                },
-                "additional_images": {
-                  "example": "any"
-                },
-                "price": {
-                  "example": "any"
-                },
-                "discount_price": {
-                  "example": "any"
-                },
-                "attributes": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Created"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
+        },
+        "tags": [
+          "Charges"
+        ]
       }
     },
     "/": {
@@ -6328,7 +5964,10 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/auth/register/vendor": {
@@ -6373,7 +6012,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Register"
+        ]
       }
     },
     "/auth/register/customer": {
@@ -6418,7 +6060,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Register"
+        ]
       }
     },
     "/auth/verify/email": {
@@ -6454,7 +6099,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Verify"
+        ]
       }
     },
     "/auth/verify/email-token": {
@@ -6490,7 +6138,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Verify"
+        ]
       }
     },
     "/auth/login": {
@@ -6532,7 +6183,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Login"
+        ]
       }
     },
     "/auth/resend/verification/email": {
@@ -6568,7 +6222,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Resend"
+        ]
       }
     },
     "/auth/password/forgot": {
@@ -6601,7 +6258,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Password"
+        ]
       }
     },
     "/auth/password/code/check": {
@@ -6634,7 +6294,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Password"
+        ]
       }
     },
     "/auth/password/reset": {
@@ -6673,7 +6336,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Password"
+        ]
       }
     },
     "/auth/facebook": {
@@ -6683,7 +6349,10 @@
           "default": {
             "description": ""
           }
-        }
+        },
+        "tags": [
+          "Facebook"
+        ]
       }
     },
     "/auth/facebook/callback": {
@@ -6702,7 +6371,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Facebook"
+        ]
       }
     },
     "/auth/google": {
@@ -6719,7 +6391,10 @@
           "400": {
             "description": "Bad Request"
           }
-        }
+        },
+        "tags": [
+          "Google"
+        ]
       },
       "post": {
         "description": "",
@@ -6745,9 +6420,6 @@
                 "accountType": {
                   "example": "any"
                 },
-                "fcmToken": {
-                  "example": "any"
-                },
                 "providerId": {
                   "example": "any"
                 }
@@ -6762,7 +6434,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Google"
+        ]
       }
     },
     "/auth/google/callback": {
@@ -6781,7 +6456,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Google"
+        ]
       }
     },
     "/auth/admin/login": {
@@ -6820,7 +6498,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Admin"
+        ]
       }
     },
     "/category/sub-categories": {
@@ -6840,7 +6521,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Sub-categories"
+        ]
       }
     },
     "/categories/with/sub-categories": {
@@ -6853,7 +6537,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "With"
+        ]
       }
     },
     "/stores": {
@@ -6888,7 +6575,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/store/products": {
@@ -6926,7 +6616,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Products"
+        ]
       }
     },
     "/faq/categories/with/faqs": {
@@ -6942,7 +6635,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Categories"
+        ]
       }
     },
     "/submit/contact/form": {
@@ -6978,7 +6674,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Contact"
+        ]
       }
     },
     "/fetch/jobs": {
@@ -7003,7 +6702,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Jobs"
+        ]
       }
     },
     "/view/job": {
@@ -7026,7 +6728,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Job"
+        ]
       }
     },
     "/apply/job": {
@@ -7074,7 +6779,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Job"
+        ]
       }
     },
     "/create-payment-intent": {
@@ -7107,105 +6815,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
-      }
-    },
-    "/service/{serviceId}": {
-      "get": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "serviceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/services/{serviceId}/reviews": {
-      "get": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "serviceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/services/categories/{categoryId}/attributes": {
-      "get": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "categoryId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/file": {
@@ -7228,7 +6841,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/delete": {
@@ -7248,7 +6864,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/profile": {
@@ -7264,7 +6883,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/profile/photo/update": {
@@ -7294,7 +6916,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Photo"
+        ]
       }
     },
     "/profile/update/email": {
@@ -7327,7 +6952,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Update"
+        ]
       }
     },
     "/profile/confirm/email": {
@@ -7363,7 +6991,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Confirm"
+        ]
       }
     },
     "/profile/update/phone": {
@@ -7396,7 +7027,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Update"
+        ]
       }
     },
     "/profile/confirm/phone/number": {
@@ -7432,7 +7066,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Confirm"
+        ]
       }
     },
     "/notification/settings": {
@@ -7448,7 +7085,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Settings"
+        ]
       }
     },
     "/update/notification/settings": {
@@ -7484,7 +7124,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Notification"
+        ]
       }
     },
     "/delete/account": {
@@ -7503,7 +7146,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Account"
+        ]
       }
     },
     "/cart/add": {
@@ -7539,7 +7185,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Add"
+        ]
       }
     },
     "/cart/update": {
@@ -7575,7 +7224,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Update"
+        ]
       }
     },
     "/cart/remove": {
@@ -7601,7 +7253,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Remove"
+        ]
       }
     },
     "/cart": {
@@ -7614,7 +7269,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/cart/clear": {
@@ -7627,7 +7285,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Clear"
+        ]
       }
     },
     "/cart/charges": {
@@ -7640,7 +7301,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Charges"
+        ]
       }
     },
     "/payment/gateway": {
@@ -7656,7 +7320,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Gateway"
+        ]
       }
     },
     "/checkout": {
@@ -7692,7 +7359,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/checkout/dollar": {
@@ -7728,7 +7398,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Dollar"
+        ]
       }
     },
     "/conversations": {
@@ -7744,7 +7417,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/messages": {
@@ -7770,7 +7446,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "post": {
         "description": "",
@@ -7813,7 +7492,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       },
       "delete": {
         "description": "",
@@ -7840,7 +7522,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/mark/message/read": {
@@ -7869,7 +7554,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Message"
+        ]
       }
     },
     "/auction/interest": {
@@ -7905,7 +7593,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Interest"
+        ]
       }
     },
     "/auction/products/interest": {
@@ -7921,7 +7612,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Products"
+        ]
       }
     },
     "/place/bid": {
@@ -7960,7 +7654,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Bid"
+        ]
       }
     },
     "/become/vendor": {
@@ -7979,7 +7676,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Vendor"
+        ]
       }
     },
     "/mark/notification/as/read": {
@@ -8005,7 +7705,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Notification"
+        ]
       }
     },
     "/orders": {
@@ -8031,7 +7734,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/order/payment": {
@@ -8064,7 +7770,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Payment"
+        ]
       }
     },
     "/save/product": {
@@ -8094,7 +7803,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Product"
+        ]
       }
     },
     "/saved/products": {
@@ -8110,7 +7822,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Products"
+        ]
       }
     },
     "/add/review": {
@@ -8155,7 +7870,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Review"
+        ]
       }
     },
     "/update/review": {
@@ -8194,7 +7912,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Review"
+        ]
       }
     },
     "/get/review": {
@@ -8214,7 +7935,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Review"
+        ]
       }
     },
     "/view/review": {
@@ -8237,7 +7961,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Review"
+        ]
       }
     },
     "/products/{productId}/report": {
@@ -8276,7 +8003,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "{productid}"
+        ]
       }
     },
     "/block/vendor": {
@@ -8312,7 +8042,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Vendor"
+        ]
       },
       "delete": {
         "description": "",
@@ -8343,7 +8076,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Vendor"
+        ]
       }
     },
     "/blocked/vendors": {
@@ -8359,7 +8095,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Vendors"
+        ]
       }
     },
     "/block/product": {
@@ -8395,196 +8134,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
-      }
-    },
-    "/service/review": {
-      "post": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "serviceId": {
-                  "example": "any"
-                },
-                "rating": {
-                  "example": "any"
-                },
-                "comment": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/service/{serviceId}/bookings": {
-      "post": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "serviceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "message": {
-                  "example": "any"
-                },
-                "vendorId": {
-                  "example": "any"
-                },
-                "bookingDate": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/service/bookings": {
-      "get": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "page",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/service/bookings/{bookingId}/complete": {
-      "patch": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "bookingId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/service/bookings/{bookingId}/cancel": {
-      "patch": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "bookingId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
+        },
+        "tags": [
+          "Product"
+        ]
       }
     },
     "/view/store": {
@@ -8607,7 +8160,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Store"
+        ]
       }
     },
     "/vendors/products": {
@@ -8647,7 +8203,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Products"
+        ]
       }
     },
     "/subscribe": {
@@ -8686,7 +8245,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/subscribe/dollar": {
@@ -8725,7 +8287,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Dollar"
+        ]
       }
     },
     "/subscription/cancel": {
@@ -8747,7 +8312,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Cancel"
+        ]
       }
     },
     "/verifyCAC": {
@@ -8763,7 +8331,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "General"
+        ]
       }
     },
     "/bank/informations": {
@@ -8796,7 +8367,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Informations"
+        ]
       },
       "put": {
         "description": "",
@@ -8827,7 +8401,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Informations"
+        ]
       },
       "get": {
         "description": "",
@@ -8841,7 +8418,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Informations"
+        ]
       }
     },
     "/bank/information": {
@@ -8864,7 +8444,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
+        },
+        "tags": [
+          "Information"
+        ]
       },
       "delete": {
         "description": "",
@@ -8885,222 +8468,10 @@
           "500": {
             "description": "Internal Server Error"
           }
-        }
-      }
-    },
-    "/services/{serviceId}": {
-      "put": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "serviceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "title": {
-                  "example": "any"
-                },
-                "description": {
-                  "example": "any"
-                },
-                "image_url": {
-                  "example": "any"
-                },
-                "video_url": {
-                  "example": "any"
-                },
-                "service_category_id": {
-                  "example": "any"
-                },
-                "service_subcategory_id": {
-                  "example": "any"
-                },
-                "location_city": {
-                  "example": "any"
-                },
-                "location_state": {
-                  "example": "any"
-                },
-                "location_country": {
-                  "example": "any"
-                },
-                "work_experience_years": {
-                  "example": "any"
-                },
-                "additional_images": {
-                  "example": "any"
-                },
-                "price": {
-                  "example": "any"
-                },
-                "discount_price": {
-                  "example": "any"
-                },
-                "is_negotiable": {
-                  "example": "any"
-                },
-                "attributes": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      },
-      "get": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "serviceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      },
-      "delete": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "serviceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/services/{serviceId}/publish": {
-      "patch": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "serviceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/services/{serviceId}/unpublish": {
-      "patch": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "serviceId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/service/bookings/{bookingId}/confirm": {
-      "patch": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "bookingId",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Not Found"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
+        },
+        "tags": [
+          "Information"
+        ]
       }
     }
   }

@@ -4,6 +4,29 @@ import User from "./user";
 import Store from "./store";
 import SubCategory from "./subcategory";
 import ReviewProduct from "./reviewproduct";
+import DropshipProducts from "./dropshipProducts";
+
+interface SkuProperty {
+	sku_image: string;
+	sku_property_id: number;
+	property_value_id: number;
+	sku_property_name: string;
+	sku_property_value: string;
+	property_value_definition_name?: string; // optional because not all objects have it
+}
+
+interface ProductSku {
+	id: string;
+	sku_id: string;
+	sku_attr: string;
+	sku_price: string; // prices are strings from API
+	currency_code: string;
+	offer_sale_price: string;
+	price_include_tax: boolean;
+	sku_available_stock: number;
+	aeop_s_k_u_propertys: SkuProperty[];
+	offer_bulk_sale_price: string;
+}
 
 class Product extends Model {
 	public id!: string;
@@ -22,6 +45,7 @@ class Product extends Model {
 	public quantity?: number | 0;
 	public price!: number;
 	public discount_price!: number | null;
+	public type!: "dropship" | "in_stock";
 	public image_url!: string | null;
 	public video_url!: string | null;
 	public additional_images!: object | null; // JSON array or object for additional images
@@ -33,12 +57,14 @@ class Product extends Model {
 	public views!: number | null;
 	public status!: "active" | "inactive" | "draft";
 	public vendor?: User; // Declare the relationship to User (vendor)
+	public variants!: ProductSku[] | null; // JSON array or object for product variants
 	public createdAt!: Date;
 	public updatedAt!: Date;
 
 	public store!: Store;
 	public sub_category!: SubCategory;
 	public reviews!: ReviewProduct;
+	public dropshipDetails!: DropshipProducts;
 
 	static associate(models: any) {
 		// Define associations here
@@ -76,6 +102,11 @@ class Product extends Model {
 			as: "carts",
 			foreignKey: "productId",
 			onDelete: "RESTRICT",
+		});
+		this.hasOne(models.DropshipProducts, {
+			as: "dropshipDetails",
+			foreignKey: "productId",
+			sourceKey: "id",
 		});
 	}
 }
@@ -128,6 +159,11 @@ const initModel = (sequelize: Sequelize) => {
 					"refurbished",
 				),
 				allowNull: false,
+			},
+			type: {
+				type: DataTypes.ENUM("dropship", "in_stock"),
+				allowNull: false,
+				defaultValue: "in_stock",
 			},
 			description: {
 				type: DataTypes.TEXT,
@@ -196,6 +232,19 @@ const initModel = (sequelize: Sequelize) => {
 				type: DataTypes.ENUM("active", "inactive", "draft"),
 				defaultValue: "active",
 				allowNull: false,
+			},
+			variants: {
+				type: DataTypes.JSON,
+				allowNull: true,
+				defaultValue: [],
+				get() {
+					const value = this.getDataValue("variants");
+					return typeof value === "string" ? JSON.parse(value) : value;
+				},
+			},
+			last_synced_at: {
+				type: DataTypes.DATE,
+				allowNull: true,
 			},
 		},
 		{

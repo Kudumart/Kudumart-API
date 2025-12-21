@@ -12,6 +12,8 @@ import passport from "passport";
 import runSubscriptionCron from "./job/subscriptionCron"; // Import the cron job
 import auctionStatusUpdate from "./job/auctionStatusUpdate"; // Import the cron job
 import { auctionReminderJob } from "./job/auctionReminder";
+import runDropshipCron from "./job/updateDropshippedProducts";
+import runDropshippingCredsRefreshCron from "./job/refreshAliexpressTokenCron";
 
 dotenv.config();
 
@@ -62,6 +64,8 @@ const port = process.env.PORT || 3001; // Get the port from the environment vari
 runSubscriptionCron();
 auctionStatusUpdate();
 auctionReminderJob();
+runDropshipCron();
+runDropshippingCredsRefreshCron();
 
 server.timeout = 300000;
 

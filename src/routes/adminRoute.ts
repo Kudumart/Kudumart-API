@@ -32,6 +32,7 @@ import {
 	AddServiceCategoryToAttributeValidation,
 	RemoveServiceCategoryFromAttributeValidation,
 	validateUUIDParam,
+	addAliexpressProductValidation,
 } from "../utils/validations"; // Import the service
 import checkPermission from "../middlewares/checkPermissionMiddleware";
 import {
@@ -428,6 +429,19 @@ adminRoutes.get(
 	adminAuthMiddleware,
 	adminController.viewOrderItem,
 );
+
+adminRoutes.get(
+	"/order/dropship/items",
+	adminAuthMiddleware,
+	adminController.getDropshipedOrderItemDetails,
+);
+
+adminRoutes.get(
+	"/order/dropship/tracking/info",
+	adminAuthMiddleware,
+	adminController.getDropshipOrderTrackingInfo,
+);
+
 adminRoutes.get(
 	"/order/item/details",
 	adminAuthMiddleware,
@@ -912,6 +926,38 @@ adminRoutes.get(
 	paginationQueryParamsValidation(),
 	validate,
 	adminController.getAllServices,
+);
+
+adminRoutes.get(
+	"/aliexpress/categories",
+	adminAuthMiddleware,
+	adminController.getAliExpressCategories,
+);
+
+adminRoutes.get(
+	"/aliexpress/products",
+	adminAuthMiddleware,
+	adminController.getAliExpressProducts,
+);
+
+adminRoutes.get(
+	"/aliexpress/products/:productId/details",
+	adminAuthMiddleware,
+	adminController.getAliExpressProductDetails,
+);
+
+adminRoutes.post(
+	"/aliexpress/products/import",
+	adminAuthMiddleware,
+	addAliexpressProductValidation(),
+	validate,
+	adminController.addAliexpressProductToInventory,
+);
+
+adminRoutes.get(
+	"/aliexpress/credentials/status",
+	adminAuthMiddleware,
+	adminController.getAliExpressDropshipCredsStatus,
 );
 
 export default adminRoutes; // Export the router

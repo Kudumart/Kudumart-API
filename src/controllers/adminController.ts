@@ -23,7 +23,6 @@ import User from "../models/user";
 import KYC from "../models/kyc";
 import PaymentGateway from "../models/paymentgateway";
 import Currency from "../models/currency";
-import { log } from "console";
 import Product from "../models/product";
 import Store from "../models/store";
 import AuctionProduct from "../models/auctionproduct";
@@ -53,6 +52,7 @@ import { ProductData } from "../types/index";
 import crypto from "crypto";
 import AdminNotification from "../models/adminnotification";
 import ProductCharge from "../models/productcharge";
+import { DropShippingService } from "../services/dropShipping.service";
 import ServiceCategories from "../models/serviceCategories";
 import ServiceSubCategories from "../models/serviceSubCategories";
 import AttributeDefinitions from "../models/attributeDefinitions";
@@ -60,6 +60,12 @@ import sequelize from "../config/sequelize";
 import AttributeOptions from "../models/attributeOptions";
 import ServiceCategoryToAttributeMap from "../models/serviceCategoryToAttributeMap";
 import Services from "../models/services";
+import { AE_Currency } from "ae_sdk";
+import { title } from "process";
+import DropshipProducts from "../models/dropshipProducts";
+import { on } from "events";
+import Decimal from "decimal.js";
+import DropShippingCred from "../models/dropshippngCreds";
 
 // Extend the Express Request interface to include adminId and admin
 interface AuthenticatedRequest extends Request {
@@ -69,6 +75,8 @@ interface AuthenticatedRequest extends Request {
 
 // Define the upload directory
 const uploadDir = path.join(__dirname, "../../uploads");
+
+const dropShippingService = new DropShippingService();
 
 export const logout = async (req: Request, res: Response): Promise<void> => {
 	try {
@@ -2395,6 +2403,10 @@ export const deleteGeneralProduct = async (
 			{ name: "review_products", model: ReviewProduct, field: "productId" },
 			{ name: "carts", model: Cart, field: "productId" },
 		];
+
+    if (product.type === "dropship") {
+     await DropshipProducts.destroy({ where: { productId: product.id } });
+    }
 
 		// Check each related table
 		for (const table of relatedTables) {
@@ -4730,6 +4742,135 @@ export const viewOrderItem = async (
 	}
 };
 
+export const getDropshipedOrderItemDetails = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+
+  const adminId = (req as AuthenticatedRequest).admin?.id;
+
+  const { orderItemId } = req.query;
+
+  if (!orderItemId) {
+    res.status(400).json({ message: "Order item ID is required." });
+    return;
+  }
+
+  try {
+    // Fetch the order item along with its order and user details
+    const orderItem = await OrderItem.findOne({
+      where: { id: orderItemId },
+      include: [
+        {
+          model: Order,
+          as: "order",
+          include: [
+            {
+              model: User,
+              as: "user",
+              attributes: [
+                "id",
+                "firstName",
+                "lastName",
+                "email",
+                "phoneNumber",
+              ], // Include user details
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!orderItem) {
+      res.status(404).json({ message: "Order item not found." });
+      return;
+    }
+
+   if (!orderItem.dropshipProductId){
+      res.status(400).json({ message: "This order item is not dropshipped." });
+      return;
+    }
+
+    if (!orderItem.dropshipOrderItemIds || orderItem.dropshipOrderItemIds.length === 0){
+      res.status(404).json({ message: "No dropshipped order item IDs found." });
+      return;
+    }
+
+    //@ts-ignore
+  const dropshipOrderItemDetails = await Promise
+      .all(orderItem.dropshipOrderItemIds.map( (dropshipOrderItemId: string) =>
+      //@ts-ignore
+      dropShippingService.getOrderDetails(adminId!, dropshipOrderItemId )
+  ));
+
+    if (!dropshipOrderItemDetails || dropshipOrderItemDetails.length === 0 || dropshipOrderItemDetails.every(detail => !detail))     {
+      res.status(404).json({ message: "No dropshipped order item details found." });
+      return;
+    }
+
+    res.status(200).json({
+      message: "Dropshipped order item details retrieved successfully.",
+      data: dropshipOrderItemDetails,
+    });
+
+  } catch (error) {
+    logger.error("Error retrieving dropshipped order item details:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to retrieve dropshipped order item details." });
+  }
+}
+
+export const getDropshipOrderTrackingInfo = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+
+  const adminId = (req as AuthenticatedRequest).admin?.id;
+
+  const { orderItemId } = req.query;
+
+  if (!orderItemId) {
+    res.status(400).json({ message: "Dropship order item ID is required." });
+    return;
+  }
+
+  const orderItem = await OrderItem.findOne({
+    where: { id: orderItemId },
+  });
+
+  if (!orderItem) {
+    res.status(404).json({ message: "Order item not found." });
+    return;
+  }
+
+  try {
+    const trackingInfo = await Promise.all(orderItem.dropshipOrderItemIds!.map((dropshipOrderItemId: string) =>
+      dropShippingService.trackOrder(
+      adminId!,
+      //@ts-ignore
+      dropshipOrderItemId,
+  )))
+
+    if (!trackingInfo || trackingInfo.length === 0 || trackingInfo.every(info => !info)) {
+      res.status(404).json({ message: "No tracking information found." });
+      return;
+    }
+
+
+    res.status(200).json({
+      message: "Dropshipped order item tracking info retrieved successfully.",
+      data: trackingInfo,
+    });
+
+  } catch (error) {
+    logger.error("Error tracking dropshipped order item:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to track dropshipped order item." });
+  }
+}
+
 export const getOrderItemsInfo = async (
 	req: Request,
 	res: Response,
@@ -6481,7 +6622,7 @@ export const markProductChargeAsActive = async (
 	}
 };
 
-export const createServiceCategory = async (req: Request, res: Response) => {
+  export const createServiceCategory = async (req: Request, res: Response) => {
 	const { name, image } = req.body;
 
 	try {
@@ -7423,3 +7564,502 @@ export const getAllServices = async (req: Request, res: Response): Promise<void>
     });
   }
 }
+
+export const getAliExpressCategories = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+  const vendorId = (req as any).adminId;
+
+	try {
+		const categories = await dropShippingService.getProductCategories(vendorId);
+
+		if (categories.length === 0) {
+			res.status(404).json({ message: "No categories found" });
+			return;
+		}
+
+		res.status(200).json({ data: categories });
+	} catch (error: any) {
+		// logger.error(
+		// 	`Error retrieving dropshipping product categories: ${error.message}`,
+		// );
+		res.status(500).json({
+			message:
+				"An error occurred while retrieving dropshipping product categories.",
+		});
+	}
+} 
+
+export const getAliExpressProducts = async (
+req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const vendorId = (req as any).adminId;
+
+  const keywords = req.query.keywords as string;  
+  const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
+
+    const categoryId = req.query.categoryId as string;
+
+    const currency = req.query.currency as string;
+
+  const pageSize = req.query.pageSize ? parseInt(req.query.pageSize as string, 10) : 20;
+    const shippingCountry = req.query.shippingCountry as string;
+
+    if (!categoryId ) {
+      res.status(400).json({ message: "Category ID is required" });
+      return;
+    }
+     
+    if (currency && currency !== 'USD' && currency !== "NGN" ) {
+      res.status(400).json({ message: "Currency must be either 'USD' or 'NGN'" });
+      return;
+    }
+
+
+    if (keywords && keywords.trim().length === 0) {
+      res.status(400).json({ message: "Keywords cannot be empty" });
+      return;
+    }
+
+    if (!shippingCountry) {
+      res.status(400).json({ message: "Shipping country is required" });
+      return;
+    }
+
+    const products = await dropShippingService.getProducts({
+      keywords, 
+      pageNo: page, 
+      pageSize,
+      categoryId,
+      shipToCountry: shippingCountry, 
+      currency: currency as AE_Currency,
+      vendorId,
+    });
+  
+
+    res.status(200).json({ data: products });
+  } catch (error: any) {
+    logger.error(
+      `Error retrieving dropshipping products: ${error.message}`,
+    );
+    res.status(500).json({
+      message:
+        "An error occurred while retrieving dropshipping products.",
+    });
+  }
+
+
+}
+
+export async function getAliExpressProductDetails(req: Request, res: Response): Promise<void> {
+  try {
+const vendorId = (req as any).adminId;
+
+const productId = req.params.productId 
+
+    const shipToCountry = req.query.shippingCountry as string;
+
+    const currency = req.query.currency as string;
+
+    if (!productId) {
+      res.status(400).json({ message: "Product ID is required" });
+      return;
+    }
+
+    if (!shipToCountry) {
+      res.status(400).json({ message: "Shipping country is required" });
+      return;
+    }
+
+    if (currency && currency !== 'USD' && currency !== "NGN" ) {
+      res.status(400).json({ message: "Currency must be either 'USD' or 'NGN'" });
+      return;
+    }
+
+    const productDetails = await dropShippingService.getProductById(vendorId,Number(productId),shipToCountry,currency as AE_Currency);
+
+    if (!productDetails) {
+      res.status(404).json({ message: "Product not found" });
+      return;
+    }
+
+    res.status(200).json({ data: productDetails });
+  } catch (error: any) {
+    logger.error(
+      `Error retrieving dropshipping product details: ${error.message}`,
+    );
+    res.status(500).json({
+      message:
+        "An error occurred while retrieving dropshipping product details.",
+    });
+  }
+}
+
+export async function addAliexpressProductToInventory(req: Request, res: Response): Promise<void> {
+
+	const transaction = await sequelizeService.connection!.transaction();
+  try {
+    const { productId, shippingCountry, currency , storeId , categoryId, priceIncrementPercent } = req.body;
+    // @ts-ignore
+    const vendorId = req.adminId ;
+
+    if (!productId) {
+
+      res.status(400).json({ message: "Product ID is required" });
+
+      await transaction.rollback();
+
+      return;
+    }
+
+    if (!shippingCountry) {
+
+      res.status(400).json({ message: "Shipping country is required" });
+
+      await transaction.rollback();
+
+      return;
+    }
+
+    if (shippingCountry.trim() === "") {
+      res.status(400).json({ message: "Shipping country cannot be empty" });
+
+      await transaction.rollback();
+
+      return;
+    }
+
+    if(shippingCountry !== "US" && shippingCountry !== "NG" && shippingCountry !== "UK" ) {
+      res.status(400).json({ message: "Shipping country must be either 'US', 'NG' or 'UK'" });
+
+      await transaction.rollback();
+
+      return;
+    }
+
+    if (currency && currency !== 'USD' && currency !== "NGN" ) {
+
+      res.status(400).json({ message: "Currency must be either 'USD' or 'NGN'" });
+
+      await transaction.rollback();
+
+      return;
+    } 
+
+    if (!storeId) {
+
+      res.status(400).json({ message: "Store ID is required" });
+
+      await transaction.rollback();
+
+      return;
+    }
+
+  const store = await Store.findByPk(storeId, {
+      include: [
+        {
+          model: Currency,
+          as: "currency",
+        },
+      ],
+    });
+
+    if (!store) {
+
+      res.status(404).json({ message: "Store not found" });
+
+      await transaction.rollback();
+
+      return;
+    }
+
+    if (!store.currency) {
+
+      res.status(400).json({ message: "Store does not have a currency set" });
+
+      await transaction.rollback();
+
+      return;
+    }
+
+    if (store.currency.name.toLowerCase() === "dollar" && currency !== 'USD' || store.currency.name.toLowerCase() === "naira" && currency !== 'NGN') {
+
+      res.status(400).json({ message: `Currency mismatch: Store currency is ${store.currency.name}, but received ${currency}` });
+
+      await transaction.rollback();
+
+      return;
+    }
+
+    const productDetails = await dropShippingService.getProductById(vendorId,Number(productId),shippingCountry,currency as AE_Currency);
+
+    if (!productDetails) {
+
+      res.status(404).json({ message: "Product not found" });
+      
+      await transaction.rollback();
+
+      return;
+    }
+
+    const lowestPricedVariant = productDetails.ae_item_sku_info_dtos.reduce((prev, curr) => {
+      return (prev.offer_sale_price < curr.offer_sale_price) ? prev : curr;
+    });
+
+    const productImages = productDetails.ae_multimedia_info_dto.image_urls.split(';');
+
+    //@ts-ignore
+    const productVideoUrl = productDetails?.ae_multimedia_info_dto.ae_video_dtos?.[0]?.media_url as string ?? "";
+
+    const productPrice = new Decimal(lowestPricedVariant.offer_sale_price).plus(
+      new Decimal(lowestPricedVariant.offer_sale_price)
+        .mul(new Decimal(priceIncrementPercent))
+        .div(new Decimal(100)),
+    ).toFixed(2);
+
+    const variantIncrementedPrices = productDetails.ae_item_sku_info_dtos.map(variant => {
+      const incrementedPrice = new Decimal(variant.offer_sale_price).plus(
+        new Decimal(variant.offer_sale_price)
+          .mul(new Decimal(priceIncrementPercent))
+          .div(new Decimal(100)),
+      ).toFixed(2);
+
+      return {
+        ...variant,
+        offer_sale_price: incrementedPrice,
+      };
+    });
+
+    const newProduct = await Product.create({
+      storeId: store.id,
+      vendorId,
+      categoryId: categoryId || null,
+      name: productDetails.ae_item_base_info_dto.subject,
+      description: productDetails.ae_item_base_info_dto.detail,
+      specification: productDetails.ae_item_base_info_dto.mobile_detail,
+      sku: `KDM-${uuidv4()}`,
+      type: 'dropship',
+      price: lowestPricedVariant.sku_price,
+      discount_price: productPrice,
+      condition: "brand_new",
+      quantity: lowestPricedVariant.sku_available_stock,
+      image_url: productImages[0],
+      video_url: productVideoUrl || null,
+      additional_images: productImages,
+      variants: variantIncrementedPrices,
+    }, { transaction });
+
+    await DropshipProducts.create({
+      productId: newProduct.id,
+      dropshipProductId: String(productDetails.ae_item_base_info_dto.product_id),
+      vendorId,
+      priceIncrementPercent,
+    }, { transaction });
+
+    await transaction.commit();
+
+    res.status(200).json({
+      message: "Dropshipping product added to inventory successfully",
+      data: newProduct,
+    });
+
+  } catch (error: any) {
+    console.error(error);
+    logger.error(error);
+
+    logger.error(
+      `Error adding dropshipping product to catalog: ${error.message}`,
+    );
+
+    await transaction.rollback();
+
+    res.status(500).json({
+      message:
+        "An error occurred while adding dropshipping product to catalog.",
+    });
+  }
+}
+
+// export async function getAliExpressDropshipCredsStatus(req: Request, res: Response): Promise<void> {
+//   try {
+//     const vendorId = (req as any).adminId;
+//
+//     const credsStatus = await DropShippingCred.findOne({
+//       where: {
+//         vendorId,
+//       },
+//     });
+//
+//     if (!credsStatus) {
+//       res.status(200).json({ data: { message: "No credentials found", isSet: false } });
+//       return;
+//     }
+//
+//     res.status(200)
+//       .json({  data: { message: "Credentials found", creds: credsStatus, isSet: true } });
+//   }
+//   catch (error: any) {
+//     logger.error(
+//       `Error retrieving dropshipping credentials status: ${error.message}`,
+//     );
+//     res.status(500).json({
+//       message:
+//         "An error occurred while retrieving dropshipping credentials status.",
+//     });
+//   }
+// }
+
+
+export async function getAliExpressDropshipCredsStatus(
+	req: Request,
+	res: Response,
+): Promise<void> {
+	try {
+		const vendorId = (req as any).adminId;
+
+		const credsStatus = await DropShippingCred.findOne({
+			where: {
+				vendorId,
+			},
+		});
+
+		if (!credsStatus) {
+			res.status(200).json({
+				data: {
+					isConnected: false,
+					message:  "No AliExpress account connected",
+					statusColor: "gray",
+				},
+			});
+			return;
+		}
+
+		// Check if tokens are expired
+		const now = Date.now();
+		const isAccessTokenExpired = credsStatus.expireTime < now;
+		const isRefreshTokenExpired = credsStatus.refreshTokenValidTime < now;
+
+		// Calculate time remaining
+		const accessTokenMinutes = Math.max(
+			0,
+			Math.floor((credsStatus.expireTime - now) / 1000 / 60),
+		);
+		const refreshTokenHours = Math.max(
+			0,
+			Math.floor((credsStatus.refreshTokenValidTime - now) / 1000 / 60 / 60),
+		);
+
+		// Format expiry times in human-readable format
+		const formatExpiryTime = (minutes: number): string => {
+			if (minutes === 0) return "Expired";
+			if (minutes < 60) return `${minutes} minute${minutes !== 1 ? "s" : ""}`;
+			const hours = Math.floor(minutes / 60);
+			const mins = minutes % 60;
+			if (mins === 0) return `${hours} hour${hours !== 1 ? "s" : ""}`;
+			return `${hours} hour${hours !== 1 ? "s" : ""} ${mins} minute${mins !== 1 ? "s" : ""}`;
+		};
+
+		const formatRefreshExpiryTime = (hours: number): string => {
+			if (hours === 0) return "Expired";
+			if (hours < 24) return `${hours} hour${hours !== 1 ? "s" : ""}`;
+			const days = Math.floor(hours / 24);
+			const remainingHours = hours % 24;
+			if (remainingHours === 0)
+				return `${days} day${days !== 1 ? "s" : ""}`;
+			return `${days} day${days !== 1 ? "s" : ""} ${remainingHours} hour${remainingHours !== 1 ?  "s" : ""}`;
+		};
+
+		// Format dates
+		const formatDate = (date: Date): string => {
+			return new Date(date).toLocaleDateString("en-US", {
+				year: "numeric",
+				month:  "long",
+				day: "numeric",
+				hour: "2-digit",
+				minute: "2-digit",
+			});
+		};
+
+		// Determine connection status
+		let status:  "active" | "expiring_soon" | "expired";
+		let statusMessage: string;
+		let statusBadge: string;
+		let statusColor: string;
+		let showReconnectButton: boolean;
+
+		if (isRefreshTokenExpired) {
+			status = "expired";
+			statusBadge = "✗ Expired";
+			statusMessage =
+				"Your AliExpress connection has expired. Please reconnect your account to continue dropshipping.";
+			statusColor = "red";
+			showReconnectButton = true;
+		} else if (accessTokenMinutes < 60) {
+			// Less than 1 hour
+			status = "expiring_soon";
+			statusBadge = "⚠ Expiring Soon";
+			statusMessage =
+				"Your AliExpress connection will expire soon. It will automatically refresh. ";
+			statusColor = "orange";
+			showReconnectButton = false;
+		} else {
+			status = "active";
+			statusBadge = "✓ Active";
+			statusMessage =
+				"Your AliExpress account is connected and working properly.";
+			statusColor = "green";
+			showReconnectButton = false;
+		}
+
+		res.status(200).json({
+			data: {
+				isConnected: true,
+				status,
+				statusBadge,
+				statusColor,
+				message: statusMessage,
+				showReconnectButton,
+				account: {
+					email: credsStatus.account,
+					nickname: credsStatus.userNick,
+					sellerId: credsStatus.sellerId,
+					platform:
+						credsStatus.accountPlatform === "seller_center"
+							? "Seller Center"
+							: credsStatus.accountPlatform,
+				},
+				expiryInfo: {
+					accessToken: {
+						label: "Access Token",
+						expiresIn: formatExpiryTime(accessTokenMinutes),
+						isExpired: isAccessTokenExpired,
+					},
+					refreshToken: {
+						label: "Refresh Token",
+						expiresIn: formatRefreshExpiryTime(refreshTokenHours),
+						isExpired: isRefreshTokenExpired,
+					},
+				},
+				timestamps: {
+					connectedAt: formatDate(credsStatus.createdAt),
+					lastUpdated: formatDate(credsStatus.updatedAt),
+				},
+			},
+		});
+	} catch (error: any) {
+		logger.error(
+			`Error retrieving dropshipping credentials status: ${error. message}`,
+		);
+		res.status(500).json({
+			message:
+				"An error occurred while retrieving dropshipping credentials status.",
+		});
+	}
+}
+
+
+
+

@@ -1424,6 +1424,49 @@ export const ValidateServiceBooking = () => {
 	];
 };
 
+export const addAliexpressProductValidation = () => {
+	return [
+		check("storeId").isUUID().withMessage("Store ID must be a valid UUID."),
+		check("categoryId")
+			.isUUID()
+			.withMessage("Category ID must be a valid UUID."),
+		check("productId")
+			.isString()
+			.withMessage("Product ID must be a valid string."),
+		check("shippingCountry")
+			.isString()
+			.withMessage("Shipping country must be a valid string.")
+			.isIn(["US", "UK", "NG"])
+			.withMessage(
+				"Shipping country must be one of the supported countries: US, UK, NG.",
+			),
+		check("currency")
+			.isString()
+			.withMessage("Currency must be a valid string.")
+			.isIn(["USD", "NGN"])
+			.withMessage("Currency must be either USD or NGN."),
+		check("priceIncrementPercent")
+			.optional({ checkFalsy: true })
+			.isDecimal({ decimal_digits: "0,2" })
+			.custom((value) => {
+				if (Number(value) < 0) {
+					throw new Error("Price increment percent cannot be negative.");
+				}
+
+				if (Number(value) > 100) {
+					throw new Error(
+						"Price increment percent cannot be greater than 100.",
+					);
+				}
+
+				return true;
+			})
+			.withMessage(
+				"Price increment percent must be a valid decimal number with up to two decimal places.",
+			),
+	];
+};
+
 // Middleware to handle validation errors, sending only the first error
 export const validate = (
 	req: Request,

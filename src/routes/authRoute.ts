@@ -17,6 +17,7 @@ import {
 	validateUUIDParam,
 } from "../utils/validations"; // Import the service
 import authMiddleware from "../middlewares/authMiddleware";
+import adminAuthMiddleware from "../middlewares/adminAuthMiddleware";
 
 const authRoutes = Router();
 
@@ -187,6 +188,19 @@ authRoutes.get(
 	"/services/categories/:categoryId/attributes",
 	paginationQueryParamsValidation(),
 	homeController.getAttributesForServiceCategory,
+);
+
+authRoutes.post(
+	"/aliexpress/create-account",
+	adminAuthMiddleware,
+	authController.createAliexpressAccount,
+);
+
+authRoutes.get("/aliexpress/auth", authController.aliExpressAuth);
+
+authRoutes.get(
+	"/aliexpress/auth-callback",
+	authController.aliExpressAuthCallback,
 );
 
 export default authRoutes; // Export the router

@@ -2,7 +2,13 @@
 import { Request, Response } from "express";
 import User from "../models/user";
 import { Op, Sequelize } from "sequelize";
-import { generateOTP, initStripe, verifyPayment } from "../utils/helpers";
+import {
+	generateOTP,
+	initializePaystackPayment,
+	initStripe,
+	splitPhoneNumber,
+	verifyPayment,
+} from "../utils/helpers";
 import { sendMail } from "../services/mail.service";
 import { emailTemplates } from "../utils/messages";
 import JwtService from "../services/jwt.service";
@@ -46,6 +52,15 @@ import Services from "../models/services";
 import ServiceBookings from "../models/servicebookings";
 import ServiceReviews from "../models/servicereview";
 import Decimal from "decimal.js";
+import {
+	AddressChild,
+	DropShippingService,
+} from "../services/dropShipping.service";
+import DropshipProducts from "../models/dropshipProducts";
+import * as uuid from "uuid";
+import { BadRequestError } from "../utils/ApiError";
+
+const dropShippingService = new DropShippingService();
 
 export const logout = async (req: Request, res: Response): Promise<void> => {
 	try {
@@ -999,12 +1014,13 @@ export const addItemToCart = async (
 		return;
 	}
 
-	const { productId, quantity } = req.body;
+	const { productId, quantity, dropshipProductSkuId, dropshipProductSkuAttr } =
+		req.body;
 
 	try {
 		// Find the product by productId and include vendor and currency details
 		const product = await Product.findByPk(productId, {
-			attributes: ["vendorId", "name", "quantity"], // Include quantity in the attributes
+			attributes: ["vendorId", "name", "quantity", "type"], // Include quantity in the attributes
 			include: [
 				{
 					model: Store,
@@ -1019,6 +1035,18 @@ export const addItemToCart = async (
 				},
 			],
 		});
+
+		if (
+			product?.type === "dropship" &&
+			(!dropshipProductSkuId || !dropshipProductSkuAttr)
+		) {
+			res.status(400).json({
+				message:
+					"Dropship product SKU ID and attribute are required for dropship products.",
+			});
+
+			return;
+		}
 
 		if (!product || !product.store || !product.store.currency) {
 			res
@@ -1154,7 +1182,16 @@ export const addItemToCart = async (
 			});
 
 			// Add a new item to the cart
-			await Cart.create({ userId, productId, quantity });
+			await Cart.create({
+				userId,
+				productId,
+				quantity,
+				productType: product.type,
+				...(dropshipProductSkuAttr && { dropshipProductSkuAttr }),
+				...(dropshipProductSkuId && {
+					dropshipProductSkuId: String(dropshipProductSkuId),
+				}),
+			});
 		}
 
 		res.status(200).json({ message: "Item added to cart successfully." });
@@ -1383,9 +1420,753 @@ export const getActivePaymentGateways = async (
 	}
 };
 
+async function getTotalAliexpressDeliveryFee(
+	dropShippedProducts: Cart[],
+	shipToCountryCode: string,
+	user: User,
+) {
+	try {
+		let totalDeliveryFee = [];
+
+		if (dropShippedProducts.length > 0) {
+			totalDeliveryFee = await Promise.all(
+				dropShippedProducts.map(async (cartItem) => {
+					const product = cartItem.product;
+
+					if (!product) {
+						throw new Error(`Product with ID ${cartItem.productId} not found`);
+					}
+
+					const deliveryFee = await dropShippingService.calculateDeliveryFee(
+						product.vendorId!,
+						{
+							sku_id: String(cartItem.dropshipProductSkuId),
+							ship_to_country_code: shipToCountryCode,
+							ship_to_city_code: `${user.location?.city} ${user.location?.state}`,
+							ship_to_province_code: user.location?.state,
+							//@ts-ignore
+							product_id: product.dropshipDetails?.dropshipProductId,
+							product_num: cartItem.quantity,
+							//@ts-ignore
+							price_currency: shipToCountryCode === "NG" ? "NGN" : "USD",
+						},
+					);
+
+					const response = deliveryFee.aliexpress_ds_freight_query_response;
+
+					if (!response) {
+						return {
+							deliveryFee: 0,
+						};
+					}
+
+					const result = response.result.delivery_options;
+
+					if (
+						!result.delivery_option_d_t_o ||
+						!result.delivery_option_d_t_o[0].shipping_fee_cent ||
+						result.delivery_option_d_t_o.length === 0
+					) {
+						return {
+							deliveryFee: 0,
+						};
+					}
+
+					return {
+						//@ts-ignore
+						deliveryFee:
+							//@ts-ignore
+							result.delivery_option_d_t_o[0].shipping_fee_cent || 0,
+					};
+				}),
+			);
+		} else {
+			totalDeliveryFee = [{ deliveryFee: 0 }];
+		}
+
+		const summedDeliveryFee = totalDeliveryFee.reduce(
+			(accumulator, current) =>
+				new Decimal(accumulator).plus(new Decimal(current.deliveryFee)),
+			new Decimal(0),
+		);
+
+		return summedDeliveryFee.toNearest(0.01).toNumber();
+	} catch (error) {
+		logger.error("Error calculating total Aliexpress delivery fee:", error);
+		throw error;
+	}
+}
+
+export const getAliexpressAddressOptions = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const userId = (req as AuthenticatedRequest).user?.id; // Get the authenticated user's ID
+
+	const shipToCountryCode = req.query.shipToCountryCode as string;
+
+	if (!shipToCountryCode) {
+		res.status(400).json({ message: "Ship to country code is required" });
+		return;
+	}
+
+	if (
+		shipToCountryCode !== "NG" &&
+		shipToCountryCode !== "US" &&
+		shipToCountryCode !== "UK"
+	) {
+		res
+			.status(400)
+			.json({ message: "Ship to country code must be either NG, US, or UK" });
+		return;
+	}
+
+	try {
+		const userCart = await Cart.findAll({
+			where: { userId },
+			include: [
+				{
+					model: Product,
+					as: "product",
+					attributes: ["id", "vendorId", "name", "price"],
+					include: [
+						{
+							model: DropshipProducts,
+							as: "dropshipDetails",
+						},
+					],
+				},
+			],
+		});
+
+		const vendorIds = Array.from(
+			new Set(
+				userCart
+					.filter((item) => item.productType === "dropship")
+					.map((item) => item.product?.vendorId),
+			),
+		);
+
+		if (vendorIds.length === 0) {
+			res.status(400).json({ message: "No dropshipped products in cart" });
+			return;
+		}
+
+		const addressOptions = await dropShippingService.getAddressSuggestions(
+			vendorIds[0] as string,
+			{
+				countryCode: shipToCountryCode,
+				language: "en",
+				isMultiLanguage: true,
+			},
+		);
+		console.log(addressOptions);
+
+		res.status(200).json({
+			message: "Aliexpress address options fetched successfully",
+			data: {
+				...addressOptions,
+				children: JSON.parse(
+					//@ts-ignore
+					addressOptions.children,
+				) as AddressChild[],
+			},
+		});
+	} catch (error: any) {
+		logger.error("Error fetching Aliexpress address options:", error);
+		res.status(500).json({
+			message: "An error occurred while fetching Aliexpress address options",
+		});
+	}
+};
+
+export const calculateAliexpressDeliveryFee = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const userId = (req as AuthenticatedRequest).user?.id; // Get the authenticated user's ID
+
+	// const curreny = req.query.currency as string;
+	const shipToCountryCode = req.query.shipToCountryCode as string;
+	try {
+		if (!shipToCountryCode) {
+			res.status(400).json({ message: "Ship to country code is required" });
+			return;
+		}
+
+		if (
+			shipToCountryCode !== "NG" &&
+			shipToCountryCode !== "US" &&
+			shipToCountryCode !== "UK"
+		) {
+			res
+				.status(400)
+				.json({ message: "Ship to country code must be either NG, US, or UK" });
+			return;
+		}
+
+		const cartItems = await Cart.findAll({
+			where: { userId },
+			include: [
+				{
+					model: Product,
+					as: "product",
+					attributes: ["id", "vendorId", "name", "price"],
+					include: [
+						{
+							model: DropshipProducts,
+							as: "dropshipDetails",
+						},
+					],
+				},
+			],
+		});
+
+		const user = await User.findByPk(userId);
+
+		if (!user) {
+			res.status(404).json({ message: "User not found" });
+			return;
+		}
+
+		if (!user.location) {
+			res.status(400).json({
+				message: "User location is required to calculate delivery fee",
+			});
+			return;
+		}
+
+		if (!user.location.city) {
+			res.status(400).json({
+				message: "User city is required to calculate delivery fee",
+			});
+			return;
+		}
+
+		if (!user.location.state) {
+			res.status(400).json({
+				message: "User state is required to calculate delivery fee",
+			});
+			return;
+		}
+
+		if (!user.location.country) {
+			res.status(400).json({
+				message: "User country is required to calculate delivery fee",
+			});
+			return;
+		}
+
+		const dropShippedProducts = cartItems.filter(
+			(item) => item.productType === "dropship",
+		);
+
+		const deliveryFee = await getTotalAliexpressDeliveryFee(
+			dropShippedProducts,
+			shipToCountryCode,
+			user,
+		);
+
+		res.status(200).json({
+			message: "Aliexpress delivery fee calculated successfully",
+			data: {
+				totalDeliveryFee: deliveryFee,
+			},
+		});
+	} catch (error: any) {
+		logger.error("Error calculating Aliexpress delivery fee:", error);
+		res.status(500).json({
+			message: "An error occurred while calculating Aliexpress delivery fee",
+		});
+	}
+};
+
+export const prepareCheckoutNaira = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const userId = (req as AuthenticatedRequest).user?.id; // Get authenticated user ID
+
+		const userCart = await Cart.findAll({
+			where: { userId },
+			include: [
+				{
+					model: Product,
+					as: "product",
+					include: [
+						{
+							model: Store,
+							as: "store",
+							include: [
+								{
+									model: Currency,
+									as: "currency",
+									attributes: ["name", "symbol"],
+								},
+							],
+						},
+						{
+							model: DropshipProducts,
+							as: "dropshipDetails",
+						},
+					],
+				},
+			],
+		});
+
+		if (!userCart || userCart.length === 0) {
+			res.status(400).json({ message: "Cart is empty" });
+			return;
+		}
+
+		userCart.forEach((cartItem) => {
+			const product = cartItem.product;
+			if (!product || !product.store || !product.store.currency) {
+				throw new Error(
+					`Product with ID ${cartItem.productId} not found or invalid currency data`,
+				);
+			}
+
+			if (
+				!userCart.every(
+					(item) =>
+						item.product &&
+						item.product.store &&
+						item.product.store.currency &&
+						item.product.store.currency.name.toLowerCase() === "naira",
+				)
+			) {
+				res.status(400).json({
+					message:
+						"All products in the cart must be priced in NGN for this checkout.",
+				});
+				return;
+			}
+		});
+
+		const user = await User.findByPk(userId);
+
+		if (!user) {
+			res.status(404).json({ message: "User not found" });
+			return;
+		}
+
+		const dropshipItems = userCart.filter(
+			(item) => item.productType === "dropship",
+		);
+
+		let deliveryFee = 0;
+		if (dropshipItems.length > 0) {
+			deliveryFee = await getTotalAliexpressDeliveryFee(
+				dropshipItems,
+				"NG",
+				user,
+			);
+		}
+
+		// Get Admin's product charges
+		const productCharges = await ProductCharge.findAll({
+			where: { is_active: true },
+		});
+
+		// Calculate total price and validate inventory
+		let totalAmount = new Decimal(0);
+		let totalChargeAmount = new Decimal(0);
+		for (const cartItem of userCart) {
+			const product = cartItem.product;
+			if (!product) {
+				throw new Error(`Product with ID ${cartItem.productId} not found`);
+			}
+
+			let productPrice: Decimal;
+			if (product.type === "in_stock") {
+				// Check if product.quantity is defined and if there's enough stock before proceeding
+				const availableQuantity = product.quantity ?? 0; // If quantity is undefined, fallback to 0
+				if (availableQuantity < cartItem.quantity) {
+					throw new BadRequestError(
+						`Insufficient stock for product: ${product.name}`,
+					);
+				}
+
+				productPrice = new Decimal(
+					(product.discount_price ?? 0) > 0
+						? product.discount_price ?? 0
+						: product.price ?? 0,
+				);
+			} else if (product.type === "dropship") {
+				const dropshipProductVariant = product.variants?.find(
+					(variant) => variant.sku_id === cartItem.dropshipProductSkuId,
+				);
+
+				if (!dropshipProductVariant) {
+					throw new Error(
+						`Dropship product variant with SKU ID ${cartItem.dropshipProductSkuId} not found for product: ${product.name}`,
+					);
+				}
+
+				const availableQuantity =
+					dropshipProductVariant.sku_available_stock ?? 0;
+
+				if (availableQuantity < cartItem.quantity) {
+					throw new BadRequestError(
+						`Insufficient stock for dropship product variant with SKU ID ${cartItem.dropshipProductSkuId} for product: ${product.name}`,
+					);
+				}
+
+				productPrice = new Decimal(
+					//@ts-ignore
+					(dropshipProductVariant.offer_sale_price ?? 0) > 0
+						? dropshipProductVariant.offer_sale_price ?? 0
+						: dropshipProductVariant.sku_price ?? 0,
+				);
+			} else {
+				throw new Error(`Unknown product type for product: ${product.name}`);
+			}
+
+			// Check for product charge percentage
+			const productChargePercentage = productCharges.find(
+				(charge) =>
+					charge.charge_currency === "NGN" &&
+					charge.calculation_type === "percentage" &&
+					new Decimal(productPrice).greaterThanOrEqualTo(
+						charge.minimum_product_amount,
+					) &&
+					new Decimal(productPrice).lessThanOrEqualTo(
+						charge.maximum_product_amount,
+					),
+			);
+
+			// Check for product charge amount
+			const productChargeAmount = productCharges.find(
+				(charge) =>
+					charge.charge_currency === "NGN" &&
+					charge.calculation_type === "fixed" &&
+					new Decimal(productPrice).greaterThanOrEqualTo(
+						charge.minimum_product_amount,
+					) &&
+					new Decimal(productPrice).lessThanOrEqualTo(
+						charge.maximum_product_amount,
+					),
+			);
+
+			let chargeAmount = new Decimal(0);
+
+			if (productChargePercentage) {
+				// Calculate percentage charge
+				chargeAmount = chargeAmount
+					.plus(new Decimal(productPrice ?? 0))
+					.mul(new Decimal(productChargePercentage.charge_percentage).div(100))
+					.toNearest(0.01);
+			} else if (productChargeAmount) {
+				// Use fixed amount charge
+				chargeAmount = chargeAmount
+					.plus(productChargeAmount.charge_amount ?? 0)
+					.toNearest(0.01);
+			}
+
+			// Calculate total amount for this cart item
+			totalAmount = totalAmount
+				.plus(productPrice.plus(chargeAmount).mul(cartItem.quantity))
+				.toNearest(0.01);
+
+			// totalAmount += product.price * cartItem.quantity;
+		}
+
+		totalAmount = totalAmount.plus(new Decimal(deliveryFee)).toNearest(0.01);
+
+		const paymentGateway = await PaymentGateway.findOne({
+			where: {
+				name: "Paystack",
+				isActive: true,
+			},
+		});
+
+		if (!paymentGateway || !paymentGateway.publicKey) {
+			throw new Error("Active Paystack gateway not configured");
+		}
+
+		const secretKey = paymentGateway.secretKey;
+
+		const uuidv4 = uuid.v4;
+
+		const refId = `psk_${uuidv4()}_${Date.now()}`;
+
+		const paystack = await initializePaystackPayment(
+			refId,
+			totalAmount.toNumber(),
+			user.email,
+			secretKey,
+		);
+
+		res.status(200).json({
+			message: "Cart validated for Naira checkout",
+			data: {
+				refId,
+				totalAmount: totalAmount.toNumber(),
+				subTotalAmount: {
+					amount: totalAmount
+						.minus(new Decimal(deliveryFee))
+						.minus(totalChargeAmount)
+						.toNumber(),
+					totalChargeAmount: totalChargeAmount.toNumber(),
+					totalDeliveryFee: deliveryFee,
+				},
+				paystackDetails: paystack,
+			},
+		});
+	} catch (error: any) {
+		logger.error(error);
+
+		res
+			.status(500)
+			.json({ message: error.message || "Error preparing checkout." });
+	}
+};
+
+export const prepareCheckoutDollar = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const userId = (req as AuthenticatedRequest).user?.id; // Get authenticated user ID
+
+	const userCart = await Cart.findAll({
+		where: { userId },
+		include: [
+			{
+				model: Product,
+				as: "product",
+				include: [
+					{
+						model: Store,
+						as: "store",
+						include: [
+							{
+								model: Currency,
+								as: "currency",
+								attributes: ["name", "symbol"],
+							},
+						],
+					},
+					{
+						model: DropshipProducts,
+						as: "dropshipDetails",
+					},
+				],
+			},
+		],
+	});
+
+	try {
+		if (!userCart || userCart.length === 0) {
+			res.status(400).json({ message: "Cart is empty" });
+			return;
+		}
+
+		userCart.forEach((cartItem) => {
+			const product = cartItem.product;
+			if (!product || !product.store || !product.store.currency) {
+				throw new Error(
+					`Product with ID ${cartItem.productId} not found or invalid currency data`,
+				);
+			}
+
+			const productCurrency = product.store.currency;
+
+			// Ensure product currency is either $, #, or ₦
+			const allowedCurrencies = ["$", "#", "₦"];
+			if (!allowedCurrencies.includes(productCurrency.symbol)) {
+				res.status(400).json({
+					message: `Only products with currencies ${allowedCurrencies.join(", ")} are allowed.`,
+				});
+				return;
+			}
+
+			if (
+				!userCart.every(
+					(item) =>
+						item.product &&
+						item.product.store &&
+						item.product.store.currency &&
+						item.product.store.currency.name.toLowerCase() === "dollar",
+				)
+			) {
+				res.status(400).json({
+					message:
+						"All products in the cart must be priced in USD for this checkout.",
+				});
+				return;
+			}
+		});
+
+		const user = await User.findByPk(userId);
+
+		if (!user) {
+			res.status(404).json({ message: "User not found" });
+			return;
+		}
+
+		const dropshipItems = userCart.filter(
+			(item) => item.productType === "dropship",
+		);
+
+		let deliveryFee = 0;
+		if (dropshipItems.length > 0) {
+			deliveryFee = await getTotalAliexpressDeliveryFee(
+				dropshipItems,
+				user.location?.country === "united states" ||
+					user.location?.country === "usa" ||
+					user.location?.country === "united states of america"
+					? "US"
+					: "UK",
+				user,
+			);
+		}
+
+		// Get Admin's product charges
+		const productCharges = await ProductCharge.findAll({
+			where: { is_active: true },
+		});
+
+		// Calculate total price and validate inventory
+		let totalAmount = new Decimal(0);
+		let totalChargeAmount = new Decimal(0);
+		for (const cartItem of userCart) {
+			const product = cartItem.product;
+			if (!product) {
+				throw new Error(`Product with ID ${cartItem.productId} not found`);
+			}
+
+			let productPrice = new Decimal(0);
+			if (product.type === "in_stock") {
+				// Check if product.quantity is defined and if there's enough stock before proceeding
+				const availableQuantity = product.quantity ?? 0; // If quantity is undefined, fallback to 0
+				if (availableQuantity < cartItem.quantity) {
+					throw new Error(`Insufficient stock for product: ${product.name}`);
+				}
+
+				productPrice = new Decimal(
+					(product.discount_price ?? 0) > 0
+						? product.discount_price ?? 0
+						: product.price ?? 0,
+				);
+			} else if (product.type === "dropship") {
+				const dropshipProductVariant = product.variants?.find(
+					(variant) => variant.sku_id === cartItem.dropshipProductSkuId,
+				);
+
+				if (!dropshipProductVariant) {
+					throw new Error(
+						`Dropship product variant with SKU ID ${cartItem.dropshipProductSkuId} not found for product: ${product.name}`,
+					);
+				}
+
+				const availableQuantity =
+					dropshipProductVariant.sku_available_stock ?? 0;
+
+				if (availableQuantity < cartItem.quantity) {
+					throw new Error(
+						`Insufficient stock for dropship product variant with SKU ID ${cartItem.dropshipProductSkuId} for product: ${product.name}`,
+					);
+				}
+
+				productPrice = new Decimal(
+					//@ts-ignore
+					(dropshipProductVariant.offer_sale_price ?? 0) > 0
+						? dropshipProductVariant.offer_sale_price ?? 0
+						: dropshipProductVariant.sku_price ?? 0,
+				);
+			} else {
+				throw new Error(`Unknown product type for product: ${product.name}`);
+			}
+
+			// Check for product charge percentage
+			const productChargePercentage = productCharges.find(
+				(charge) =>
+					charge.charge_currency === "USD" &&
+					charge.calculation_type === "percentage" &&
+					new Decimal(productPrice).greaterThanOrEqualTo(
+						charge.minimum_product_amount,
+					) &&
+					new Decimal(productPrice).lessThanOrEqualTo(
+						charge.maximum_product_amount,
+					),
+			);
+
+			// Check for product charge amount
+			const productChargeAmount = productCharges.find(
+				(charge) =>
+					charge.charge_currency === "USD" &&
+					charge.calculation_type === "fixed" &&
+					new Decimal(productPrice).greaterThanOrEqualTo(
+						charge.minimum_product_amount,
+					) &&
+					new Decimal(productPrice).lessThanOrEqualTo(
+						charge.maximum_product_amount,
+					),
+			);
+
+			let chargeAmount = new Decimal(0);
+
+			if (productChargePercentage) {
+				// Calculate percentage charge
+				chargeAmount = chargeAmount
+					.plus(new Decimal(productPrice))
+					.mul(new Decimal(productChargePercentage.charge_percentage).div(100))
+					.toNearest(0.01);
+			} else if (productChargeAmount) {
+				// Use fixed amount charge
+				chargeAmount = chargeAmount
+					.plus(productChargeAmount.charge_amount ?? 0)
+					.toNearest(0.01);
+			}
+
+			// Calculate total amount for this cart item
+			totalAmount = totalAmount
+				.plus(productPrice.plus(chargeAmount).mul(cartItem.quantity))
+				.toNearest(0.01);
+
+			totalChargeAmount = totalChargeAmount.plus(chargeAmount).toNearest(0.01);
+
+			// totalAmount += product.price * cartItem.quantity;
+		}
+
+		totalAmount = totalAmount.plus(new Decimal(deliveryFee)).toNearest(0.01);
+
+		const stripe = await initStripe();
+
+		const paymentIntent = await stripe.paymentIntents.create({
+			amount: totalAmount.mul(100).toNumber(), // amount in cents
+			currency: "usd",
+			metadata: { userId: userId!.toString() },
+		});
+
+		res.status(200).json({
+			id: paymentIntent.id,
+			clientSecret: paymentIntent.client_secret,
+			totalAmount: totalAmount.toNumber(),
+			paymentBreakdown: {
+				currency: "USD",
+				chargeAmount: totalChargeAmount.toNearest(0.01).toNumber(),
+				subtotal: totalAmount
+					.minus(totalChargeAmount)
+					.toNearest(0.01)
+					.toNumber(),
+				deliveryFee: deliveryFee,
+			},
+		});
+	} catch (error: any) {
+		logger.error(error);
+		res
+			.status(500)
+			.json({ message: error.message || "Error during checkout." });
+		return;
+	}
+};
+
 export const checkout = async (req: Request, res: Response): Promise<void> => {
 	const userId = (req as AuthenticatedRequest).user?.id; // Get authenticated user ID
-	const { refId, shippingAddress } = req.body;
+	const { refId, shippingAddress, shippingAddressZipCode } = req.body;
 
 	if (!userId) {
 		res.status(400).json({ message: "User must be authenticated" });
@@ -1404,6 +2185,12 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 
 	const transaction = await sequelizeService.connection!.transaction();
 	let transactionCommitted = false;
+
+	// Fetch user before the for loop so it's available
+	const user = await User.findByPk(userId, { transaction });
+	if (!user) {
+		throw new Error(`User not found.`);
+	}
 
 	try {
 		// Fetch active Paystack secret key from PaymentGateway model
@@ -1443,11 +2230,19 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 					attributes: [
 						"id",
 						"name",
+						"type",
 						"price",
 						"discount_price",
 						"vendorId",
 						"quantity",
 						"sku",
+						"variants",
+					],
+					include: [
+						{
+							model: DropshipProducts,
+							as: "dropshipDetails",
+						},
 					],
 				},
 			],
@@ -1463,6 +2258,112 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 			where: { is_active: true },
 		});
 
+		// Filter out dropshipped products from cart items
+		const dropShippedProducts = cartItems.filter(
+			(item) => item.productType === "dropship",
+		);
+
+		let vendorsDropshipOrders = null;
+		// Place dropship orders with dropshipping service
+		if (dropShippedProducts.length > 0) {
+			const dropShippedVendorProducts = new Map<string, Cart[]>();
+
+			// Group cart items by vendorId
+			dropShippedProducts.forEach((cartItem) => {
+				const product = cartItem.product;
+				if (product) {
+					const vendorId = product.vendorId!;
+					if (!dropShippedVendorProducts.has(vendorId)) {
+						dropShippedVendorProducts.set(vendorId, []);
+					}
+					dropShippedVendorProducts.get(vendorId)!.push(cartItem);
+				}
+			});
+
+			const placeDropshipOrders = await Promise.all(
+				Array.from(dropShippedVendorProducts.entries()).map(
+					// Place dropship order for each vendor
+					async ([vendorId, cartItems]) => {
+						// Call the dropshipping service to place orders for these cart items
+						const productOrders = cartItems.map((cartItem) => ({
+							product_id: cartItem.product?.dropshipDetails.dropshipProductId,
+							product_count: cartItem.quantity as number,
+							sku_attr: cartItem.dropshipProductSkuAttr as string,
+						}));
+
+						// Determine user country code
+						const userCountry =
+							user?.location?.country?.toLowerCase() === "nigeria"
+								? "NG"
+								: user?.location?.country?.toLowerCase() === "united states" ||
+										user?.location?.country?.toLowerCase() === "usa" ||
+										user?.location?.country?.toLowerCase() ===
+											"united states of america"
+									? "US"
+									: "UK";
+
+						const userCity = user?.location?.city;
+
+						if (!shippingAddressZipCode) {
+							res
+								.status(400)
+								.json({ message: "Shipping address zip code is required" });
+							return;
+						}
+
+						const phoneNumberSplit = splitPhoneNumber(
+							user?.phoneNumber as string,
+						);
+
+						const dropshipOrderResponse = await dropShippingService.createOrder(
+							vendorId,
+							{
+								// @ts-ignore
+								products: productOrders,
+								shippingAddress: {
+									contact_person: `${user.firstName} ${user.lastName}`,
+									full_name: `${user.firstName} ${user.lastName}`,
+									country: userCountry,
+									province: user.location?.state as string,
+									city: userCity as string,
+									address: shippingAddress,
+									zip: shippingAddressZipCode,
+									mobile_no: phoneNumberSplit.phone_number,
+									phone_country: phoneNumberSplit.phone_country,
+									locale: "en_US",
+								},
+							},
+						);
+
+						return { vendorId, dropshipOrderResponse };
+					},
+				),
+			);
+
+			if (placeDropshipOrders.length === 0) {
+				throw new Error("Failed to place dropship orders.");
+			}
+
+			vendorsDropshipOrders = placeDropshipOrders;
+		}
+
+		// Calculate total Aliexpress delivery fee for dropshipped products
+		let totalAliexpressDeliveryFee = 0;
+		if (dropShippedProducts.length > 0) {
+			totalAliexpressDeliveryFee = await getTotalAliexpressDeliveryFee(
+				dropShippedProducts,
+				user.location?.country?.toLowerCase() === "nigeria"
+					? "NG"
+					: user.location?.country?.toLowerCase() === "united states" ||
+							user.location?.country?.toLowerCase() === "usa" ||
+							user.location?.country?.toLowerCase() ===
+								"united states of america"
+						? "US"
+						: "UK",
+				user,
+			);
+		}
+
 		// Calculate total price and validate inventory
 		let totalAmount = 0;
 		for (const cartItem of cartItems) {
@@ -1471,25 +2372,59 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 				throw new Error(`Product with ID ${cartItem.productId} not found`);
 			}
 
-			// Check if product.quantity is defined and if there's enough stock before proceeding
-			const availableQuantity = product.quantity ?? 0; // If quantity is undefined, fallback to 0
-			if (availableQuantity < cartItem.quantity) {
-				throw new Error(`Insufficient stock for product: ${product.name}`);
-			}
+			let productPrice = new Decimal(0);
 
-			const productPrice = new Decimal(
-				(product.discount_price ?? 0) > 0
-					? product.discount_price ?? 0
-					: product.price ?? 0,
-			);
+			if (product.type === "in_stock") {
+				// Check if product.quantity is defined and if there's enough stock before proceeding
+				const availableQuantity = product.quantity ?? 0; // If quantity is undefined, fallback to 0
+				if (availableQuantity < cartItem.quantity) {
+					throw new Error(`Insufficient stock for product: ${product.name}`);
+				}
+
+				productPrice = new Decimal(
+					(product.discount_price ?? 0) > 0
+						? product.discount_price ?? 0
+						: product.price ?? 0,
+				);
+			} else if (product.type === "dropship") {
+				const dropshipProductVariant = product.variants?.find(
+					(variant) => variant.sku_id === cartItem.dropshipProductSkuId,
+				);
+
+				if (!dropshipProductVariant) {
+					throw new Error(
+						`Dropship product variant with SKU ID ${cartItem.dropshipProductSkuId} not found for product: ${product.name}`,
+					);
+				}
+
+				const availableQuantity =
+					dropshipProductVariant.sku_available_stock ?? 0;
+
+				if (availableQuantity < cartItem.quantity) {
+					throw new Error(
+						`Insufficient stock for dropship product variant with SKU ID ${cartItem.dropshipProductSkuId} for product: ${product.name}`,
+					);
+				}
+
+				productPrice = new Decimal(
+					//@ts-ignore
+					(dropshipProductVariant.offer_sale_price ?? 0) > 0
+						? dropshipProductVariant.offer_sale_price ?? 0
+						: dropshipProductVariant.sku_price ?? 0,
+				);
+			} else {
+				throw new Error(
+					`Unknown product type for product: ${product.name}, type: ${product.type}`,
+				);
+			}
 
 			// Check for product charge percentage
 			const productChargePercentage = productCharges.find(
 				(charge) =>
 					charge.charge_currency === "NGN" &&
 					charge.calculation_type === "percentage" &&
-					Number(productPrice) >= Number(charge.minimum_product_amount) &&
-					Number(productPrice) <= Number(charge.maximum_product_amount),
+					productPrice.gte(charge.minimum_product_amount) &&
+					productPrice.lte(charge.maximum_product_amount),
 			);
 
 			// Check for product charge amount
@@ -1497,42 +2432,37 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 				(charge) =>
 					charge.charge_currency === "NGN" &&
 					charge.calculation_type === "fixed" &&
-					Number(productPrice) >= Number(charge.minimum_product_amount) &&
-					Number(productPrice) <= Number(charge.maximum_product_amount),
+					productPrice.gte(charge.minimum_product_amount) &&
+					productPrice.lte(charge.maximum_product_amount),
 			);
 
 			let chargeAmount = 0;
 			if (productChargePercentage) {
-				// console.log(
-				// 	`Applying charge percentage: ${productChargePercentage.charge_percentage}% for product ${product.name}`,
-				// );
-				// console.log(
-				// 	`Type of charge percentage: ${typeof productChargePercentage.charge_percentage}`,
-				// );
 				// Calculate percentage charge
-				chargeAmount +=
-					Number(productPrice ?? 0) *
-					(Number(productChargePercentage.charge_percentage) / 100);
+				chargeAmount += productPrice
+					.mul(Number(productChargePercentage.charge_percentage) / 100)
+					.toNearest(0.01)
+					.toNumber();
 			} else if (productChargeAmount) {
-				// console.log(
-				// 	`Applying fixed charge: ${productChargeAmount.charge_amount} for product ${product.name}`,
-				// );
-				// console.log(
-				// 	`Type of charge amount: ${typeof productChargeAmount.charge_amount}`,
-				// );
 				// Use fixed amount charge
 				chargeAmount += Number(productChargeAmount.charge_amount ?? 0);
 			}
 
-			// console.log(`Charge amount for product ${product.name}: ${chargeAmount}`);
-
 			// Calculate total amount for this cart item
-			totalAmount +=
-				(Number(productPrice) + Number(chargeAmount)) *
-				Number(cartItem.quantity);
+			totalAmount += productPrice
+				.plus(chargeAmount)
+				.mul(cartItem.quantity)
+				.toNearest(0.01)
+				.toNumber();
 
 			// totalAmount += product.price * cartItem.quantity;
 		}
+
+		// Add total Aliexpress delivery fee to total amount
+		totalAmount = new Decimal(totalAmount)
+			.plus(new Decimal(totalAliexpressDeliveryFee))
+			.toNearest(0.01)
+			.toNumber();
 
 		// Validate that the total amount matches the Paystack transaction amount
 		if (paymentData.amount / 100 !== totalAmount) {
@@ -1550,7 +2480,7 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 				userId,
 				totalAmount,
 				refId,
-				shippingAddress,
+				shippingAddress: `${shippingAddress}, ${user.location?.city}, ${user.location?.state}, ${user.location?.country}`,
 				status: "pending",
 			},
 			{ transaction },
@@ -1584,6 +2514,10 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 						as: "sub_category",
 						attributes: ["id", "name"],
 					},
+					{
+						model: DropshipProducts,
+						as: "dropshipDetails",
+					},
 				],
 			});
 
@@ -1591,16 +2525,58 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 				throw new Error(`Product with ID ${cartItem.product.id} not found.`);
 			}
 
-			// Reduce product quantity in inventory
-			const availableQuantity = product.quantity ?? 0; // Fallback to 0 if quantity is undefined
-			if (availableQuantity >= cartItem.quantity) {
-				// Update the product quantity in inventory
-				await product.update(
-					{ quantity: availableQuantity - cartItem.quantity },
-					{ transaction },
+			if (product.type === "in_stock") {
+				// Reduce product quantity in inventory
+				const availableQuantity = product.quantity ?? 0; // Fallback to 0 if quantity is undefined
+				if (availableQuantity >= cartItem.quantity) {
+					// Update the product quantity in inventory
+					await product.update(
+						{ quantity: availableQuantity - cartItem.quantity },
+						{ transaction },
+					);
+				} else {
+					throw new Error(`Not enough stock for product: ${product.name}`);
+				}
+			} else if (product.type === "dropship") {
+				const dropshipProductVariant = product.variants?.find(
+					(variant) => variant.sku_id === cartItem.dropshipProductSkuId,
 				);
-			} else {
-				throw new Error(`Not enough stock for product: ${product.name}`);
+				const dropshipProductVariantIndex = product.variants?.findIndex(
+					(variant) => variant.sku_id === cartItem.dropshipProductSkuId,
+				);
+
+				if (!dropshipProductVariant) {
+					throw new Error(
+						`Dropship product variant with SKU ID ${cartItem.dropshipProductSkuId} not found for product: ${product.name}`,
+					);
+				}
+
+				const availableQuantity =
+					dropshipProductVariant.sku_available_stock ?? 0;
+
+				if (availableQuantity >= cartItem.quantity) {
+					// Update the dropship product variant stock in inventory
+					await product.update(
+						{
+							variants: [
+								...product.variants!.slice(0, dropshipProductVariantIndex!),
+								{
+									...dropshipProductVariant,
+									sku_available_stock: availableQuantity - cartItem.quantity,
+								},
+								...product.variants!.slice(dropshipProductVariantIndex! + 1),
+							],
+						},
+						{
+							where: { id: dropshipProductVariant.id },
+							transaction,
+						},
+					);
+				} else {
+					throw new Error(
+						`Not enough stock for dropship product variant with SKU ID ${cartItem.dropshipProductSkuId} for product: ${product.name}`,
+					);
+				}
 			}
 
 			// Check if vendorId exists in the User table (Vendor)
@@ -1612,6 +2588,41 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 				return;
 			}
 
+			let dropshipOrderIds = null;
+			if (cartItem.productType === "dropship") {
+				const vendorDropshipOrderIds = vendorsDropshipOrders?.find(
+					(order) => order?.vendorId === product.vendorId,
+				);
+
+				dropshipOrderIds = vendorDropshipOrderIds?.dropshipOrderResponse;
+
+				if (!dropshipOrderIds || dropshipOrderIds.length === 0) {
+					throw new Error(
+						`Failed to retrieve dropship order IDs for vendor ID: ${product.vendorId}`,
+					);
+				}
+			}
+
+			const productPrice =
+				product.type === "in_stock"
+					? product.discount_price && product.discount_price > 0
+						? product.discount_price
+						: product.price
+					: (() => {
+							const dropshipProductVariant = product.variants?.find(
+								(variant) => variant.sku_id === cartItem.dropshipProductSkuId,
+							);
+							if (!dropshipProductVariant) {
+								throw new Error(
+									`Dropship product variant with SKU ID ${cartItem.dropshipProductSkuId} not found for product: ${product.name}`,
+								);
+							}
+							return dropshipProductVariant.offer_sale_price &&
+								new Decimal(dropshipProductVariant.offer_sale_price).gt(0)
+								? dropshipProductVariant.offer_sale_price
+								: dropshipProductVariant.sku_price;
+						})();
+
 			// Create the order item
 			await OrderItem.create(
 				{
@@ -1619,10 +2630,9 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 					orderId: order.id,
 					product: product,
 					quantity: cartItem.quantity,
-					price:
-						product.discount_price && product.discount_price > 0
-							? product.discount_price
-							: product.price,
+					dropshipProductId: cartItem.dropshipProductSkuId,
+					dropshipOrderItemIds: dropshipOrderIds,
+					price: productPrice,
 				},
 				{ transaction },
 			);
@@ -1802,12 +2812,6 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 			{ transaction },
 		);
 
-		// Fetch user before the for loop so it's available
-		const user = await User.findByPk(userId, { transaction });
-		if (!user) {
-			throw new Error(`User not found.`);
-		}
-
 		// Commit the transaction
 		await transaction.commit();
 		transactionCommitted = true; // Mark as committed
@@ -1862,190 +2866,12 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 	}
 };
 
-export const prepareCheckoutDollar = async (
-	req: Request,
-	res: Response,
-): Promise<void> => {
-	const userId = (req as AuthenticatedRequest).user?.id; // Get authenticated user ID
-
-	const userCart = await Cart.findAll({
-		where: { userId },
-		include: [
-			{
-				model: Product,
-				as: "product",
-				include: [
-					{
-						model: Store,
-						as: "store",
-						include: [
-							{
-								model: Currency,
-								as: "currency",
-								attributes: ["name", "symbol"],
-							},
-						],
-					},
-				],
-			},
-		],
-	});
-
-	try {
-		if (!userCart || userCart.length === 0) {
-			res.status(400).json({ message: "Cart is empty" });
-			return;
-		}
-
-		userCart.forEach((cartItem) => {
-			const product = cartItem.product;
-			if (!product || !product.store || !product.store.currency) {
-				throw new Error(
-					`Product with ID ${cartItem.productId} not found or invalid currency data`,
-				);
-			}
-
-			const productCurrency = product.store.currency;
-
-			// Ensure product currency is either $, #, or ₦
-			const allowedCurrencies = ["$", "#", "₦"];
-			if (!allowedCurrencies.includes(productCurrency.symbol)) {
-				res.status(400).json({
-					message: `Only products with currencies ${allowedCurrencies.join(", ")} are allowed.`,
-				});
-				return;
-			}
-
-			if (
-				!userCart.every(
-					(item) =>
-						item.product &&
-						item.product.store &&
-						item.product.store.currency &&
-						item.product.store.currency.name.toLowerCase() === "dollar",
-				)
-			) {
-				res.status(400).json({
-					message:
-						"All products in the cart must be priced in USD for this checkout.",
-				});
-				return;
-			}
-		});
-
-		// Get Admin's product charges
-		const productCharges = await ProductCharge.findAll({
-			where: { is_active: true },
-		});
-
-		// Calculate total price and validate inventory
-		let totalAmount = new Decimal(0);
-		let totalChargeAmount = new Decimal(0);
-		for (const cartItem of userCart) {
-			const product = cartItem.product;
-			if (!product) {
-				throw new Error(`Product with ID ${cartItem.productId} not found`);
-			}
-
-			// Check if product.quantity is defined and if there's enough stock before proceeding
-			const availableQuantity = product.quantity ?? 0; // If quantity is undefined, fallback to 0
-			if (availableQuantity < cartItem.quantity) {
-				throw new Error(`Insufficient stock for product: ${product.name}`);
-			}
-
-			const productPrice = new Decimal(
-				(product.discount_price ?? 0) > 0
-					? product.discount_price ?? 0
-					: product.price ?? 0,
-			);
-
-			// Check for product charge percentage
-			const productChargePercentage = productCharges.find(
-				(charge) =>
-					charge.charge_currency === "USD" &&
-					charge.calculation_type === "percentage" &&
-					new Decimal(productPrice).greaterThanOrEqualTo(
-						charge.minimum_product_amount,
-					) &&
-					new Decimal(productPrice).lessThanOrEqualTo(
-						charge.maximum_product_amount,
-					),
-			);
-
-			// Check for product charge amount
-			const productChargeAmount = productCharges.find(
-				(charge) =>
-					charge.charge_currency === "USD" &&
-					charge.calculation_type === "fixed" &&
-					new Decimal(productPrice).greaterThanOrEqualTo(
-						charge.minimum_product_amount,
-					) &&
-					new Decimal(productPrice).lessThanOrEqualTo(
-						charge.maximum_product_amount,
-					),
-			);
-
-			let chargeAmount = new Decimal(0);
-
-			if (productChargePercentage) {
-				// Calculate percentage charge
-				chargeAmount = chargeAmount
-					.plus(new Decimal(productPrice ?? 0))
-					.mul(new Decimal(productChargePercentage.charge_percentage).div(100))
-					.toNearest(0.01);
-			} else if (productChargeAmount) {
-				// Use fixed amount charge
-				chargeAmount = chargeAmount
-					.plus(productChargeAmount.charge_amount ?? 0)
-					.toNearest(0.01);
-			}
-
-			// Calculate total amount for this cart item
-			totalAmount = totalAmount
-				.plus(productPrice.plus(chargeAmount).mul(cartItem.quantity))
-				.toNearest(0.01);
-
-			totalChargeAmount = totalChargeAmount.plus(chargeAmount).toNearest(0.01);
-
-			// totalAmount += product.price * cartItem.quantity;
-		}
-
-		const stripe = await initStripe();
-
-		const paymentIntent = await stripe.paymentIntents.create({
-			amount: totalAmount.mul(100).toNumber(), // amount in cents
-			currency: "usd",
-			metadata: { userId: userId!.toString() },
-		});
-
-		res.status(200).json({
-			id: paymentIntent.id,
-			clientSecret: paymentIntent.client_secret,
-			totalAmount: totalAmount.toNumber(),
-			paymentBreakdown: {
-				currency: "USD",
-				chargeAmount: totalChargeAmount.toNearest(0.01).toNumber(),
-				subtotal: totalAmount
-					.minus(totalChargeAmount)
-					.toNearest(0.01)
-					.toNumber(),
-			},
-		});
-	} catch (error: any) {
-		logger.error(error);
-		res
-			.status(500)
-			.json({ message: error.message || "Error during checkout." });
-		return;
-	}
-};
-
 export const checkoutDollar = async (
 	req: Request,
 	res: Response,
 ): Promise<void> => {
 	const userId = (req as AuthenticatedRequest).user?.id;
-	const { refId, shippingAddress } = req.body;
+	const { refId, shippingAddress, shippingAddressZipCode } = req.body;
 
 	if (!userId) {
 		res.status(400).json({ message: "User must be authenticated" });
@@ -2089,6 +2915,14 @@ export const checkoutDollar = async (
 						"discount_price",
 						"vendorId",
 						"quantity",
+						"type",
+						"variants",
+					],
+					include: [
+						{
+							model: DropshipProducts,
+							as: "dropshipDetails",
+						},
 					],
 				},
 			],
@@ -2097,6 +2931,117 @@ export const checkoutDollar = async (
 		if (!cartItems || cartItems.length === 0) {
 			res.status(400).json({ message: "Cart is empty" });
 			return;
+		}
+
+		// Filter out dropshipped products from cart items
+		const dropShippedProducts = cartItems.filter(
+			(item) => item.productType === "dropship",
+		);
+
+		const user = await User.findByPk(userId, { transaction });
+		if (!user) {
+			throw new Error("User not found.");
+		}
+
+		let vendorsDropshipOrders = null;
+		// Place dropship orders with dropshipping service
+		if (dropShippedProducts.length > 0) {
+			const dropShippedVendorProducts = new Map<string, Cart[]>();
+
+			// Group cart items by vendorId
+			dropShippedProducts.forEach((cartItem) => {
+				const product = cartItem.product;
+				if (product) {
+					const vendorId = product.vendorId!;
+					if (!dropShippedVendorProducts.has(vendorId)) {
+						dropShippedVendorProducts.set(vendorId, []);
+					}
+					dropShippedVendorProducts.get(vendorId)!.push(cartItem);
+				}
+			});
+
+			const placeDropshipOrders = await Promise.all(
+				Array.from(dropShippedVendorProducts.entries()).map(
+					// Place dropship order for each vendor
+					async ([vendorId, cartItems]) => {
+						// Call the dropshipping service to place orders for these cart items
+						const productOrders = cartItems.map((cartItem) => ({
+							product_id: cartItem.product?.dropshipDetails.dropshipProductId,
+							product_count: cartItem.quantity as number,
+							sku_attr: cartItem.dropshipProductSkuAttr as string,
+						}));
+
+						// Determine user country code
+						const userCountry =
+							user?.location?.country?.toLowerCase() === "nigeria"
+								? "NG"
+								: user?.location?.country?.toLowerCase() === "united states" ||
+										user?.location?.country?.toLowerCase() === "usa" ||
+										user?.location?.country?.toLowerCase() ===
+											"united states of america"
+									? "US"
+									: "UK";
+
+						const userCity = user?.location?.city;
+
+						if (!shippingAddressZipCode) {
+							res
+								.status(400)
+								.json({ message: "Shipping address zip code is required" });
+							return;
+						}
+
+						const phoneNumberSplit = splitPhoneNumber(
+							user?.phoneNumber as string,
+						);
+
+						const dropshipOrderResponse = await dropShippingService.createOrder(
+							vendorId,
+							{
+								// @ts-ignore
+								products: productOrders,
+								shippingAddress: {
+									contact_person: `${user.firstName} ${user.lastName}`,
+									full_name: `${user.firstName} ${user.lastName}`,
+									country: userCountry,
+									province: user.location?.state as string,
+									city: userCity as string,
+									address: shippingAddress,
+									zip: shippingAddressZipCode,
+									mobile_no: phoneNumberSplit.phone_number,
+									phone_country: phoneNumberSplit.phone_country,
+									locale: "en_US",
+								},
+							},
+						);
+
+						return { vendorId, dropshipOrderResponse };
+					},
+				),
+			);
+
+			if (placeDropshipOrders.length === 0) {
+				throw new Error("Failed to place dropship orders.");
+			}
+
+			vendorsDropshipOrders = placeDropshipOrders;
+		}
+
+		// Calculate total Aliexpress delivery fee for dropshipped products
+		let totalAliexpressDeliveryFee = 0;
+		if (dropShippedProducts.length > 0) {
+			totalAliexpressDeliveryFee = await getTotalAliexpressDeliveryFee(
+				dropShippedProducts,
+				user.location?.country?.toLowerCase() === "nigeria"
+					? "NG"
+					: user.location?.country?.toLowerCase() === "united states" ||
+							user.location?.country?.toLowerCase() === "usa" ||
+							user.location?.country?.toLowerCase() ===
+								"united states of america"
+						? "US"
+						: "UK",
+				user,
+			);
 		}
 
 		// Get Admin's product charges
@@ -2108,21 +3053,54 @@ export const checkoutDollar = async (
 		let totalAmount = new Decimal(0);
 		for (const cartItem of cartItems) {
 			const product = cartItem.product;
+
 			if (!product) {
 				throw new Error(`Product with ID ${cartItem.productId} not found`);
 			}
 
-			// Check if product.quantity is defined and if there's enough stock before proceeding
-			const availableQuantity = product.quantity ?? 0; // If quantity is undefined, fallback to 0
-			if (availableQuantity < cartItem.quantity) {
-				throw new Error(`Insufficient stock for product: ${product.name}`);
-			}
+			let productPrice: Decimal;
+			if (product.type === "in_stock") {
+				// Check if product.quantity is defined and if there's enough stock before proceeding
+				const availableQuantity = product.quantity ?? 0; // If quantity is undefined, fallback to 0
+				if (availableQuantity < cartItem.quantity) {
+					throw new Error(`Insufficient stock for product: ${product.name}`);
+				}
 
-			const productPrice = new Decimal(
-				(product.discount_price ?? 0) > 0
-					? product.discount_price ?? 0
-					: product.price ?? 0,
-			);
+				productPrice = new Decimal(
+					(product.discount_price ?? 0) > 0
+						? product.discount_price ?? 0
+						: product.price ?? 0,
+				);
+			} else if (product.type === "dropship") {
+				const dropshipProductVariant = product.variants?.find(
+					(variant) => variant.sku_id === cartItem.dropshipProductSkuId,
+				);
+				if (!dropshipProductVariant) {
+					throw new Error(
+						`Dropship product variant with SKU ID ${cartItem.dropshipProductSkuId} not found for product: ${product.name}`,
+					);
+				}
+
+				const availableQuantity =
+					dropshipProductVariant.sku_available_stock ?? 0;
+
+				if (availableQuantity < cartItem.quantity) {
+					throw new Error(
+						`Insufficient stock for dropship product variant with SKU ID ${cartItem.dropshipProductSkuId} for product: ${product.name}`,
+					);
+				}
+
+				productPrice = new Decimal(
+					//@ts-ignore
+					(dropshipProductVariant.offer_sale_price ?? 0) > 0
+						? dropshipProductVariant.offer_sale_price ?? 0
+						: dropshipProductVariant.sku_price ?? 0,
+				);
+			} else {
+				throw new Error(
+					`Unknown product type for product: ${product.name}, type: ${product.type}`,
+				);
+			}
 
 			// Check for product charge percentage
 			const productChargePercentage = productCharges.find(
@@ -2172,6 +3150,11 @@ export const checkoutDollar = async (
 			// totalAmount += product.price * cartItem.quantity;
 		}
 
+		// Add total Aliexpress delivery fee to total amount
+		totalAmount = totalAmount
+			.plus(new Decimal(totalAliexpressDeliveryFee))
+			.toNearest(0.01);
+
 		if (!new Decimal(paymentIntent.amount_received).div(100).eq(totalAmount)) {
 			res
 				.status(400)
@@ -2185,11 +3168,46 @@ export const checkoutDollar = async (
 			const product = cartItem.product;
 			if (!product)
 				throw new Error(`Product with ID ${cartItem.productId} not found`);
+			//
+			let availableQuantity = 0;
+			let productPrice: Decimal = new Decimal(0);
+			if (product.type === "in_stock") {
+				// Check if product has enough stock
+				const availableQuantity = product.quantity ?? 0; // Fallback to 0 if undefined
+				if (availableQuantity < cartItem.quantity) {
+					throw new Error(`Insufficient stock for product: ${product.name}`);
+				}
 
-			// Check if product has enough stock
-			const availableQuantity = product.quantity ?? 0; // Fallback to 0 if undefined
-			if (availableQuantity < cartItem.quantity) {
-				throw new Error(`Insufficient stock for product: ${product.name}`);
+				productPrice = new Decimal(
+					(product.discount_price ?? 0) > 0
+						? product.discount_price ?? 0
+						: product.price ?? 0,
+				);
+			} else if (product.type === "dropship") {
+				const dropshipProductVariant = product.variants?.find(
+					(variant) => variant.sku_id === cartItem.dropshipProductSkuId,
+				);
+
+				if (!dropshipProductVariant) {
+					throw new BadRequestError(
+						`Dropship product variant with SKU ID ${cartItem.dropshipProductSkuId} not found for product: ${product.name}`,
+					);
+				}
+
+				availableQuantity = dropshipProductVariant.sku_available_stock ?? 0;
+
+				if (availableQuantity < cartItem.quantity) {
+					throw new BadRequestError(
+						`Insufficient stock for dropship product variant with SKU ID ${cartItem.dropshipProductSkuId} for product: ${product.name}`,
+					);
+				}
+
+				productPrice = new Decimal(
+					//@ts-ignore
+					(dropshipProductVariant.offer_sale_price ?? 0) > 0
+						? dropshipProductVariant.offer_sale_price ?? 0
+						: dropshipProductVariant.sku_price ?? 0,
+				);
 			}
 
 			const productInfo = await Product.findByPk(cartItem.productId, {
@@ -2211,6 +3229,10 @@ export const checkoutDollar = async (
 						as: "sub_category",
 						attributes: ["id", "name"],
 					},
+					{
+						model: DropshipProducts,
+						as: "dropshipDetails",
+					},
 				],
 			});
 
@@ -2218,9 +3240,34 @@ export const checkoutDollar = async (
 				throw new Error(`Product with ID ${cartItem.productId} not found.`);
 			}
 
-			// Reduce stock quantity
-			const newQuantity = availableQuantity - cartItem.quantity;
-			await product.update({ quantity: newQuantity }, { transaction });
+			if (product.type === "in_stock") {
+				// Reduce stock quantity
+				const newQuantity = availableQuantity - cartItem.quantity;
+				await product.update({ quantity: newQuantity }, { transaction });
+			} else if (product.type === "dropship") {
+				const dropshipProductVariantIndex = product.variants?.findIndex(
+					(variant) => variant.sku_id === cartItem.dropshipProductSkuId,
+				);
+
+				if (
+					dropshipProductVariantIndex === undefined ||
+					dropshipProductVariantIndex < 0
+				) {
+					throw new Error(
+						`Dropship product variant with SKU ID ${cartItem.dropshipProductSkuId} not found for product: ${product.name}`,
+					);
+				}
+
+				// Reduce dropship variant stock quantity
+				const newVariantQuantity = availableQuantity - cartItem.quantity;
+				const updatedVariants = [...product.variants!];
+				updatedVariants[dropshipProductVariantIndex] = {
+					...updatedVariants[dropshipProductVariantIndex],
+					sku_available_stock: newVariantQuantity,
+				};
+
+				await product.update({ variants: updatedVariants }, { transaction });
+			}
 
 			//totalAmount += product.price * cartItem.quantity;
 
@@ -2232,10 +3279,7 @@ export const checkoutDollar = async (
 				vendorId: product.vendorId,
 				product: productInfo,
 				quantity: cartItem.quantity,
-				price:
-					product.discount_price && product.discount_price > 0
-						? product.discount_price
-						: product.price,
+				price: productPrice.toNumber(),
 			} as unknown as OrderItem);
 		}
 
@@ -2245,7 +3289,7 @@ export const checkoutDollar = async (
 				userId,
 				totalAmount,
 				refId,
-				shippingAddress,
+				shippingAddress: `${shippingAddress}, ${user.location?.city}, ${user.location?.state}, ${user.location?.country}`,
 				status: "pending",
 			},
 			{ transaction },
@@ -2253,75 +3297,132 @@ export const checkoutDollar = async (
 
 		// Process order items per vendor
 		// Fetch user before the vendorOrders loop so it's available and not null
-		const user = await User.findByPk(userId, { transaction });
-		if (!user) {
-			throw new Error("User not found.");
-		}
 		for (const vendorId in vendorOrders) {
 			const vendorOrderItems = vendorOrders[vendorId];
+
 			// Loop through each order item for the current vendor
 			for (const item of vendorOrderItems) {
+				let dropshipOrderIds = null;
+				let dropshipProductId = null;
+				//@ts-ignore
+				if (item.product.type === "dropship") {
+					dropshipOrderIds = vendorsDropshipOrders?.find(
+						(order) => order?.vendorId === item.vendorId,
+					)?.dropshipOrderResponse;
+
+					dropshipProductId =
+						//@ts-ignore
+						item.product.dropshipDetails.dropshipProductId;
+				}
+
 				// Create the order item in the database
 				await OrderItem.create(
 					{
-						vendorId: item.vendorId,
+						vendorId: vendorId,
 						orderId: order.id,
 						product: item.product,
 						quantity: item.quantity,
 						price: item.price,
+						dropshipProductId,
+						dropshipOrderItemIds: dropshipOrderIds,
 					},
 					{ transaction },
 				);
 
 				// Fetch vendor object
-				const vendor = await User.findByPk(item.vendorId, { transaction });
-				if (!vendor) {
-					throw new Error(`Vendor not found.`);
+				const vendor = await User.findByPk(vendorId, { transaction });
+
+				const admin = await Admin.findByPk(vendorId, { transaction });
+
+				if (!vendor && !admin) {
+					throw new Error(`Owner not found`);
 				}
+
 				// Fetch user (customer) object
 				const user = await User.findByPk(order.userId, { transaction });
 				if (!user) {
 					throw new Error(`User not found.`);
 				}
 
-				// Create the email message for the current order item
-				const message = emailTemplates.newOrderNotification(
-					vendor,
-					order,
-					user,
-					item.product,
-					item.quantity,
-				);
-				try {
-					// Send the email to the vendor
-					await sendMail(
-						vendor.email,
-						`${process.env.APP_NAME} - New Order Received`,
-						message,
-					);
+				if (vendor) {
+					try {
+						// Create the email message for the current order item
+						const message = emailTemplates.newOrderNotification(
+							vendor,
+							order,
+							user,
+							item.product,
+							item.quantity,
+						);
+						// Send the email to the vendor
+						await sendMail(
+							vendor.email,
+							`${process.env.APP_NAME} - New Order Received`,
+							message,
+						);
 
-					if (vendor.fcmToken) {
-						try {
-							// Send push notification to the vendor
-							const notificationMessage = {
-								notification: {
-									title: "New Order Received",
-									body: `You have received a new order (TRACKING NO: ${order.trackingNumber}) for your product.`,
-								},
-								data: {
-									orderId: order.id,
-									type: PushNotificationTypes.ORDER_CREATED,
-								},
-								token: vendor.fcmToken, // FCM token of the vendor
-							};
+						if (vendor.fcmToken) {
+							try {
+								// Send push notification to the vendor
+								const notificationMessage = {
+									notification: {
+										title: "New Order Received",
+										body: `You have received a new order (TRACKING NO: ${order.trackingNumber}) for your product.`,
+									},
+									data: {
+										orderId: order.id,
+										type: PushNotificationTypes.ORDER_CREATED,
+									},
+									token: vendor.fcmToken, // FCM token of the vendor
+								};
 
-							await sendPushNotificationSingle(notificationMessage);
-						} catch (pushError) {
-							logger.error("Error sending push notification:", pushError);
+								await sendPushNotificationSingle(notificationMessage);
+							} catch (pushError) {
+								logger.error("Error sending push notification:", pushError);
+							}
 						}
+					} catch (emailError) {
+						logger.error("Error sending email:", emailError);
 					}
-				} catch (emailError) {
-					logger.error("Error sending email:", emailError);
+				} else if (admin) {
+					// Create the email message for the current order item
+					const message = emailTemplates.newOrderAdminNotification(
+						admin,
+						order,
+						user,
+						item.product,
+					);
+					try {
+						// Send the email to the admin
+						await sendMail(
+							admin.email,
+							`${process.env.APP_NAME} - New Order Received`,
+							message,
+						);
+
+						if (admin.fcmToken) {
+							try {
+								// Send push notification to the admin
+								const notificationMessage = {
+									notification: {
+										title: "New Order Received",
+										body: `A new order (TRACKING NO: ${order.trackingNumber}) has been placed.`,
+									},
+									data: {
+										orderId: order.id,
+										type: PushNotificationTypes.ORDER_CREATED,
+									},
+									token: admin.fcmToken, // FCM token of the admin
+								};
+
+								await sendPushNotificationSingle(notificationMessage);
+							} catch (pushError) {
+								logger.error("Error sending push notification:", pushError);
+							}
+						}
+					} catch (emailError) {
+						logger.error("Error sending email:", emailError);
+					}
 				}
 			}
 		}
@@ -2362,7 +3463,9 @@ export const checkoutDollar = async (
 			for (const item of vendorOrderItems) {
 				// Loop through each order item for the current vendor
 
+				console.log("Vendor ID: ", vendorId);
 				const vendor = await User.findByPk(vendorId);
+
 				const admin = await Admin.findByPk(vendorId);
 
 				if (!vendor && !admin) {
