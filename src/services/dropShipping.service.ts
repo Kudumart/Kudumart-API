@@ -601,7 +601,6 @@ export class DropShippingService {
 		);
 
 		if (!responseData.ok) {
-			console.log(responseData);
 			throw new Error("Failed to fetch order details from the dropshipper API");
 		}
 
