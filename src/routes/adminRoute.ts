@@ -929,6 +929,14 @@ adminRoutes.get(
 );
 
 adminRoutes.get(
+	"/services/:serviceId",
+	adminAuthMiddleware,
+	validateUUIDParam("serviceId"),
+	validate,
+	adminController.getServiceById,
+);
+
+adminRoutes.get(
 	"/aliexpress/categories",
 	adminAuthMiddleware,
 	adminController.getAliExpressCategories,

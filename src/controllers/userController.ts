@@ -59,6 +59,7 @@ import {
 import DropshipProducts from "../models/dropshipProducts";
 import * as uuid from "uuid";
 import { BadRequestError } from "../utils/ApiError";
+import DropShippingCred from "../models/dropshippngCreds";
 
 const dropShippingService = new DropShippingService();
 
@@ -1501,7 +1502,7 @@ export const getAliexpressAddressOptions = async (
 	req: Request,
 	res: Response,
 ): Promise<void> => {
-	const userId = (req as AuthenticatedRequest).user?.id; // Get the authenticated user's ID
+	// const userId = (req as AuthenticatedRequest).user?.id; // Get the authenticated user's ID
 
 	const shipToCountryCode = req.query.shipToCountryCode as string;
 
@@ -1522,45 +1523,62 @@ export const getAliexpressAddressOptions = async (
 	}
 
 	try {
-		const userCart = await Cart.findAll({
-			where: { userId },
-			include: [
-				{
-					model: Product,
-					as: "product",
-					attributes: ["id", "vendorId", "name", "price"],
-					include: [
-						{
-							model: DropshipProducts,
-							as: "dropshipDetails",
-						},
-					],
-				},
-			],
+		// const userCart = await Cart.findAll({
+		// 	where: { userId },
+		// 	include: [
+		// 		{
+		// 			model: Product,
+		// 			as: "product",
+		// 			attributes: ["id", "vendorId", "name", "price"],
+		// 			include: [
+		// 				{
+		// 					model: DropshipProducts,
+		// 					as: "dropshipDetails",
+		// 				},
+		// 			],
+		// 		},
+		// 	],
+		// });
+		//
+		// const vendorIds = Array.from(
+		// 	new Set(
+		// 		userCart
+		// 			.filter((item) => item.productType === "dropship")
+		// 			.map((item) => item.product?.vendorId),
+		// 	),
+		// );
+		//
+		// if (vendorIds.length === 0) {
+		// 	res.status(400).json({ message: "No dropshipped products in cart" });
+		// 	return;
+		// }
+
+		const vendorCred = await DropShippingCred.findOne({
+			where: { expireTime: { [Op.gt]: new Date() } },
 		});
 
-		const vendorIds = Array.from(
-			new Set(
-				userCart
-					.filter((item) => item.productType === "dropship")
-					.map((item) => item.product?.vendorId),
-			),
-		);
+		if (!vendorCred) {
+			res
+				.status(400)
+				.json({ message: "No valid dropshipping credentials found" });
+			return;
+		}
 
-		if (vendorIds.length === 0) {
-			res.status(400).json({ message: "No dropshipped products in cart" });
+		if (!vendorCred.vendorId) {
+			res.status(400).json({
+				message: "No valid vendor ID found in dropshipping credentials",
+			});
 			return;
 		}
 
 		const addressOptions = await dropShippingService.getAddressSuggestions(
-			vendorIds[0] as string,
+			vendorCred.vendorId,
 			{
 				countryCode: shipToCountryCode,
 				language: "en",
 				isMultiLanguage: true,
 			},
 		);
-		console.log(addressOptions);
 
 		res.status(200).json({
 			message: "Aliexpress address options fetched successfully",
