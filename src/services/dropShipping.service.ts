@@ -568,6 +568,9 @@ export class DropShippingService {
 		}
 
 		if (!result.is_success) {
+			console.log("Order creation result indicates failure:");
+			console.log(result);
+			console.log(result.order_list);
 			throw new Error(`Order creation failed: ${result || "Unknown error"}`);
 		}
 
