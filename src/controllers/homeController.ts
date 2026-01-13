@@ -1389,12 +1389,29 @@ export const getAllServices = async (
 	req: Request,
 	res: Response,
 ): Promise<void> => {
-	const { page, limit, categoryId, subCategoryId } = req.query;
+	const {
+		page = "1",
+		limit = "10",
+		categoryId,
+		subCategoryId,
+		search,
+	} = req.query;
 
 	try {
 		// Calculate pagination values
-		const currentPage = Number(page) || 1;
-		const currentLimit = Number(limit) || 10;
+		const currentPage = Number(page);
+		const currentLimit = Number(limit);
+
+		// Validate page and limit to ensure they are valid numbers
+		if (isNaN(currentPage) || currentPage < 1) {
+			res.status(400).json({ message: "Invalid page number." });
+			return;
+		}
+		if (isNaN(currentLimit) || currentLimit < 1) {
+			res.status(400).json({ message: "Invalid limit number." });
+			return;
+		}
+
 		const offset = (currentPage - 1) * currentLimit;
 
 		// Build where clause
@@ -1406,6 +1423,15 @@ export const getAllServices = async (
 
 		if (subCategoryId) {
 			whereClause.service_subcategory_id = subCategoryId;
+		}
+
+		// Add search filter for service name or description
+		if (search) {
+			const normalizedSearch = String(search).trim().replace(/\s+/g, " ");
+			whereClause[Op.or] = [
+				{ title: { [Op.like]: `%${normalizedSearch}%` } },
+				{ description: { [Op.like]: `%${normalizedSearch}%` } },
+			];
 		}
 
 		whereClause.status = "active"; // Only fetch active services
@@ -1441,19 +1467,6 @@ export const getAllServices = async (
 			order: [["createdAt", "DESC"]],
 		});
 
-		// Calculate total pages
-		const totalPages = Math.ceil(count / currentLimit);
-
-		// Generate next and previous page links
-		const nextPage =
-			currentPage < totalPages
-				? `${req.baseUrl}?page=${currentPage + 1}&limit=${currentLimit}`
-				: null;
-		const prevPage =
-			currentPage > 1
-				? `${req.baseUrl}?page=${currentPage - 1}&limit=${currentLimit}`
-				: null;
-
 		// Transform the response to include isVerified
 		const formattedServices = services.map((service: any) => {
 			let providerData = service.provider ? service.provider.toJSON() : null;
@@ -1470,6 +1483,25 @@ export const getAllServices = async (
 				provider: providerData ?? null, // Ensure provider is null if not present
 			};
 		});
+
+		// Calculate total pages
+		const totalPages = Math.ceil(count / currentLimit);
+
+		// Build query string preserving existing parameters
+		const buildPageUrl = (pageNum: number) => {
+			const params = new URLSearchParams();
+			params.set("page", String(pageNum));
+			params.set("limit", String(currentLimit));
+			if (categoryId) params.set("categoryId", String(categoryId));
+			if (subCategoryId) params.set("subCategoryId", String(subCategoryId));
+			if (search) params.set("search", String(search));
+			return `${req.baseUrl}?${params.toString()}`;
+		};
+
+		// Generate next and previous page links
+		const nextPage =
+			currentPage < totalPages ? buildPageUrl(currentPage + 1) : null;
+		const prevPage = currentPage > 1 ? buildPageUrl(currentPage - 1) : null;
 
 		// Send the response with services and pagination info
 		res.status(200).json({
