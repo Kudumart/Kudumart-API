@@ -7565,6 +7565,68 @@ export const getAllServices = async (req: Request, res: Response): Promise<void>
   }
 }
 
+export const getServiceById = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { serviceId } = req.params;
+
+  try {
+    if (!serviceId) {
+      res.status(400).json({ message: "Service ID is required" });
+      return;
+    }
+
+    // Fetch the service by ID (admin can view any status)
+    const service = await Services.findOne({
+      where: { id: serviceId },
+      include: [
+        {
+          model: User,
+          as: "provider",
+          include: [
+            {
+              model: KYC,
+              as: "kyc",
+              attributes: ["isVerified"],
+            },
+          ],
+        },
+        {
+          model: ServiceCategories,
+          as: "category",
+          attributes: ["id", "name"],
+        },
+        {
+          model: ServiceSubCategories,
+          as: "subCategory",
+          attributes: ["id", "name"],
+        },
+      ],
+    });
+
+    if (!service) {
+      res.status(404).json({ message: "Service not found" });
+      return;
+    }
+
+    // Add isVerified to provider if exists
+    if (service.provider) {
+      const kyc = await KYC.findOne({
+        where: { vendorId: service.provider.id },
+      });
+      service.provider.setDataValue("isVerified", kyc ? kyc.isVerified : false);
+    }
+
+    res.status(200).json({ data: service });
+  } catch (error: any) {
+    logger.error("Error fetching service:", error);
+    res.status(500).json({
+      message: error.message || "An error occurred while fetching the service.",
+    });
+  }
+};
+
 export const getAliExpressCategories = async (
 	req: Request,
 	res: Response,
