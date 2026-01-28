@@ -26,7 +26,9 @@ class User extends Model {
 	public photo?: string;
 	public fcmToken?: string;
 	public wallet?: number;
+	public pendingWallet?: number;
 	public dollarWallet?: number;
+	public pendingDollarWallet?: number;
 	public accountType?: string;
 	public status?: "active" | "inactive";
 	public isVerified?: boolean;
@@ -122,7 +124,9 @@ const initModel = (sequelize: Sequelize) => {
 			photo: DataTypes.TEXT,
 			fcmToken: DataTypes.STRING,
 			wallet: DataTypes.DECIMAL(20, 2),
+			pendingWallet: DataTypes.DECIMAL(20, 2),
 			dollarWallet: DataTypes.DECIMAL(20, 2),
+			pendingDollarWallet: DataTypes.DECIMAL(20, 2),
 			facebookId: DataTypes.STRING,
 			googleId: DataTypes.STRING,
 			accountType: DataTypes.ENUM("Vendor", "Customer"),
