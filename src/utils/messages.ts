@@ -284,8 +284,7 @@ export const emailTemplates = {
 		// Build the link the user will click to verify:
 		const verificationLink = `${frontendUrl}/verify-email?token=${encodeURIComponent(token)}&email=${encodeURIComponent(user.email)}`;
 
-		return `
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
+		return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
@@ -293,7 +292,51 @@ export const emailTemplates = {
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
   <title>${appName}</title>
   <style>
-    /* … your existing styles here … */
+    /* Reset styles and general layout */
+    body {
+      background-color: #f6f6f6;
+      font-family: Arial, sans-serif;
+      margin: 0; padding: 0;
+    }
+    .body-wrap {
+      width: 100%; background-color: #f6f6f6;
+    }
+    .container {
+      display: block !important; max-width: 600px !important; margin: 0 auto !important; /* makes it centered */
+      clear: both !important;
+    }
+    .content {
+      max-width: 600px; margin: 0 auto; display: block; padding: 24px 24px 15px 24px;
+    }
+    h2 { margin: 0 0 10px 0; }
+    .center { text-align: center; }
+    .padding { padding: 20px 0; }
+    .footnote { color: #666; font-size: 13px; }
+
+    /* Verify Email Button Styling */
+    .btn-primary {
+      display: inline-block;
+      font-size: 16px;
+      color: #fff !important;
+      text-decoration: none;
+      background: #2D9CDB;
+      padding: 12px 32px;
+      border-radius: 5px;
+      font-weight: bold;
+      transition: background 0.2s;
+      border: none;
+    }
+    .btn-primary:hover,
+    .btn-primary:focus,
+    .btn-primary:active {
+      background: orange !important;
+      color: #fff !important;
+    }
+    /* Responsive for mobile */
+    @media only screen and (max-width: 620px) {
+      .container, .content { padding: 10px !important; }
+      .btn-primary { width: 100% !important; box-sizing: border-box; }
+    }
   </style>
 </head>
 <body bgcolor="#f6f6f6">
@@ -314,7 +357,7 @@ export const emailTemplates = {
                 <p>Hi ${user.firstName} ${user.lastName},</p>
                 <p>
                   Thanks for signing up for ${appName}! To complete your registration
-                  and start using ${user.email} to log in, please verify your email:
+                  and start using ${user.email} to log in, please click the button below to verify your email:
                 </p>
                 <table>
                   <tr>
@@ -361,8 +404,87 @@ export const emailTemplates = {
     </tr>
   </table>
 </body>
-</html>
-  `;
+</html>`;
+
+		// 		return `
+		// <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+		//   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+		// <html xmlns="http://www.w3.org/1999/xhtml">
+		// <head>
+		//   <meta name="viewport" content="width=device-width" />
+		//   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+		//   <title>${appName}</title>
+		//   <style>
+		//     /* … your existing styles here … */
+		//   </style>
+		// </head>
+		// <body bgcolor="#f6f6f6">
+		//   <!-- body -->
+		//   <table class="body-wrap">
+		//     <tr><td></td>
+		//       <td class="container" bgcolor="#FFFFFF">
+		//         <div class="content">
+		//           <table>
+		//             <tr>
+		//               <td class="center">
+		//                 <img src="${logoUrl}" alt="${appName} logo" width="150px" />
+		//               </td>
+		//             </tr>
+		//             <tr>
+		//               <td>
+		//                 <h2>Activate your account</h2>
+		//                 <p>Hi ${user.firstName} ${user.lastName},</p>
+		//                 <p>
+		//                   Thanks for signing up for ${appName}! To complete your registration
+		//                   and start using ${user.email} to log in, please verify your email:
+		//                 </p>
+		//                 <table>
+		//                   <tr>
+		//                     <td class="padding center">
+		//                       <a
+		//                         href="${verificationLink}"
+		//                         class="btn-primary"
+		//                         target="_blank"
+		//                         rel="noopener noreferrer"
+		//                       >
+		//                         Verify Email
+		//                       </a>
+		//                     </td>
+		//                   </tr>
+		//                 </table>
+		//                 <p>This link expires in one hour.</p>
+		//                 <p>Thank you,<br />The ${appName} Support Team</p>
+		//               </td>
+		//             </tr>
+		//             <tr>
+		//               <td>
+		//                 <p class="footnote">
+		//                   If you have any troubles, email us at
+		//                   <a href="mailto:${supportEmail}">${supportEmail}</a>.
+		//                 </p>
+		//               </td>
+		//             </tr>
+		//           </table>
+		//         </div>
+		//       </td>
+		//       <td></td>
+		//     </tr>
+		//   </table>
+		//
+		//   <!-- footer -->
+		//   <table class="footer-wrap">
+		//     <tr><td></td>
+		//       <td class="container">
+		//         <div class="content" align="center">
+		//           &copy; ${new Date().getFullYear()} ${appName}
+		//         </div>
+		//       </td>
+		//       <td></td>
+		//     </tr>
+		//   </table>
+		// </body>
+		// </html>
+		//   `;
 	},
 
 	forgotPassword: (user: User, code: string): string => {

@@ -2673,6 +2673,16 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 					{ transaction },
 				);
 
+				// Update vendor's pending wallet
+				await vendor.update(
+					{
+						pendingWallet: new Decimal(vendor.pendingWallet || 0).plus(
+							productPrice,
+						),
+					},
+					{ transaction, where: { id: vendor.id } },
+				);
+
 				const message = emailTemplates.newOrderNotification(
 					vendor,
 					order,
@@ -3500,6 +3510,16 @@ export const checkoutDollar = async (
 							message: `You have received a new order (TRACKING NO: ${order.trackingNumber}) for your product.`,
 						},
 						{ transaction },
+					);
+
+					// Update vendor's pending wallet
+					await vendor.update(
+						{
+							pendingDollarWallet: new Decimal(vendor.pendingDollarWallet || 0)
+								.plus(item.price)
+								.toNumber(),
+						},
+						{ transaction, where: { id: vendor.id } },
 					);
 
 					const message = emailTemplates.newOrderNotification(
@@ -4589,14 +4609,28 @@ export const updateOrderStatus = async (
 			(status === "delivered" && currencySymbol === "₦" && vendor)
 		) {
 			const price = Number(order.price);
+
 			vendor.wallet = Number(vendor.wallet) + price;
+
+			vendor.pendingWallet = new Decimal(Number(vendor.pendingWallet))
+				.minus(price)
+				.toNumber();
+
 			await vendor.save({ transaction });
 		}
 
 		// If the order is delivered and the currency is USD, add funds to the vendor's wallet
 		if (status === "delivered" && currencySymbol === "$" && vendor) {
 			const price = Number(order.price);
+
 			vendor.dollarWallet = Number(vendor.dollarWallet) + price;
+
+			vendor.pendingDollarWallet = new Decimal(
+				Number(vendor.pendingDollarWallet),
+			)
+				.minus(price)
+				.toNumber();
+
 			await vendor.save({ transaction });
 		}
 
