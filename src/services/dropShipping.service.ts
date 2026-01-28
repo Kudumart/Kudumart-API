@@ -551,8 +551,7 @@ export class DropShippingService {
 			},
 		);
 
-		if (!response.ok) {
-			console.log(response);
+		if (!response.ok) { console.log(response);
 			throw new Error("Failed to create order in the dropshipper API");
 		}
 
@@ -570,7 +569,6 @@ export class DropShippingService {
 		if (!result.is_success) {
 			console.log("Order creation result indicates failure:");
 			console.log(result);
-			console.log(result.order_list);
 			throw new Error(`Order creation failed: ${result || "Unknown error"}`);
 		}
 
