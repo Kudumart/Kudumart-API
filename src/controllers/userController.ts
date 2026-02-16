@@ -33,6 +33,7 @@ import Payment from "../models/payment";
 import Store from "../models/store";
 import Currency from "../models/currency";
 import Notification from "../models/notification";
+import Transaction from "../models/transaction";
 import SubscriptionPlan from "../models/subscriptionplan";
 import VendorSubscription from "../models/vendorsubscription";
 import SubCategory from "../models/subcategory";
@@ -1491,7 +1492,7 @@ async function getTotalAliexpressDeliveryFee(
 			new Decimal(0),
 		);
 
-		return summedDeliveryFee.toNearest(0.01).toNumber();
+		return summedDeliveryFee.div(100).toNearest(0.01).toNumber();
 	} catch (error) {
 		logger.error("Error calculating total Aliexpress delivery fee:", error);
 		throw error;
@@ -2314,9 +2315,9 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 							user?.location?.country?.toLowerCase() === "nigeria"
 								? "NG"
 								: user?.location?.country?.toLowerCase() === "united states" ||
-										user?.location?.country?.toLowerCase() === "usa" ||
-										user?.location?.country?.toLowerCase() ===
-											"united states of america"
+									user?.location?.country?.toLowerCase() === "usa" ||
+									user?.location?.country?.toLowerCase() ===
+									"united states of america"
 									? "US"
 									: "UK";
 
@@ -2373,9 +2374,9 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 				user.location?.country?.toLowerCase() === "nigeria"
 					? "NG"
 					: user.location?.country?.toLowerCase() === "united states" ||
-							user.location?.country?.toLowerCase() === "usa" ||
-							user.location?.country?.toLowerCase() ===
-								"united states of america"
+						user.location?.country?.toLowerCase() === "usa" ||
+						user.location?.country?.toLowerCase() ===
+						"united states of america"
 						? "US"
 						: "UK",
 				user,
@@ -2627,19 +2628,19 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 						? product.discount_price
 						: product.price
 					: (() => {
-							const dropshipProductVariant = product.variants?.find(
-								(variant) => variant.sku_id === cartItem.dropshipProductSkuId,
+						const dropshipProductVariant = product.variants?.find(
+							(variant) => variant.sku_id === cartItem.dropshipProductSkuId,
+						);
+						if (!dropshipProductVariant) {
+							throw new Error(
+								`Dropship product variant with SKU ID ${cartItem.dropshipProductSkuId} not found for product: ${product.name}`,
 							);
-							if (!dropshipProductVariant) {
-								throw new Error(
-									`Dropship product variant with SKU ID ${cartItem.dropshipProductSkuId} not found for product: ${product.name}`,
-								);
-							}
-							return dropshipProductVariant.offer_sale_price &&
-								new Decimal(dropshipProductVariant.offer_sale_price).gt(0)
-								? dropshipProductVariant.offer_sale_price
-								: dropshipProductVariant.sku_price;
-						})();
+						}
+						return dropshipProductVariant.offer_sale_price &&
+							new Decimal(dropshipProductVariant.offer_sale_price).gt(0)
+							? dropshipProductVariant.offer_sale_price
+							: dropshipProductVariant.sku_price;
+					})();
 
 			// Create the order item
 			await OrderItem.create(
@@ -2812,7 +2813,7 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 					name: cartItem.product.name,
 					price:
 						cartItem.product.discount_price &&
-						cartItem.product.discount_price > 0
+							cartItem.product.discount_price > 0
 							? cartItem.product.discount_price
 							: cartItem.product.price,
 				}, // Ensure product is an object
@@ -3004,9 +3005,9 @@ export const checkoutDollar = async (
 							user?.location?.country?.toLowerCase() === "nigeria"
 								? "NG"
 								: user?.location?.country?.toLowerCase() === "united states" ||
-										user?.location?.country?.toLowerCase() === "usa" ||
-										user?.location?.country?.toLowerCase() ===
-											"united states of america"
+									user?.location?.country?.toLowerCase() === "usa" ||
+									user?.location?.country?.toLowerCase() ===
+									"united states of america"
 									? "US"
 									: "UK";
 
@@ -3063,9 +3064,9 @@ export const checkoutDollar = async (
 				user.location?.country?.toLowerCase() === "nigeria"
 					? "NG"
 					: user.location?.country?.toLowerCase() === "united states" ||
-							user.location?.country?.toLowerCase() === "usa" ||
-							user.location?.country?.toLowerCase() ===
-								"united states of america"
+						user.location?.country?.toLowerCase() === "usa" ||
+						user.location?.country?.toLowerCase() ===
+						"united states of america"
 						? "US"
 						: "UK",
 				user,
@@ -3179,14 +3180,16 @@ export const checkoutDollar = async (
 		}
 
 		// Add total Aliexpress delivery fee to total amount
-		totalAmount = totalAmount
-			.plus(new Decimal(totalAliexpressDeliveryFee))
-			.toNearest(0.01);
+		// Add total Aliexpress delivery fee to total amount
+		totalAmount = totalAmount.plus(new Decimal(totalAliexpressDeliveryFee)).toNearest(0.01);
 
-		if (!new Decimal(paymentIntent.amount_received).div(100).eq(totalAmount)) {
-			res
-				.status(400)
-				.json({ message: "Payment amount does not match cart total." });
+		const receivedAmount = new Decimal(paymentIntent.amount_received).div(100);
+
+		if (!receivedAmount.eq(totalAmount)) {
+			logger.error(`Payment mismatch: Expected ${totalAmount.toNumber()}, Received ${receivedAmount.toNumber()}`);
+			res.status(400).json({
+				message: `Payment amount does not match cart total. Expected: $${totalAmount.toNumber()}, Received: $${receivedAmount.toNumber()}`,
+			});
 			return;
 		}
 
@@ -3644,7 +3647,7 @@ export const checkoutDollar = async (
 			await transaction.rollback();
 		}
 		logger.error("Error during checkout:", error);
-		res.status(500).json({ message: "Checkout failed" });
+		res.status(500).json({ message: "Checkout failed: " + error.message });
 	}
 };
 
@@ -3676,7 +3679,7 @@ export const showInterest = async (
 		if (
 			auctionProduct.startDate &&
 			new Date(auctionProduct.startDate).toDateString() ===
-				new Date().toDateString()
+			new Date().toDateString()
 		) {
 			res.status(400).json({
 				message: "You cannot show interest on the day the auction starts.",
@@ -4617,6 +4620,16 @@ export const updateOrderStatus = async (
 				.toNumber();
 
 			await vendor.save({ transaction });
+
+			// Mark Transaction as completed
+			const existingTransaction = await Transaction.findOne({
+				where: { refId: order.id, transactionType: "sale" },
+				transaction,
+			});
+			if (existingTransaction) {
+				existingTransaction.status = "completed";
+				await existingTransaction.save({ transaction });
+			}
 		}
 
 		// If the order is delivered and the currency is USD, add funds to the vendor's wallet
@@ -4632,6 +4645,16 @@ export const updateOrderStatus = async (
 				.toNumber();
 
 			await vendor.save({ transaction });
+
+			// Mark Transaction as completed
+			const existingTransaction = await Transaction.findOne({
+				where: { refId: order.id, transactionType: "sale" },
+				transaction,
+			});
+			if (existingTransaction) {
+				existingTransaction.status = "completed";
+				await existingTransaction.save({ transaction });
+			}
 		}
 
 		// Send a notification to the Buyer

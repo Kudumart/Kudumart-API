@@ -1,4 +1,5 @@
 // src/controllers/vendorController.ts
+import Decimal from "decimal.js";
 import { Request, Response, NextFunction } from "express";
 import User from "../models/user";
 import { v4 as uuidv4 } from "uuid";
@@ -372,9 +373,9 @@ export const deleteStore = async (
 			model: typeof AuctionProduct | typeof Product;
 			field: string;
 		}[] = [
-			{ name: "auction_products", model: AuctionProduct, field: "storeId" },
-			{ name: "products", model: Product, field: "storeId" },
-		];
+				{ name: "auction_products", model: AuctionProduct, field: "storeId" },
+				{ name: "products", model: Product, field: "storeId" },
+			];
 
 		// Check each related table
 		for (const table of relatedTables) {
@@ -549,10 +550,10 @@ export const deleteProduct = async (
 			model: typeof SaveProduct | typeof ReviewProduct | typeof Cart;
 			field: string;
 		}[] = [
-			{ name: "save_products", model: SaveProduct, field: "productId" },
-			{ name: "review_products", model: ReviewProduct, field: "productId" },
-			{ name: "carts", model: Cart, field: "productId" },
-		];
+				{ name: "save_products", model: SaveProduct, field: "productId" },
+				{ name: "review_products", model: ReviewProduct, field: "productId" },
+				{ name: "carts", model: Cart, field: "productId" },
+			];
 
 		// Check each related table
 		for (const table of relatedTables) {
@@ -1643,7 +1644,7 @@ export const verifyCAC = async (req: Request, res: Response): Promise<void> => {
 		path: "/bank/validate",
 		method: "POST",
 		headers: {
-			Authorization: "Bearer sk_test_fde1e5319c69aa49534344c95485a8f1cef333ac", // Replace with your Paystack secret key
+			Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`, // Use Paystack secret key from environment
 			"Content-Type": "application/json",
 		},
 	};
@@ -2377,6 +2378,89 @@ export const deleteBankInformation = async (
 };
 
 // Request Withdrawal
+
+export const getVendorWalletStats = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const vendorId = (req as AuthenticatedRequest).user?.id as string;
+
+	try {
+		const vendor = await User.findByPk(vendorId, {
+			attributes: ['wallet', 'pendingWallet', 'dollarWallet', 'pendingDollarWallet']
+		});
+
+		if (!vendor) {
+			res.status(404).json({ message: "Vendor not found" });
+			return;
+		}
+
+		// Calculate total earnings (simplified for now as sum of all completed sales transactions)
+		const transactions = await Transaction.findAll({
+			where: { userId: vendorId, status: 'completed' },
+		});
+
+		const stats = {
+			balance: {
+				NGN: vendor.wallet || 0,
+				USD: vendor.dollarWallet || 0,
+			},
+			pending: {
+				NGN: vendor.pendingWallet || 0,
+				USD: vendor.pendingDollarWallet || 0,
+			},
+			availableNGN: vendor.wallet || 0,
+			availableUSD: vendor.dollarWallet || 0,
+			pendingNGN: vendor.pendingWallet || 0,
+			pendingUSD: vendor.pendingDollarWallet || 0,
+			totalEarnings: transactions.reduce(
+				(acc: any, t: any) => {
+					acc[t.currency] = new Decimal(acc[t.currency] || 0)
+						.plus(t.amount)
+						.toNumber();
+					return acc;
+				},
+				{ NGN: 0, USD: 0 },
+			),
+		};
+
+		res.status(200).json({ data: stats });
+	} catch (error) {
+		logger.error("Error fetching wallet stats:", error);
+		res.status(500).json({ message: "Internal server error" });
+	}
+};
+
+export const getVendorTransactions = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const vendorId = (req as AuthenticatedRequest).user?.id as string;
+	const { page = 1, limit = 10 } = req.query;
+
+	try {
+		const offset = (Number(page) - 1) * Number(limit);
+		const { rows, count } = await Transaction.findAndCountAll({
+			where: { userId: vendorId },
+			limit: Number(limit),
+			offset,
+			order: [['createdAt', 'DESC']]
+		});
+
+		res.status(200).json({
+			data: rows,
+			pagination: {
+				total: count,
+				page: Number(page),
+				limit: Number(limit)
+			}
+		});
+	} catch (error) {
+		logger.error("Error fetching transactions:", error);
+		res.status(500).json({ message: "Internal server error" });
+	}
+};
+
 export const requestWithdrawal = async (
 	req: Request,
 	res: Response,
@@ -2433,6 +2517,7 @@ export const requestWithdrawal = async (
 		}
 		await vendor.save({ transaction });
 
+
 		// Create withdrawal request
 		const withdrawal = await Withdrawal.create(
 			{
@@ -2444,6 +2529,17 @@ export const requestWithdrawal = async (
 			},
 			{ transaction },
 		);
+
+		// Log Transaction
+		await Transaction.create({
+			userId: vendorId,
+			amount: amount,
+			currency: currency,
+			transactionType: "withdrawal",
+			refId: withdrawal.id,
+			status: "pending",
+			note: `Withdrawal request to ${bankInformation.bankName}`
+		}, { transaction });
 
 		// Vendor Notification
 		await Notification.create(

@@ -5,7 +5,9 @@ class Transaction extends Model {
   public id!: string;
   public userId!: string;
   public amount!: number;
-  public transactionType!: string; // e.g., 'subscription', 'payment', etc.
+  public currency!: string;
+  public transactionType!: string; // e.g., 'subscription', 'payment', 'sale', 'withdrawal', 'refund'
+  public metadata?: any;
   public refId?: string;
   public status!: string; // e.g., 'completed', 'pending', 'failed'
   public createdAt!: Date;
@@ -38,12 +40,20 @@ const initModel = (sequelize: Sequelize) => {
         allowNull: false,
       },
       amount: {
-        type: DataTypes.FLOAT,
+        type: DataTypes.DECIMAL(20, 2),
         allowNull: false,
       },
-      transactionType: {
+      currency: {
         type: DataTypes.STRING,
+        defaultValue: "NGN",
+      },
+      transactionType: {
+        type: DataTypes.STRING, // e.g., 'subscription', 'payment', 'sale', 'withdrawal', 'refund'
         allowNull: false,
+      },
+      metadata: {
+        type: DataTypes.JSON,
+        allowNull: true,
       },
       refId: {
         type: DataTypes.STRING,
@@ -64,5 +74,5 @@ const initModel = (sequelize: Sequelize) => {
   );
 };
 
-export default Transaction; 
+export default Transaction;
 export { initModel };

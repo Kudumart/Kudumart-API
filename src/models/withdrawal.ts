@@ -2,6 +2,7 @@
 import { Model, DataTypes, Sequelize } from "sequelize";
 
 class Withdrawal extends Model {
+  public id!: string;
   public vendorId?: string;
   public bankInformation?: object;
   public amount!: string;
@@ -9,6 +10,7 @@ class Withdrawal extends Model {
   public status?: string;
   public note?: string;
   public paymentReceipt?: string;
+  public createdAt!: Date;
   public updatedAt!: Date;
   public deletedAt!: Date | null;
 
@@ -61,7 +63,7 @@ const initModel = (sequelize: Sequelize) => {
         allowNull: true,
       },
       paymentReceipt: {
-        type: DataTypes.TEXT, // Store file path or URL
+        type: DataTypes.TEXT,
         allowNull: true, // Optional field
       },
     },
@@ -75,5 +77,5 @@ const initModel = (sequelize: Sequelize) => {
   );
 };
 
-export default Withdrawal; 
+export default Withdrawal;
 export { initModel };

@@ -282,6 +282,16 @@ vendorRoutes.post(
 	authMiddleware,
 	vendorController.requestWithdrawal,
 );
+vendorRoutes.get(
+	"/wallet/stats",
+	authMiddleware,
+	vendorController.getVendorWalletStats,
+);
+vendorRoutes.get(
+	"/wallet/transactions",
+	authMiddleware,
+	vendorController.getVendorTransactions,
+);
 vendorRoutes.put(
 	"/withdrawal",
 	authMiddleware,

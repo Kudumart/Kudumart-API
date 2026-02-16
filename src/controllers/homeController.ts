@@ -217,21 +217,21 @@ export const products = async (req: Request, res: Response): Promise<void> => {
 				as: "store",
 				where: countryFilter
 					? where(
+						fn(
+							"LOWER",
 							fn(
-								"LOWER",
+								"JSON_UNQUOTE",
 								fn(
-									"JSON_UNQUOTE",
-									fn(
-										"JSON_EXTRACT",
-										col("store.location"),
-										literal("'$.country'"),
-									),
+									"JSON_EXTRACT",
+									col("store.location"),
+									literal("'$.country'"),
 								),
 							),
-							{
-								[Op.like]: `%${countryFilter}%`,
-							},
-						)
+						),
+						{
+							[Op.like]: `%${countryFilter}%`,
+						},
+					)
 					: undefined,
 
 				include: [
@@ -253,9 +253,9 @@ export const products = async (req: Request, res: Response): Promise<void> => {
 		const orderClause: Order =
 			popular === "true"
 				? [
-						["views", "DESC"],
-						[Sequelize.literal("RAND()"), "ASC"],
-					] // Sort by views first, then randomize
+					["views", "DESC"],
+					[Sequelize.literal("RAND()"), "ASC"],
+				] // Sort by views first, then randomize
 				: [[Sequelize.literal("RAND()"), "ASC"]]; // Default random sorting
 
 		// Calculate the offset based on page and limit
@@ -415,11 +415,11 @@ export const getProductById = async (
 		const averageRating =
 			totalReviews > 0
 				? (
-						reviews.reduce(
-							(sum, review) => sum + Number(review.rating) || 0,
-							0,
-						) / totalReviews
-					).toFixed(1)
+					reviews.reduce(
+						(sum, review) => sum + Number(review.rating) || 0,
+						0,
+					) / totalReviews
+				).toFixed(1)
 				: "0.0";
 
 		// Attach review data to the product
@@ -735,21 +735,21 @@ export const getAuctionProducts = async (
 					],
 					where: country
 						? where(
+							fn(
+								"LOWER",
 								fn(
-									"LOWER",
+									"JSON_UNQUOTE",
 									fn(
-										"JSON_UNQUOTE",
-										fn(
-											"JSON_EXTRACT",
-											col("store.location"),
-											literal("'$.country'"),
-										),
+										"JSON_EXTRACT",
+										col("store.location"),
+										literal("'$.country'"),
 									),
 								),
-								{
-									[Op.like]: `%${country.toString().toLowerCase()}%`,
-								},
-							)
+							),
+							{
+								[Op.like]: `%${country.toString().toLowerCase()}%`,
+							},
+						)
 						: undefined,
 				},
 				{
@@ -1345,7 +1345,7 @@ export const getAttributesForServiceCategory = async (
 			return;
 		}
 
-		const serviceCategory = await ServiceCategories.findByPk(serviceCategoryId);
+		const serviceCategory = await ServiceCategories.findByPk(Number(serviceCategoryId));
 
 		if (!serviceCategory) {
 			res.status(404).json({ message: "Service category not found." });

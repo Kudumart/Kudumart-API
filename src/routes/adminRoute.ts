@@ -702,6 +702,21 @@ adminRoutes.post(
 	adminController.updateWithdrawalStatus,
 );
 adminRoutes.get(
+	"/payout/reports",
+	adminAuthMiddleware,
+	adminController.getVendorPayoutReports,
+);
+adminRoutes.get(
+	"/payout/stats",
+	adminAuthMiddleware,
+	adminController.getOverallPayoutStats,
+);
+adminRoutes.get(
+	"/earnings/reports",
+	adminAuthMiddleware,
+	adminController.getVendorEarningsReport,
+);
+adminRoutes.get(
 	"/withdrawals",
 	adminAuthMiddleware,
 	adminController.getWithdrawals,

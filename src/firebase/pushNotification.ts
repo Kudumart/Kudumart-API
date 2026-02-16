@@ -1,15 +1,24 @@
 import firebase from "firebase-admin";
 
-const serviceAccount = JSON.parse(
-	Buffer.from(
-		process.env.FIREBASE_SERVICE_ACCOUNT_KEY as string,
-		"base64",
-	).toString("utf8"),
-);
+let serviceAccount: any = {};
+try {
+	const b64 = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+	if (b64 && b64 !== "e30=") {
+		serviceAccount = JSON.parse(Buffer.from(b64, "base64").toString("utf8"));
+	}
+} catch (e) {
+	console.error("Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY", e);
+}
 
-firebase.initializeApp({
-	credential: firebase.credential.cert(serviceAccount),
-});
+if (serviceAccount && serviceAccount.project_id) {
+	firebase.initializeApp({
+		credential: firebase.credential.cert(serviceAccount),
+	});
+} else {
+	console.warn(
+		"Firebase not initialized: Invalid or missing service account key. Push notifications will not work.",
+	);
+}
 
 type FirebaseMessage = {
 	token: string;
@@ -37,6 +46,13 @@ type FirebaseTopicMessage = {
 		body: string;
 	};
 };
+
+export enum PushNotificationTypes {
+	ORDER_CREATED = "order_created",
+	ORDER_STATUS_UPDATE = "order_status_update",
+	NEW_MESSAGE = "new_message",
+	PAYMENT_SUCCESS = "payment_success",
+}
 
 // Send push notification
 export async function sendPushNotification(message: FirebaseMessage) {

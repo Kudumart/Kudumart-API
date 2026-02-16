@@ -829,8 +829,8 @@ export const createSubscriptionPlan = async (
 		productLimit,
 		allowsAuction,
 		auctionProductLimit,
-    allowsServiceAds,
-    serviceAdsLimit,
+		allowsServiceAds,
+		serviceAdsLimit,
 		maxAds,
 		adsDurationDays,
 	} = req.body;
@@ -862,8 +862,8 @@ export const createSubscriptionPlan = async (
 			productLimit,
 			allowsAuction,
 			auctionProductLimit,
-      allowsServiceAds,
-      serviceAdsLimit,
+			allowsServiceAds,
+			serviceAdsLimit,
 			maxAds,
 			adsDurationDays,
 			currencyId: currency.id,
@@ -1343,9 +1343,9 @@ export const deleteSubCategory = async (
 			model: typeof Product | typeof AuctionProduct;
 			field: string;
 		}[] = [
-			{ name: "products", model: Product, field: "categoryId" },
-			{ name: "auction_products", model: AuctionProduct, field: "categoryId" },
-		];
+				{ name: "products", model: Product, field: "categoryId" },
+				{ name: "auction_products", model: AuctionProduct, field: "categoryId" },
+			];
 
 		// Check each related table
 		for (const table of relatedTables) {
@@ -2399,14 +2399,14 @@ export const deleteGeneralProduct = async (
 			model: typeof SaveProduct | typeof ReviewProduct | typeof Cart;
 			field: string;
 		}[] = [
-			{ name: "save_products", model: SaveProduct, field: "productId" },
-			{ name: "review_products", model: ReviewProduct, field: "productId" },
-			{ name: "carts", model: Cart, field: "productId" },
-		];
+				{ name: "save_products", model: SaveProduct, field: "productId" },
+				{ name: "review_products", model: ReviewProduct, field: "productId" },
+				{ name: "carts", model: Cart, field: "productId" },
+			];
 
-    if (product.type === "dropship") {
-     await DropshipProducts.destroy({ where: { productId: product.id } });
-    }
+		if (product.type === "dropship") {
+			await DropshipProducts.destroy({ where: { productId: product.id } });
+		}
 
 		// Check each related table
 		for (const table of relatedTables) {
@@ -3248,9 +3248,9 @@ export const deleteStore = async (
 			model: typeof AuctionProduct | typeof Product;
 			field: string;
 		}[] = [
-			{ name: "auction_products", model: AuctionProduct, field: "storeId" },
-			{ name: "products", model: Product, field: "storeId" },
-		];
+				{ name: "auction_products", model: AuctionProduct, field: "storeId" },
+				{ name: "products", model: Product, field: "storeId" },
+			];
 
 		// Check each related table
 		for (const table of relatedTables) {
@@ -3416,10 +3416,10 @@ export const deleteProduct = async (
 			model: typeof SaveProduct | typeof ReviewProduct | typeof Cart;
 			field: string;
 		}[] = [
-			{ name: "save_products", model: SaveProduct, field: "productId" },
-			{ name: "review_products", model: ReviewProduct, field: "productId" },
-			{ name: "carts", model: Cart, field: "productId" },
-		];
+				{ name: "save_products", model: SaveProduct, field: "productId" },
+				{ name: "review_products", model: ReviewProduct, field: "productId" },
+				{ name: "carts", model: Cart, field: "productId" },
+			];
 
 		// Check each related table
 		for (const table of relatedTables) {
@@ -4743,132 +4743,132 @@ export const viewOrderItem = async (
 };
 
 export const getDropshipedOrderItemDetails = async (
-  req: Request,
-  res: Response,
+	req: Request,
+	res: Response,
 ): Promise<void> => {
 
-  const adminId = (req as AuthenticatedRequest).admin?.id;
+	const adminId = (req as AuthenticatedRequest).admin?.id;
 
-  const { orderItemId } = req.query;
+	const { orderItemId } = req.query;
 
-  if (!orderItemId) {
-    res.status(400).json({ message: "Order item ID is required." });
-    return;
-  }
+	if (!orderItemId) {
+		res.status(400).json({ message: "Order item ID is required." });
+		return;
+	}
 
-  try {
-    // Fetch the order item along with its order and user details
-    const orderItem = await OrderItem.findOne({
-      where: { id: orderItemId },
-      include: [
-        {
-          model: Order,
-          as: "order",
-          include: [
-            {
-              model: User,
-              as: "user",
-              attributes: [
-                "id",
-                "firstName",
-                "lastName",
-                "email",
-                "phoneNumber",
-              ], // Include user details
-            },
-          ],
-        },
-      ],
-    });
+	try {
+		// Fetch the order item along with its order and user details
+		const orderItem = await OrderItem.findOne({
+			where: { id: orderItemId },
+			include: [
+				{
+					model: Order,
+					as: "order",
+					include: [
+						{
+							model: User,
+							as: "user",
+							attributes: [
+								"id",
+								"firstName",
+								"lastName",
+								"email",
+								"phoneNumber",
+							], // Include user details
+						},
+					],
+				},
+			],
+		});
 
-    if (!orderItem) {
-      res.status(404).json({ message: "Order item not found." });
-      return;
-    }
+		if (!orderItem) {
+			res.status(404).json({ message: "Order item not found." });
+			return;
+		}
 
-   if (!orderItem.dropshipProductId){
-      res.status(400).json({ message: "This order item is not dropshipped." });
-      return;
-    }
+		if (!orderItem.dropshipProductId) {
+			res.status(400).json({ message: "This order item is not dropshipped." });
+			return;
+		}
 
-    if (!orderItem.dropshipOrderItemIds || orderItem.dropshipOrderItemIds.length === 0){
-      res.status(404).json({ message: "No dropshipped order item IDs found." });
-      return;
-    }
+		if (!orderItem.dropshipOrderItemIds || orderItem.dropshipOrderItemIds.length === 0) {
+			res.status(404).json({ message: "No dropshipped order item IDs found." });
+			return;
+		}
 
-    //@ts-ignore
-  const dropshipOrderItemDetails = await Promise
-      .all(orderItem.dropshipOrderItemIds.map( (dropshipOrderItemId: string) =>
-      //@ts-ignore
-      dropShippingService.getOrderDetails(adminId!, dropshipOrderItemId )
-  ));
+		//@ts-ignore
+		const dropshipOrderItemDetails = await Promise
+			.all(orderItem.dropshipOrderItemIds.map((dropshipOrderItemId: string) =>
+				//@ts-ignore
+				dropShippingService.getOrderDetails(adminId!, dropshipOrderItemId)
+			));
 
-    if (!dropshipOrderItemDetails || dropshipOrderItemDetails.length === 0 || dropshipOrderItemDetails.every(detail => !detail))     {
-      res.status(404).json({ message: "No dropshipped order item details found." });
-      return;
-    }
+		if (!dropshipOrderItemDetails || dropshipOrderItemDetails.length === 0 || dropshipOrderItemDetails.every(detail => !detail)) {
+			res.status(404).json({ message: "No dropshipped order item details found." });
+			return;
+		}
 
-    res.status(200).json({
-      message: "Dropshipped order item details retrieved successfully.",
-      data: dropshipOrderItemDetails,
-    });
+		res.status(200).json({
+			message: "Dropshipped order item details retrieved successfully.",
+			data: dropshipOrderItemDetails,
+		});
 
-  } catch (error) {
-    logger.error("Error retrieving dropshipped order item details:", error);
-    res
-      .status(500)
-      .json({ message: "Failed to retrieve dropshipped order item details." });
-  }
+	} catch (error) {
+		logger.error("Error retrieving dropshipped order item details:", error);
+		res
+			.status(500)
+			.json({ message: "Failed to retrieve dropshipped order item details." });
+	}
 }
 
 export const getDropshipOrderTrackingInfo = async (
-  req: Request,
-  res: Response,
+	req: Request,
+	res: Response,
 ): Promise<void> => {
 
-  const adminId = (req as AuthenticatedRequest).admin?.id;
+	const adminId = (req as AuthenticatedRequest).admin?.id;
 
-  const { orderItemId } = req.query;
+	const { orderItemId } = req.query;
 
-  if (!orderItemId) {
-    res.status(400).json({ message: "Dropship order item ID is required." });
-    return;
-  }
+	if (!orderItemId) {
+		res.status(400).json({ message: "Dropship order item ID is required." });
+		return;
+	}
 
-  const orderItem = await OrderItem.findOne({
-    where: { id: orderItemId },
-  });
+	const orderItem = await OrderItem.findOne({
+		where: { id: orderItemId },
+	});
 
-  if (!orderItem) {
-    res.status(404).json({ message: "Order item not found." });
-    return;
-  }
+	if (!orderItem) {
+		res.status(404).json({ message: "Order item not found." });
+		return;
+	}
 
-  try {
-    const trackingInfo = await Promise.all(orderItem.dropshipOrderItemIds!.map((dropshipOrderItemId: string) =>
-      dropShippingService.trackOrder(
-      adminId!,
-      //@ts-ignore
-      dropshipOrderItemId,
-  )))
+	try {
+		const trackingInfo = await Promise.all(orderItem.dropshipOrderItemIds!.map((dropshipOrderItemId: string) =>
+			dropShippingService.trackOrder(
+				adminId!,
+				//@ts-ignore
+				dropshipOrderItemId,
+			)))
 
-    if (!trackingInfo || trackingInfo.length === 0 || trackingInfo.every(info => !info)) {
-      res.status(404).json({ message: "No tracking information found." });
-      return;
-    }
+		if (!trackingInfo || trackingInfo.length === 0 || trackingInfo.every(info => !info)) {
+			res.status(404).json({ message: "No tracking information found." });
+			return;
+		}
 
 
-    res.status(200).json({
-      message: "Dropshipped order item tracking info retrieved successfully.",
-      data: trackingInfo,
-    });
+		res.status(200).json({
+			message: "Dropshipped order item tracking info retrieved successfully.",
+			data: trackingInfo,
+		});
 
-  } catch (error) {
-    logger.error("Error tracking dropshipped order item:", error);
-    res
-      .status(500)
-      .json({ message: "Failed to track dropshipped order item." });
-  }
+	} catch (error) {
+		logger.error("Error tracking dropshipped order item:", error);
+		res
+			.status(500)
+			.json({ message: "Failed to track dropshipped order item." });
+	}
 }
 
 export const getOrderItemsInfo = async (
@@ -5029,21 +5029,51 @@ export const updateOrderStatus = async (
 			return;
 		}
 
-		// If the order is delivered, add funds to the vendor's wallet
+		// If the order is delivered, add funds to the vendor's wallet and deduct from pending
 		if (
-			(status === "delivered" && currencySymbol === "#" && vendor) ||
-			(status === "delivered" && currencySymbol === "₦" && vendor)
+			(status === "delivered" && (currencySymbol === "#" || currencySymbol === "₦") && vendor)
 		) {
-			const price = Number(order.price);
-			vendor.wallet = Number(vendor.wallet) + price;
+			const totalIncome = Number(order.price) * Number(order.quantity);
+			vendor.wallet = Number(vendor.wallet) + totalIncome;
+			vendor.pendingWallet = Math.max(0, Number(vendor.pendingWallet) - totalIncome);
 			await vendor.save({ transaction });
+
+			// Update transaction status
+			await Transaction.update(
+				{ status: "completed" },
+				{ where: { refId: order.id, transactionType: "sale" }, transaction }
+			);
 		}
 
 		// If the order is delivered and the currency is USD, add funds to the vendor's wallet
 		if (status === "delivered" && currencySymbol === "$" && vendor) {
-			const price = Number(order.price);
-			vendor.dollarWallet = Number(vendor.dollarWallet) + price;
+			const totalIncome = Number(order.price) * Number(order.quantity);
+			vendor.dollarWallet = Number(vendor.dollarWallet) + totalIncome;
+			vendor.pendingDollarWallet = Math.max(0, Number(vendor.pendingDollarWallet) - totalIncome);
 			await vendor.save({ transaction });
+
+			// Update transaction status
+			await Transaction.update(
+				{ status: "completed" },
+				{ where: { refId: order.id, transactionType: "sale" }, transaction }
+			);
+		}
+
+		// If the order is cancelled, deduct from pending wallet
+		if (status === "cancelled" && vendor) {
+			const totalIncome = Number(order.price) * Number(order.quantity);
+			if (currencySymbol === "#" || currencySymbol === "₦") {
+				vendor.pendingWallet = Math.max(0, Number(vendor.pendingWallet) - totalIncome);
+			} else if (currencySymbol === "$") {
+				vendor.pendingDollarWallet = Math.max(0, Number(vendor.pendingDollarWallet) - totalIncome);
+			}
+			await vendor.save({ transaction });
+
+			// Update transaction status
+			await Transaction.update(
+				{ status: "failed" },
+				{ where: { refId: order.id, transactionType: "sale" }, transaction }
+			);
 		}
 
 		// Send a notification to the buyer
@@ -6060,6 +6090,20 @@ export const updateWithdrawalStatus = async (
 		withdrawal.note = note || withdrawal.note; // Store rejection note
 		await withdrawal.save({ transaction });
 
+		// Update the corresponding Transaction record
+		const existingTransaction = await Transaction.findOne({
+			where: { refId: withdrawal.id, transactionType: "withdrawal" },
+			transaction,
+		});
+
+		if (existingTransaction) {
+			existingTransaction.status = status === "approved" ? "completed" : "failed";
+			if (status === "rejected") {
+				existingTransaction.metadata = { ...(existingTransaction.metadata || {}), reason: note };
+			}
+			await existingTransaction.save({ transaction });
+		}
+
 		// Notify Vendor
 		await Notification.create(
 			{
@@ -6287,9 +6331,9 @@ export const getAdminNotifications = async (
 			offset: offset || 0, // Default to 0 if page or limit is invalid
 			order: [["createdAt", "DESC"]],
 		});
-		res.status(200).json({ data: notifications  , pagination: { limit, page } });
+		res.status(200).json({ data: notifications, pagination: { limit, page } });
 	} catch (error) {
-    console.log(error);
+		console.log(error);
 		res.status(500).json({ message: "Failed to fetch notifications" });
 	}
 };
@@ -6301,7 +6345,7 @@ export const markAdminNotificationAsRead = async (
 ): Promise<void> => {
 	const { id } = req.params;
 	try {
-		const notification = await AdminNotification.findByPk(id);
+		const notification = await AdminNotification.findByPk(Number(id));
 		if (!notification) {
 			res.status(404).json({ message: "Notification not found" });
 			return;
@@ -6360,7 +6404,7 @@ export const createProductCharge = async (req: Request, res: Response) => {
 
 		const chargeOverlap = await ProductCharge.findOne({
 			where: {
-        charge_currency,
+				charge_currency,
 				minimum_product_amount: { [Op.lte]: maximum_product_amount },
 				maximum_product_amount: { [Op.gte]: minimum_product_amount },
 			},
@@ -6443,7 +6487,7 @@ export const updateProductCharge = async (req: Request, res: Response) => {
 	}
 
 	try {
-		const charge = await ProductCharge.findByPk(productChargeId);
+		const charge = await ProductCharge.findByPk(Number(productChargeId));
 
 		if (!charge) {
 			res.status(404).json({ message: "Product charge not found" });
@@ -6453,7 +6497,7 @@ export const updateProductCharge = async (req: Request, res: Response) => {
 		const chargeOverlap = await ProductCharge.findOne({
 			where: {
 				id: { [Op.ne]: productChargeId },
-        charge_currency,
+				charge_currency,
 				minimum_product_amount: { [Op.lte]: maximum_product_amount },
 				maximum_product_amount: { [Op.gte]: minimum_product_amount },
 			},
@@ -6518,7 +6562,7 @@ export const deleteProductCharge = async (req: Request, res: Response) => {
 	const productChargeId = req.params.id;
 
 	try {
-		const charge = await ProductCharge.findByPk(productChargeId);
+		const charge = await ProductCharge.findByPk(Number(productChargeId));
 
 		if (!charge) {
 			res.status(404).json({ message: "Product charge not found" });
@@ -6546,7 +6590,7 @@ export const markProductChargeAsInactive = async (
 	const productChargeId = req.params.id;
 
 	try {
-		const charge = await ProductCharge.findByPk(productChargeId);
+		const charge = await ProductCharge.findByPk(Number(productChargeId));
 
 		if (!charge) {
 			res.status(404).json({ message: "Product charge not found" });
@@ -6588,7 +6632,7 @@ export const markProductChargeAsActive = async (
 	const productChargeId = req.params.id;
 
 	try {
-		const charge = await ProductCharge.findByPk(productChargeId);
+		const charge = await ProductCharge.findByPk(Number(productChargeId));
 
 		if (!charge) {
 			res.status(404).json({ message: "Product charge not found" });
@@ -6622,7 +6666,7 @@ export const markProductChargeAsActive = async (
 	}
 };
 
-  export const createServiceCategory = async (req: Request, res: Response) => {
+export const createServiceCategory = async (req: Request, res: Response) => {
 	const { name, image } = req.body;
 
 	try {
@@ -6667,7 +6711,7 @@ export const updateServiceCategory = async (req: Request, res: Response) => {
 			return;
 		}
 
-		const service = await ServiceCategories.findByPk(id);
+		const service = await ServiceCategories.findByPk(Number(id));
 
 		if (!service) {
 			res.status(404).json({ message: "Service category not found" });
@@ -6735,7 +6779,7 @@ export const deleteServiceCategory = async (
 			return;
 		}
 
-		const service = await ServiceCategories.findByPk(id);
+		const service = await ServiceCategories.findByPk(Number(id));
 
 		if (!service) {
 			res.status(404).json({ message: "Service category not found" });
@@ -6824,7 +6868,7 @@ export const updateServiceSubCategory = async (
 			return;
 		}
 
-		const subCategory = await ServiceSubCategories.findByPk(id);
+		const subCategory = await ServiceSubCategories.findByPk(Number(id));
 
 		if (!subCategory) {
 			res.status(404).json({ message: "Service sub-category not found" });
@@ -6907,7 +6951,7 @@ export const deleteServiceSubCategory = async (
 			return;
 		}
 
-		const subCategory = await ServiceSubCategories.findByPk(id);
+		const subCategory = await ServiceSubCategories.findByPk(Number(id));
 
 		if (!subCategory) {
 			res.status(404).json({ message: "Service sub-category not found" });
@@ -6950,21 +6994,21 @@ export const createServiceAttribute = async (
 			data_type: string;
 		}[] = [];
 		for (const attr of attributes) {
-			const { name, input_type,  value } = attr;
+			const { name, input_type, value } = attr;
 
-			if (!name ) {
+			if (!name) {
 				res.status(400).json({
 					message: "Each attribute must include name.",
 				});
 				return;
 			}
 
-      if ((input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.MULTI_SELECT || input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.SINGLE_SELECT) && (!value || !Array.isArray(value) || value.length === 0)) {
-        res.status(400).json({
-          message: `Attribute ${name} of type ${input_type} must include non-empty value array.`,
-        });
-        return;
-      }
+			if ((input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.MULTI_SELECT || input_type === ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.SINGLE_SELECT) && (!value || !Array.isArray(value) || value.length === 0)) {
+				res.status(400).json({
+					message: `Attribute ${name} of type ${input_type} must include non-empty value array.`,
+				});
+				return;
+			}
 
 			if (
 				!input_type ||
@@ -7044,7 +7088,7 @@ export const createServiceAttribute = async (
 					{
 						validate: true,
 						individualHooks: true,
-          	transaction: t,
+						transaction: t,
 					},
 				);
 
@@ -7117,521 +7161,521 @@ export const createServiceAttribute = async (
 };
 
 export const deleteServiceAttribute = async (
-  req: Request,
-  res: Response,
+	req: Request,
+	res: Response,
 ): Promise<void> => {
-  const id = req.params.id;
+	const id = req.params.id;
 
-  try {
-    if (!id) {
-      res.status(400).json({ message: "Service attribute ID is required" });
-      return;
-    }
+	try {
+		if (!id) {
+			res.status(400).json({ message: "Service attribute ID is required" });
+			return;
+		}
 
-    if (typeof Number(id) !== 'number') {
-      res.status(400).json({ message: "Service attribute ID must be a number" });
-      return;
-    }
+		if (typeof Number(id) !== 'number') {
+			res.status(400).json({ message: "Service attribute ID must be a number" });
+			return;
+		}
 
-    const attribute = await AttributeDefinitions.findByPk(id);
+		const attribute = await AttributeDefinitions.findByPk(Number(id));
 
-    if (!attribute) {
-      res.status(404).json({ message: "Service attribute not found" });
-      return;
-    }
+		if (!attribute) {
+			res.status(404).json({ message: "Service attribute not found" });
+			return;
+		}
 
-    await attribute.destroy();
+		await attribute.destroy();
 
-    res.status(200).json({
-      message: "Service attribute deleted successfully",
-    });
-  } catch (error: any) {
-    logger.error(`Error deleting service attribute: ${error.message}`);
-    res.status(500).json({
-      message:
-        "An error occurred while deleting the service attribute. Please try again later.",
-    });
-  }
+		res.status(200).json({
+			message: "Service attribute deleted successfully",
+		});
+	} catch (error: any) {
+		logger.error(`Error deleting service attribute: ${error.message}`);
+		res.status(500).json({
+			message:
+				"An error occurred while deleting the service attribute. Please try again later.",
+		});
+	}
 }
 
 export const addAttributeOptions = async (
-  req: Request,
-  res: Response,
+	req: Request,
+	res: Response,
 ): Promise<void> => {
-  const attributeId = req.params.attributeId;
-  const { options } = req.body;
+	const attributeId = req.params.attributeId;
+	const { options } = req.body;
 
-  try {
-    if (!attributeId) {
-      res.status(400).json({ message: "Attribute ID is required." });
-      return;
-    }
+	try {
+		if (!attributeId) {
+			res.status(400).json({ message: "Attribute ID is required." });
+			return;
+		}
 
-    if (!options || !Array.isArray(options) || options.length === 0) {
-      res.status(400).json({
-        message: "Options must be a non-empty array.",
-      });
-      return;
-    }
+		if (!options || !Array.isArray(options) || options.length === 0) {
+			res.status(400).json({
+				message: "Options must be a non-empty array.",
+			});
+			return;
+		}
 
-    const attribute = await AttributeDefinitions.findByPk(attributeId);
+		const attribute = await AttributeDefinitions.findByPk(Number(attributeId));
 
-    if (!attribute) {
-      res.status(404).json({ message: "Attribute not found." });
-      return;
-    }
+		if (!attribute) {
+			res.status(404).json({ message: "Attribute not found." });
+			return;
+		}
 
-    if (
-      attribute.data_type !== ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ.STR_ARRAY ||
-      (attribute.input_type !== ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.SINGLE_SELECT &&
-        attribute.input_type !== ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.MULTI_SELECT)
-    ) {
-      res.status(400).json({
-        message:
-          "Options can only be added to attributes with 'single_select' or 'multi_select' input types.",
-      });
-      return;
-    }
+		if (
+			attribute.data_type !== ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ.STR_ARRAY ||
+			(attribute.input_type !== ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.SINGLE_SELECT &&
+				attribute.input_type !== ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.MULTI_SELECT)
+		) {
+			res.status(400).json({
+				message:
+					"Options can only be added to attributes with 'single_select' or 'multi_select' input types.",
+			});
+			return;
+		}
 
 
 
-    const optionRecords = options.map((opt: string) => ({
-      attribute_id: attribute.id,
-      option_value: opt,
-    }));
+		const optionRecords = options.map((opt: string) => ({
+			attribute_id: attribute.id,
+			option_value: opt,
+		}));
 
-    const newOptions = await AttributeOptions.bulkCreate(optionRecords, {
-      validate: true,
-      individualHooks: true,
-      ignoreDuplicates: true,
-    });
+		const newOptions = await AttributeOptions.bulkCreate(optionRecords, {
+			validate: true,
+			individualHooks: true,
+			ignoreDuplicates: true,
+		});
 
-    res.status(200).json({
-      message: "Options added successfully",
-      data: newOptions,
-    });
-  } catch (error: any) {
-    if (error.name === "SequelizeUniqueConstraintError") {
-      res.status(400).json({
-        message: "One or more options already exist for this attribute.",
-      });
-      return;
-    }
+		res.status(200).json({
+			message: "Options added successfully",
+			data: newOptions,
+		});
+	} catch (error: any) {
+		if (error.name === "SequelizeUniqueConstraintError") {
+			res.status(400).json({
+				message: "One or more options already exist for this attribute.",
+			});
+			return;
+		}
 
-    logger.error(`Error adding attribute options: ${error.message}`);
-    res.status(500).json({
-      message:
-        "An unexpected error occurred while adding attribute options.",
-    });
-  }
+		logger.error(`Error adding attribute options: ${error.message}`);
+		res.status(500).json({
+			message:
+				"An unexpected error occurred while adding attribute options.",
+		});
+	}
 }
 
 export const getAllServiceAttributes = async (
-  _req: Request,
-  res: Response,
+	_req: Request,
+	res: Response,
 ): Promise<void> => {
 
-  const { page, limit } = _req.query;
+	const { page, limit } = _req.query;
 
-  try {
-    const offset = (Number(page) - 1) * Number(limit);
+	try {
+		const offset = (Number(page) - 1) * Number(limit);
 
-    const attributes = await AttributeDefinitions.findAll({
-      limit: Number(limit) || 10,
-      offset: offset || 0,
-      order: [["id", "ASC"]],
-      include: [
-        {
-          model: AttributeOptions,
-          as: "options",
-          attributes: ["id", "option_value"],
-        },
-      ],
-    });
-    res.status(200).json({ data: attributes });
-  } catch (error: any) {
-    logger.error(`Error retrieving service attributes: ${error.message}`);
-    res.status(500).json({
-      message:
-        "An error occurred while retrieving service attributes. Please try again later.",
-    });
-  }
+		const attributes = await AttributeDefinitions.findAll({
+			limit: Number(limit) || 10,
+			offset: offset || 0,
+			order: [["id", "ASC"]],
+			include: [
+				{
+					model: AttributeOptions,
+					as: "options",
+					attributes: ["id", "option_value"],
+				},
+			],
+		});
+		res.status(200).json({ data: attributes });
+	} catch (error: any) {
+		logger.error(`Error retrieving service attributes: ${error.message}`);
+		res.status(500).json({
+			message:
+				"An error occurred while retrieving service attributes. Please try again later.",
+		});
+	}
 }
 
 export const deleteAttributeOption = async (
-  req: Request,
-  res: Response,
+	req: Request,
+	res: Response,
 ): Promise<void> => {
-  const optionId = req.params.optionId;
+	const optionId = req.params.optionId;
 
-  try {
-    if (!optionId) {
-      res.status(400).json({ message: "Option ID is required." });
-      return;
-    }
+	try {
+		if (!optionId) {
+			res.status(400).json({ message: "Option ID is required." });
+			return;
+		}
 
-    const option = await AttributeOptions.findByPk(optionId);
+		const option = await AttributeOptions.findByPk(Number(optionId));
 
-    if (!option) {
-      res.status(404).json({ message: "Option not found." });
-      return;
-    }
+		if (!option) {
+			res.status(404).json({ message: "Option not found." });
+			return;
+		}
 
-    if (typeof Number(optionId) !== 'number') {
-      res.status(400).json({ message: "Option ID must be a number" });
-      return;
-    }
+		if (typeof Number(optionId) !== 'number') {
+			res.status(400).json({ message: "Option ID must be a number" });
+			return;
+		}
 
-    await option.destroy();
+		await option.destroy();
 
-    res.status(200).json({
-      message: "Option deleted successfully",
-    });
-  } catch (error: any) {
-    logger.error(`Error deleting attribute option: ${error.message}`);
-    res.status(500).json({
-      message:
-        "An error occurred while deleting the attribute option. Please try again later.",
-    });
-  }
+		res.status(200).json({
+			message: "Option deleted successfully",
+		});
+	} catch (error: any) {
+		logger.error(`Error deleting attribute option: ${error.message}`);
+		res.status(500).json({
+			message:
+				"An error occurred while deleting the attribute option. Please try again later.",
+		});
+	}
 }
 
 export const addAttributeToServiceCategory = async (
-  req: Request,
-  res: Response,
+	req: Request,
+	res: Response,
 ): Promise<void> => {
-  const categoryId = req.params.categoryId;
+	const categoryId = req.params.categoryId;
 
-  const {  attributeIds } = req.body;
+	const { attributeIds } = req.body;
 
-  try {
-    if (!categoryId) {
-      res.status(400).json({ message: "Service category ID is required." });
-      return;
-    }
+	try {
+		if (!categoryId) {
+			res.status(400).json({ message: "Service category ID is required." });
+			return;
+		}
 
-    if (
-      !attributeIds ||
-      !Array.isArray(attributeIds) ||
-      attributeIds.length === 0
-    ) {
-      res.status(400).json({
-        message: "Attribute IDs must be a non-empty array.",
-      });
-      return;
-    }
+		if (
+			!attributeIds ||
+			!Array.isArray(attributeIds) ||
+			attributeIds.length === 0
+		) {
+			res.status(400).json({
+				message: "Attribute IDs must be a non-empty array.",
+			});
+			return;
+		}
 
-    const serviceCategory = await ServiceCategories.findByPk(categoryId);
+		const serviceCategory = await ServiceCategories.findByPk(Number(categoryId));
 
-    if (!serviceCategory) {
-      res.status(404).json({ message: "Service category not found." });
-      return;
-    }
+		if (!serviceCategory) {
+			res.status(404).json({ message: "Service category not found." });
+			return;
+		}
 
-    const attributes = await AttributeDefinitions.findAll({
-      where: {
-        id: {
-          [Op.in]: attributeIds,
-        },
-      }
-    });
+		const attributes = await AttributeDefinitions.findAll({
+			where: {
+				id: {
+					[Op.in]: attributeIds,
+				},
+			}
+		});
 
-    if (attributes.length !== attributeIds.length) {
-      res.status(400).json({
-        message:
-          "One or more attribute IDs are invalid and do not exist.",
-      });
-      return;
-    }
+		if (attributes.length !== attributeIds.length) {
+			res.status(400).json({
+				message:
+					"One or more attribute IDs are invalid and do not exist.",
+			});
+			return;
+		}
 
-  const attributeToServiceCategoryRecords = attributeIds.map((attrId: string) => ({
-	 service_category_id: categoryId,
-  	attribute_id: attrId,
-    }));
+		const attributeToServiceCategoryRecords = attributeIds.map((attrId: string) => ({
+			service_category_id: categoryId,
+			attribute_id: attrId,
+		}));
 
-    await ServiceCategoryToAttributeMap.bulkCreate(attributeToServiceCategoryRecords, {
-      validate: true,
-      individualHooks: true,
-      ignoreDuplicates: true,
-    });
+		await ServiceCategoryToAttributeMap.bulkCreate(attributeToServiceCategoryRecords, {
+			validate: true,
+			individualHooks: true,
+			ignoreDuplicates: true,
+		});
 
-    res.status(200).json({
-      message: "Attributes added to service category successfully",
-    });
-  } catch (error: any) {
-    if (error.name === "SequelizeForeignKeyConstraintError") {
-      res.status(400).json({
-        message: "One or more attribute IDs are invalid and do not exist.",
-      });
-      return;
-    }
-    if (error.name === "SequelizeUniqueConstraintError") {
-      res.status(400).json({
-        message: "One or more attributes are already associated with this service category.",
-      });
-      return;
-    }
-    logger.error(`Error adding attributes to service category: ${error.message}`);
-    res.status(500).json({
-      message:
-        "An unexpected error occurred while adding attributes to the service category.",
-    });
-  }
+		res.status(200).json({
+			message: "Attributes added to service category successfully",
+		});
+	} catch (error: any) {
+		if (error.name === "SequelizeForeignKeyConstraintError") {
+			res.status(400).json({
+				message: "One or more attribute IDs are invalid and do not exist.",
+			});
+			return;
+		}
+		if (error.name === "SequelizeUniqueConstraintError") {
+			res.status(400).json({
+				message: "One or more attributes are already associated with this service category.",
+			});
+			return;
+		}
+		logger.error(`Error adding attributes to service category: ${error.message}`);
+		res.status(500).json({
+			message:
+				"An unexpected error occurred while adding attributes to the service category.",
+		});
+	}
 }
 
 
 export const removeAttributeFromServiceCategory = async (
-  req: Request,
-  res: Response,
+	req: Request,
+	res: Response,
 ): Promise<void> => {
-  const categoryId = req.params.categoryId;
-  const {  attributeIds } = req.body;
-  
-  if(!categoryId) {
-    res.status(400).json({ message: "Service category ID is required." });
-    return;
-  }
+	const categoryId = req.params.categoryId;
+	const { attributeIds } = req.body;
 
-  if (
-    !attributeIds ||
-    !Array.isArray(attributeIds) ||
-    attributeIds.length === 0
-  ) {
-    res.status(400).json({
-      message: "Attribute IDs must be a non-empty array.",
-    });
-    return;
-  }
+	if (!categoryId) {
+		res.status(400).json({ message: "Service category ID is required." });
+		return;
+	}
 
-  try {
-    const serviceCategory = await ServiceCategories.findByPk(categoryId);
+	if (
+		!attributeIds ||
+		!Array.isArray(attributeIds) ||
+		attributeIds.length === 0
+	) {
+		res.status(400).json({
+			message: "Attribute IDs must be a non-empty array.",
+		});
+		return;
+	}
 
-    if (!serviceCategory) {
-      res.status(404).json({ message: "Service category not found." });
-      return;
-    }
+	try {
+		const serviceCategory = await ServiceCategories.findByPk(Number(categoryId));
 
-    const deleteCount = await ServiceCategoryToAttributeMap.destroy({
-      where: {
-        service_category_id: categoryId,
-        attribute_id: {
-          [Op.in]: attributeIds,
-        },
-      },
-    });
+		if (!serviceCategory) {
+			res.status(404).json({ message: "Service category not found." });
+			return;
+		}
 
-    if (deleteCount === 0) {
-      res.status(404).json({
-        message: "No matching attribute mappings found for deletion.",
-      });
-      return;
-    }
+		const deleteCount = await ServiceCategoryToAttributeMap.destroy({
+			where: {
+				service_category_id: categoryId,
+				attribute_id: {
+					[Op.in]: attributeIds,
+				},
+			},
+		});
 
-    res.status(200).json({
-      message: "Attributes removed from service category successfully",
-    });
-  } catch (error: any) {
-    logger.error(`Error removing attributes from service category: ${error.message}`);
-    res.status(500).json({
-      message:
-        "An unexpected error occurred while removing attributes from the service category.",
-    });
-  }
+		if (deleteCount === 0) {
+			res.status(404).json({
+				message: "No matching attribute mappings found for deletion.",
+			});
+			return;
+		}
+
+		res.status(200).json({
+			message: "Attributes removed from service category successfully",
+		});
+	} catch (error: any) {
+		logger.error(`Error removing attributes from service category: ${error.message}`);
+		res.status(500).json({
+			message:
+				"An unexpected error occurred while removing attributes from the service category.",
+		});
+	}
 }
 
 export const suspendService = async (req: Request, res: Response): Promise<void> => {
-  const serviceId = req.params.serviceId;
+	const serviceId = req.params.serviceId;
 
-  try {
-    if (!serviceId) {
-      res.status(400).json({ message: "Service ID is required." });
-      return;
-    }
+	try {
+		if (!serviceId) {
+			res.status(400).json({ message: "Service ID is required." });
+			return;
+		}
 
-    const service = await Services.findByPk(serviceId);
+		const service = await Services.findByPk(serviceId as string);
 
-    if (!service) {
-      res.status(404).json({ message: "Service not found." });
-      return;
-    }
+		if (!service) {
+			res.status(404).json({ message: "Service not found." });
+			return;
+		}
 
-    if (service.status === 'suspended') {
-      res.status(400).json({ message: "Service is already suspended." });
-      return;
-    }
+		if (service.status === 'suspended') {
+			res.status(400).json({ message: "Service is already suspended." });
+			return;
+		}
 
-    service.status = 'suspended';
-    await service.save();
+		service.status = 'suspended';
+		await service.save();
 
-    res.status(200).json({
-      message: "Service suspended successfully",
-      data: service,
-    });
-  } catch (error: any) {
-    logger.error(`Error suspending service: ${error.message}`);
-    res.status(500).json({
-      message:
-        "An unexpected error occurred while suspending the service.",
-    });
-  }
+		res.status(200).json({
+			message: "Service suspended successfully",
+			data: service,
+		});
+	} catch (error: any) {
+		logger.error(`Error suspending service: ${error.message}`);
+		res.status(500).json({
+			message:
+				"An unexpected error occurred while suspending the service.",
+		});
+	}
 }
 
 export const activateService = async (req: Request, res: Response): Promise<void> => {
-  const serviceId = req.params.serviceId;
+	const serviceId = req.params.serviceId;
 
-  try {
-    if (!serviceId) {
-      res.status(400).json({ message: "Service ID is required." });
-      return;
-    }
+	try {
+		if (!serviceId) {
+			res.status(400).json({ message: "Service ID is required." });
+			return;
+		}
 
-    const service = await Services.findByPk(serviceId);
+		const service = await Services.findByPk(serviceId as string);
 
-    if (!service) {
-      res.status(404).json({ message: "Service not found." });
-      return;
-    }
+		if (!service) {
+			res.status(404).json({ message: "Service not found." });
+			return;
+		}
 
-    if (service.status === 'active') {
-      res.status(400).json({ message: "Service is already active." });
-      return;
-    }
+		if (service.status === 'active') {
+			res.status(400).json({ message: "Service is already active." });
+			return;
+		}
 
-    service.status = 'active';
-    await service.save();
+		service.status = 'active';
+		await service.save();
 
-    res.status(200).json({
-      message: "Service activated successfully",
-      data: service,
-    });
-  } catch (error: any) {
-    logger.error(`Error activating service: ${error.message}`);
-    res.status(500).json({
-      message:
-        "An unexpected error occurred while activating the service.",
-    });
-  }
+		res.status(200).json({
+			message: "Service activated successfully",
+			data: service,
+		});
+	} catch (error: any) {
+		logger.error(`Error activating service: ${error.message}`);
+		res.status(500).json({
+			message:
+				"An unexpected error occurred while activating the service.",
+		});
+	}
 }
 
 export const getAllServices = async (req: Request, res: Response): Promise<void> => {
-  const { page, limit, status, categoryId, subCategoryId } = req.query;
+	const { page, limit, status, categoryId, subCategoryId } = req.query;
 
-  try {
-    const offset = (Number(page) - 1) * Number(limit);
+	try {
+		const offset = (Number(page) - 1) * Number(limit);
 
-    const whereClause: any = {};
+		const whereClause: any = {};
 
-    if (status && (status === 'active' || status === 'suspended')) {
-      whereClause.status = status;
-    }
+		if (status && (status === 'active' || status === 'suspended')) {
+			whereClause.status = status;
+		}
 
-    if (categoryId) {
-      whereClause.serviceCategoryId = categoryId;
-    }
+		if (categoryId) {
+			whereClause.serviceCategoryId = categoryId;
+		}
 
-    if (subCategoryId) {
-      whereClause.serviceSubCategoryId = subCategoryId;
-    }
+		if (subCategoryId) {
+			whereClause.serviceSubCategoryId = subCategoryId;
+		}
 
-    const services = await Services.findAll({
-      where: whereClause,
-      limit: Number(limit) || 10,
-      offset: offset || 0,
-      order: [["createdAt", "DESC"]],
-      include: [
-        {
-          model: ServiceCategories,
-          as: "category",
-          attributes: ["id", "name"],
-        },
-        {
-          model: ServiceSubCategories,
-          as: "subCategory",
-          attributes: ["id", "name"],
-        },
-        {
-          model: User,
-          as: "provider",
-        }
-      ],
-    });
-    res.status(200).json({ data: services });
-  } catch (error: any) {
-    logger.error(`Error retrieving services: ${error.message}`);
-    res.status(500).json({
-      message:
-        "An error occurred while retrieving services. Please try again later.",
-    });
-  }
+		const services = await Services.findAll({
+			where: whereClause,
+			limit: Number(limit) || 10,
+			offset: offset || 0,
+			order: [["createdAt", "DESC"]],
+			include: [
+				{
+					model: ServiceCategories,
+					as: "category",
+					attributes: ["id", "name"],
+				},
+				{
+					model: ServiceSubCategories,
+					as: "subCategory",
+					attributes: ["id", "name"],
+				},
+				{
+					model: User,
+					as: "provider",
+				}
+			],
+		});
+		res.status(200).json({ data: services });
+	} catch (error: any) {
+		logger.error(`Error retrieving services: ${error.message}`);
+		res.status(500).json({
+			message:
+				"An error occurred while retrieving services. Please try again later.",
+		});
+	}
 }
 
 export const getServiceById = async (
-  req: Request,
-  res: Response,
+	req: Request,
+	res: Response,
 ): Promise<void> => {
-  const { serviceId } = req.params;
+	const { serviceId } = req.params;
 
-  try {
-    if (!serviceId) {
-      res.status(400).json({ message: "Service ID is required" });
-      return;
-    }
+	try {
+		if (!serviceId) {
+			res.status(400).json({ message: "Service ID is required" });
+			return;
+		}
 
-    // Fetch the service by ID (admin can view any status)
-    const service = await Services.findOne({
-      where: { id: serviceId },
-      include: [
-        {
-          model: User,
-          as: "provider",
-          include: [
-            {
-              model: KYC,
-              as: "kyc",
-              attributes: ["isVerified"],
-            },
-          ],
-        },
-        {
-          model: ServiceCategories,
-          as: "category",
-          attributes: ["id", "name"],
-        },
-        {
-          model: ServiceSubCategories,
-          as: "subCategory",
-          attributes: ["id", "name"],
-        },
-      ],
-    });
+		// Fetch the service by ID (admin can view any status)
+		const service = await Services.findOne({
+			where: { id: serviceId },
+			include: [
+				{
+					model: User,
+					as: "provider",
+					include: [
+						{
+							model: KYC,
+							as: "kyc",
+							attributes: ["isVerified"],
+						},
+					],
+				},
+				{
+					model: ServiceCategories,
+					as: "category",
+					attributes: ["id", "name"],
+				},
+				{
+					model: ServiceSubCategories,
+					as: "subCategory",
+					attributes: ["id", "name"],
+				},
+			],
+		});
 
-    if (!service) {
-      res.status(404).json({ message: "Service not found" });
-      return;
-    }
+		if (!service) {
+			res.status(404).json({ message: "Service not found" });
+			return;
+		}
 
-    // Add isVerified to provider if exists
-    if (service.provider) {
-      const kyc = await KYC.findOne({
-        where: { vendorId: service.provider.id },
-      });
-      service.provider.setDataValue("isVerified", kyc ? kyc.isVerified : false);
-    }
+		// Add isVerified to provider if exists
+		if (service.provider) {
+			const kyc = await KYC.findOne({
+				where: { vendorId: service.provider.id },
+			});
+			service.provider.setDataValue("isVerified", kyc ? kyc.isVerified : false);
+		}
 
-    res.status(200).json({ data: service });
-  } catch (error: any) {
-    logger.error("Error fetching service:", error);
-    res.status(500).json({
-      message: error.message || "An error occurred while fetching the service.",
-    });
-  }
+		res.status(200).json({ data: service });
+	} catch (error: any) {
+		logger.error("Error fetching service:", error);
+		res.status(500).json({
+			message: error.message || "An error occurred while fetching the service.",
+		});
+	}
 };
 
 export const getAliExpressCategories = async (
 	req: Request,
 	res: Response,
 ): Promise<void> => {
-  const vendorId = (req as any).adminId;
+	const vendorId = (req as any).adminId;
 
 	try {
 		const categories = await dropShippingService.getProductCategories(vendorId);
@@ -7651,298 +7695,298 @@ export const getAliExpressCategories = async (
 				"An error occurred while retrieving dropshipping product categories.",
 		});
 	}
-} 
+}
 
 export const getAliExpressProducts = async (
-req: Request,
-  res: Response
+	req: Request,
+	res: Response
 ): Promise<void> => {
-  try {
-    const vendorId = (req as any).adminId;
+	try {
+		const vendorId = (req as any).adminId;
 
-  const keywords = req.query.keywords as string;  
-  const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
+		const keywords = req.query.keywords as string;
+		const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
 
-    const categoryId = req.query.categoryId as string;
+		const categoryId = req.query.categoryId as string;
 
-    const currency = req.query.currency as string;
+		const currency = req.query.currency as string;
 
-  const pageSize = req.query.pageSize ? parseInt(req.query.pageSize as string, 10) : 20;
-    const shippingCountry = req.query.shippingCountry as string;
+		const pageSize = req.query.pageSize ? parseInt(req.query.pageSize as string, 10) : 20;
+		const shippingCountry = req.query.shippingCountry as string;
 
-    if (!categoryId ) {
-      res.status(400).json({ message: "Category ID is required" });
-      return;
-    }
-     
-    if (currency && currency !== 'USD' && currency !== "NGN" ) {
-      res.status(400).json({ message: "Currency must be either 'USD' or 'NGN'" });
-      return;
-    }
+		if (!categoryId) {
+			res.status(400).json({ message: "Category ID is required" });
+			return;
+		}
+
+		if (currency && currency !== 'USD' && currency !== "NGN") {
+			res.status(400).json({ message: "Currency must be either 'USD' or 'NGN'" });
+			return;
+		}
 
 
-    if (keywords && keywords.trim().length === 0) {
-      res.status(400).json({ message: "Keywords cannot be empty" });
-      return;
-    }
+		if (keywords && keywords.trim().length === 0) {
+			res.status(400).json({ message: "Keywords cannot be empty" });
+			return;
+		}
 
-    if (!shippingCountry) {
-      res.status(400).json({ message: "Shipping country is required" });
-      return;
-    }
+		if (!shippingCountry) {
+			res.status(400).json({ message: "Shipping country is required" });
+			return;
+		}
 
-    const products = await dropShippingService.getProducts({
-      keywords, 
-      pageNo: page, 
-      pageSize,
-      categoryId,
-      shipToCountry: shippingCountry, 
-      currency: currency as AE_Currency,
-      vendorId,
-    });
-  
+		const products = await dropShippingService.getProducts({
+			keywords,
+			pageNo: page,
+			pageSize,
+			categoryId,
+			shipToCountry: shippingCountry,
+			currency: currency as AE_Currency,
+			vendorId,
+		});
 
-    res.status(200).json({ data: products });
-  } catch (error: any) {
-    logger.error(
-      `Error retrieving dropshipping products: ${error.message}`,
-    );
-    res.status(500).json({
-      message:
-        "An error occurred while retrieving dropshipping products.",
-    });
-  }
+
+		res.status(200).json({ data: products });
+	} catch (error: any) {
+		logger.error(
+			`Error retrieving dropshipping products: ${error.message}`,
+		);
+		res.status(500).json({
+			message:
+				"An error occurred while retrieving dropshipping products.",
+		});
+	}
 
 
 }
 
 export async function getAliExpressProductDetails(req: Request, res: Response): Promise<void> {
-  try {
-const vendorId = (req as any).adminId;
+	try {
+		const vendorId = (req as any).adminId;
 
-const productId = req.params.productId 
+		const productId = req.params.productId
 
-    const shipToCountry = req.query.shippingCountry as string;
+		const shipToCountry = req.query.shippingCountry as string;
 
-    const currency = req.query.currency as string;
+		const currency = req.query.currency as string;
 
-    if (!productId) {
-      res.status(400).json({ message: "Product ID is required" });
-      return;
-    }
+		if (!productId) {
+			res.status(400).json({ message: "Product ID is required" });
+			return;
+		}
 
-    if (!shipToCountry) {
-      res.status(400).json({ message: "Shipping country is required" });
-      return;
-    }
+		if (!shipToCountry) {
+			res.status(400).json({ message: "Shipping country is required" });
+			return;
+		}
 
-    if (currency && currency !== 'USD' && currency !== "NGN" ) {
-      res.status(400).json({ message: "Currency must be either 'USD' or 'NGN'" });
-      return;
-    }
+		if (currency && currency !== 'USD' && currency !== "NGN") {
+			res.status(400).json({ message: "Currency must be either 'USD' or 'NGN'" });
+			return;
+		}
 
-    const productDetails = await dropShippingService.getProductById(vendorId,Number(productId),shipToCountry,currency as AE_Currency);
+		const productDetails = await dropShippingService.getProductById(vendorId, Number(productId), shipToCountry, currency as AE_Currency);
 
-    if (!productDetails) {
-      res.status(404).json({ message: "Product not found" });
-      return;
-    }
+		if (!productDetails) {
+			res.status(404).json({ message: "Product not found" });
+			return;
+		}
 
-    res.status(200).json({ data: productDetails });
-  } catch (error: any) {
-    logger.error(
-      `Error retrieving dropshipping product details: ${error.message}`,
-    );
-    res.status(500).json({
-      message:
-        "An error occurred while retrieving dropshipping product details.",
-    });
-  }
+		res.status(200).json({ data: productDetails });
+	} catch (error: any) {
+		logger.error(
+			`Error retrieving dropshipping product details: ${error.message}`,
+		);
+		res.status(500).json({
+			message:
+				"An error occurred while retrieving dropshipping product details.",
+		});
+	}
 }
 
 export async function addAliexpressProductToInventory(req: Request, res: Response): Promise<void> {
 
 	const transaction = await sequelizeService.connection!.transaction();
-  try {
-    const { productId, shippingCountry, currency , storeId , categoryId, priceIncrementPercent } = req.body;
-    // @ts-ignore
-    const vendorId = req.adminId ;
+	try {
+		const { productId, shippingCountry, currency, storeId, categoryId, priceIncrementPercent } = req.body;
+		// @ts-ignore
+		const vendorId = req.adminId;
 
-    if (!productId) {
+		if (!productId) {
 
-      res.status(400).json({ message: "Product ID is required" });
+			res.status(400).json({ message: "Product ID is required" });
 
-      await transaction.rollback();
+			await transaction.rollback();
 
-      return;
-    }
+			return;
+		}
 
-    if (!shippingCountry) {
+		if (!shippingCountry) {
 
-      res.status(400).json({ message: "Shipping country is required" });
+			res.status(400).json({ message: "Shipping country is required" });
 
-      await transaction.rollback();
+			await transaction.rollback();
 
-      return;
-    }
+			return;
+		}
 
-    if (shippingCountry.trim() === "") {
-      res.status(400).json({ message: "Shipping country cannot be empty" });
+		if (shippingCountry.trim() === "") {
+			res.status(400).json({ message: "Shipping country cannot be empty" });
 
-      await transaction.rollback();
+			await transaction.rollback();
 
-      return;
-    }
+			return;
+		}
 
-    if(shippingCountry !== "US" && shippingCountry !== "NG" && shippingCountry !== "UK" ) {
-      res.status(400).json({ message: "Shipping country must be either 'US', 'NG' or 'UK'" });
+		if (shippingCountry !== "US" && shippingCountry !== "NG" && shippingCountry !== "UK") {
+			res.status(400).json({ message: "Shipping country must be either 'US', 'NG' or 'UK'" });
 
-      await transaction.rollback();
+			await transaction.rollback();
 
-      return;
-    }
+			return;
+		}
 
-    if (currency && currency !== 'USD' && currency !== "NGN" ) {
+		if (currency && currency !== 'USD' && currency !== "NGN") {
 
-      res.status(400).json({ message: "Currency must be either 'USD' or 'NGN'" });
+			res.status(400).json({ message: "Currency must be either 'USD' or 'NGN'" });
 
-      await transaction.rollback();
+			await transaction.rollback();
 
-      return;
-    } 
+			return;
+		}
 
-    if (!storeId) {
+		if (!storeId) {
 
-      res.status(400).json({ message: "Store ID is required" });
+			res.status(400).json({ message: "Store ID is required" });
 
-      await transaction.rollback();
+			await transaction.rollback();
 
-      return;
-    }
+			return;
+		}
 
-  const store = await Store.findByPk(storeId, {
-      include: [
-        {
-          model: Currency,
-          as: "currency",
-        },
-      ],
-    });
+		const store = await Store.findByPk(storeId, {
+			include: [
+				{
+					model: Currency,
+					as: "currency",
+				},
+			],
+		});
 
-    if (!store) {
+		if (!store) {
 
-      res.status(404).json({ message: "Store not found" });
+			res.status(404).json({ message: "Store not found" });
 
-      await transaction.rollback();
+			await transaction.rollback();
 
-      return;
-    }
+			return;
+		}
 
-    if (!store.currency) {
+		if (!store.currency) {
 
-      res.status(400).json({ message: "Store does not have a currency set" });
+			res.status(400).json({ message: "Store does not have a currency set" });
 
-      await transaction.rollback();
+			await transaction.rollback();
 
-      return;
-    }
+			return;
+		}
 
-    if (store.currency.name.toLowerCase() === "dollar" && currency !== 'USD' || store.currency.name.toLowerCase() === "naira" && currency !== 'NGN') {
+		if (store.currency.name.toLowerCase() === "dollar" && currency !== 'USD' || store.currency.name.toLowerCase() === "naira" && currency !== 'NGN') {
 
-      res.status(400).json({ message: `Currency mismatch: Store currency is ${store.currency.name}, but received ${currency}` });
+			res.status(400).json({ message: `Currency mismatch: Store currency is ${store.currency.name}, but received ${currency}` });
 
-      await transaction.rollback();
+			await transaction.rollback();
 
-      return;
-    }
+			return;
+		}
 
-    const productDetails = await dropShippingService.getProductById(vendorId,Number(productId),shippingCountry,currency as AE_Currency);
+		const productDetails = await dropShippingService.getProductById(vendorId, Number(productId), shippingCountry, currency as AE_Currency);
 
-    if (!productDetails) {
+		if (!productDetails) {
 
-      res.status(404).json({ message: "Product not found" });
-      
-      await transaction.rollback();
+			res.status(404).json({ message: "Product not found" });
 
-      return;
-    }
+			await transaction.rollback();
 
-    const lowestPricedVariant = productDetails.ae_item_sku_info_dtos.reduce((prev, curr) => {
-      return (prev.offer_sale_price < curr.offer_sale_price) ? prev : curr;
-    });
+			return;
+		}
 
-    const productImages = productDetails.ae_multimedia_info_dto.image_urls.split(';');
+		const lowestPricedVariant = productDetails.ae_item_sku_info_dtos.reduce((prev, curr) => {
+			return (prev.offer_sale_price < curr.offer_sale_price) ? prev : curr;
+		});
 
-    //@ts-ignore
-    const productVideoUrl = productDetails?.ae_multimedia_info_dto.ae_video_dtos?.[0]?.media_url as string ?? "";
+		const productImages = productDetails.ae_multimedia_info_dto.image_urls.split(';');
 
-    const productPrice = new Decimal(lowestPricedVariant.offer_sale_price).plus(
-      new Decimal(lowestPricedVariant.offer_sale_price)
-        .mul(new Decimal(priceIncrementPercent))
-        .div(new Decimal(100)),
-    ).toFixed(2);
+		//@ts-ignore
+		const productVideoUrl = productDetails?.ae_multimedia_info_dto.ae_video_dtos?.[0]?.media_url as string ?? "";
 
-    const variantIncrementedPrices = productDetails.ae_item_sku_info_dtos.map(variant => {
-      const incrementedPrice = new Decimal(variant.offer_sale_price).plus(
-        new Decimal(variant.offer_sale_price)
-          .mul(new Decimal(priceIncrementPercent))
-          .div(new Decimal(100)),
-      ).toFixed(2);
+		const productPrice = new Decimal(lowestPricedVariant.offer_sale_price).plus(
+			new Decimal(lowestPricedVariant.offer_sale_price)
+				.mul(new Decimal(priceIncrementPercent))
+				.div(new Decimal(100)),
+		).toFixed(2);
 
-      return {
-        ...variant,
-        offer_sale_price: incrementedPrice,
-      };
-    });
+		const variantIncrementedPrices = productDetails.ae_item_sku_info_dtos.map(variant => {
+			const incrementedPrice = new Decimal(variant.offer_sale_price).plus(
+				new Decimal(variant.offer_sale_price)
+					.mul(new Decimal(priceIncrementPercent))
+					.div(new Decimal(100)),
+			).toFixed(2);
 
-    const newProduct = await Product.create({
-      storeId: store.id,
-      vendorId,
-      categoryId: categoryId || null,
-      name: productDetails.ae_item_base_info_dto.subject,
-      description: productDetails.ae_item_base_info_dto.detail,
-      specification: productDetails.ae_item_base_info_dto.mobile_detail,
-      sku: `KDM-${uuidv4()}`,
-      type: 'dropship',
-      price: lowestPricedVariant.sku_price,
-      discount_price: productPrice,
-      condition: "brand_new",
-      quantity: lowestPricedVariant.sku_available_stock,
-      image_url: productImages[0],
-      video_url: productVideoUrl || null,
-      additional_images: productImages,
-      variants: variantIncrementedPrices,
-    }, { transaction });
+			return {
+				...variant,
+				offer_sale_price: incrementedPrice,
+			};
+		});
 
-    await DropshipProducts.create({
-      productId: newProduct.id,
-      dropshipProductId: String(productDetails.ae_item_base_info_dto.product_id),
-      vendorId,
-      priceIncrementPercent,
-    }, { transaction });
+		const newProduct = await Product.create({
+			storeId: store.id,
+			vendorId,
+			categoryId: categoryId || null,
+			name: productDetails.ae_item_base_info_dto.subject,
+			description: productDetails.ae_item_base_info_dto.detail,
+			specification: productDetails.ae_item_base_info_dto.mobile_detail,
+			sku: `KDM-${uuidv4()}`,
+			type: 'dropship',
+			price: lowestPricedVariant.sku_price,
+			discount_price: productPrice,
+			condition: "brand_new",
+			quantity: lowestPricedVariant.sku_available_stock,
+			image_url: productImages[0],
+			video_url: productVideoUrl || null,
+			additional_images: productImages,
+			variants: variantIncrementedPrices,
+		}, { transaction });
 
-    await transaction.commit();
+		await DropshipProducts.create({
+			productId: newProduct.id,
+			dropshipProductId: String(productDetails.ae_item_base_info_dto.product_id),
+			vendorId,
+			priceIncrementPercent,
+		}, { transaction });
 
-    res.status(200).json({
-      message: "Dropshipping product added to inventory successfully",
-      data: newProduct,
-    });
+		await transaction.commit();
 
-  } catch (error: any) {
-    console.error(error);
-    logger.error(error);
+		res.status(200).json({
+			message: "Dropshipping product added to inventory successfully",
+			data: newProduct,
+		});
 
-    logger.error(
-      `Error adding dropshipping product to catalog: ${error.message}`,
-    );
+	} catch (error: any) {
+		console.error(error);
+		logger.error(error);
 
-    await transaction.rollback();
+		logger.error(
+			`Error adding dropshipping product to catalog: ${error.message}`,
+		);
 
-    res.status(500).json({
-      message:
-        "An error occurred while adding dropshipping product to catalog.",
-    });
-  }
+		await transaction.rollback();
+
+		res.status(500).json({
+			message:
+				"An error occurred while adding dropshipping product to catalog.",
+		});
+	}
 }
 
 // export async function getAliExpressDropshipCredsStatus(req: Request, res: Response): Promise<void> {
@@ -7992,7 +8036,7 @@ export async function getAliExpressDropshipCredsStatus(
 			res.status(200).json({
 				data: {
 					isConnected: false,
-					message:  "No AliExpress account connected",
+					message: "No AliExpress account connected",
 					statusColor: "gray",
 				},
 			});
@@ -8031,14 +8075,14 @@ export async function getAliExpressDropshipCredsStatus(
 			const remainingHours = hours % 24;
 			if (remainingHours === 0)
 				return `${days} day${days !== 1 ? "s" : ""}`;
-			return `${days} day${days !== 1 ? "s" : ""} ${remainingHours} hour${remainingHours !== 1 ?  "s" : ""}`;
+			return `${days} day${days !== 1 ? "s" : ""} ${remainingHours} hour${remainingHours !== 1 ? "s" : ""}`;
 		};
 
 		// Format dates
 		const formatDate = (date: Date): string => {
 			return new Date(date).toLocaleDateString("en-US", {
 				year: "numeric",
-				month:  "long",
+				month: "long",
 				day: "numeric",
 				hour: "2-digit",
 				minute: "2-digit",
@@ -8046,7 +8090,7 @@ export async function getAliExpressDropshipCredsStatus(
 		};
 
 		// Determine connection status
-		let status:  "active" | "expiring_soon" | "expired";
+		let status: "active" | "expiring_soon" | "expired";
 		let statusMessage: string;
 		let statusBadge: string;
 		let statusColor: string;
@@ -8113,14 +8157,106 @@ export async function getAliExpressDropshipCredsStatus(
 		});
 	} catch (error: any) {
 		logger.error(
-			`Error retrieving dropshipping credentials status: ${error. message}`,
+			`Error retrieving dropshipping credentials status: ${error.message}`,
 		);
 		res.status(500).json({
 			message:
 				"An error occurred while retrieving dropshipping credentials status.",
 		});
 	}
-}
+};
+
+export const getVendorPayoutReports = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const { status, currency, vendorId } = req.query;
+		const where: any = {};
+		if (status) where.status = status;
+		if (currency) where.currency = currency;
+		if (vendorId) where.vendorId = vendorId;
+
+		const withdrawals = await Withdrawal.findAll({
+			where,
+			include: [
+				{
+					model: User,
+					as: "vendor",
+					attributes: ["id", "firstName", "lastName", "email", "phoneNumber"],
+				},
+			],
+			order: [["createdAt", "DESC"]],
+		});
+
+		res.status(200).json({ data: withdrawals });
+	} catch (error) {
+		logger.error("Error fetching payout reports:", error);
+		res.status(500).json({ message: "Internal server error" });
+	}
+};
+
+export const getVendorEarningsReport = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const { vendorId, startDate, endDate } = req.query;
+		const where: any = { transactionType: "sale", status: "completed" };
+		if (vendorId) where.userId = vendorId;
+		if (startDate && endDate) {
+			where.createdAt = {
+				[Op.between]: [new Date(startDate as string), new Date(endDate as string)],
+			};
+		}
+
+		const sales = await Transaction.findAll({
+			where,
+			attributes: [
+				"currency",
+				[Sequelize.fn("SUM", Sequelize.col("amount")), "totalEarnings"],
+				[Sequelize.fn("COUNT", Sequelize.col("id")), "totalOrders"],
+			],
+			group: ["currency"],
+			include: vendorId
+				? [
+					{
+						model: User,
+						as: "user",
+						attributes: ["id", "firstName", "lastName", "email"],
+					},
+				]
+				: [],
+		});
+
+		res.status(200).json({ data: sales });
+	} catch (error) {
+		logger.error("Error fetching earnings report:", error);
+		res.status(500).json({ message: "Internal server error" });
+	}
+};
+
+export const getOverallPayoutStats = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const stats = await Withdrawal.findAll({
+			attributes: [
+				"currency",
+				"status",
+				[Sequelize.fn("SUM", Sequelize.col("amount")), "totalAmount"],
+				[Sequelize.fn("COUNT", Sequelize.col("id")), "count"],
+			],
+			group: ["currency", "status"],
+		});
+
+		res.status(200).json({ data: stats });
+	} catch (error) {
+		logger.error("Error fetching payout stats:", error);
+		res.status(500).json({ message: "Internal server error" });
+	}
+};
 
 
 
