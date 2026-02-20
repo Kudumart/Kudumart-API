@@ -10,6 +10,12 @@ const sequelize = new Sequelize(
 		dialect: "mysql",
 		logging: false,
 		timezone: "+00:00",
+		pool: {
+			max: 20,
+			min: 2,
+			acquire: 60000,
+			idle: 10000,
+		},
 	},
 );
 
