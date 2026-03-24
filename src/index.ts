@@ -32,10 +32,6 @@ const io = new Server(server, {
 
 app.use(passport.initialize());
 
-app.get("/api/healthcheck", (_req, res) => {
-	res.status(200).json({ message: "Kudumart server up and running" });
-});
-
 app.use("/api", apiRouter); // Mount the router to /api
 
 app.set("trust proxy", true);

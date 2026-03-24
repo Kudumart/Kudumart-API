@@ -44,6 +44,11 @@ const createExpressApp = () => {
 	// Serve uploaded images
 	app.use("/uploads", express.static(path.join(__dirname, "../../uploads")));
 
+	// Healthcheck
+	app.get("/api/healthcheck", (_req, res) => {
+		res.status(200).json({ message: "Kudumart server up and running" });
+	});
+
 	// Use your routes
 	app.use("/api", apiRouter);
 	app.use("/api/user", userRouter);
