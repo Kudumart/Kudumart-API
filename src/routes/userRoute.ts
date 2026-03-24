@@ -297,4 +297,35 @@ userRoutes.patch(
 	userController.cancelServiceBooking,
 );
 
+// Product offer routes
+userRoutes.post(
+	"/products/:productId/offers",
+	authMiddleware,
+	userController.submitOffer,
+);
+
+userRoutes.get(
+	"/offers",
+	authMiddleware,
+	userController.getMyOffers,
+);
+
+userRoutes.put(
+	"/offers/:offerId/respond",
+	authMiddleware,
+	userController.respondToCounterOffer,
+);
+
+userRoutes.post(
+	"/offers/:offerId/initiate-payment",
+	authMiddleware,
+	userController.initiateOfferPayment,
+);
+
+userRoutes.post(
+	"/offers/:offerId/checkout",
+	authMiddleware,
+	userController.checkoutOffer,
+);
+
 export default userRoutes;

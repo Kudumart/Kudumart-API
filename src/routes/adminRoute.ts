@@ -968,4 +968,17 @@ adminRoutes.get(
 	adminController.getAliExpressDropshipCredsStatus,
 );
 
+// Product offer routes
+adminRoutes.get(
+	"/offers",
+	adminAuthMiddleware,
+	adminController.getAllOffers,
+);
+
+adminRoutes.put(
+	"/offers/:offerId",
+	adminAuthMiddleware,
+	adminController.respondToOffer,
+);
+
 export default adminRoutes; // Export the router

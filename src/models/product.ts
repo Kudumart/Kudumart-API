@@ -108,6 +108,11 @@ class Product extends Model {
 			foreignKey: "productId",
 			sourceKey: "id",
 		});
+		this.hasMany(models.ProductOffer, {
+			as: "offers",
+			foreignKey: "productId",
+			onDelete: "CASCADE",
+		});
 	}
 }
 

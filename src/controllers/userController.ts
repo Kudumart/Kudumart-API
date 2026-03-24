@@ -51,6 +51,7 @@ import ProductCharge from "../models/productcharge";
 import Services from "../models/services";
 import ServiceBookings from "../models/servicebookings";
 import ServiceReviews from "../models/servicereview";
+import ProductOffer from "../models/productoffer";
 import Decimal from "decimal.js";
 import {
 	AddressChild,
@@ -5815,5 +5816,339 @@ export const cancelServiceBooking = async (
 		logger.error("Error cancelling booking:", error);
 		res.status(500).json({ message: "Server error." });
 		return;
+	}
+};
+
+export const submitOffer = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const buyerId = (req as AuthenticatedRequest).user?.id;
+	const { productId } = req.params;
+	const { offeredPrice, message } = req.body;
+
+	if (!offeredPrice || isNaN(Number(offeredPrice)) || Number(offeredPrice) <= 0) {
+		res.status(400).json({ message: "A valid offered price is required." });
+		return;
+	}
+
+	try {
+		const product = await Product.findByPk(productId as string);
+		if (!product) {
+			res.status(404).json({ message: "Product not found." });
+			return;
+		}
+
+		const offer = await ProductOffer.create({
+			productId,
+			buyerId,
+			offeredPrice: Number(offeredPrice),
+			message: message || null,
+			status: "pending",
+		});
+
+		await Notification.create({
+			userId: buyerId,
+			title: "Offer Submitted",
+			message: `Your offer of ${offeredPrice} on "${product.name}" has been submitted and is awaiting review.`,
+			type: "OFFER_SUBMITTED",
+			isRead: false,
+		});
+
+		const { createAdminNotification } = await import("../services/notification.service");
+		await createAdminNotification(
+			"NEW_OFFER",
+			`A buyer made an offer on "${product.name}"`,
+			{ offerId: offer.id, productId: product.id, offeredPrice, buyerId },
+		);
+
+		res.status(201).json({ message: "Offer submitted successfully.", data: offer });
+	} catch (error) {
+		logger.error("Error submitting offer:", error);
+		res.status(500).json({ message: "Server error." });
+	}
+};
+
+export const getMyOffers = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const buyerId = (req as AuthenticatedRequest).user?.id;
+	const { page, limit } = req.query;
+	const offset = (Number(page) - 1) * Number(limit) || 0;
+
+	try {
+		const { count, rows: offers } = await ProductOffer.findAndCountAll({
+			where: { buyerId },
+			include: [
+				{
+					model: Product,
+					as: "product",
+					attributes: ["id", "name", "price", "image_url"],
+				},
+			],
+			order: [["createdAt", "DESC"]],
+			limit: Number(limit) || 10,
+			offset,
+		});
+
+		res.status(200).json({ data: offers, total: count });
+	} catch (error) {
+		logger.error("Error fetching offers:", error);
+		res.status(500).json({ message: "Server error." });
+	}
+};
+
+export const respondToCounterOffer = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const buyerId = (req as AuthenticatedRequest).user?.id;
+	const { offerId } = req.params;
+	const { status } = req.body;
+
+	if (!status || !["accepted", "rejected"].includes(status)) {
+		res.status(400).json({ message: "Status must be either accepted or rejected." });
+		return;
+	}
+
+	try {
+		const offer = await ProductOffer.findOne({
+			where: { id: offerId as string, buyerId },
+			include: [{ model: Product, as: "product", attributes: ["id", "name"] }],
+		});
+
+		if (!offer) {
+			res.status(404).json({ message: "Offer not found." });
+			return;
+		}
+
+		if (offer.status !== "countered") {
+			res.status(400).json({ message: "Only countered offers can be responded to." });
+			return;
+		}
+
+		await offer.update({ status });
+
+		const product = (offer as any).product;
+		const { createAdminNotification } = await import("../services/notification.service");
+		await createAdminNotification(
+			"OFFER_BUYER_RESPONSE",
+			`Buyer has ${status} the counter offer on "${product.name}".`,
+			{ offerId: offer.id, productId: product.id, status, buyerId },
+		);
+
+		res.status(200).json({ message: `Counter offer ${status} successfully.`, data: offer });
+	} catch (error) {
+		logger.error("Error responding to counter offer:", error);
+		res.status(500).json({ message: "Server error." });
+	}
+};
+
+export const initiateOfferPayment = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const buyerId = (req as AuthenticatedRequest).user?.id;
+	const { offerId } = req.params;
+
+	try {
+		const offer = await ProductOffer.findOne({
+			where: { id: offerId as string, buyerId },
+			include: [{ model: Product, as: "product", attributes: ["id", "name"] }],
+		});
+
+		if (!offer) {
+			res.status(404).json({ message: "Offer not found." });
+			return;
+		}
+
+		if (offer.status !== "accepted") {
+			res.status(400).json({ message: "Payment can only be initiated for accepted offers." });
+			return;
+		}
+
+		const user = await User.findByPk(buyerId);
+		if (!user) {
+			res.status(404).json({ message: "User not found." });
+			return;
+		}
+
+		const paymentGateway = await PaymentGateway.findOne({
+			where: { name: "Paystack", isActive: true },
+		});
+
+		if (!paymentGateway || !paymentGateway.secretKey) {
+			res.status(500).json({ message: "Active Paystack gateway not configured." });
+			return;
+		}
+
+		const effectivePrice = offer.counterPrice !== null ? Number(offer.counterPrice) : Number(offer.offeredPrice);
+		const uuidv4 = uuid.v4;
+		const refId = `psk_offer_${uuidv4()}_${Date.now()}`;
+
+		const paystack = await initializePaystackPayment(refId, effectivePrice, user.email, paymentGateway.secretKey);
+
+		res.status(200).json({
+			message: "Payment initialized.",
+			data: { refId, effectivePrice, paystackDetails: paystack },
+		});
+	} catch (error) {
+		logger.error("Error initiating offer payment:", error);
+		res.status(500).json({ message: "Server error." });
+	}
+};
+
+export const checkoutOffer = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const buyerId = (req as AuthenticatedRequest).user?.id;
+	const { offerId } = req.params;
+	const { refId, shippingAddress } = req.body;
+
+	if (!refId) {
+		res.status(400).json({ message: "Payment reference ID is required." });
+		return;
+	}
+
+	if (!shippingAddress) {
+		res.status(400).json({ message: "Shipping address is required." });
+		return;
+	}
+
+	const transaction = await sequelizeService.connection!.transaction();
+
+	try {
+		const offer = await ProductOffer.findOne({
+			where: { id: offerId as string, buyerId },
+			include: [{ model: Product, as: "product" }],
+			transaction,
+		});
+
+		if (!offer) {
+			await transaction.rollback();
+			res.status(404).json({ message: "Offer not found." });
+			return;
+		}
+
+		if (offer.status !== "accepted") {
+			await transaction.rollback();
+			res.status(400).json({ message: "Checkout is only allowed for accepted offers." });
+			return;
+		}
+
+		const paymentGateway = await PaymentGateway.findOne({
+			where: { name: "Paystack", isActive: true },
+			transaction,
+		});
+
+		if (!paymentGateway || !paymentGateway.secretKey) {
+			await transaction.rollback();
+			res.status(500).json({ message: "Active Paystack gateway not configured." });
+			return;
+		}
+
+		const verificationResponse = await verifyPayment(refId, paymentGateway.secretKey);
+
+		if (verificationResponse.status !== "success") {
+			await transaction.rollback();
+			res.status(400).json({ message: "Payment verification failed." });
+			return;
+		}
+
+		const product = (offer as any).product as Product;
+
+		if (product.type === "in_stock") {
+			const availableQuantity = product.quantity ?? 0;
+			if (availableQuantity < 1) {
+				await transaction.rollback();
+				res.status(400).json({ message: "Product is out of stock." });
+				return;
+			}
+			await product.update({ quantity: availableQuantity - 1 }, { transaction });
+		}
+
+		const effectivePrice = offer.counterPrice !== null ? Number(offer.counterPrice) : Number(offer.offeredPrice);
+
+		const user = await User.findByPk(buyerId, { transaction });
+
+		const order = await Order.create(
+			{
+				userId: buyerId,
+				totalAmount: effectivePrice,
+				refId,
+				shippingAddress,
+				status: "pending",
+			},
+			{ transaction },
+		);
+
+		await OrderItem.create(
+			{
+				vendorId: product.vendorId,
+				orderId: order.id,
+				product,
+				quantity: 1,
+				price: effectivePrice,
+			},
+			{ transaction },
+		);
+
+		await Payment.create(
+			{
+				orderId: order.id,
+				refId,
+				amount: verificationResponse.amount / 100,
+				currency: verificationResponse.currency,
+				status: verificationResponse.status,
+				channel: verificationResponse.channel,
+				paymentDate: verificationResponse.transaction_date,
+			},
+			{ transaction },
+		);
+
+		await offer.update({ status: "completed" } as any, { transaction });
+
+		await Notification.create(
+			{
+				userId: buyerId,
+				title: "Order Placed",
+				message: `Your order for "${product.name}" at the agreed price has been placed successfully.`,
+				type: "ORDER_PLACED",
+				isRead: false,
+			},
+			{ transaction },
+		);
+
+		const vendor = await User.findByPk(product.vendorId, { transaction });
+		const admin = await Admin.findByPk(product.vendorId, { transaction });
+
+		if (vendor) {
+			await Notification.create(
+				{
+					userId: vendor.id,
+					title: "New Order Received",
+					type: "new_order",
+					message: `You have received a new order (TRACKING NO: ${order.trackingNumber}) for "${product.name}" via an offer.`,
+				},
+				{ transaction },
+			);
+
+			await vendor.update(
+				{ pendingWallet: new Decimal(vendor.pendingWallet || 0).plus(effectivePrice) },
+				{ transaction },
+			);
+		}
+
+		// Admin-owned products do not have a wallet to update
+
+		await transaction.commit();
+
+		res.status(200).json({ message: "Order placed successfully.", data: { orderId: order.id, trackingNumber: order.trackingNumber } });
+	} catch (error) {
+		await transaction.rollback();
+		logger.error("Error during offer checkout:", error);
+		res.status(500).json({ message: "Server error." });
 	}
 };

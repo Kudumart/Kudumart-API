@@ -1345,7 +1345,7 @@ export const getAttributesForServiceCategory = async (
 			return;
 		}
 
-		const serviceCategory = await ServiceCategories.findByPk(serviceCategoryId);
+		const serviceCategory = await ServiceCategories.findByPk(serviceCategoryId as string);
 
 		if (!serviceCategory) {
 			res.status(404).json({ message: "Service category not found." });

@@ -66,6 +66,9 @@ import DropshipProducts from "../models/dropshipProducts";
 import { on } from "events";
 import Decimal from "decimal.js";
 import DropShippingCred from "../models/dropshippngCreds";
+import ProductOffer from "../models/productoffer";
+import { sendPushNotificationSingle } from "../firebase/pushNotification";
+import { PushNotificationTypes } from "../types/index";
 
 // Extend the Express Request interface to include adminId and admin
 interface AuthenticatedRequest extends Request {
@@ -6301,7 +6304,7 @@ export const markAdminNotificationAsRead = async (
 ): Promise<void> => {
 	const { id } = req.params;
 	try {
-		const notification = await AdminNotification.findByPk(id);
+		const notification = await AdminNotification.findByPk(id as string);
 		if (!notification) {
 			res.status(404).json({ message: "Notification not found" });
 			return;
@@ -6443,7 +6446,7 @@ export const updateProductCharge = async (req: Request, res: Response) => {
 	}
 
 	try {
-		const charge = await ProductCharge.findByPk(productChargeId);
+		const charge = await ProductCharge.findByPk(productChargeId as string);
 
 		if (!charge) {
 			res.status(404).json({ message: "Product charge not found" });
@@ -6518,7 +6521,7 @@ export const deleteProductCharge = async (req: Request, res: Response) => {
 	const productChargeId = req.params.id;
 
 	try {
-		const charge = await ProductCharge.findByPk(productChargeId);
+		const charge = await ProductCharge.findByPk(productChargeId as string);
 
 		if (!charge) {
 			res.status(404).json({ message: "Product charge not found" });
@@ -6546,7 +6549,7 @@ export const markProductChargeAsInactive = async (
 	const productChargeId = req.params.id;
 
 	try {
-		const charge = await ProductCharge.findByPk(productChargeId);
+		const charge = await ProductCharge.findByPk(productChargeId as string);
 
 		if (!charge) {
 			res.status(404).json({ message: "Product charge not found" });
@@ -6588,7 +6591,7 @@ export const markProductChargeAsActive = async (
 	const productChargeId = req.params.id;
 
 	try {
-		const charge = await ProductCharge.findByPk(productChargeId);
+		const charge = await ProductCharge.findByPk(productChargeId as string);
 
 		if (!charge) {
 			res.status(404).json({ message: "Product charge not found" });
@@ -6667,7 +6670,7 @@ export const updateServiceCategory = async (req: Request, res: Response) => {
 			return;
 		}
 
-		const service = await ServiceCategories.findByPk(id);
+		const service = await ServiceCategories.findByPk(id as string);
 
 		if (!service) {
 			res.status(404).json({ message: "Service category not found" });
@@ -6735,7 +6738,7 @@ export const deleteServiceCategory = async (
 			return;
 		}
 
-		const service = await ServiceCategories.findByPk(id);
+		const service = await ServiceCategories.findByPk(id as string);
 
 		if (!service) {
 			res.status(404).json({ message: "Service category not found" });
@@ -6824,7 +6827,7 @@ export const updateServiceSubCategory = async (
 			return;
 		}
 
-		const subCategory = await ServiceSubCategories.findByPk(id);
+		const subCategory = await ServiceSubCategories.findByPk(id as string);
 
 		if (!subCategory) {
 			res.status(404).json({ message: "Service sub-category not found" });
@@ -6907,7 +6910,7 @@ export const deleteServiceSubCategory = async (
 			return;
 		}
 
-		const subCategory = await ServiceSubCategories.findByPk(id);
+		const subCategory = await ServiceSubCategories.findByPk(id as string);
 
 		if (!subCategory) {
 			res.status(404).json({ message: "Service sub-category not found" });
@@ -7133,7 +7136,7 @@ export const deleteServiceAttribute = async (
       return;
     }
 
-    const attribute = await AttributeDefinitions.findByPk(id);
+    const attribute = await AttributeDefinitions.findByPk(id as string);
 
     if (!attribute) {
       res.status(404).json({ message: "Service attribute not found" });
@@ -7174,7 +7177,7 @@ export const addAttributeOptions = async (
       return;
     }
 
-    const attribute = await AttributeDefinitions.findByPk(attributeId);
+    const attribute = await AttributeDefinitions.findByPk(attributeId as string);
 
     if (!attribute) {
       res.status(404).json({ message: "Attribute not found." });
@@ -7270,7 +7273,7 @@ export const deleteAttributeOption = async (
       return;
     }
 
-    const option = await AttributeOptions.findByPk(optionId);
+    const option = await AttributeOptions.findByPk(optionId as string);
 
     if (!option) {
       res.status(404).json({ message: "Option not found." });
@@ -7321,7 +7324,7 @@ export const addAttributeToServiceCategory = async (
       return;
     }
 
-    const serviceCategory = await ServiceCategories.findByPk(categoryId);
+    const serviceCategory = await ServiceCategories.findByPk(categoryId as string);
 
     if (!serviceCategory) {
       res.status(404).json({ message: "Service category not found." });
@@ -7404,7 +7407,7 @@ export const removeAttributeFromServiceCategory = async (
   }
 
   try {
-    const serviceCategory = await ServiceCategories.findByPk(categoryId);
+    const serviceCategory = await ServiceCategories.findByPk(categoryId as string);
 
     if (!serviceCategory) {
       res.status(404).json({ message: "Service category not found." });
@@ -7448,7 +7451,7 @@ export const suspendService = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    const service = await Services.findByPk(serviceId);
+    const service = await Services.findByPk(serviceId as string);
 
     if (!service) {
       res.status(404).json({ message: "Service not found." });
@@ -7485,7 +7488,7 @@ export const activateService = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    const service = await Services.findByPk(serviceId);
+    const service = await Services.findByPk(serviceId as string);
 
     if (!service) {
       res.status(404).json({ message: "Service not found." });
@@ -8121,6 +8124,127 @@ export async function getAliExpressDropshipCredsStatus(
 		});
 	}
 }
+
+export const getAllOffers = async (
+	req: AuthenticatedRequest,
+	res: Response,
+): Promise<void> => {
+	const { page, limit, status, productId } = req.query;
+	const offset = (Number(page) - 1) * Number(limit) || 0;
+
+	const where: any = {};
+	if (status) where.status = status;
+	if (productId) where.productId = productId;
+
+	try {
+		const { count, rows: offers } = await ProductOffer.findAndCountAll({
+			where,
+			include: [
+				{
+					model: Product,
+					as: "product",
+					attributes: ["id", "name", "price", "image_url"],
+				},
+				{
+					model: User,
+					as: "buyer",
+					attributes: ["id", "firstName", "lastName", "email"],
+				},
+			],
+			order: [["createdAt", "DESC"]],
+			limit: Number(limit) || 10,
+			offset,
+		});
+
+		res.status(200).json({ data: offers, total: count });
+	} catch (error: any) {
+		logger.error(`Error fetching offers: ${error.message}`);
+		res.status(500).json({ message: "An error occurred while fetching offers." });
+	}
+};
+
+export const respondToOffer = async (
+	req: AuthenticatedRequest,
+	res: Response,
+): Promise<void> => {
+	const { offerId } = req.params;
+	const { status, counterPrice } = req.body;
+
+	const allowedStatuses = ["accepted", "rejected", "countered"];
+	if (!status || !allowedStatuses.includes(status)) {
+		res.status(400).json({ message: "Status must be one of: accepted, rejected, countered." });
+		return;
+	}
+
+	if (status === "countered" && (!counterPrice || isNaN(Number(counterPrice)) || Number(counterPrice) <= 0)) {
+		res.status(400).json({ message: "A valid counter price is required when countering an offer." });
+		return;
+	}
+
+	try {
+		const offer = await ProductOffer.findByPk(offerId as string, {
+			include: [
+				{ model: Product, as: "product", attributes: ["id", "name"] },
+				{ model: User, as: "buyer", attributes: ["id", "firstName", "fcmToken"] },
+			],
+		});
+
+		if (!offer) {
+			res.status(404).json({ message: "Offer not found." });
+			return;
+		}
+
+		if (offer.status !== "pending") {
+			res.status(400).json({ message: "This offer has already been responded to." });
+			return;
+		}
+
+		await offer.update({
+			status,
+			counterPrice: status === "countered" ? Number(counterPrice) : null,
+		});
+
+		const buyer = (offer as any).buyer;
+		const product = (offer as any).product;
+
+		const notificationMessages: Record<string, string> = {
+			accepted: `Your offer on "${product.name}" has been accepted!`,
+			rejected: `Your offer on "${product.name}" has been declined.`,
+			countered: `The admin has made a counter offer of ${counterPrice} on "${product.name}".`,
+		};
+
+		await Notification.create({
+			userId: buyer.id,
+			title: status === "accepted" ? "Offer Accepted" : status === "rejected" ? "Offer Declined" : "Counter Offer Received",
+			message: notificationMessages[status],
+			type: `OFFER_${status.toUpperCase()}`,
+			isRead: false,
+		});
+
+		if (buyer.fcmToken) {
+			try {
+				await sendPushNotificationSingle({
+					token: buyer.fcmToken,
+					notification: {
+						title: status === "accepted" ? "Offer Accepted" : status === "rejected" ? "Offer Declined" : "Counter Offer",
+						body: notificationMessages[status],
+					},
+					data: {
+						offerId: offer.id,
+						type: PushNotificationTypes.ORDER_STATUS_UPDATE,
+					},
+				});
+			} catch (pushError) {
+				logger.error("Error sending push notification:", pushError);
+			}
+		}
+
+		res.status(200).json({ message: "Offer response sent successfully.", data: offer });
+	} catch (error: any) {
+		logger.error(`Error responding to offer: ${error.message}`);
+		res.status(500).json({ message: "An error occurred while responding to the offer." });
+	}
+};
 
 
 
