@@ -29,6 +29,17 @@ const checkPermission = (requiredPermission: string) => {
         return;
       }
 
+      // Superadmin bypasses all permission checks
+      if ((admin as any).role?.name === "superadmin") {
+        return next();
+      }
+
+      // Check if sub-admin is active
+      if (admin.status === "inactive") {
+        res.status(403).json({ message: "Your account has been deactivated." });
+        return;
+      }
+
       // Fetch the permissions associated with the admin's role from the role_permissions table
       const rolePermissions = await RolePermission.findAll({
         where: { roleId: admin.roleId }, // Assuming roleId is stored in the admin model
