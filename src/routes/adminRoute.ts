@@ -35,6 +35,7 @@ import {
 	addAliexpressProductValidation,
 } from "../utils/validations"; // Import the service
 import checkPermission from "../middlewares/checkPermissionMiddleware";
+import { PERMISSIONS } from "../utils/permissions";
 import {
 	getAdminNotifications,
 	markAdminNotificationAsRead,
@@ -245,12 +246,18 @@ adminRoutes.get(
 );
 
 // KYC
-adminRoutes.get("/kyc", adminAuthMiddleware, adminController.getAllKYC);
+adminRoutes.get(
+	"/kyc",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_KYC),
+	adminController.getAllKYC,
+);
 adminRoutes.post(
 	"/kyc/approve-reject",
 	adminAuthMiddleware,
 	validateKYCNotification(),
 	validate,
+	checkPermission(PERMISSIONS.MANAGE_KYC),
 	adminController.approveOrRejectKYC,
 );
 
@@ -312,23 +319,41 @@ adminRoutes.get(
 adminRoutes.get(
 	"/customers",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_CUSTOMERS),
 	adminController.getAllCustomers,
 );
-adminRoutes.get("/vendors", adminAuthMiddleware, adminController.getAllVendors);
-adminRoutes.get("/user/details", adminAuthMiddleware, adminController.viewUser);
+adminRoutes.get(
+	"/vendors",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_VENDORS),
+	adminController.getAllVendors,
+);
+adminRoutes.get(
+	"/user/details",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_CUSTOMERS),
+	adminController.viewUser,
+);
 adminRoutes.patch(
 	"/toggle/user/status",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_CUSTOMERS),
 	adminController.toggleUserStatus,
 );
 
 // Store
-adminRoutes.get("/store", adminAuthMiddleware, adminController.getStore);
+adminRoutes.get(
+	"/store",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_STORES),
+	adminController.getStore,
+);
 adminRoutes.post(
 	"/store",
 	adminAuthMiddleware,
 	createStoreValidation(),
 	validate,
+	checkPermission(PERMISSIONS.MANAGE_STORES),
 	adminController.createStore,
 );
 adminRoutes.put(
@@ -336,14 +361,21 @@ adminRoutes.put(
 	adminAuthMiddleware,
 	updateStoreValidation(),
 	validate,
+	checkPermission(PERMISSIONS.MANAGE_STORES),
 	adminController.updateStore,
 );
-adminRoutes.delete("/store", adminAuthMiddleware, adminController.deleteStore);
+adminRoutes.delete(
+	"/store",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_STORES),
+	adminController.deleteStore,
+);
 
 // Product
 adminRoutes.get(
 	"/products",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_PRODUCTS),
 	adminController.fetchProducts,
 );
 adminRoutes.post(
@@ -351,6 +383,7 @@ adminRoutes.post(
 	adminAuthMiddleware,
 	addProductValidation(),
 	validate,
+	checkPermission(PERMISSIONS.MANAGE_PRODUCTS),
 	adminController.createProduct,
 );
 adminRoutes.put(
@@ -358,22 +391,31 @@ adminRoutes.put(
 	adminAuthMiddleware,
 	updateProductValidation(),
 	validate,
+	checkPermission(PERMISSIONS.MANAGE_PRODUCTS),
 	adminController.updateProduct,
 );
 adminRoutes.delete(
 	"/products",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_PRODUCTS),
 	adminController.deleteProduct,
 );
-adminRoutes.get("/product", adminAuthMiddleware, adminController.viewProduct);
+adminRoutes.get(
+	"/product",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_PRODUCTS),
+	adminController.viewProduct,
+);
 adminRoutes.patch(
 	"/products/move-to-draft",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_PRODUCTS),
 	adminController.moveToDraft,
 );
 adminRoutes.patch(
 	"/products/change-status",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_PRODUCTS),
 	adminController.changeProductStatus,
 );
 
@@ -422,34 +464,40 @@ adminRoutes.get(
 adminRoutes.get(
 	"/order/items",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_ORDERS),
 	adminController.getOrderItems,
 );
 adminRoutes.get(
 	"/order/item",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_ORDERS),
 	adminController.viewOrderItem,
 );
 
 adminRoutes.get(
 	"/order/dropship/items",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_ORDERS),
 	adminController.getDropshipedOrderItemDetails,
 );
 
 adminRoutes.get(
 	"/order/dropship/tracking/info",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_ORDERS),
 	adminController.getDropshipOrderTrackingInfo,
 );
 
 adminRoutes.get(
 	"/order/item/details",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_ORDERS),
 	adminController.getOrderItemsInfo,
 );
 adminRoutes.post(
 	"/order/item/update/status",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_ORDERS),
 	adminController.updateOrderStatus,
 );
 
@@ -457,81 +505,97 @@ adminRoutes.post(
 adminRoutes.get(
 	"/general/stores",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_STORES),
 	adminController.getGeneralStores,
 );
 adminRoutes.get(
 	"/general/store/view",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_STORES),
 	adminController.viewGeneralStore,
 );
 adminRoutes.get(
 	"/general/products",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_PRODUCTS),
 	adminController.getGeneralProducts,
 );
 adminRoutes.get(
 	"/general/product/view",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_PRODUCTS),
 	adminController.viewGeneralProduct,
 );
 adminRoutes.delete(
 	"/general/product/delete",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_PRODUCTS),
 	adminController.deleteGeneralProduct,
 );
 adminRoutes.put(
 	"/general/product/unpublished",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_PRODUCTS),
 	adminController.unpublishProduct,
 );
 adminRoutes.put(
 	"/general/product/publish",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_PRODUCTS),
 	adminController.publishProduct,
 );
 adminRoutes.get(
 	"/general/auction/products",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_PRODUCTS),
 	adminController.getGeneralAuctionProducts,
 );
 adminRoutes.get(
 	"/general/auction/product/view",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_PRODUCTS),
 	adminController.viewGeneralAuctionProduct,
 );
 adminRoutes.delete(
 	"/general/auction/product/delete",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_PRODUCTS),
 	adminController.deleteGeneralAuctionProduct,
 );
 adminRoutes.get(
 	"/general/auction/product/bidders",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_PRODUCTS),
 	adminController.getAllBiddersByAuctionProductId,
 );
 adminRoutes.get(
 	"/general/orders",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_ORDERS),
 	adminController.getAllGeneralOrders,
 );
 adminRoutes.get(
 	"/general/order/items",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_ORDERS),
 	adminController.getAllGeneralOrderItems,
 );
 adminRoutes.get(
 	"/general/order/payment",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_ORDERS),
 	adminController.getGeneralPaymentDetails,
 );
 adminRoutes.get(
 	"/general/adverts",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_ADVERTS),
 	adminController.getGeneralAdverts,
 );
 adminRoutes.get(
 	"/general/advert/view",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_ADVERTS),
 	adminController.viewGeneralAdvert,
 );
 
@@ -546,6 +610,7 @@ adminRoutes.get(
 adminRoutes.get(
 	"/transactions",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_TRANSACTIONS),
 	adminController.getTransactionsForAdmin,
 );
 
@@ -553,32 +618,47 @@ adminRoutes.get(
 adminRoutes.get(
 	"/active/products",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_ADVERTS),
 	adminController.activeProducts,
-); // Create a new advert
+);
 adminRoutes.post(
 	"/adverts",
 	createAdvertValidation(),
 	validate,
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_ADVERTS),
 	adminController.createAdvert,
-); // Create a new advert
+);
 adminRoutes.put(
 	"/adverts",
 	updateAdvertValidation(),
 	validate,
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_ADVERTS),
 	adminController.updateAdvert,
-); // Update an existing advert
-adminRoutes.get("/adverts", adminAuthMiddleware, adminController.getAdverts); // Get adverts
-adminRoutes.get("/advert", adminAuthMiddleware, adminController.viewAdvert); // View a specific advert
+);
+adminRoutes.get(
+	"/adverts",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_ADVERTS),
+	adminController.getAdverts,
+);
+adminRoutes.get(
+	"/advert",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_ADVERTS),
+	adminController.viewAdvert,
+);
 adminRoutes.delete(
 	"/adverts",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_ADVERTS),
 	adminController.deleteAdvert,
-); // Delete an advert
+);
 adminRoutes.post(
 	"/approved-reject/advert",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_ADVERTS),
 	adminController.approveOrRejectAdvert,
 );
 
@@ -586,62 +666,97 @@ adminRoutes.post(
 adminRoutes.post(
 	"/testimonial",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_PAGES),
 	adminController.createTestimonial,
-); // Create a new testimonial
+);
 adminRoutes.put(
 	"/testimonial",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_PAGES),
 	adminController.updateTestimonial,
-); // Update a testimonial
+);
 adminRoutes.get(
 	"/testimonials",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_PAGES),
 	adminController.getAllTestimonials,
-); // Get all testimonials
+);
 adminRoutes.get(
 	"/testimonial",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_PAGES),
 	adminController.getTestimonial,
-); // Get a single testimonial
+);
 adminRoutes.delete(
 	"/testimonial",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_PAGES),
 	adminController.deleteTestimonial,
-); // Delete a testimonial
+);
 
 // FAQ Category Routes
 adminRoutes.post(
 	"/faq/category",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_PAGES),
 	adminController.createFaqCategory,
 );
 adminRoutes.get(
 	"/faq/categories",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_PAGES),
 	adminController.getAllFaqCategories,
 );
 adminRoutes.get(
 	"/faq/category",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_PAGES),
 	adminController.getFaqCategory,
 );
 adminRoutes.put(
 	"/faq/category",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_PAGES),
 	adminController.updateFaqCategory,
 );
 adminRoutes.delete(
 	"/faq/category",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_PAGES),
 	adminController.deleteFaqCategory,
 );
 
 // FAQ Routes
-adminRoutes.post("/faq", adminAuthMiddleware, adminController.createFaq);
-adminRoutes.get("/faqs", adminAuthMiddleware, adminController.getAllFaqs);
-adminRoutes.get("/faq", adminAuthMiddleware, adminController.getFaq);
-adminRoutes.put("/faq", adminAuthMiddleware, adminController.updateFaq);
-adminRoutes.delete("/faq", adminAuthMiddleware, adminController.deleteFaq);
+adminRoutes.post(
+	"/faq",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_PAGES),
+	adminController.createFaq,
+);
+adminRoutes.get(
+	"/faqs",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_PAGES),
+	adminController.getAllFaqs,
+);
+adminRoutes.get(
+	"/faq",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_PAGES),
+	adminController.getFaq,
+);
+adminRoutes.put(
+	"/faq",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_PAGES),
+	adminController.updateFaq,
+);
+adminRoutes.delete(
+	"/faq",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_PAGES),
+	adminController.deleteFaq,
+);
 
 // Contact Us Form
 adminRoutes.get(
@@ -666,32 +781,61 @@ adminRoutes.post(
 	adminAuthMiddleware,
 	postJobValidationRules(),
 	validate,
+	checkPermission(PERMISSIONS.MANAGE_JOBS),
 	adminController.postJob,
 );
-adminRoutes.put("/job/update", adminAuthMiddleware, adminController.updateJob);
-adminRoutes.get("/jobs", adminAuthMiddleware, adminController.getJobs);
-adminRoutes.get("/job", adminAuthMiddleware, adminController.getJobById);
-adminRoutes.patch("/job/close", adminAuthMiddleware, adminController.closeJob);
+adminRoutes.put(
+	"/job/update",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_JOBS),
+	adminController.updateJob,
+);
+adminRoutes.get(
+	"/jobs",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_JOBS),
+	adminController.getJobs,
+);
+adminRoutes.get(
+	"/job",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_JOBS),
+	adminController.getJobById,
+);
+adminRoutes.patch(
+	"/job/close",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_JOBS),
+	adminController.closeJob,
+);
 adminRoutes.delete(
 	"/job/delete",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_JOBS),
 	adminController.deleteJob,
 );
-
-adminRoutes.post("/job/repost", adminAuthMiddleware, adminController.repostJob);
+adminRoutes.post(
+	"/job/repost",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_JOBS),
+	adminController.repostJob,
+);
 adminRoutes.get(
 	"/job/applicants",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_JOBS),
 	adminController.getJobApplicants,
 );
 adminRoutes.get(
 	"/job/view/applicant",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_JOBS),
 	adminController.viewApplicant,
 );
 adminRoutes.get(
 	"/job/download/applicant/resume",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_JOBS),
 	adminController.downloadApplicantResume,
 );
 
@@ -699,27 +843,51 @@ adminRoutes.get(
 adminRoutes.post(
 	"/withdrawal/update/status",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_WITHDRAWALS),
 	adminController.updateWithdrawalStatus,
 );
 adminRoutes.get(
 	"/withdrawals",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_WITHDRAWALS),
 	adminController.getWithdrawals,
 );
 adminRoutes.get(
 	"/withdrawal",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_WITHDRAWALS),
 	adminController.getWithdrawalById,
 );
 
 // BANNER Routes
-adminRoutes.post("/banner", adminAuthMiddleware, adminController.createBanner);
-adminRoutes.get("/banners", adminAuthMiddleware, adminController.getAllBanners);
-adminRoutes.get("/banner", adminAuthMiddleware, adminController.getBanner);
-adminRoutes.put("/banner", adminAuthMiddleware, adminController.updateBanner);
+adminRoutes.post(
+	"/banner",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_PAGES),
+	adminController.createBanner,
+);
+adminRoutes.get(
+	"/banners",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_PAGES),
+	adminController.getAllBanners,
+);
+adminRoutes.get(
+	"/banner",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_PAGES),
+	adminController.getBanner,
+);
+adminRoutes.put(
+	"/banner",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_PAGES),
+	adminController.updateBanner,
+);
 adminRoutes.delete(
 	"/banner",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_PAGES),
 	adminController.deleteBanner,
 );
 
@@ -782,6 +950,7 @@ adminRoutes.post(
 	adminAuthMiddleware,
 	ServiceCategoryValidation(),
 	validate,
+	checkPermission(PERMISSIONS.MANAGE_SERVICES),
 	adminController.createServiceCategory,
 );
 
@@ -791,6 +960,7 @@ adminRoutes.put(
 	ServiceIdValidation(),
 	ServiceCategoryValidation(),
 	validate,
+	checkPermission(PERMISSIONS.MANAGE_SERVICES),
 	adminController.updateServiceCategory,
 );
 
@@ -799,6 +969,7 @@ adminRoutes.get(
 	adminAuthMiddleware,
 	paginationQueryParamsValidation(),
 	validate,
+	checkPermission(PERMISSIONS.VIEW_SERVICES),
 	adminController.getAllServiceCategories,
 );
 
@@ -807,6 +978,7 @@ adminRoutes.delete(
 	adminAuthMiddleware,
 	ServiceIdValidation(),
 	validate,
+	checkPermission(PERMISSIONS.MANAGE_SERVICES),
 	adminController.deleteServiceCategory,
 );
 
@@ -815,6 +987,7 @@ adminRoutes.post(
 	adminAuthMiddleware,
 	ServiceSubCategoryValidation(),
 	validate,
+	checkPermission(PERMISSIONS.MANAGE_SERVICES),
 	adminController.createServiceSubCategory,
 );
 
@@ -824,6 +997,7 @@ adminRoutes.put(
 	ServiceIdValidation(),
 	ServiceSubCategoryValidation(),
 	validate,
+	checkPermission(PERMISSIONS.MANAGE_SERVICES),
 	adminController.updateServiceSubCategory,
 );
 
@@ -833,6 +1007,7 @@ adminRoutes.get(
 	ServiceIdValidation(),
 	paginationQueryParamsValidation(),
 	validate,
+	checkPermission(PERMISSIONS.VIEW_SERVICES),
 	adminController.getAllServiceSubCategories,
 );
 
@@ -841,6 +1016,7 @@ adminRoutes.delete(
 	adminAuthMiddleware,
 	ServiceIdValidation(),
 	validate,
+	checkPermission(PERMISSIONS.MANAGE_SERVICES),
 	adminController.deleteServiceSubCategory,
 );
 
@@ -849,12 +1025,14 @@ adminRoutes.post(
 	adminAuthMiddleware,
 	CreateServiceAttributeValidation(),
 	validate,
+	checkPermission(PERMISSIONS.MANAGE_SERVICES),
 	adminController.createServiceAttribute,
 );
 
 adminRoutes.delete(
 	"/service/attributes/:id",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_SERVICES),
 	adminController.deleteServiceAttribute,
 );
 
@@ -863,6 +1041,7 @@ adminRoutes.post(
 	adminAuthMiddleware,
 	AddServiceAttributeOptionsValidation(),
 	validate,
+	checkPermission(PERMISSIONS.MANAGE_SERVICES),
 	adminController.addAttributeOptions,
 );
 
@@ -871,12 +1050,14 @@ adminRoutes.get(
 	adminAuthMiddleware,
 	paginationQueryParamsValidation(),
 	validate,
+	checkPermission(PERMISSIONS.VIEW_SERVICES),
 	adminController.getAllServiceAttributes,
 );
 
 adminRoutes.delete(
 	"/service/attributes/options/:optionId",
 	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_SERVICES),
 	adminController.deleteAttributeOption,
 );
 
@@ -885,6 +1066,7 @@ adminRoutes.post(
 	adminAuthMiddleware,
 	AddServiceCategoryToAttributeValidation(),
 	validate,
+	checkPermission(PERMISSIONS.MANAGE_SERVICES),
 	adminController.addAttributeToServiceCategory,
 );
 
