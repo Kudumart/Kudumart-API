@@ -48,6 +48,9 @@ import ServiceAttributeNumberValues from "../models/serviceAttributeNumberValues
 import ServiceAttributeBoolValues from "../models/serviceAttributeBoolValues";
 import AttributeOptions from "../models/attributeOptions";
 import ServiceBookings from "../models/servicebookings";
+import ProductOffer from "../models/productoffer";
+import { sendPushNotificationSingle } from "../firebase/pushNotification";
+import { PushNotificationTypes } from "../types/index";
 
 export const submitOrUpdateKYC = async (
 	req: Request,
@@ -3913,5 +3916,135 @@ export const markServiceBookingAsCancelled = async (
 	} catch (error) {
 		logger.error("Error cancelling service booking:", error);
 		res.status(500).json({ message: "Internal server error" });
+	}
+};
+
+export const getVendorOffers = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const vendorId = (req as AuthenticatedRequest).user?.id;
+	const { page, limit, status, productId } = req.query;
+	const offset = (Number(page) - 1) * Number(limit) || 0;
+
+	const where: any = {};
+	if (status) where.status = status;
+	if (productId) where.productId = productId;
+
+	try {
+		const { count, rows: offers } = await ProductOffer.findAndCountAll({
+			where,
+			include: [
+				{
+					model: Product,
+					as: "product",
+					attributes: ["id", "name", "price", "image_url"],
+					where: { vendorId },
+					required: true,
+				},
+				{
+					model: User,
+					as: "buyer",
+					attributes: ["id", "firstName", "lastName", "email"],
+				},
+			],
+			order: [["createdAt", "DESC"]],
+			limit: Number(limit) || 10,
+			offset,
+		});
+
+		res.status(200).json({ data: offers, total: count });
+	} catch (error: any) {
+		logger.error(`Error fetching vendor offers: ${error.message}`);
+		res.status(500).json({ message: "An error occurred while fetching offers." });
+	}
+};
+
+export const respondToVendorOffer = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const vendorId = (req as AuthenticatedRequest).user?.id;
+	const { offerId } = req.params;
+	const { status, counterPrice } = req.body;
+
+	const allowedStatuses = ["accepted", "rejected", "countered"];
+	if (!status || !allowedStatuses.includes(status)) {
+		res.status(400).json({ message: "Status must be one of: accepted, rejected, countered." });
+		return;
+	}
+
+	if (status === "countered" && (!counterPrice || isNaN(Number(counterPrice)) || Number(counterPrice) <= 0)) {
+		res.status(400).json({ message: "A valid counter price is required when countering an offer." });
+		return;
+	}
+
+	try {
+		const offer = await ProductOffer.findByPk(offerId as string, {
+			include: [
+				{ model: Product, as: "product", attributes: ["id", "name", "vendorId"] },
+				{ model: User, as: "buyer", attributes: ["id", "firstName", "fcmToken"] },
+			],
+		});
+
+		if (!offer) {
+			res.status(404).json({ message: "Offer not found." });
+			return;
+		}
+
+		const product = (offer as any).product;
+		if (product.vendorId !== vendorId) {
+			res.status(403).json({ message: "You are not authorized to respond to this offer." });
+			return;
+		}
+
+		if (offer.status !== "pending") {
+			res.status(400).json({ message: "This offer has already been responded to." });
+			return;
+		}
+
+		await offer.update({
+			status,
+			counterPrice: status === "countered" ? Number(counterPrice) : null,
+		});
+
+		const buyer = (offer as any).buyer;
+
+		const notificationMessages: Record<string, string> = {
+			accepted: `Your offer on "${product.name}" has been accepted!`,
+			rejected: `Your offer on "${product.name}" has been declined.`,
+			countered: `The vendor has made a counter offer of ${counterPrice} on "${product.name}".`,
+		};
+
+		await Notification.create({
+			userId: buyer.id,
+			title: status === "accepted" ? "Offer Accepted" : status === "rejected" ? "Offer Declined" : "Counter Offer Received",
+			message: notificationMessages[status],
+			type: `OFFER_${status.toUpperCase()}`,
+			isRead: false,
+		});
+
+		if (buyer.fcmToken) {
+			try {
+				await sendPushNotificationSingle({
+					token: buyer.fcmToken,
+					notification: {
+						title: status === "accepted" ? "Offer Accepted" : status === "rejected" ? "Offer Declined" : "Counter Offer",
+						body: notificationMessages[status],
+					},
+					data: {
+						offerId: offer.id,
+						type: PushNotificationTypes.ORDER_STATUS_UPDATE,
+					},
+				});
+			} catch (pushError) {
+				logger.error("Error sending push notification:", pushError);
+			}
+		}
+
+		res.status(200).json({ message: "Offer response sent successfully.", data: offer });
+	} catch (error: any) {
+		logger.error(`Error responding to vendor offer: ${error.message}`);
+		res.status(500).json({ message: "An error occurred while responding to the offer." });
 	}
 };

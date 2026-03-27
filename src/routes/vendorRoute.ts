@@ -363,6 +363,23 @@ vendorRoutes.patch(
 	vendorController.unpublishService,
 );
 
+// Product offer routes
+vendorRoutes.get(
+	"/offers",
+	authMiddleware,
+	authorizeVendor,
+	vendorController.getVendorOffers,
+);
+
+vendorRoutes.put(
+	"/offers/:offerId",
+	validateUUIDParam("offerId"),
+	validate,
+	authMiddleware,
+	authorizeVendor,
+	vendorController.respondToVendorOffer,
+);
+
 vendorRoutes.get(
 	"/service/bookings",
 	paginationQueryParamsValidation(),

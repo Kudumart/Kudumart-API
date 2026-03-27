@@ -8181,16 +8181,24 @@ export const respondToOffer = async (
 		return;
 	}
 
+	const adminId = req.admin?.id;
+
 	try {
 		const offer = await ProductOffer.findByPk(offerId as string, {
 			include: [
-				{ model: Product, as: "product", attributes: ["id", "name"] },
+				{ model: Product, as: "product", attributes: ["id", "name", "vendorId"] },
 				{ model: User, as: "buyer", attributes: ["id", "firstName", "fcmToken"] },
 			],
 		});
 
 		if (!offer) {
 			res.status(404).json({ message: "Offer not found." });
+			return;
+		}
+
+		const product = (offer as any).product;
+		if (product.vendorId !== adminId) {
+			res.status(403).json({ message: "You can only respond to offers on your own products." });
 			return;
 		}
 
@@ -8205,7 +8213,6 @@ export const respondToOffer = async (
 		});
 
 		const buyer = (offer as any).buyer;
-		const product = (offer as any).product;
 
 		const notificationMessages: Record<string, string> = {
 			accepted: `Your offer on "${product.name}" has been accepted!`,
