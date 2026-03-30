@@ -5874,12 +5874,17 @@ export const getMyOffers = async (
 	res: Response,
 ): Promise<void> => {
 	const buyerId = (req as AuthenticatedRequest).user?.id;
-	const { page, limit } = req.query;
+	const { page, limit, status, productId } = req.query;
 	const offset = (Number(page) - 1) * Number(limit) || 0;
+
+	const where: any = { buyerId };
+	if (status) where.status = String(status);
+	if (productId) where.productId = String(productId);
 
 	try {
 		const { count, rows: offers } = await ProductOffer.findAndCountAll({
-			where: { buyerId },
+			where,
+			subQuery: false,
 			include: [
 				{
 					model: Product,
