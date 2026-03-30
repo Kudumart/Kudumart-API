@@ -8129,23 +8129,46 @@ export const getAllOffers = async (
 	req: AuthenticatedRequest,
 	res: Response,
 ): Promise<void> => {
-	const { page, limit, status, productId } = req.query;
+	const { page, limit, status, productId, ownerType } = req.query;
 	const offset = (Number(page) - 1) * Number(limit) || 0;
 
 	const where: any = {};
 	if (status) where.status = String(status);
 	if (productId) where.productId = String(productId);
 
+	// ownerType=admin → only offers on admin-owned products
+	// ownerType=vendor → only offers on vendor-owned products
+	// no ownerType → all offers (oversight)
+	const productInclude: any = {
+		model: Product,
+		as: "product",
+		attributes: ["id", "name", "price", "image_url", "vendorId"],
+		required: true,
+	};
+
+	if (ownerType === "admin") {
+		productInclude.include = [{
+			model: Admin,
+			as: "admin",
+			attributes: ["id"],
+			required: true,
+		}];
+	} else if (ownerType === "vendor") {
+		productInclude.include = [{
+			model: Admin,
+			as: "admin",
+			attributes: ["id"],
+			required: false,
+		}];
+		productInclude.where = { "$product.admin.id$": null };
+	}
+
 	try {
 		const { count, rows: offers } = await ProductOffer.findAndCountAll({
 			where,
 			subQuery: false,
 			include: [
-				{
-					model: Product,
-					as: "product",
-					attributes: ["id", "name", "price", "image_url"],
-				},
+				productInclude,
 				{
 					model: User,
 					as: "buyer",
