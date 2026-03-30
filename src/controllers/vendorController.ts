@@ -3928,12 +3928,13 @@ export const getVendorOffers = async (
 	const offset = (Number(page) - 1) * Number(limit) || 0;
 
 	const where: any = {};
-	if (status) where.status = status;
-	if (productId) where.productId = productId;
+	if (status) where.status = String(status);
+	if (productId) where.productId = String(productId);
 
 	try {
 		const { count, rows: offers } = await ProductOffer.findAndCountAll({
 			where,
+			subQuery: false,
 			include: [
 				{
 					model: Product,
