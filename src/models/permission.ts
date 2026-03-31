@@ -4,6 +4,7 @@ import { Model, DataTypes, Sequelize } from 'sequelize';
 class Permission extends Model {
   public id!: string;
   public name!: string;
+  public description!: string | null;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 
@@ -29,6 +30,10 @@ const initModel = (sequelize: Sequelize) => {
       type: DataTypes.STRING,
       allowNull: false,
       unique: true,
+    },
+    description: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
   }, {
     sequelize,

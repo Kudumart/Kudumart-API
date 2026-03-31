@@ -149,24 +149,6 @@ adminRoutes.get(
 	checkPermission("view-permission"),
 	adminController.getPermissions,
 );
-adminRoutes.post(
-	"/permission/create",
-	adminAuthMiddleware,
-	checkPermission("create-permission"),
-	adminController.createPermission,
-);
-adminRoutes.put(
-	"/permission/update",
-	adminAuthMiddleware,
-	checkPermission("update-permission"),
-	adminController.updatePermission,
-);
-adminRoutes.delete(
-	"/permission/delete",
-	adminAuthMiddleware,
-	checkPermission("delete-permission"),
-	adminController.deletePermission,
-);
 
 // Subscription Plan
 adminRoutes.get(
