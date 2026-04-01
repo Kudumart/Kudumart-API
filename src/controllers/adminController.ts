@@ -713,6 +713,31 @@ export const getPermissions = async (
 	}
 };
 
+export const getMyPermissions = async (
+	req: AuthenticatedRequest,
+	res: Response,
+): Promise<void> => {
+	const roleId = req.admin?.roleId;
+
+	if (!roleId) {
+		res.status(404).json({ message: "No role assigned to this account." });
+		return;
+	}
+
+	try {
+		const rolePermissions = await RolePermission.findAll({
+			where: { roleId },
+			include: [{ model: Permission, as: "permission" }],
+		});
+
+		const permissions = rolePermissions.map((rp: any) => rp.permission).filter(Boolean);
+		res.status(200).json({ data: permissions });
+	} catch (error) {
+		logger.error("Error fetching admin permissions:", error);
+		res.status(500).json({ message: "Internal server error" });
+	}
+};
+
 // Update an existing Permission
 export const updatePermission = async (
 	req: Request,

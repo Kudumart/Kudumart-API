@@ -149,6 +149,11 @@ adminRoutes.get(
 	checkPermission("view-permission"),
 	adminController.getPermissions,
 );
+adminRoutes.get(
+	"/permissions/me",
+	adminAuthMiddleware,
+	adminController.getMyPermissions,
+);
 
 // Subscription Plan
 adminRoutes.get(
