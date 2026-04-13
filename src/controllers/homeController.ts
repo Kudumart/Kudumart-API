@@ -482,6 +482,73 @@ export const getProductById = async (
 	}
 };
 
+// Get price history/market comparison for a product by name
+export const getProductPriceHistory = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const { name } = req.query;
+
+	if (!name) {
+		res.status(400).json({ message: "Product name is required" });
+		return;
+	}
+
+	try {
+		const normalizedName = String(name).trim().replace(/\s+/g, " ");
+		const nameFilter = { [Op.like]: `%${normalizedName}%` };
+		const baseWhere = { name: nameFilter, status: "active" };
+
+		// Single query — window functions compute aggregates in the same DB scan as the data points
+		const rows = await Product.findAll({
+			where: baseWhere,
+			attributes: [
+				"price",
+				"condition",
+				[fn("DATE", col("createdAt")), "date"],
+				[literal("MIN(price) OVER()"), "minPrice"],
+				[literal("MAX(price) OVER()"), "maxPrice"],
+				[literal("ROUND(AVG(price) OVER(), 2)"), "avgPrice"],
+				[literal("COUNT(*) OVER()"), "totalListings"],
+			],
+			order: [["createdAt", "ASC"]],
+			raw: true,
+		});
+
+		if (rows.length === 0) {
+			res.status(200).json({
+				productName: normalizedName,
+				dataPoints: [],
+				stats: null,
+			});
+			return;
+		}
+
+		// Aggregates are identical on every row — read once from the first
+		const first: any = rows[0];
+
+		res.status(200).json({
+			productName: normalizedName,
+			dataPoints: rows.map((p: any) => ({
+				date: p.date,
+				price: parseFloat(p.price),
+				condition: p.condition,
+			})),
+			stats: {
+				minPrice: parseFloat(first.minPrice),
+				maxPrice: parseFloat(first.maxPrice),
+				avgPrice: parseFloat(first.avgPrice),
+				totalListings: parseInt(first.totalListings),
+			},
+		});
+	} catch (error: any) {
+		logger.error("Error fetching product price history:", error);
+		res.status(500).json({
+			message: error.message || "An error occurred while fetching price history.",
+		});
+	}
+};
+
 // Controller to get all stores with optional filters and pagination
 export const getAllStores = async (
 	req: Request,
