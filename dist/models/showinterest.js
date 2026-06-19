@@ -39,7 +39,7 @@ const initModel = (sequelize) => {
             type: sequelize_1.DataTypes.UUID,
             allowNull: false,
             references: {
-                model: 'auction_products',
+                model: 'auction_products', // Ensure this matches your AuctionProduct table name
                 key: 'id',
             },
             onDelete: 'CASCADE',

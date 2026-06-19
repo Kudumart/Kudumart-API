@@ -23,7 +23,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cancelSubscription = exports.getWithdrawalById = exports.updateWithdrawal = exports.getWithdrawals = exports.requestWithdrawal = exports.deleteBankInformation = exports.getSingleBankInformation = exports.getBankInformation = exports.updateBankInformation = exports.addBankInformation = exports.deleteAdvert = exports.viewAdvert = exports.getAdverts = exports.updateAdvert = exports.createAdvert = exports.activeProducts = exports.getOrderItemsInfo = exports.getVendorOrderItems = exports.getAllSubCategories = exports.getAllCurrencies = exports.verifyCAC = exports.subscribeDollar = exports.subscribe = exports.subscriptionPlans = exports.getAllBidsByAuctionProductId = exports.viewAuctionProduct = exports.fetchVendorAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchVendorProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.viewStore = exports.getStore = exports.getKYC = exports.submitOrUpdateKYC = void 0;
+exports.createService = exports.cancelSubscription = exports.getWithdrawalById = exports.updateWithdrawal = exports.getWithdrawals = exports.requestWithdrawal = exports.getVendorTransactions = exports.getVendorWalletStats = exports.deleteBankInformation = exports.getSingleBankInformation = exports.getBankInformation = exports.updateBankInformationV2 = exports.updateBankInformation = exports.addBankInformationV2 = exports.addBankInformation = exports.deleteAdvert = exports.viewAdvert = exports.getAdverts = exports.updateAdvert = exports.createAdvert = exports.activeProducts = exports.getOrderItemsInfo = exports.getVendorOrderItems = exports.getAllSubCategories = exports.getAllCurrencies = exports.verifyCAC = exports.subscribeDollar = exports.subscribe = exports.subscriptionPlans = exports.getAllBidsByAuctionProductId = exports.viewAuctionProduct = exports.fetchVendorAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchVendorProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.viewStore = exports.getStore = exports.getKYC = exports.submitOrUpdateKYC = void 0;
+exports.respondToVendorOffer = exports.getVendorOffers = exports.markServiceBookingAsCancelled = exports.markServiceBookingAsConfirmed = exports.getServiceBookings = exports.unpublishService = exports.publishService = exports.deleteService = exports.getVendorServices = exports.getService = exports.updateService = void 0;
+// src/controllers/vendorController.ts
+const decimal_js_1 = __importDefault(require("decimal.js"));
 const user_1 = __importDefault(require("../models/user"));
 const uuid_1 = require("uuid");
 const sequelize_1 = require("sequelize");
@@ -54,6 +57,20 @@ const withdrawal_1 = __importDefault(require("../models/withdrawal"));
 const admin_1 = __importDefault(require("../models/admin"));
 const role_1 = __importDefault(require("../models/role"));
 const blockedvendor_1 = __importDefault(require("../models/blockedvendor"));
+const serviceCategories_1 = __importDefault(require("../models/serviceCategories"));
+const serviceSubCategories_1 = __importDefault(require("../models/serviceSubCategories"));
+const attributeDefinitions_1 = __importDefault(require("../models/attributeDefinitions"));
+const services_1 = __importDefault(require("../models/services"));
+const sequelize_2 = __importDefault(require("../config/sequelize"));
+const serviceAttributeOptionValues_1 = __importDefault(require("../models/serviceAttributeOptionValues"));
+const serviceAttributeTextValues_1 = __importDefault(require("../models/serviceAttributeTextValues"));
+const serviceAttributeNumberValues_1 = __importDefault(require("../models/serviceAttributeNumberValues"));
+const serviceAttributeBoolValues_1 = __importDefault(require("../models/serviceAttributeBoolValues"));
+const attributeOptions_1 = __importDefault(require("../models/attributeOptions"));
+const servicebookings_1 = __importDefault(require("../models/servicebookings"));
+const productoffer_1 = __importDefault(require("../models/productoffer"));
+const pushNotification_1 = require("../firebase/pushNotification");
+const index_1 = require("../types/index");
 const submitOrUpdateKYC = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
@@ -93,8 +110,8 @@ const submitOrUpdateKYC = (req, res) => __awaiter(void 0, void 0, void 0, functi
 });
 exports.submitOrUpdateKYC = submitOrUpdateKYC;
 const getKYC = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _b;
-    const vendorId = (_b = req.user) === null || _b === void 0 ? void 0 : _b.id; // Authenticated user ID from middleware
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     try {
         // Check if a KYC record already exists for this user
         const kyc = yield kyc_1.default.findOne({ where: { vendorId } });
@@ -107,15 +124,17 @@ const getKYC = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.getKYC = getKYC;
 const getStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _c, _d;
-    const vendorId = (_c = req.user) === null || _c === void 0 ? void 0 : _c.id; // Authenticated user ID from middleware
+    var _a, _b;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     const requestedVendorId = req.query.vendorId || vendorId;
-    const userId = (_d = req.user) === null || _d === void 0 ? void 0 : _d.id;
+    const userId = (_b = req.user) === null || _b === void 0 ? void 0 : _b.id;
     // Block check: if user is not the vendor, check if user has blocked this vendor
     if (userId && requestedVendorId && userId !== requestedVendorId) {
-        const blocked = yield blockedvendor_1.default.findOne({ where: { userId, vendorId: requestedVendorId } });
+        const blocked = yield blockedvendor_1.default.findOne({
+            where: { userId, vendorId: requestedVendorId },
+        });
         if (blocked) {
-            res.status(403).json({ message: 'You have blocked this vendor.' });
+            res.status(403).json({ message: "You have blocked this vendor." });
             return;
         }
     }
@@ -163,7 +182,9 @@ const getStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         });
         // Check if any stores were found
         if (stores.length === 0) {
-            res.status(404).json({ message: "No stores found for this vendor.", data: [] });
+            res
+                .status(404)
+                .json({ message: "No stores found for this vendor.", data: [] });
             return;
         }
         res.status(200).json({ data: stores });
@@ -175,16 +196,18 @@ const getStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.getStore = getStore;
 const viewStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _e, _f;
-    const vendorId = (_e = req.user) === null || _e === void 0 ? void 0 : _e.id; // Authenticated user ID from middleware
+    var _a, _b;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     const storeId = req.query.storeId;
-    const userId = (_f = req.user) === null || _f === void 0 ? void 0 : _f.id;
+    const userId = (_b = req.user) === null || _b === void 0 ? void 0 : _b.id;
     // Find the store to get the vendorId
     const store = yield store_1.default.findOne({ where: { id: storeId } });
     if (store && userId && store.vendorId && userId !== store.vendorId) {
-        const blocked = yield blockedvendor_1.default.findOne({ where: { userId, vendorId: store.vendorId } });
+        const blocked = yield blockedvendor_1.default.findOne({
+            where: { userId, vendorId: store.vendorId },
+        });
         if (blocked) {
-            res.status(403).json({ message: 'You have blocked this vendor.' });
+            res.status(403).json({ message: "You have blocked this vendor." });
             return;
         }
     }
@@ -206,7 +229,7 @@ const viewStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                     as: "auctionproducts",
                     attributes: [], // Don't include individual product details
                 },
-            ]
+            ],
         });
         res.status(200).json({ data: store });
     }
@@ -217,11 +240,11 @@ const viewStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.viewStore = viewStore;
 const createStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _g;
-    const vendorId = (_g = req.user) === null || _g === void 0 ? void 0 : _g.id; // Authenticated user ID from middleware
-    const { currencyId, name, location, logo, businessHours, deliveryOptions, tipsOnFinding } = req.body;
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    const { currencyId, name, location, logo, businessHours, deliveryOptions, tipsOnFinding, } = req.body;
     if (!currencyId) {
-        res.status(400).json({ message: 'Currency ID is required.' });
+        res.status(400).json({ message: "Currency ID is required." });
         return;
     }
     try {
@@ -238,7 +261,7 @@ const createStore = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         // Find the currency by ID
         const currency = yield currency_1.default.findByPk(currencyId);
         if (!currency) {
-            res.status(404).json({ message: 'Currency not found' });
+            res.status(404).json({ message: "Currency not found" });
             return;
         }
         // Create the store
@@ -263,9 +286,9 @@ const createStore = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 });
 exports.createStore = createStore;
 const updateStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _h;
-    const vendorId = (_h = req.user) === null || _h === void 0 ? void 0 : _h.id; // Authenticated user ID from middleware
-    const { storeId, currencyId, name, location, businessHours, deliveryOptions, tipsOnFinding, logo } = req.body;
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    const { storeId, currencyId, name, location, businessHours, deliveryOptions, tipsOnFinding, logo, } = req.body;
     try {
         const store = yield store_1.default.findOne({ where: { id: storeId } });
         if (!store) {
@@ -275,7 +298,7 @@ const updateStore = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         // Find the currency by ID
         const currency = yield currency_1.default.findByPk(currencyId);
         if (!currency) {
-            res.status(404).json({ message: 'Currency not found' });
+            res.status(404).json({ message: "Currency not found" });
             return;
         }
         // Check for unique name for this vendorId if name is being updated
@@ -298,7 +321,7 @@ const updateStore = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             businessHours,
             deliveryOptions,
             tipsOnFinding,
-            logo
+            logo,
         });
         res
             .status(200)
@@ -320,15 +343,17 @@ const deleteStore = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         }
         const relatedTables = [
             { name: "auction_products", model: auctionproduct_1.default, field: "storeId" },
-            { name: "products", model: product_1.default, field: "storeId" }
+            { name: "products", model: product_1.default, field: "storeId" },
         ];
         // Check each related table
         for (const table of relatedTables) {
             const count = yield table.model.count({
-                where: { [table.field]: store.id }
+                where: { [table.field]: store.id },
             });
             if (count > 0) {
-                res.status(400).json({ message: `Cannot delete store because related records exist in ${table.name}` });
+                res.status(400).json({
+                    message: `Cannot delete store because related records exist in ${table.name}`,
+                });
                 return;
             }
         }
@@ -350,9 +375,9 @@ const deleteStore = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 exports.deleteStore = deleteStore;
 // Product
 const createProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _j;
-    const vendorId = (_j = req.user) === null || _j === void 0 ? void 0 : _j.id; // Authenticated user ID from middleware
-    const _k = req.body, { storeId, categoryId, name } = _k, otherData = __rest(_k, ["storeId", "categoryId", "name"]);
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    const _b = req.body, { storeId, categoryId, name } = _b, otherData = __rest(_b, ["storeId", "categoryId", "name"]);
     try {
         // Use the utility function to check the product limit
         const { status, message } = yield (0, helpers_1.checkVendorProductLimit)(vendorId);
@@ -375,21 +400,15 @@ const createProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         const storeExists = yield store_1.default.findByPk(storeId);
         const categoryExists = yield subcategory_1.default.findByPk(categoryId);
         if (!vendorExists) {
-            res
-                .status(404)
-                .json({ message: "Vendor not found." });
+            res.status(404).json({ message: "Vendor not found." });
             return;
         }
         if (!storeExists) {
-            res
-                .status(404)
-                .json({ message: "Store not found." });
+            res.status(404).json({ message: "Store not found." });
             return;
         }
         if (!categoryExists) {
-            res
-                .status(404)
-                .json({ message: "Category not found." });
+            res.status(404).json({ message: "Category not found." });
             return;
         }
         // Generate a unique SKU (could also implement a more complex logic if needed)
@@ -417,9 +436,9 @@ const createProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.createProduct = createProduct;
 const updateProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _l;
-    const _m = req.body, { productId } = _m, updateData = __rest(_m, ["productId"]);
-    const vendorId = (_l = req.user) === null || _l === void 0 ? void 0 : _l.id; // Authenticated user ID from middleware
+    var _a;
+    const _b = req.body, { productId } = _b, updateData = __rest(_b, ["productId"]);
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     try {
         // Use the utility function to check the product limit
         // const { status, message } = await checkVendorProductLimit(vendorId);
@@ -450,9 +469,9 @@ const updateProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.updateProduct = updateProduct;
 const deleteProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _o;
+    var _a;
     const { productId } = req.query;
-    const vendorId = (_o = req.user) === null || _o === void 0 ? void 0 : _o.id; // Authenticated user ID from middleware
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     try {
         const product = yield product_1.default.findOne({
             where: {
@@ -467,15 +486,17 @@ const deleteProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         const relatedTables = [
             { name: "save_products", model: saveproduct_1.default, field: "productId" },
             { name: "review_products", model: reviewproduct_1.default, field: "productId" },
-            { name: "carts", model: cart_1.default, field: "productId" }
+            { name: "carts", model: cart_1.default, field: "productId" },
         ];
         // Check each related table
         for (const table of relatedTables) {
             const count = yield table.model.count({
-                where: { [table.field]: product.id }
+                where: { [table.field]: product.id },
             });
             if (count > 0) {
-                res.status(400).json({ message: `Cannot delete product because related records exist in ${table.name}` });
+                res.status(400).json({
+                    message: `Cannot delete product because related records exist in ${table.name}`,
+                });
                 return;
             }
         }
@@ -491,8 +512,8 @@ const deleteProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.deleteProduct = deleteProduct;
 const fetchVendorProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _p;
-    const vendorId = (_p = req.user) === null || _p === void 0 ? void 0 : _p.id; // Authenticated user ID from middleware
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     const { name, sku, status, condition, categoryName } = req.query;
     try {
         const products = yield product_1.default.findAll(Object.assign({ where: { vendorId }, include: [
@@ -504,14 +525,14 @@ const fetchVendorProducts = (req, res) => __awaiter(void 0, void 0, void 0, func
                 {
                     model: store_1.default,
                     as: "store",
-                    attributes: ['name'],
+                    attributes: ["name"],
                     include: [
                         {
                             model: currency_1.default,
                             as: "currency",
-                            attributes: ['symbol']
+                            attributes: ["symbol"],
                         },
-                    ]
+                    ],
                 },
             ] }, ((name || sku || status || condition) && {
             where: Object.assign(Object.assign(Object.assign(Object.assign({}, (name && { name: { [sequelize_1.Op.like]: `%${name}%` } })), (sku && { sku })), (status && { status })), (condition && { condition })),
@@ -527,10 +548,10 @@ const fetchVendorProducts = (req, res) => __awaiter(void 0, void 0, void 0, func
 });
 exports.fetchVendorProducts = fetchVendorProducts;
 const viewProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _q;
+    var _a;
     // Get productId from route params instead of query
     const { productId } = req.query;
-    const vendorId = (_q = req.user) === null || _q === void 0 ? void 0 : _q.id; // Authenticated user ID from middleware
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     try {
         const product = yield product_1.default.findOne({
             where: {
@@ -545,9 +566,9 @@ const viewProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                         {
                             model: currency_1.default,
                             as: "currency",
-                            attributes: ['symbol']
+                            attributes: ["symbol"],
                         },
-                    ]
+                    ],
                 },
                 { model: subcategory_1.default, as: "sub_category" },
             ],
@@ -568,9 +589,9 @@ const viewProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 });
 exports.viewProduct = viewProduct;
 const moveToDraft = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _r;
+    var _a;
     const { productId } = req.query; // Get productId from request query
-    const vendorId = (_r = req.user) === null || _r === void 0 ? void 0 : _r.id; // Authenticated user ID from middleware
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     try {
         // Validate productId type
         if (typeof productId !== "string") {
@@ -607,9 +628,9 @@ const moveToDraft = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 });
 exports.moveToDraft = moveToDraft;
 const changeProductStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _s;
+    var _a;
     const { productId, status } = req.body; // Get productId and status from request body
-    const vendorId = (_s = req.user) === null || _s === void 0 ? void 0 : _s.id; // Authenticated user ID from middleware
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     // Validate status
     if (!["active", "inactive", "draft"].includes(status)) {
         res.status(400).json({ message: "Invalid status." });
@@ -644,9 +665,9 @@ const changeProductStatus = (req, res) => __awaiter(void 0, void 0, void 0, func
 exports.changeProductStatus = changeProductStatus;
 // Auction Product
 const createAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _t;
-    const vendorId = (_t = req.user) === null || _t === void 0 ? void 0 : _t.id; // Authenticated user ID from middleware
-    const { storeId, categoryId, name, condition, description, specification, price, bidIncrement, maxBidsPerUser, participantsInterestFee, startDate, endDate, image, additionalImages, } = req.body;
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    const { storeId, categoryId, name, condition, description, specification, price, bidIncrement, maxBidsPerUser, participantsInterestFee, startDate, endDate, image, video, additionalImages, } = req.body;
     try {
         // Use the utility function to check the product limit
         const { status, message } = yield (0, helpers_1.checkVendorAuctionProductLimit)(vendorId);
@@ -659,21 +680,15 @@ const createAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
         const storeExists = yield store_1.default.findByPk(storeId);
         const categoryExists = yield subcategory_1.default.findByPk(categoryId);
         if (!vendorExists) {
-            res
-                .status(404)
-                .json({ message: "Vendor not found." });
+            res.status(404).json({ message: "Vendor not found." });
             return;
         }
         if (!storeExists) {
-            res
-                .status(404)
-                .json({ message: "Store not found." });
+            res.status(404).json({ message: "Store not found." });
             return;
         }
         if (!categoryExists) {
-            res
-                .status(404)
-                .json({ message: "Category not found." });
+            res.status(404).json({ message: "Category not found." });
             return;
         }
         // Fetch the KYC relationship
@@ -712,6 +727,7 @@ const createAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
             startDate,
             endDate,
             image,
+            video,
             additionalImages,
         });
         res.status(201).json({
@@ -729,9 +745,9 @@ const createAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.createAuctionProduct = createAuctionProduct;
 const updateAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _u;
-    const vendorId = (_u = req.user) === null || _u === void 0 ? void 0 : _u.id; // Authenticated user ID from middleware
-    const { auctionProductId, storeId, categoryId, name, condition, description, specification, price, bidIncrement, maxBidsPerUser, participantsInterestFee, startDate, endDate, image, additionalImages, } = req.body;
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    const { auctionProductId, storeId, categoryId, name, condition, description, specification, price, bidIncrement, maxBidsPerUser, participantsInterestFee, startDate, endDate, image, video, additionalImages, } = req.body;
     try {
         // Use the utility function to check the product limit
         // const { status, message } = await checkVendorAuctionProductLimit(vendorId);
@@ -799,6 +815,7 @@ const updateAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
         auctionProduct.startDate = startDate || auctionProduct.startDate;
         auctionProduct.endDate = endDate || auctionProduct.endDate;
         auctionProduct.image = image || auctionProduct.image;
+        auctionProduct.video = video || auctionProduct.video;
         auctionProduct.additionalImages =
             additionalImages || auctionProduct.additionalImages;
         // Save the updated auction product
@@ -818,9 +835,9 @@ const updateAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.updateAuctionProduct = updateAuctionProduct;
 const deleteAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _v;
+    var _a;
     const { auctionProductId } = req.query;
-    const vendorId = (_v = req.user) === null || _v === void 0 ? void 0 : _v.id; // Authenticated user ID from middleware
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     try {
         // Find the auction product by ID
         const auctionProduct = yield auctionproduct_1.default.findOne({
@@ -849,16 +866,16 @@ const deleteAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
             });
             return;
         }
-        const relatedTables = [
-            { name: "bids", model: bid_1.default, field: "auctionProductId" },
-        ];
+        const relatedTables = [{ name: "bids", model: bid_1.default, field: "auctionProductId" }];
         // Check each related table
         for (const table of relatedTables) {
             const count = yield table.model.count({
-                where: { [table.field]: auctionProduct.id }
+                where: { [table.field]: auctionProduct.id },
             });
             if (count > 0) {
-                res.status(400).json({ message: `Cannot delete auction product because related records exist in ${table.name}` });
+                res.status(400).json({
+                    message: `Cannot delete auction product because related records exist in ${table.name}`,
+                });
                 return;
             }
         }
@@ -883,9 +900,9 @@ const deleteAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.deleteAuctionProduct = deleteAuctionProduct;
 const cancelAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _w;
+    var _a;
     const { auctionProductId } = req.query;
-    const vendorId = (_w = req.user) === null || _w === void 0 ? void 0 : _w.id; // Authenticated user ID from middleware
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     try {
         // Find the auction product by ID
         const auctionProduct = yield auctionproduct_1.default.findOne({
@@ -929,8 +946,8 @@ const cancelAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.cancelAuctionProduct = cancelAuctionProduct;
 const fetchVendorAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _x;
-    const vendorId = (_x = req.user) === null || _x === void 0 ? void 0 : _x.id; // Authenticated user ID from middleware
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     const { name, sku, status, condition, categoryName } = req.query;
     try {
         // Fetch all auction products for the vendor
@@ -945,22 +962,23 @@ const fetchVendorAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 
                 {
                     model: store_1.default,
                     as: "store",
-                    attributes: ['name'],
+                    attributes: ["name"],
                     include: [
                         {
                             model: currency_1.default,
                             as: "currency",
-                            attributes: ['symbol']
+                            attributes: ["symbol"],
                         },
-                    ]
+                    ],
                 },
             ] }, ((name || sku || status || condition) && {
             where: Object.assign(Object.assign(Object.assign(Object.assign({}, (name && { name: { [sequelize_1.Op.like]: `%${name}%` } })), (sku && { sku })), (status && { status })), (condition && { condition })),
         })));
         if (auctionProducts.length === 0) {
-            res
-                .status(404)
-                .json({ message: "No auction products found for this vendor.", data: [] });
+            res.status(200).json({
+                message: "No auction products found for this vendor.",
+                data: [],
+            });
             return;
         }
         res.status(200).json({
@@ -977,10 +995,10 @@ const fetchVendorAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 
 });
 exports.fetchVendorAuctionProducts = fetchVendorAuctionProducts;
 const viewAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _y;
+    var _a;
     // Get auctionProductId from route params instead of query
     const { auctionProductId } = req.query;
-    const vendorId = (_y = req.user) === null || _y === void 0 ? void 0 : _y.id; // Authenticated user ID from middleware
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     try {
         const product = yield auctionproduct_1.default.findOne({
             where: {
@@ -995,9 +1013,9 @@ const viewAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, funct
                         {
                             model: currency_1.default,
                             as: "currency",
-                            attributes: ['symbol']
+                            attributes: ["symbol"],
                         },
-                    ]
+                    ],
                 },
                 { model: subcategory_1.default, as: "sub_category" },
             ],
@@ -1050,8 +1068,8 @@ const getAllBidsByAuctionProductId = (req, res) => __awaiter(void 0, void 0, voi
 exports.getAllBidsByAuctionProductId = getAllBidsByAuctionProductId;
 // Subscription
 const subscriptionPlans = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _z;
-    const vendorId = (_z = req.user) === null || _z === void 0 ? void 0 : _z.id; // Authenticated user ID from middleware
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     const { currencySymbol } = req.query; // Get currency symbol from query parameters
     try {
         // Build query options with optional currency symbol filter
@@ -1092,8 +1110,8 @@ const subscriptionPlans = (req, res) => __awaiter(void 0, void 0, void 0, functi
 });
 exports.subscriptionPlans = subscriptionPlans;
 const subscribe = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _0;
-    const vendorId = (_0 = req.user) === null || _0 === void 0 ? void 0 : _0.id;
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
     const { subscriptionPlanId, isWallet, refId } = req.body;
     if (!subscriptionPlanId) {
         res.status(400).json({ message: "Subscription plan ID is required." });
@@ -1119,7 +1137,10 @@ const subscribe = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         // Step 3: Function to Handle Payment (Wallet or External)
         const handleTransaction = (amount) => __awaiter(void 0, void 0, void 0, function* () {
             if (isWallet) {
-                const vendor = yield user_1.default.findByPk(vendorId, { transaction, lock: true });
+                const vendor = yield user_1.default.findByPk(vendorId, {
+                    transaction,
+                    lock: true,
+                });
                 if (!vendor || vendor.wallet === undefined || vendor.wallet < amount) {
                     yield transaction.rollback();
                     res.status(400).json({ message: "Insufficient wallet balance." });
@@ -1139,13 +1160,17 @@ const subscribe = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 }
                 if (!refId) {
                     yield transaction.rollback();
-                    res.status(400).json({ message: "Payment reference ID (refId) is required." });
+                    res
+                        .status(400)
+                        .json({ message: "Payment reference ID (refId) is required." });
                     return false;
                 }
                 const isPaymentValid = yield (0, helpers_1.verifyPayment)(refId, paymentGateway.secretKey);
                 if (!isPaymentValid) {
                     yield transaction.rollback();
-                    res.status(400).json({ message: "Invalid or unverified payment reference." });
+                    res
+                        .status(400)
+                        .json({ message: "Invalid or unverified payment reference." });
                     return false;
                 }
             }
@@ -1192,13 +1217,15 @@ const subscribe = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     catch (error) {
         yield transaction.rollback(); // Rollback changes on error
         logger_1.default.error("Error subscribing vendor:", error);
-        res.status(500).json({ message: "An error occurred while processing the subscription." });
+        res.status(500).json({
+            message: "An error occurred while processing the subscription.",
+        });
     }
 });
 exports.subscribe = subscribe;
 const subscribeDollar = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _1;
-    const vendorId = (_1 = req.user) === null || _1 === void 0 ? void 0 : _1.id;
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
     const { subscriptionPlanId, isWallet, refId } = req.body;
     if (!subscriptionPlanId) {
         res.status(400).json({ message: "Subscription plan ID is required." });
@@ -1224,8 +1251,13 @@ const subscribeDollar = (req, res) => __awaiter(void 0, void 0, void 0, function
         // Step 3: Function to Handle Payment (Wallet or External)
         const handleTransaction = (amount) => __awaiter(void 0, void 0, void 0, function* () {
             if (isWallet) {
-                const vendor = yield user_1.default.findByPk(vendorId, { transaction, lock: true });
-                if (!vendor || vendor.dollarWallet === undefined || vendor.dollarWallet < amount) {
+                const vendor = yield user_1.default.findByPk(vendorId, {
+                    transaction,
+                    lock: true,
+                });
+                if (!vendor ||
+                    vendor.dollarWallet === undefined ||
+                    vendor.dollarWallet < amount) {
                     yield transaction.rollback();
                     res.status(400).json({ message: "Insufficient wallet balance." });
                     return false;
@@ -1244,7 +1276,9 @@ const subscribeDollar = (req, res) => __awaiter(void 0, void 0, void 0, function
                 }
                 if (!refId) {
                     yield transaction.rollback();
-                    res.status(400).json({ message: "Payment reference ID (refId) is required." });
+                    res
+                        .status(400)
+                        .json({ message: "Payment reference ID (refId) is required." });
                     return false;
                 }
             }
@@ -1291,84 +1325,88 @@ const subscribeDollar = (req, res) => __awaiter(void 0, void 0, void 0, function
     catch (error) {
         yield transaction.rollback(); // Rollback changes on error
         logger_1.default.error("Error subscribing vendor:", error);
-        res.status(500).json({ message: "An error occurred while processing the subscription." });
+        res.status(500).json({
+            message: "An error occurred while processing the subscription.",
+        });
     }
 });
 exports.subscribeDollar = subscribeDollar;
 const verifyCAC = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const businessName = 'GREEN MOUSE TECHNOLOGIES ENTERPRISES';
-    const registrationNumber = 'BN 2182096';
+    const businessName = "GREEN MOUSE TECHNOLOGIES ENTERPRISES";
+    const registrationNumber = "BN 2182096";
     const data = JSON.stringify({
-        bank_code: '011',
-        country_code: 'NG',
-        account_number: '3060096527',
-        account_name: 'Ezema Promise',
-        account_type: 'personal',
-        document_type: 'businessRegistrationNumber',
+        bank_code: "011",
+        country_code: "NG",
+        account_number: "3060096527",
+        account_name: "Ezema Promise",
+        account_type: "personal",
+        document_type: "businessRegistrationNumber",
         document_number: registrationNumber,
     });
     const options = {
-        hostname: 'api.paystack.co',
+        hostname: "api.paystack.co",
         port: 443,
-        path: '/bank/validate',
-        method: 'POST',
+        path: "/bank/validate",
+        method: "POST",
         headers: {
-            Authorization: 'Bearer sk_test_fde1e5319c69aa49534344c95485a8f1cef333ac',
-            'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`, // Use Paystack secret key from environment
+            "Content-Type": "application/json",
         },
     };
     try {
         const request = https_1.default.request(options, (response) => {
-            let responseData = '';
+            let responseData = "";
             // Collect response data
-            response.on('data', (chunk) => {
+            response.on("data", (chunk) => {
                 responseData += chunk;
             });
             // Process complete response
-            response.on('end', () => {
+            response.on("end", () => {
                 if (!responseData) {
-                    logger_1.default.error('No response data received.');
-                    res.status(500).json({ message: 'No response data received from API.' });
+                    logger_1.default.error("No response data received.");
+                    res
+                        .status(500)
+                        .json({ message: "No response data received from API." });
                     return;
                 }
                 try {
                     const parsedData = JSON.parse(responseData);
                     if (parsedData.status === true) {
-                        logger_1.default.log('Vendor verified successfully!', parsedData);
+                        logger_1.default.log("Vendor verified successfully!", parsedData);
                         res.status(200).json({
-                            message: 'Vendor verified successfully!',
+                            message: "Vendor verified successfully!",
                             data: parsedData,
                         });
                     }
                     else {
-                        logger_1.default.log('Verification failed:', parsedData.message);
+                        logger_1.default.log("Verification failed:", parsedData.message);
                         res.status(400).json({
-                            message: 'Verification failed',
+                            message: "Verification failed",
                             error: parsedData.message,
                         });
                     }
                 }
                 catch (parseError) {
-                    logger_1.default.error('Error parsing response:', parseError);
+                    logger_1.default.error("Error parsing response:", parseError);
                     res.status(500).json({
-                        message: 'Error parsing API response',
+                        message: "Error parsing API response",
                         error: parseError.message,
                     });
                 }
             });
         });
         // Handle request errors
-        request.on('error', (error) => {
-            logger_1.default.error('Error verifying CAC:', error);
-            res.status(500).json({ message: 'Request error', error: error.message });
+        request.on("error", (error) => {
+            logger_1.default.error("Error verifying CAC:", error);
+            res.status(500).json({ message: "Request error", error: error.message });
         });
         // Write the data to the request body and send it
         request.write(data);
         request.end();
     }
     catch (error) {
-        logger_1.default.error('Unexpected error:', error);
-        res.status(500).json({ message: 'Unexpected error', error: error });
+        logger_1.default.error("Unexpected error:", error);
+        res.status(500).json({ message: "Unexpected error", error: error });
     }
 });
 exports.verifyCAC = verifyCAC;
@@ -1378,8 +1416,8 @@ const getAllCurrencies = (req, res) => __awaiter(void 0, void 0, void 0, functio
         res.status(200).json({ data: currencies });
     }
     catch (error) {
-        logger_1.default.error('Error fetching currencies:', error);
-        res.status(500).json({ message: 'Failed to fetch currencies' });
+        logger_1.default.error("Error fetching currencies:", error);
+        res.status(500).json({ message: "Failed to fetch currencies" });
     }
 });
 exports.getAllCurrencies = getAllCurrencies;
@@ -1398,8 +1436,8 @@ const getAllSubCategories = (req, res) => __awaiter(void 0, void 0, void 0, func
 });
 exports.getAllSubCategories = getAllSubCategories;
 const getVendorOrderItems = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _2;
-    const vendorId = (_2 = req.user) === null || _2 === void 0 ? void 0 : _2.id; // Authenticated user ID from middleware
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     if (!vendorId) {
         res.status(403).json({ message: "Unauthorized. Vendor ID is required." });
         return;
@@ -1416,15 +1454,23 @@ const getVendorOrderItems = (req, res) => __awaiter(void 0, void 0, void 0, func
                         {
                             model: user_1.default,
                             as: "user",
-                            attributes: ["id", "firstName", "lastName", "email", "phoneNumber"], // Include user details
+                            attributes: [
+                                "id",
+                                "firstName",
+                                "lastName",
+                                "email",
+                                "phoneNumber",
+                            ], // Include user details
                         },
-                    ]
-                }
+                    ],
+                },
             ],
             order: [["createdAt", "DESC"]], // Sort by most recent
         });
         if (!orderItems || orderItems.length === 0) {
-            res.status(404).json({ message: "No order items found for this vendor." });
+            res
+                .status(404)
+                .json({ message: "No order items found for this vendor." });
             return;
         }
         res.status(200).json({
@@ -1433,7 +1479,9 @@ const getVendorOrderItems = (req, res) => __awaiter(void 0, void 0, void 0, func
         });
     }
     catch (error) {
-        res.status(500).json({ message: error.message || "Failed to retrieve order items." });
+        res
+            .status(500)
+            .json({ message: error.message || "Failed to retrieve order items." });
     }
 });
 exports.getVendorOrderItems = getVendorOrderItems;
@@ -1458,17 +1506,19 @@ const getOrderItemsInfo = (req, res) => __awaiter(void 0, void 0, void 0, functi
         });
     }
     catch (error) {
-        res.status(500).json({ message: error.message || "Failed to retrieve order details." });
+        res
+            .status(500)
+            .json({ message: error.message || "Failed to retrieve order details." });
     }
 });
 exports.getOrderItemsInfo = getOrderItemsInfo;
 // Adverts
 const activeProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _3;
-    const vendorId = (_3 = req.user) === null || _3 === void 0 ? void 0 : _3.id; // Authenticated user ID from middleware
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     const { name } = req.query;
     try {
-        const products = yield product_1.default.findAll(Object.assign({ where: { vendorId, status: "active" } }, ((name) && {
+        const products = yield product_1.default.findAll(Object.assign({ where: { vendorId, status: "active" } }, (name && {
             where: Object.assign({}, (name && { name: { [sequelize_1.Op.like]: `%${name}%` } })),
         })));
         res.status(200).json({
@@ -1482,9 +1532,9 @@ const activeProducts = (req, res) => __awaiter(void 0, void 0, void 0, function*
 });
 exports.activeProducts = activeProducts;
 const createAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _4;
-    const vendorId = (_4 = req.user) === null || _4 === void 0 ? void 0 : _4.id; // Authenticated user ID from middleware
-    const { categoryId, productId, title, description, media_url, showOnHomepage, link } = req.body;
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    const { categoryId, productId, title, description, media_url, showOnHomepage, link, } = req.body;
     try {
         // Use the utility function to check the product limit
         const { status, message } = yield (0, helpers_1.checkAdvertLimit)(vendorId);
@@ -1495,17 +1545,13 @@ const createAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         // Check if categoryId and productId exist
         const categoryExists = yield subcategory_1.default.findByPk(categoryId);
         if (!categoryExists) {
-            res
-                .status(404)
-                .json({ message: "Category not found." });
+            res.status(404).json({ message: "Category not found." });
             return;
         }
         if (productId) {
             const productExists = yield product_1.default.findByPk(productId);
             if (!productExists) {
-                res
-                    .status(404)
-                    .json({ message: "Product not found." });
+                res.status(404).json({ message: "Product not found." });
                 return;
             }
         }
@@ -1517,7 +1563,7 @@ const createAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             description,
             media_url,
             showOnHomepage,
-            link
+            link,
         });
         res.status(201).json({
             message: "Advert created successfully",
@@ -1531,22 +1577,18 @@ const createAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* (
 });
 exports.createAdvert = createAdvert;
 const updateAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { advertId, categoryId, productId, title, description, media_url, showOnHomepage, link } = req.body;
+    const { advertId, categoryId, productId, title, description, media_url, showOnHomepage, link, } = req.body;
     try {
         // Check if categoryId and productId exist
         const categoryExists = yield subcategory_1.default.findByPk(categoryId);
         if (!categoryExists) {
-            res
-                .status(404)
-                .json({ message: "Category not found." });
+            res.status(404).json({ message: "Category not found." });
             return;
         }
         if (productId) {
             const productExists = yield product_1.default.findByPk(productId);
             if (!productExists) {
-                res
-                    .status(404)
-                    .json({ message: "Product not found." });
+                res.status(404).json({ message: "Product not found." });
                 return;
             }
         }
@@ -1575,9 +1617,9 @@ const updateAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* (
 });
 exports.updateAdvert = updateAdvert;
 const getAdverts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _5;
+    var _a;
     const { search, page = 1, limit = 10 } = req.query;
-    const vendorId = (_5 = req.user) === null || _5 === void 0 ? void 0 : _5.id; // Authenticated user ID from middleware
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     // Convert `page` and `limit` to numbers and ensure they are valid
     const pageNumber = parseInt(page, 10) || 1;
     const limitNumber = parseInt(limit, 10) || 10;
@@ -1595,7 +1637,7 @@ const getAdverts = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         const { count, rows: adverts } = yield advert_1.default.findAndCountAll({
             where: whereConditions,
             include: [
-                { model: product_1.default, as: "product", attributes: ['id', 'name'] },
+                { model: product_1.default, as: "product", attributes: ["id", "name"] },
                 { model: subcategory_1.default, as: "sub_category" },
             ],
             limit: limitNumber,
@@ -1622,7 +1664,7 @@ const getAdverts = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             message: "Adverts fetched successfully",
             data: adverts,
             pagination: {
-                total: count,
+                total: count, // Total number of adverts
                 page: pageNumber,
                 pages: totalPages,
                 limit: limitNumber,
@@ -1682,9 +1724,9 @@ exports.deleteAdvert = deleteAdvert;
  * Add a new bank account for a vendor
  */
 const addBankInformation = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _6;
+    var _a;
     const { bankInfo } = req.body; // bankInfo contains bankName, accountNumber, accountName
-    const vendorId = (_6 = req.user) === null || _6 === void 0 ? void 0 : _6.id; // Authenticated user ID from middleware
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     try {
         // Ensure required fields are provided
         if (!bankInfo) {
@@ -1713,9 +1755,11 @@ const addBankInformation = (req, res) => __awaiter(void 0, void 0, void 0, funct
         // Create bank information entry
         const bankData = yield bankinformation_1.default.create({
             vendorId,
-            bankInfo
+            bankInfo,
         });
-        res.status(200).json({ message: "Bank information added successfully", data: bankData });
+        res
+            .status(200)
+            .json({ message: "Bank information added successfully", data: bankData });
     }
     catch (error) {
         logger_1.default.error("Error adding bank information:", error);
@@ -1723,6 +1767,44 @@ const addBankInformation = (req, res) => __awaiter(void 0, void 0, void 0, funct
     }
 });
 exports.addBankInformation = addBankInformation;
+const addBankInformationV2 = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const { bankName, accountNumber, accountHolderName, swiftCode, routingNumber, bankAddress, } = req.body; // bankInfo contains bankName, accountNumber, accountName
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    try {
+        // Ensure required fields are provided
+        if (!bankName || !accountNumber || !accountHolderName) {
+            res.status(400).json({ message: "All bank details are required" });
+            return;
+        }
+        // Check if vendorId exists in the User table (Vendor)
+        const vendor = yield user_1.default.findByPk(vendorId);
+        if (!vendor) {
+            res.status(404).json({ message: "Owner not found" });
+            return;
+        }
+        // If it's a vendor, ensure they are verified
+        if (vendor && !vendor.isVerified) {
+            res.status(400).json({
+                message: "Cannot add bank information. You are not verified.",
+            });
+            return;
+        }
+        // Create bank information entry
+        const bankData = yield bankinformation_1.default.create(Object.assign(Object.assign(Object.assign({ vendorId,
+            bankName,
+            accountNumber,
+            accountHolderName }, (swiftCode && { swiftCode })), (routingNumber && { routingNumber })), (bankAddress && { bankAddress })));
+        res
+            .status(200)
+            .json({ message: "Bank information added successfully", data: bankData });
+    }
+    catch (error) {
+        logger_1.default.error("Error adding bank information:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+exports.addBankInformationV2 = addBankInformationV2;
 /**
  * Update bank account details for a vendor
  */
@@ -1737,9 +1819,12 @@ const updateBankInformation = (req, res) => __awaiter(void 0, void 0, void 0, fu
         }
         // Update bank details
         yield bankData.update({
-            bankInfo
+            bankInfo,
         });
-        res.status(200).json({ message: "Bank information updated successfully", data: bankData });
+        res.status(200).json({
+            message: "Bank information updated successfully",
+            data: bankData,
+        });
     }
     catch (error) {
         logger_1.default.error("Error updating bank information:", error);
@@ -1747,21 +1832,59 @@ const updateBankInformation = (req, res) => __awaiter(void 0, void 0, void 0, fu
     }
 });
 exports.updateBankInformation = updateBankInformation;
+const updateBankInformationV2 = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { bankId, bankName, accountNumber, accountHolderName, swiftCode, routingNumber, bankAddress, } = req.body;
+    if (!bankId) {
+        res.status(400).json({ message: "bankId field is required" });
+        return;
+    }
+    try {
+        // Find the bank record
+        const bankData = yield bankinformation_1.default.findOne({ where: { id: bankId } });
+        if (!bankData) {
+            res.status(404).json({ message: "Bank information not found" });
+            return;
+        }
+        // Update bank details
+        yield bankData.update({
+            bankName: bankName || bankData.bankName,
+            accountNumber: accountNumber || bankData.accountNumber,
+            accountHolderName: accountHolderName || bankData.accountHolderName,
+            swiftCode: swiftCode || bankData.swiftCode,
+            routingNumber: routingNumber || bankData.routingNumber,
+            bankAddress: bankAddress || bankData.bankAddress,
+        });
+        res.status(200).json({
+            message: "Bank information updated successfully",
+            data: bankData,
+        });
+    }
+    catch (error) {
+        logger_1.default.error("Error updating bank information:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+exports.updateBankInformationV2 = updateBankInformationV2;
 /**
  * Get bank information for a specific vendor or all vendors
  */
 const getBankInformation = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _7;
-    const vendorId = (_7 = req.user) === null || _7 === void 0 ? void 0 : _7.id; // Authenticated user ID from middleware
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
     try {
         let bankData;
         // Fetch bank details for a specific vendor
         bankData = yield bankinformation_1.default.findAll({ where: { vendorId } });
         if (!bankData.length) {
-            res.status(404).json({ message: "No bank information found for this vendor" });
+            res
+                .status(404)
+                .json({ message: "No bank information found for this vendor" });
             return;
         }
-        res.status(200).json({ message: "Bank information retrieved successfully", data: bankData });
+        res.status(200).json({
+            message: "Bank information retrieved successfully",
+            data: bankData,
+        });
     }
     catch (error) {
         logger_1.default.error("Error fetching bank information:", error);
@@ -1781,7 +1904,10 @@ const getSingleBankInformation = (req, res) => __awaiter(void 0, void 0, void 0,
             res.status(404).json({ message: "Bank information not found" });
             return;
         }
-        res.status(200).json({ message: "Bank information retrieved successfully", data: bankInfo });
+        res.status(200).json({
+            message: "Bank information retrieved successfully",
+            data: bankInfo,
+        });
     }
     catch (error) {
         logger_1.default.error("Error fetching bank information:", error);
@@ -1812,15 +1938,89 @@ const deleteBankInformation = (req, res) => __awaiter(void 0, void 0, void 0, fu
 });
 exports.deleteBankInformation = deleteBankInformation;
 // Request Withdrawal
+const getVendorWalletStats = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+    try {
+        const vendor = yield user_1.default.findByPk(vendorId, {
+            attributes: ['wallet', 'pendingWallet', 'dollarWallet', 'pendingDollarWallet']
+        });
+        if (!vendor) {
+            res.status(404).json({ message: "Vendor not found" });
+            return;
+        }
+        // Calculate total earnings (simplified for now as sum of all completed sales transactions)
+        const transactions = yield transaction_1.default.findAll({
+            where: { userId: vendorId, status: 'completed' },
+        });
+        const stats = {
+            balance: {
+                NGN: vendor.wallet || 0,
+                USD: vendor.dollarWallet || 0,
+            },
+            pending: {
+                NGN: vendor.pendingWallet || 0,
+                USD: vendor.pendingDollarWallet || 0,
+            },
+            availableNGN: vendor.wallet || 0,
+            availableUSD: vendor.dollarWallet || 0,
+            pendingNGN: vendor.pendingWallet || 0,
+            pendingUSD: vendor.pendingDollarWallet || 0,
+            totalEarnings: transactions.reduce((acc, t) => {
+                acc[t.currency] = new decimal_js_1.default(acc[t.currency] || 0)
+                    .plus(t.amount)
+                    .toNumber();
+                return acc;
+            }, { NGN: 0, USD: 0 }),
+        };
+        res.status(200).json({ data: stats });
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching wallet stats:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+exports.getVendorWalletStats = getVendorWalletStats;
+const getVendorTransactions = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+    const { page = 1, limit = 10 } = req.query;
+    try {
+        const offset = (Number(page) - 1) * Number(limit);
+        const { rows, count } = yield transaction_1.default.findAndCountAll({
+            where: { userId: vendorId },
+            limit: Number(limit),
+            offset,
+            order: [['createdAt', 'DESC']]
+        });
+        res.status(200).json({
+            data: rows,
+            pagination: {
+                total: count,
+                page: Number(page),
+                limit: Number(limit)
+            }
+        });
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching transactions:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+exports.getVendorTransactions = getVendorTransactions;
 const requestWithdrawal = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _8, _9, _10, _11, _12;
-    const vendorId = (_8 = req.user) === null || _8 === void 0 ? void 0 : _8.id;
+    var _a, _b, _c, _d, _e;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
     const transaction = yield sequelize_service_1.default.connection.transaction();
     try {
         const vendor = yield user_1.default.findByPk(vendorId, { transaction });
-        if (!vendor || vendor.dollarWallet === undefined || vendor.wallet === undefined) {
+        if (!vendor ||
+            vendor.dollarWallet === undefined ||
+            vendor.wallet === undefined) {
             yield transaction.rollback();
-            res.status(404).json({ message: "Vendor not found or wallet not initialized" });
+            res
+                .status(404)
+                .json({ message: "Vendor not found or wallet not initialized" });
             return;
         }
         const { bankInformationId, amount, currency } = req.body;
@@ -1834,31 +2034,41 @@ const requestWithdrawal = (req, res) => __awaiter(void 0, void 0, void 0, functi
             return;
         }
         // Validate sufficient funds
-        if (currency === "USD" && ((_9 = vendor.dollarWallet) !== null && _9 !== void 0 ? _9 : 0) < amount) {
+        if (currency === "USD" && ((_b = vendor.dollarWallet) !== null && _b !== void 0 ? _b : 0) < amount) {
             yield transaction.rollback();
             res.status(400).json({ message: "Insufficient USD balance" });
             return;
         }
-        if (currency !== "USD" && ((_10 = vendor.wallet) !== null && _10 !== void 0 ? _10 : 0) < amount) {
+        if (currency !== "USD" && ((_c = vendor.wallet) !== null && _c !== void 0 ? _c : 0) < amount) {
             yield transaction.rollback();
             res.status(400).json({ message: "Insufficient local currency balance" });
             return;
         }
         // Deduct balance from wallet
         if (currency === "USD") {
-            vendor.dollarWallet = ((_11 = vendor.dollarWallet) !== null && _11 !== void 0 ? _11 : 0) - amount;
+            vendor.dollarWallet = ((_d = vendor.dollarWallet) !== null && _d !== void 0 ? _d : 0) - amount;
         }
         else {
-            vendor.wallet = ((_12 = vendor.wallet) !== null && _12 !== void 0 ? _12 : 0) - amount;
+            vendor.wallet = ((_e = vendor.wallet) !== null && _e !== void 0 ? _e : 0) - amount;
         }
         yield vendor.save({ transaction });
         // Create withdrawal request
         const withdrawal = yield withdrawal_1.default.create({
             vendorId,
-            bankInformation,
+            bankInformation, // Store only the ID instead of full object
             amount,
             currency,
             status: "pending", // Set default status
+        }, { transaction });
+        // Log Transaction
+        yield transaction_1.default.create({
+            userId: vendorId,
+            amount: amount,
+            currency: currency,
+            transactionType: "withdrawal",
+            refId: withdrawal.id,
+            status: "pending",
+            note: `Withdrawal request to ${bankInformation.bankName}`
         }, { transaction });
         // Vendor Notification
         yield notification_1.default.create({
@@ -1889,7 +2099,9 @@ const requestWithdrawal = (req, res) => __awaiter(void 0, void 0, void 0, functi
             }, { transaction });
         }
         yield transaction.commit(); // Commit transaction
-        res.status(200).json({ message: "Withdrawal request submitted", withdrawal });
+        res
+            .status(200)
+            .json({ message: "Withdrawal request submitted", withdrawal });
     }
     catch (error) {
         yield transaction.rollback(); // Rollback changes on error
@@ -1899,8 +2111,8 @@ const requestWithdrawal = (req, res) => __awaiter(void 0, void 0, void 0, functi
 });
 exports.requestWithdrawal = requestWithdrawal;
 const getWithdrawals = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _13;
-    const vendorId = (_13 = req.user) === null || _13 === void 0 ? void 0 : _13.id;
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
     try {
         const { status } = req.query; // Optional filter by status
         const whereClause = { vendorId };
@@ -1911,7 +2123,9 @@ const getWithdrawals = (req, res) => __awaiter(void 0, void 0, void 0, function*
             where: whereClause,
             order: [["createdAt", "DESC"]], // Latest withdrawals first
         });
-        res.status(200).json({ message: "Withdrawals fetched successfully", data: withdrawals });
+        res
+            .status(200)
+            .json({ message: "Withdrawals fetched successfully", data: withdrawals });
     }
     catch (error) {
         logger_1.default.error("Error fetching withdrawals:", error);
@@ -1920,8 +2134,8 @@ const getWithdrawals = (req, res) => __awaiter(void 0, void 0, void 0, function*
 });
 exports.getWithdrawals = getWithdrawals;
 const updateWithdrawal = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _14, _15, _16, _17, _18;
-    const vendorId = (_14 = req.user) === null || _14 === void 0 ? void 0 : _14.id;
+    var _a, _b, _c, _d, _e;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
     const transaction = yield sequelize_service_1.default.connection.transaction();
     try {
         const { withdrawalId, bankInformationId } = req.body;
@@ -1942,7 +2156,9 @@ const updateWithdrawal = (req, res) => __awaiter(void 0, void 0, void 0, functio
         }
         if (withdrawal.status !== "rejected") {
             yield transaction.rollback();
-            res.status(400).json({ message: "Only rejected withdrawals can be updated" });
+            res
+                .status(400)
+                .json({ message: "Only rejected withdrawals can be updated" });
             return;
         }
         // Find vendor
@@ -1955,20 +2171,22 @@ const updateWithdrawal = (req, res) => __awaiter(void 0, void 0, void 0, functio
         // Deduct withdrawal amount from the vendor's wallet
         const withdrawalAmount = Number(withdrawal.amount); // Ensure it's a number
         if (withdrawal.currency === "USD") {
-            if ((Number((_15 = vendor.dollarWallet) !== null && _15 !== void 0 ? _15 : 0)) < withdrawalAmount) {
+            if (Number((_b = vendor.dollarWallet) !== null && _b !== void 0 ? _b : 0) < withdrawalAmount) {
                 yield transaction.rollback();
-                res.status(400).json({ message: "Insufficient funds in dollar wallet." });
+                res
+                    .status(400)
+                    .json({ message: "Insufficient funds in dollar wallet." });
                 return;
             }
-            vendor.dollarWallet = (Number((_16 = vendor.dollarWallet) !== null && _16 !== void 0 ? _16 : 0)) - withdrawalAmount;
+            vendor.dollarWallet = Number((_c = vendor.dollarWallet) !== null && _c !== void 0 ? _c : 0) - withdrawalAmount;
         }
         else {
-            if ((Number((_17 = vendor.wallet) !== null && _17 !== void 0 ? _17 : 0)) < withdrawalAmount) {
+            if (Number((_d = vendor.wallet) !== null && _d !== void 0 ? _d : 0) < withdrawalAmount) {
                 yield transaction.rollback();
                 res.status(400).json({ message: "Insufficient funds in wallet." });
                 return;
             }
-            vendor.wallet = (Number((_18 = vendor.wallet) !== null && _18 !== void 0 ? _18 : 0)) - withdrawalAmount;
+            vendor.wallet = Number((_e = vendor.wallet) !== null && _e !== void 0 ? _e : 0) - withdrawalAmount;
         }
         yield vendor.save({ transaction });
         // Update withdrawal
@@ -2004,7 +2222,9 @@ const updateWithdrawal = (req, res) => __awaiter(void 0, void 0, void 0, functio
             }, { transaction });
         }
         yield transaction.commit(); // Commit transaction
-        res.status(200).json({ message: `Withdrawal successfully updated.`, data: withdrawal });
+        res
+            .status(200)
+            .json({ message: `Withdrawal successfully updated.`, data: withdrawal });
     }
     catch (error) {
         yield transaction.rollback(); // Rollback changes on error
@@ -2022,7 +2242,9 @@ const getWithdrawalById = (req, res) => __awaiter(void 0, void 0, void 0, functi
             res.status(404).json({ message: "Withdrawal not found" });
             return;
         }
-        res.status(200).json({ message: "Withdrawal retrieved successfully", data: withdrawal });
+        res
+            .status(200)
+            .json({ message: "Withdrawal retrieved successfully", data: withdrawal });
     }
     catch (error) {
         logger_1.default.error("Error retrieving withdrawal:", error);
@@ -2031,8 +2253,8 @@ const getWithdrawalById = (req, res) => __awaiter(void 0, void 0, void 0, functi
 });
 exports.getWithdrawalById = getWithdrawalById;
 const cancelSubscription = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _19, _20, _21, _22;
-    const vendorId = (_19 = req.user) === null || _19 === void 0 ? void 0 : _19.id;
+    var _a, _b, _c, _d;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
     if (!vendorId) {
         res.status(403).json({ message: "Unauthorized. Vendor ID is required." });
         return;
@@ -2045,32 +2267,38 @@ const cancelSubscription = (req, res) => __awaiter(void 0, void 0, void 0, funct
             include: [
                 {
                     model: subscriptionplan_1.default,
-                    as: 'subscriptionPlans',
-                    attributes: ['id', 'name', 'price']
-                }
+                    as: "subscriptionPlans",
+                    attributes: ["id", "name", "price"],
+                },
             ],
             transaction,
             lock: true, // Prevent concurrent modifications
         });
         if (!activeSubscription) {
             yield transaction.rollback();
-            res.status(404).json({ message: "No active subscription found for this vendor." });
+            res
+                .status(404)
+                .json({ message: "No active subscription found for this vendor." });
             return;
         }
         // Step 2: Check if it's already a Free Plan
-        if (((_20 = activeSubscription.subscriptionPlans) === null || _20 === void 0 ? void 0 : _20.name) === "Free Plan") {
+        if (((_b = activeSubscription.subscriptionPlans) === null || _b === void 0 ? void 0 : _b.name) === "Free Plan") {
             yield transaction.rollback();
-            res.status(400).json({ message: "Cannot cancel Free Plan subscription." });
+            res
+                .status(400)
+                .json({ message: "Cannot cancel Free Plan subscription." });
             return;
         }
         // Step 3: Find the Free Plan
         const freePlan = yield subscriptionplan_1.default.findOne({
             where: { name: "Free Plan" },
-            transaction
+            transaction,
         });
         if (!freePlan) {
             yield transaction.rollback();
-            res.status(500).json({ message: "Free Plan not found. Please contact support." });
+            res
+                .status(500)
+                .json({ message: "Free Plan not found. Please contact support." });
             return;
         }
         // Step 4: Deactivate current subscription
@@ -2090,7 +2318,7 @@ const cancelSubscription = (req, res) => __awaiter(void 0, void 0, void 0, funct
         yield notification_1.default.create({
             userId: vendorId,
             title: "Subscription Cancelled",
-            message: `Your ${(_21 = activeSubscription.subscriptionPlans) === null || _21 === void 0 ? void 0 : _21.name} subscription has been cancelled. You have been moved to the Free Plan.`,
+            message: `Your ${(_c = activeSubscription.subscriptionPlans) === null || _c === void 0 ? void 0 : _c.name} subscription has been cancelled. You have been moved to the Free Plan.`,
             type: "subscription",
             isRead: false,
         }, { transaction });
@@ -2099,22 +2327,1034 @@ const cancelSubscription = (req, res) => __awaiter(void 0, void 0, void 0, funct
             message: "Subscription cancelled successfully. You have been moved to the Free Plan.",
             cancelledSubscription: {
                 id: activeSubscription.id,
-                planName: (_22 = activeSubscription.subscriptionPlans) === null || _22 === void 0 ? void 0 : _22.name,
-                cancelledAt: new Date()
+                planName: (_d = activeSubscription.subscriptionPlans) === null || _d === void 0 ? void 0 : _d.name,
+                cancelledAt: new Date(),
             },
             newSubscription: {
                 id: newFreeSubscription.id,
                 planName: "Free Plan",
                 startDate: newFreeSubscription.startDate,
-                endDate: newFreeSubscription.endDate
-            }
+                endDate: newFreeSubscription.endDate,
+            },
         });
     }
     catch (error) {
         yield transaction.rollback(); // Rollback changes on error
         logger_1.default.error("Error cancelling subscription:", error);
-        res.status(500).json({ message: "An error occurred while cancelling the subscription." });
+        res.status(500).json({
+            message: "An error occurred while cancelling the subscription.",
+        });
     }
 });
 exports.cancelSubscription = cancelSubscription;
+const createService = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    const { title, description, image_url, video_url, service_category_id, service_subcategory_id, location_city, location_state, location_country, is_negotiable, work_experience_years, additional_images, price, discount_price, attributes, } = req.body;
+    try {
+        // Check if categoryId exists
+        const serviceCategory = yield serviceCategories_1.default.findByPk(service_category_id);
+        if (!serviceCategory) {
+            res.status(404).json({ message: "Service category not found." });
+            return;
+        }
+        // Check if subcategoryId exist
+        const serviceSubCategory = yield serviceSubCategories_1.default.findByPk(service_subcategory_id);
+        if (!serviceSubCategory) {
+            res.status(404).json({ message: "Service subcategory not found." });
+            return;
+        }
+        if (discount_price && Number(discount_price) >= Number(price)) {
+            res.status(400).json({
+                message: "Discount price must be less than the regular price.",
+            });
+            return;
+        }
+        const attributeIds = attributes
+            ? [...new Set(attributes.map((attr) => attr.attributeId))]
+            : [];
+        // Validate that all attribute IDs exist
+        const existingAttributes = yield attributeDefinitions_1.default.findAll({
+            where: { id: attributeIds },
+        });
+        if (existingAttributes.length !== attributeIds.length) {
+            res.status(400).json({
+                message: "One or more attributes does not exist for this category.",
+            });
+            return;
+        }
+        let createdService = null;
+        yield sequelize_2.default.transaction((t) => __awaiter(void 0, void 0, void 0, function* () {
+            const newService = yield services_1.default.create({
+                vendorId,
+                service_category_id,
+                service_subcategory_id,
+                description,
+                price,
+                discount_price,
+                title,
+                image_url,
+                video_url,
+                location_city,
+                location_state,
+                location_country,
+                is_negotiable,
+                work_experience_years,
+                additional_images,
+                status: "inactive",
+            }, {
+                transaction: t,
+            });
+            const optionAttributes = [];
+            const textAttributes = [];
+            const numberAttributes = [];
+            const booleanAttributes = [];
+            for (const attr of existingAttributes) {
+                if (attr.input_type === helpers_1.ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.MULTI_SELECT) {
+                    const attribute = attributes.find((a) => a.attributeId === attr.id);
+                    if (attribute && Array.isArray(attribute.value)) {
+                        for (const val of attribute.value) {
+                            if (typeof val !== "number") {
+                                res.status(400).json({
+                                    message: `Invalid value in array for attribute ID ${attr.id}. Expected all values to be option id numbers.`,
+                                });
+                                return;
+                            }
+                            optionAttributes.push({
+                                attribute_id: attr.id,
+                                service_id: newService.id,
+                                option_value_id: val,
+                            });
+                        }
+                    }
+                    else {
+                        res.status(400).json({
+                            message: `Invalid value for attribute ID ${attr.id}. Expected an array.`,
+                        });
+                        return;
+                    }
+                }
+                else if (attr.input_type === helpers_1.ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.SINGLE_SELECT) {
+                    const attribute = attributes.find((a) => a.attributeId === attr.id);
+                    if (attribute && typeof attribute.value === "number") {
+                        optionAttributes.push({
+                            attribute_id: attr.id,
+                            service_id: newService.id,
+                            option_value_id: attribute.value,
+                        });
+                    }
+                    else {
+                        res.status(400).json({
+                            message: `Invalid value for attribute ID ${attr.id}. Expected an option id number.`,
+                        });
+                        return;
+                    }
+                }
+                else if (attr.input_type === helpers_1.ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.STR_INPUT) {
+                    const attribute = attributes.find((a) => a.attributeId === attr.id);
+                    if (attribute && typeof attribute.value === "string") {
+                        textAttributes.push({
+                            attribute_id: attr.id,
+                            service_id: newService.id,
+                            text_value: attribute.value,
+                        });
+                    }
+                    else {
+                        res.status(400).json({
+                            message: `Invalid value for attribute ID ${attr.id}. Expected a string.`,
+                        });
+                        return;
+                    }
+                }
+                else if (attr.input_type === helpers_1.ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.INT_INPUT) {
+                    const attribute = attributes.find((a) => a.attributeId === attr.id);
+                    if (attribute && typeof attribute.value === "number") {
+                        numberAttributes.push({
+                            attribute_id: attr.id,
+                            service_id: newService.id,
+                            value: attribute.value,
+                        });
+                    }
+                    else {
+                        res.status(400).json({
+                            message: `Invalid value for attribute ID ${attr.id}. Expected a number.`,
+                        });
+                        return;
+                    }
+                }
+                else if (attr.input_type === helpers_1.ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.BOOL_INPUT) {
+                    const attribute = attributes.find((a) => a.attributeId === attr.id);
+                    if (attribute && typeof attribute.value === "boolean") {
+                        booleanAttributes.push({
+                            attribute_id: attr.id,
+                            service_id: newService.id,
+                            value: attribute.value,
+                        });
+                    }
+                    else {
+                        res.status(400).json({
+                            message: `Invalid value for attribute ID ${attr.id}. Expected a boolean`,
+                        });
+                        return;
+                    }
+                }
+            }
+            const groupedOptions = new Map();
+            const serviceAttributes = [];
+            // Bulk create attributes
+            if (optionAttributes.length > 0) {
+                yield serviceAttributeOptionValues_1.default.bulkCreate(optionAttributes, {
+                    transaction: t,
+                });
+                const serviceOptionAttributes = yield serviceAttributeOptionValues_1.default.findAll({
+                    where: { service_id: newService.id },
+                    include: [
+                        {
+                            model: attributeDefinitions_1.default,
+                            as: "attribute",
+                        },
+                        {
+                            model: attributeOptions_1.default,
+                            as: "optionValue",
+                        },
+                    ],
+                    transaction: t,
+                });
+                for (const { attribute, optionValue } of serviceOptionAttributes) {
+                    const key = attribute.name;
+                    const val = optionValue.option_value;
+                    const options = groupedOptions.get(key);
+                    if (options)
+                        options.push(val);
+                    else
+                        groupedOptions.set(key, [val]);
+                }
+                const optionsArray = Array.from(groupedOptions, ([name, values]) => ({
+                    name,
+                    values,
+                }));
+                serviceAttributes.push(...optionsArray);
+            }
+            if (textAttributes.length > 0) {
+                yield serviceAttributeTextValues_1.default.bulkCreate(textAttributes, {
+                    transaction: t,
+                });
+                const serviceTextAttributes = yield serviceAttributeTextValues_1.default.findAll({
+                    where: { service_id: newService.id },
+                    include: [
+                        {
+                            model: attributeDefinitions_1.default,
+                            as: "attribute",
+                        },
+                    ],
+                    transaction: t,
+                });
+                for (const { attribute, text_value } of serviceTextAttributes) {
+                    serviceAttributes.push({ name: attribute.name, value: text_value });
+                }
+            }
+            if (numberAttributes.length > 0) {
+                yield serviceAttributeNumberValues_1.default.bulkCreate(numberAttributes, {
+                    transaction: t,
+                });
+                const serviceNumberAttributes = yield serviceAttributeNumberValues_1.default.findAll({
+                    where: { service_id: newService.id },
+                    include: [
+                        {
+                            model: attributeDefinitions_1.default,
+                            as: "attribute",
+                        },
+                    ],
+                    transaction: t,
+                });
+                for (const { attribute, value } of serviceNumberAttributes) {
+                    serviceAttributes.push({ name: attribute.name, value });
+                }
+            }
+            if (booleanAttributes.length > 0) {
+                yield serviceAttributeBoolValues_1.default.bulkCreate(booleanAttributes, {
+                    transaction: t,
+                });
+                const serviceBooleanAttributes = yield serviceAttributeBoolValues_1.default.findAll({
+                    where: { service_id: newService.id },
+                    include: [
+                        {
+                            model: attributeDefinitions_1.default,
+                            as: "attribute",
+                        },
+                    ],
+                    transaction: t,
+                });
+                for (const { attribute, value } of serviceBooleanAttributes) {
+                    serviceAttributes.push({ name: attribute.name, value });
+                }
+            }
+            // Update service with attributes
+            newService.attributes = serviceAttributes;
+            const updatedService = yield newService.save({ transaction: t });
+            createdService = updatedService || newService;
+        }));
+        res.status(201).json({
+            message: "Service created successfully",
+            data: createdService,
+        });
+        return;
+    }
+    catch (error) {
+        logger_1.default.error(error);
+        res.status(500).json({ message: "Failed to create service" });
+        return;
+    }
+});
+exports.createService = createService;
+const updateService = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Authenticated user ID from middleware
+    const serviceId = req.params.serviceId;
+    const { title, description, image_url, video_url, service_category_id, service_subcategory_id, location_city, location_state, location_country, work_experience_years, additional_images, price, discount_price, is_negotiable, attributes, } = req.body;
+    try {
+        // Check if categoryId exists
+        const serviceCategory = yield serviceCategories_1.default.findByPk(service_category_id);
+        if (!serviceCategory) {
+            res.status(404).json({ message: "Service category not found." });
+            return;
+        }
+        // Check if subcategoryId exist
+        const serviceSubCategory = yield serviceSubCategories_1.default.findByPk(service_subcategory_id);
+        if (!serviceSubCategory) {
+            res.status(404).json({ message: "Service subcategory not found." });
+            return;
+        }
+        if (discount_price && Number(discount_price) >= Number(price)) {
+            res.status(400).json({
+                message: "Discount price must be less than the regular price.",
+            });
+            return;
+        }
+        const attributeIds = attributes
+            ? attributes.map((attr) => attr.attributeId)
+            : [];
+        // Validate that all attribute IDs exist
+        const existingAttributes = yield attributeDefinitions_1.default.findAll({
+            where: { id: attributeIds },
+        });
+        if (existingAttributes.length !== attributeIds.length) {
+            res.status(400).json({ message: "One or more attributes are invalid." });
+            return;
+        }
+        let updatedService = null;
+        yield sequelize_2.default.transaction((t) => __awaiter(void 0, void 0, void 0, function* () {
+            const service = yield services_1.default.findOne({
+                where: { id: serviceId, vendorId },
+                transaction: t,
+                lock: true, // Prevent concurrent modifications
+            });
+            if (!service) {
+                res.status(404).json({ message: "Service not found." });
+                return;
+            }
+            if (service.status === "active") {
+                res.status(400).json({
+                    message: "Cannot update an active service. Please deactivate it first.",
+                });
+                return;
+            }
+            yield service.update({
+                service_category_id,
+                service_subcategory_id,
+                description,
+                price,
+                discount_price,
+                title,
+                image_url,
+                video_url,
+                location_city,
+                location_state,
+                location_country,
+                work_experience_years,
+                is_negotiable,
+                additional_images,
+                status: "inactive",
+            }, {
+                transaction: t,
+            });
+            const optionAttributes = [];
+            const textAttributes = [];
+            const numberAttributes = [];
+            const booleanAttributes = [];
+            for (const attr of existingAttributes) {
+                if (attr.input_type === helpers_1.ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.MULTI_SELECT) {
+                    const attribute = attributes.find((a) => a.attributeId === attr.id);
+                    if (attribute && Array.isArray(attribute.value)) {
+                        for (const val of attribute.value) {
+                            if (typeof val !== "number") {
+                                res.status(400).json({
+                                    message: `Invalid value in array for attribute ID ${attr.id}. Expected all values to be option id numbers.`,
+                                });
+                                return;
+                            }
+                            optionAttributes.push({
+                                attribute_id: attr.id,
+                                service_id: service.id,
+                                option_value_id: val,
+                            });
+                        }
+                    }
+                    else {
+                        res.status(400).json({
+                            message: `Invalid value for attribute ID ${attr.id}. Expected an array.`,
+                        });
+                        return;
+                    }
+                }
+                else if (attr.input_type === helpers_1.ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.SINGLE_SELECT) {
+                    const attribute = attributes.find((a) => a.attributeId === attr.id);
+                    if (attribute && typeof attribute.value === "number") {
+                        optionAttributes.push({
+                            attribute_id: attr.id,
+                            service_id: service.id,
+                            option_value_id: attribute.value,
+                        });
+                    }
+                    else {
+                        res.status(400).json({
+                            message: `Invalid value for attribute ID ${attr.id}. Expected an option id string.`,
+                        });
+                        return;
+                    }
+                }
+                else if (attr.input_type === helpers_1.ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.STR_INPUT) {
+                    const attribute = attributes.find((a) => a.attributeId === attr.id);
+                    if (attribute && typeof attribute.value === "string") {
+                        textAttributes.push({
+                            attribute_id: attr.id,
+                            service_id: service.id,
+                            text_value: attribute.value,
+                        });
+                    }
+                    else {
+                        res.status(400).json({
+                            message: `Invalid value for attribute ID ${attr.id}. Expected a string.`,
+                        });
+                        return;
+                    }
+                }
+                else if (attr.input_type === helpers_1.ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.INT_INPUT) {
+                    const attribute = attributes.find((a) => a.attributeId === attr.id);
+                    if (attribute && typeof attribute.value === "string") {
+                        numberAttributes.push({
+                            attribute_id: attr.id,
+                            service_id: service.id,
+                            value: attribute.value,
+                        });
+                    }
+                    else {
+                        res.status(400).json({
+                            message: `Invalid value for attribute ID ${attr.id}. Expected a number string.`,
+                        });
+                        return;
+                    }
+                }
+                else if (attr.input_type === helpers_1.ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.BOOL_INPUT) {
+                    const attribute = attributes.find((a) => a.attributeId === attr.id);
+                    if (attribute && typeof attribute.value === "boolean") {
+                        booleanAttributes.push({
+                            attribute_id: attr.id,
+                            service_id: service.id,
+                            value: attribute.value,
+                        });
+                    }
+                    else {
+                        res.status(400).json({
+                            message: `Invalid value for attribute ID ${attr.id}. Expected a boolean.`,
+                        });
+                        return;
+                    }
+                }
+            }
+            const groupedOptions = new Map();
+            const serviceAttributes = [];
+            // Bulk create attribute
+            if (optionAttributes.length > 0) {
+                // First, delete existing option attributes for the service
+                yield serviceAttributeOptionValues_1.default.destroy({
+                    where: { service_id: service.id },
+                    transaction: t,
+                });
+                yield serviceAttributeOptionValues_1.default.bulkCreate(optionAttributes, {
+                    transaction: t,
+                    returning: true,
+                });
+                const serviceOptionAttributes = yield serviceAttributeOptionValues_1.default.findAll({
+                    where: { service_id: service.id },
+                    include: [
+                        {
+                            model: attributeDefinitions_1.default,
+                            as: "attribute",
+                        },
+                        {
+                            model: attributeOptions_1.default,
+                            as: "optionValue",
+                        },
+                    ],
+                    transaction: t,
+                });
+                for (const { attribute, optionValue } of serviceOptionAttributes) {
+                    const key = attribute.name;
+                    const val = optionValue.option_value;
+                    const options = groupedOptions.get(key);
+                    if (options)
+                        options.push(val);
+                    else
+                        groupedOptions.set(key, [val]);
+                }
+                const optionsArray = Array.from(groupedOptions, ([name, values]) => ({
+                    name,
+                    values,
+                }));
+                serviceAttributes.push(...optionsArray);
+            }
+            if (textAttributes.length > 0) {
+                // First, delete existing text attributes for the service
+                yield serviceAttributeTextValues_1.default.destroy({
+                    where: { service_id: service.id },
+                    transaction: t,
+                });
+                yield serviceAttributeTextValues_1.default.bulkCreate(textAttributes, {
+                    transaction: t,
+                });
+                const serviceTextAttributes = yield serviceAttributeTextValues_1.default.findAll({
+                    where: { service_id: service.id },
+                    include: [
+                        {
+                            model: attributeDefinitions_1.default,
+                            as: "attribute",
+                        },
+                    ],
+                    transaction: t,
+                });
+                for (const { attribute, text_value } of serviceTextAttributes) {
+                    serviceAttributes.push({ name: attribute.name, value: text_value });
+                }
+            }
+            if (numberAttributes.length > 0) {
+                // First, delete existing number attributes for the service
+                yield serviceAttributeNumberValues_1.default.destroy({
+                    where: { service_id: service.id },
+                    transaction: t,
+                });
+                yield serviceAttributeNumberValues_1.default.bulkCreate(numberAttributes, {
+                    transaction: t,
+                    returning: true,
+                });
+                const serviceNumberAttributes = yield serviceAttributeNumberValues_1.default.findAll({
+                    where: { service_id: service.id },
+                    include: [
+                        {
+                            model: attributeDefinitions_1.default,
+                            as: "attribute",
+                        },
+                    ],
+                    transaction: t,
+                });
+                for (const { attribute, value } of serviceNumberAttributes) {
+                    serviceAttributes.push({ name: attribute.name, value });
+                }
+            }
+            if (booleanAttributes.length > 0) {
+                // First, delete existing boolean attributes for the service
+                yield serviceAttributeBoolValues_1.default.destroy({
+                    where: { service_id: service.id },
+                    transaction: t,
+                });
+                yield serviceAttributeBoolValues_1.default.bulkCreate(booleanAttributes, {
+                    transaction: t,
+                    returning: true,
+                });
+                const serviceBooleanAttributes = yield serviceAttributeBoolValues_1.default.findAll({
+                    where: { service_id: service.id },
+                    include: [
+                        {
+                            model: attributeDefinitions_1.default,
+                            as: "attribute",
+                        },
+                    ],
+                    transaction: t,
+                });
+                for (const { attribute, value } of serviceBooleanAttributes) {
+                    serviceAttributes.push({ name: attribute.name, value });
+                }
+            }
+            // Update service with attributes
+            service.attributes = serviceAttributes;
+            const serviceAfterUpdate = yield service.save({ transaction: t });
+            updatedService = serviceAfterUpdate;
+        }));
+        res.status(200).json({
+            message: "Service updated successfully",
+            data: updatedService,
+        });
+    }
+    catch (error) {
+        logger_1.default.error(error);
+        console.error(error);
+        res.status(500).json({ message: "Failed to update service" });
+        return;
+    }
+});
+exports.updateService = updateService;
+const getService = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const serviceId = req.params.serviceId;
+    if (!serviceId) {
+        res.status(400).json({ message: "Service ID is required." });
+        return;
+    }
+    try {
+        const services = yield services_1.default.findAll({
+            where: { id: serviceId },
+            include: [
+                {
+                    model: serviceCategories_1.default,
+                    as: "category",
+                    attributes: ["id", "name"],
+                },
+                {
+                    model: serviceSubCategories_1.default,
+                    as: "subCategory",
+                    attributes: ["id", "name"],
+                },
+            ],
+            order: [["createdAt", "DESC"]],
+        });
+        res
+            .status(200)
+            .json({ message: "Services fetched successfully", data: services });
+    }
+    catch (error) {
+        logger_1.default.error(error);
+        res.status(500).json({ message: "Failed to fetch services" });
+    }
+});
+exports.getService = getService;
+const getVendorServices = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+    const { page, limit } = req.query;
+    const offset = page && limit ? (Number(page) - 1) * Number(limit) : 0;
+    try {
+        const services = yield services_1.default.findAll({
+            where: { vendorId },
+            limit: limit ? Number(limit) : 10,
+            offset: offset ? offset : 0,
+            include: [
+                {
+                    model: serviceCategories_1.default,
+                    as: "category",
+                    attributes: ["id", "name"],
+                },
+                {
+                    model: serviceSubCategories_1.default,
+                    as: "subCategory",
+                    attributes: ["id", "name"],
+                },
+            ],
+            order: [["createdAt", "DESC"]],
+        });
+        res
+            .status(200)
+            .json({ message: "Services fetched successfully", data: services });
+    }
+    catch (error) {
+        logger_1.default.error(error);
+        res.status(500).json({ message: "Failed to fetch services" });
+    }
+});
+exports.getVendorServices = getVendorServices;
+const deleteService = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+    const serviceId = req.params.serviceId;
+    try {
+        const service = yield services_1.default.findOne({
+            where: { id: serviceId, vendorId },
+        });
+        if (!service) {
+            res.status(404).json({ message: "Service not found." });
+            return;
+        }
+        if (service.status === "active") {
+            res.status(400).json({
+                message: "Cannot delete an active service. Deactivate it first.",
+            });
+            return;
+        }
+        yield service.destroy();
+        res.status(200).json({ message: "Service deleted successfully." });
+    }
+    catch (error) {
+        logger_1.default.error(error);
+        res.status(500).json({ message: "Failed to delete service." });
+    }
+});
+exports.deleteService = deleteService;
+const publishService = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+    const serviceId = req.params.serviceId;
+    try {
+        const vendorSubscription = yield vendorsubscription_1.default.findOne({
+            where: { vendorId, isActive: true },
+            include: [
+                {
+                    model: subscriptionplan_1.default,
+                    as: "subscriptionPlans",
+                    attributes: ["id", "name", "allowsServiceAds", "serviceAdsLimit"],
+                },
+            ],
+        });
+        if (!vendorSubscription) {
+            res.status(403).json({
+                message: "No active subscription found. Please subscribe to a plan to publish services.",
+            });
+            return;
+        }
+        if (!((_b = vendorSubscription.subscriptionPlans) === null || _b === void 0 ? void 0 : _b.allowsServiceAds)) {
+            res.status(403).json({
+                message: "Your current subscription plan does not allow publishing services. Please upgrade your plan.",
+            });
+            return;
+        }
+        if (vendorSubscription.subscriptionPlans.serviceAdsLimit !== null) {
+            const publishedServiceCount = yield services_1.default.count({
+                where: { vendorId, status: "active" },
+            });
+            if (publishedServiceCount >=
+                vendorSubscription.subscriptionPlans.serviceAdsLimit) {
+                res.status(403).json({
+                    message: `You have reached your service publication limit of ${vendorSubscription.subscriptionPlans.serviceAdsLimit}. Please upgrade your plan to publish more services.`,
+                });
+                return;
+            }
+        }
+        const service = yield services_1.default.findOne({
+            where: { id: serviceId, vendorId },
+        });
+        if (!service) {
+            res.status(404).json({ message: "Service not found." });
+            return;
+        }
+        if (service.status === "active") {
+            res.status(400).json({ message: "Service is already active." });
+            return;
+        }
+        if (service.status === "suspended") {
+            res.status(400).json({
+                message: "Suspended services cannot be published. Please contact support.",
+            });
+            return;
+        }
+        yield service.update({ status: "active" });
+        res.status(200).json({ message: "Service published successfully." });
+        return;
+    }
+    catch (error) {
+        logger_1.default.error(error);
+        console.error(error);
+        res.status(500).json({ message: "Failed to publish service." });
+        return;
+    }
+});
+exports.publishService = publishService;
+const unpublishService = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+    const serviceId = req.params.serviceId;
+    try {
+        const service = yield services_1.default.findOne({
+            where: { id: serviceId, vendorId },
+        });
+        if (!service) {
+            res.status(404).json({ message: "Service not found." });
+            return;
+        }
+        if (service.status === "inactive") {
+            res.status(400).json({ message: "Service is already inactive." });
+            return;
+        }
+        yield service.update({ status: "inactive" });
+        res.status(200).json({ message: "Service unpublished successfully." });
+    }
+    catch (error) {
+        logger_1.default.error(error);
+        res.status(500).json({ message: "Failed to unpublish service." });
+    }
+});
+exports.unpublishService = unpublishService;
+const getServiceBookings = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+    if (!vendorId) {
+        res.status(403).json({ message: "Unauthorized. Vendor ID is required." });
+        return;
+    }
+    const { page, limit, status } = req.query;
+    const offset = page && limit ? (Number(page) - 1) * Number(limit) : 0;
+    const whereClause = {};
+    if (status) {
+        whereClause.status = status;
+    }
+    whereClause.vendorId = vendorId;
+    try {
+        const { rows: bookings, count: total } = yield servicebookings_1.default.findAndCountAll({
+            where: whereClause,
+            limit: limit ? Number(limit) : 10,
+            offset: offset ? offset : 0,
+            include: [
+                {
+                    model: services_1.default,
+                    as: "service",
+                },
+                {
+                    model: user_1.default,
+                    as: "user",
+                    attributes: ["id", "firstName", "lastName", "email", "photo"],
+                },
+            ],
+            order: [["createdAt", "DESC"]],
+        });
+        res.status(200).json({
+            message: "Bookings fetched successfully",
+            data: bookings,
+            total,
+        });
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching service bookings:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+exports.getServiceBookings = getServiceBookings;
+const markServiceBookingAsConfirmed = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+    if (!vendorId) {
+        res.status(403).json({ message: "Unauthorized. Vendor ID is required." });
+        return;
+    }
+    const bookingId = req.params.bookingId;
+    try {
+        const booking = yield servicebookings_1.default.findOne({
+            where: { id: bookingId, vendorId },
+            include: [
+                {
+                    model: services_1.default,
+                    as: "service",
+                },
+                {
+                    model: user_1.default,
+                    as: "user",
+                    attributes: ["id", "firstName", "lastName", "email", "photo"],
+                },
+            ],
+        });
+        if (!booking) {
+            res.status(404).json({ message: "Booking not found." });
+            return;
+        }
+        if (booking.status !== "pending") {
+            res.status(400).json({
+                message: `Only pending bookings can be confirmed. Current status: ${booking.status}`,
+            });
+            return;
+        }
+        booking.status = "confirmed";
+        yield booking.save();
+        // Notify User
+        yield notification_1.default.create({
+            userId: booking.userId,
+            title: "Service Booking Confirmed",
+            type: "service_booking",
+            message: `Your booking for the service "${(_b = booking.service) === null || _b === void 0 ? void 0 : _b.title}" has been confirmed by the vendor.`,
+            isRead: false,
+        });
+        res
+            .status(200)
+            .json({ message: "Booking marked as confirmed.", data: booking });
+    }
+    catch (error) {
+        logger_1.default.error("Error confirming service booking:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+exports.markServiceBookingAsConfirmed = markServiceBookingAsConfirmed;
+const markServiceBookingAsCancelled = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+    if (!vendorId) {
+        res.status(403).json({ message: "Unauthorized. Vendor ID is required." });
+        return;
+    }
+    const bookingId = req.params.bookingId;
+    try {
+        const booking = yield servicebookings_1.default.findOne({
+            where: { id: bookingId, vendorId },
+            include: [
+                {
+                    model: services_1.default,
+                    as: "service",
+                },
+                {
+                    model: user_1.default,
+                    as: "user",
+                    attributes: ["id", "firstName", "lastName", "email", "photo"],
+                },
+            ],
+        });
+        if (!booking) {
+            res.status(404).json({ message: "Booking not found." });
+            return;
+        }
+        if (booking.status !== "pending") {
+            res.status(400).json({
+                message: `Only pending bookings can be cancelled. Current status: ${booking.status}`,
+            });
+            return;
+        }
+        booking.status = "cancelled";
+        yield booking.save();
+        // Notify User
+        yield notification_1.default.create({
+            userId: booking.userId,
+            title: "Service Booking Cancelled",
+            type: "service_booking",
+            message: `Your booking for the service "${(_b = booking.service) === null || _b === void 0 ? void 0 : _b.title}" has been cancelled by the vendor.`,
+            isRead: false,
+        });
+        res
+            .status(200)
+            .json({ message: "Booking marked as cancelled.", data: booking });
+    }
+    catch (error) {
+        logger_1.default.error("Error cancelling service booking:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+exports.markServiceBookingAsCancelled = markServiceBookingAsCancelled;
+const getVendorOffers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+    const { page, limit, status, productId } = req.query;
+    const offset = (Number(page) - 1) * Number(limit) || 0;
+    const where = {};
+    if (status)
+        where.status = String(status);
+    if (productId)
+        where.productId = String(productId);
+    try {
+        const { count, rows: offers } = yield productoffer_1.default.findAndCountAll({
+            where,
+            subQuery: false,
+            include: [
+                {
+                    model: product_1.default,
+                    as: "product",
+                    attributes: ["id", "name", "price", "image_url"],
+                    where: { vendorId },
+                    required: true,
+                },
+                {
+                    model: user_1.default,
+                    as: "buyer",
+                    attributes: ["id", "firstName", "lastName", "email"],
+                },
+            ],
+            order: [["createdAt", "DESC"]],
+            limit: Number(limit) || 10,
+            offset,
+        });
+        res.status(200).json({ data: offers, total: count });
+    }
+    catch (error) {
+        logger_1.default.error(`Error fetching vendor offers: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while fetching offers." });
+    }
+});
+exports.getVendorOffers = getVendorOffers;
+const respondToVendorOffer = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+    const { offerId } = req.params;
+    const { status, counterPrice } = req.body;
+    const allowedStatuses = ["accepted", "rejected", "countered"];
+    if (!status || !allowedStatuses.includes(status)) {
+        res.status(400).json({ message: "Status must be one of: accepted, rejected, countered." });
+        return;
+    }
+    if (status === "countered" && (!counterPrice || isNaN(Number(counterPrice)) || Number(counterPrice) <= 0)) {
+        res.status(400).json({ message: "A valid counter price is required when countering an offer." });
+        return;
+    }
+    try {
+        const offer = yield productoffer_1.default.findByPk(offerId, {
+            include: [
+                { model: product_1.default, as: "product", attributes: ["id", "name", "vendorId"] },
+                { model: user_1.default, as: "buyer", attributes: ["id", "firstName", "fcmToken"] },
+            ],
+        });
+        if (!offer) {
+            res.status(404).json({ message: "Offer not found." });
+            return;
+        }
+        const product = offer.product;
+        if (product.vendorId !== vendorId) {
+            res.status(403).json({ message: "You are not authorized to respond to this offer." });
+            return;
+        }
+        if (offer.status !== "pending") {
+            res.status(400).json({ message: "This offer has already been responded to." });
+            return;
+        }
+        yield offer.update({
+            status,
+            counterPrice: status === "countered" ? Number(counterPrice) : null,
+        });
+        const buyer = offer.buyer;
+        const notificationMessages = {
+            accepted: `Your offer on "${product.name}" has been accepted!`,
+            rejected: `Your offer on "${product.name}" has been declined.`,
+            countered: `The vendor has made a counter offer of ${counterPrice} on "${product.name}".`,
+        };
+        yield notification_1.default.create({
+            userId: buyer.id,
+            title: status === "accepted" ? "Offer Accepted" : status === "rejected" ? "Offer Declined" : "Counter Offer Received",
+            message: notificationMessages[status],
+            type: `OFFER_${status.toUpperCase()}`,
+            isRead: false,
+        });
+        if (buyer.fcmToken) {
+            try {
+                yield (0, pushNotification_1.sendPushNotificationSingle)({
+                    token: buyer.fcmToken,
+                    notification: {
+                        title: status === "accepted" ? "Offer Accepted" : status === "rejected" ? "Offer Declined" : "Counter Offer",
+                        body: notificationMessages[status],
+                    },
+                    data: {
+                        offerId: offer.id,
+                        type: index_1.PushNotificationTypes.ORDER_STATUS_UPDATE,
+                    },
+                });
+            }
+            catch (pushError) {
+                logger_1.default.error("Error sending push notification:", pushError);
+            }
+        }
+        res.status(200).json({ message: "Offer response sent successfully.", data: offer });
+    }
+    catch (error) {
+        logger_1.default.error(`Error responding to vendor offer: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while responding to the offer." });
+    }
+});
+exports.respondToVendorOffer = respondToVendorOffer;
 //# sourceMappingURL=vendorController.js.map

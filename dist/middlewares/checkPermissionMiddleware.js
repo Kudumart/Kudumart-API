@@ -19,6 +19,7 @@ const permission_1 = __importDefault(require("../models/permission"));
 // Middleware to check if admin has the required permission
 const checkPermission = (requiredPermission) => {
     return (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+        var _a;
         try {
             // Fetch the admin instance based on the adminId from the request
             const admin = yield admin_1.default.findByPk(req.adminId, {
@@ -29,9 +30,18 @@ const checkPermission = (requiredPermission) => {
                 res.status(404).json({ message: "Sub Admin not found" });
                 return;
             }
+            // Superadmin bypasses all permission checks
+            if (((_a = admin.role) === null || _a === void 0 ? void 0 : _a.name) === "superadmin") {
+                return next();
+            }
+            // Check if sub-admin is active
+            if (admin.status === "inactive") {
+                res.status(403).json({ message: "Your account has been deactivated." });
+                return;
+            }
             // Fetch the permissions associated with the admin's role from the role_permissions table
             const rolePermissions = yield rolepermission_1.default.findAll({
-                where: { roleId: admin.roleId },
+                where: { roleId: admin.roleId }, // Assuming roleId is stored in the admin model
                 include: [{ model: permission_1.default, as: "permission" }], // Include permission details
             });
             // Check if the admin has the required permission

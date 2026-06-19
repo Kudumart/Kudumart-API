@@ -23,9 +23,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.viewGeneralStore = exports.getGeneralStores = exports.viewUser = exports.toggleUserStatus = exports.getAllVendors = exports.getAllCustomers = exports.deleteCurrency = exports.getAllCurrencies = exports.updateCurrency = exports.addCurrency = exports.setPaymentGatewayActive = exports.paymentGateway = exports.getAllPaymentGateways = exports.deletePaymentGateway = exports.updatePaymentGateway = exports.createPaymentGateway = exports.approveOrRejectKYC = exports.getAllKYC = exports.getAllSubCategories = exports.deleteSubCategory = exports.updateSubCategory = exports.createSubCategory = exports.getCategoriesWithSubCategories = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getAllCategories = exports.deleteSubscriptionPlan = exports.updateSubscriptionPlan = exports.createSubscriptionPlan = exports.getAllSubscriptionPlans = exports.deletePermission = exports.updatePermission = exports.getPermissions = exports.createPermission = exports.deletePermissionFromRole = exports.assignPermissionToRole = exports.viewRolePermissions = exports.updateRole = exports.getRoles = exports.createRole = exports.resendLoginDetailsSubAdmin = exports.deleteSubAdmin = exports.deactivateOrActivateSubAdmin = exports.updateSubAdmin = exports.createSubAdmin = exports.subAdmins = exports.updatePassword = exports.updateProfile = exports.logout = void 0;
-exports.deleteTestimonial = exports.getTestimonial = exports.getAllTestimonials = exports.updateTestimonial = exports.createTestimonial = exports.updateOrderStatus = exports.getOrderItemsInfo = exports.viewOrderItem = exports.getOrderItems = exports.approveOrRejectAdvert = exports.viewGeneralAdvert = exports.getGeneralAdverts = exports.deleteAdvert = exports.viewAdvert = exports.getAdverts = exports.updateAdvert = exports.createAdvert = exports.activeProducts = exports.getTransactionsForAdmin = exports.getAllBidsByAuctionProductId = exports.viewAuctionProduct = exports.fetchAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.getStore = exports.getAllSubscribers = exports.getGeneralPaymentDetails = exports.getAllGeneralOrderItems = exports.getAllGeneralOrders = exports.getAllBiddersByAuctionProductId = exports.deleteGeneralAuctionProduct = exports.viewGeneralAuctionProduct = exports.getGeneralAuctionProducts = exports.publishProduct = exports.unpublishProduct = exports.deleteGeneralProduct = exports.viewGeneralProduct = exports.getGeneralProducts = void 0;
-exports.markAdminNotificationAsRead = exports.getAdminNotifications = exports.deleteBanner = exports.getBanner = exports.getAllBanners = exports.updateBanner = exports.createBanner = exports.getWithdrawalById = exports.getWithdrawals = exports.updateWithdrawalStatus = exports.downloadApplicantResume = exports.repostJob = exports.viewApplicant = exports.getJobApplicants = exports.deleteJob = exports.closeJob = exports.getJobById = exports.updateJob = exports.getJobs = exports.postJob = exports.deleteContactById = exports.getContactById = exports.getAllContacts = exports.deleteFaq = exports.updateFaq = exports.getFaq = exports.getAllFaqs = exports.createFaq = exports.deleteFaqCategory = exports.updateFaqCategory = exports.getFaqCategory = exports.getAllFaqCategories = exports.createFaqCategory = void 0;
+exports.getGeneralStores = exports.viewUser = exports.toggleUserStatus = exports.getAllVendors = exports.getAllCustomers = exports.deleteCurrency = exports.getAllCurrencies = exports.updateCurrency = exports.addCurrency = exports.setPaymentGatewayActive = exports.paymentGateway = exports.getAllPaymentGateways = exports.deletePaymentGateway = exports.updatePaymentGateway = exports.createPaymentGateway = exports.approveOrRejectKYC = exports.getAllKYC = exports.getAllSubCategories = exports.deleteSubCategory = exports.updateSubCategory = exports.createSubCategory = exports.getCategoriesWithSubCategories = exports.deleteCategory = exports.updateCategory = exports.createCategory = exports.getAllCategories = exports.deleteSubscriptionPlan = exports.updateSubscriptionPlan = exports.createSubscriptionPlan = exports.getAllSubscriptionPlans = exports.deletePermission = exports.updatePermission = exports.getMyPermissions = exports.getPermissions = exports.createPermission = exports.deletePermissionFromRole = exports.assignPermissionToRole = exports.viewRolePermissions = exports.updateRole = exports.getRoles = exports.createRole = exports.resendLoginDetailsSubAdmin = exports.deleteSubAdmin = exports.deactivateOrActivateSubAdmin = exports.updateSubAdmin = exports.createSubAdmin = exports.subAdmins = exports.updatePassword = exports.updateProfile = exports.logout = void 0;
+exports.updateTestimonial = exports.createTestimonial = exports.updateOrderStatus = exports.getOrderItemsInfo = exports.getDropshipOrderTrackingInfo = exports.getDropshipedOrderItemDetails = exports.viewOrderItem = exports.getOrderItems = exports.approveOrRejectAdvert = exports.viewGeneralAdvert = exports.getGeneralAdverts = exports.deleteAdvert = exports.viewAdvert = exports.getAdverts = exports.updateAdvert = exports.createAdvert = exports.activeProducts = exports.getTransactionsForAdmin = exports.getAllBidsByAuctionProductId = exports.viewAuctionProduct = exports.fetchAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.getStore = exports.getAllSubscribers = exports.getGeneralPaymentDetails = exports.getAllGeneralOrderItems = exports.getAllGeneralOrders = exports.getAllBiddersByAuctionProductId = exports.deleteGeneralAuctionProduct = exports.viewGeneralAuctionProduct = exports.getGeneralAuctionProducts = exports.publishProduct = exports.unpublishProduct = exports.deleteGeneralProduct = exports.viewGeneralProduct = exports.getGeneralProducts = exports.viewGeneralStore = void 0;
+exports.deleteServiceSubCategory = exports.getAllServiceSubCategories = exports.updateServiceSubCategory = exports.createServiceSubCategory = exports.deleteServiceCategory = exports.getAllServiceCategories = exports.updateServiceCategory = exports.createServiceCategory = exports.markProductChargeAsActive = exports.markProductChargeAsInactive = exports.deleteProductCharge = exports.getAllProductCharges = exports.updateProductCharge = exports.createProductCharge = exports.markAdminNotificationAsRead = exports.getAdminNotifications = exports.deleteBanner = exports.getBanner = exports.getAllBanners = exports.updateBanner = exports.createBanner = exports.getWithdrawalById = exports.getWithdrawals = exports.updateWithdrawalStatus = exports.downloadApplicantResume = exports.repostJob = exports.viewApplicant = exports.getJobApplicants = exports.deleteJob = exports.closeJob = exports.getJobById = exports.updateJob = exports.getJobs = exports.postJob = exports.deleteContactById = exports.getContactById = exports.getAllContacts = exports.deleteFaq = exports.updateFaq = exports.getFaq = exports.getAllFaqs = exports.createFaq = exports.deleteFaqCategory = exports.updateFaqCategory = exports.getFaqCategory = exports.getAllFaqCategories = exports.createFaqCategory = exports.deleteTestimonial = exports.getTestimonial = exports.getAllTestimonials = void 0;
+exports.respondToOffer = exports.getAllOffers = exports.getOverallPayoutStats = exports.getVendorEarningsReport = exports.getVendorPayoutReports = exports.getAliExpressProducts = exports.getAliExpressCategories = exports.getServiceById = exports.getAllServices = exports.activateService = exports.suspendService = exports.removeAttributeFromServiceCategory = exports.addAttributeToServiceCategory = exports.deleteAttributeOption = exports.getAllServiceAttributes = exports.addAttributeOptions = exports.deleteServiceAttribute = exports.createServiceAttribute = void 0;
+exports.getAliExpressProductDetails = getAliExpressProductDetails;
+exports.addAliexpressProductToInventory = addAliexpressProductToInventory;
+exports.getAliExpressDropshipCredsStatus = getAliExpressDropshipCredsStatus;
 const sequelize_1 = require("sequelize");
 const uuid_1 = require("uuid");
 const mail_service_1 = require("../services/mail.service");
@@ -71,8 +75,24 @@ const withdrawal_1 = __importDefault(require("../models/withdrawal"));
 const banner_1 = __importDefault(require("../models/banner"));
 const crypto_1 = __importDefault(require("crypto"));
 const adminnotification_1 = __importDefault(require("../models/adminnotification"));
+const productcharge_1 = __importDefault(require("../models/productcharge"));
+const dropShipping_service_1 = require("../services/dropShipping.service");
+const serviceCategories_1 = __importDefault(require("../models/serviceCategories"));
+const serviceSubCategories_1 = __importDefault(require("../models/serviceSubCategories"));
+const attributeDefinitions_1 = __importDefault(require("../models/attributeDefinitions"));
+const sequelize_2 = __importDefault(require("../config/sequelize"));
+const attributeOptions_1 = __importDefault(require("../models/attributeOptions"));
+const serviceCategoryToAttributeMap_1 = __importDefault(require("../models/serviceCategoryToAttributeMap"));
+const services_1 = __importDefault(require("../models/services"));
+const dropshipProducts_1 = __importDefault(require("../models/dropshipProducts"));
+const decimal_js_1 = __importDefault(require("decimal.js"));
+const dropshippngCreds_1 = __importDefault(require("../models/dropshippngCreds"));
+const productoffer_1 = __importDefault(require("../models/productoffer"));
+const pushNotification_1 = require("../firebase/pushNotification");
+const index_1 = require("../types/index");
 // Define the upload directory
 const uploadDir = path_1.default.join(__dirname, "../../uploads");
+const dropShippingService = new dropShipping_service_1.DropShippingService();
 const logout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Get the token from the request
@@ -138,9 +158,9 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.updateProfile = updateProfile;
 const updatePassword = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _b;
+    var _a;
     const { oldPassword, newPassword, confirmNewPassword } = req.body;
-    const adminId = (_b = req.admin) === null || _b === void 0 ? void 0 : _b.id;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     // Validate that new passwords match
     if (newPassword !== confirmNewPassword) {
         res.status(400).json({ message: "New passwords do not match." });
@@ -148,7 +168,9 @@ const updatePassword = (req, res) => __awaiter(void 0, void 0, void 0, function*
     }
     // Validate new password strength (example: length and complexity)
     if (newPassword.length < 8) {
-        res.status(400).json({ message: "New password must be at least 8 characters long." });
+        res
+            .status(400)
+            .json({ message: "New password must be at least 8 characters long." });
         return;
     }
     try {
@@ -208,7 +230,7 @@ const subAdmins = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             where: whereCondition,
             include: [
                 {
-                    model: role_1.default,
+                    model: role_1.default, // Include the Role model in the query
                     as: "role", // Use the alias defined in the association (if any)
                 },
             ],
@@ -342,14 +364,16 @@ const deleteSubAdmin = (req, res) => __awaiter(void 0, void 0, void 0, function*
             res.status(404).json({ message: "Sub-admin not found" });
             return;
         }
-        const relatedTables = [
-            { name: "stores", model: store_1.default, field: "vendorId" },
-        ];
+        const relatedTables = [{ name: "stores", model: store_1.default, field: "vendorId" }];
         // Check each related table
         for (const table of relatedTables) {
-            const count = yield table.model.count({ where: { [table.field]: subAdmin.id } });
+            const count = yield table.model.count({
+                where: { [table.field]: subAdmin.id },
+            });
             if (count > 0) {
-                res.status(400).json({ message: `Cannot delete sub-admin because related records exist in ${table.name}` });
+                res.status(400).json({
+                    message: `Cannot delete sub-admin because related records exist in ${table.name}`,
+                });
                 return;
             }
         }
@@ -586,6 +610,27 @@ const getPermissions = (req, res) => __awaiter(void 0, void 0, void 0, function*
     }
 });
 exports.getPermissions = getPermissions;
+const getMyPermissions = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const roleId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.roleId;
+    if (!roleId) {
+        res.status(404).json({ message: "No role assigned to this account." });
+        return;
+    }
+    try {
+        const rolePermissions = yield rolepermission_1.default.findAll({
+            where: { roleId },
+            include: [{ model: permission_1.default, as: "permission" }],
+        });
+        const permissions = rolePermissions.map((rp) => rp.permission).filter(Boolean);
+        res.status(200).json({ data: permissions });
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching admin permissions:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+exports.getMyPermissions = getMyPermissions;
 // Update an existing Permission
 const updatePermission = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { permissionId, name } = req.body;
@@ -650,7 +695,7 @@ const getAllSubscriptionPlans = (req, res) => __awaiter(void 0, void 0, void 0, 
         const queryOptions = {
             include: [
                 {
-                    model: currency_1.default,
+                    model: currency_1.default, // Include the Currency model
                     as: "currency", // Ensure this matches the alias in the association
                 },
             ],
@@ -673,7 +718,7 @@ const getAllSubscriptionPlans = (req, res) => __awaiter(void 0, void 0, void 0, 
 });
 exports.getAllSubscriptionPlans = getAllSubscriptionPlans;
 const createSubscriptionPlan = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { currencyId, name, duration, price, productLimit, allowsAuction, auctionProductLimit, maxAds, adsDurationDays, } = req.body;
+    const { currencyId, name, duration, price, productLimit, allowsAuction, auctionProductLimit, allowsServiceAds, serviceAdsLimit, maxAds, adsDurationDays, } = req.body;
     try {
         // Check if the subscription plan name already exists
         const existingPlan = yield subscriptionplan_1.default.findOne({ where: { name } });
@@ -686,7 +731,7 @@ const createSubscriptionPlan = (req, res) => __awaiter(void 0, void 0, void 0, f
         // Find the currency by ID
         const currency = yield currency_1.default.findByPk(currencyId);
         if (!currency) {
-            res.status(404).json({ message: 'Currency not found' });
+            res.status(404).json({ message: "Currency not found" });
             return;
         }
         // Create the subscription plan
@@ -697,6 +742,8 @@ const createSubscriptionPlan = (req, res) => __awaiter(void 0, void 0, void 0, f
             productLimit,
             allowsAuction,
             auctionProductLimit,
+            allowsServiceAds,
+            serviceAdsLimit,
             maxAds,
             adsDurationDays,
             currencyId: currency.id,
@@ -740,7 +787,7 @@ const updateSubscriptionPlan = (req, res) => __awaiter(void 0, void 0, void 0, f
         // Find the currency by ID
         const currency = yield currency_1.default.findByPk(currencyId);
         if (!currency) {
-            res.status(404).json({ message: 'Currency not found' });
+            res.status(404).json({ message: "Currency not found" });
             return;
         }
         // Update fields
@@ -777,13 +824,21 @@ const deleteSubscriptionPlan = (req, res) => __awaiter(void 0, void 0, void 0, f
             return;
         }
         const relatedTables = [
-            { name: "vendor_subscriptions", model: vendorsubscription_1.default, field: "subscriptionPlanId" },
+            {
+                name: "vendor_subscriptions",
+                model: vendorsubscription_1.default,
+                field: "subscriptionPlanId",
+            },
         ];
         // Check each related table
         for (const table of relatedTables) {
-            const count = yield table.model.count({ where: { [table.field]: plan.id } });
+            const count = yield table.model.count({
+                where: { [table.field]: plan.id },
+            });
             if (count > 0) {
-                res.status(400).json({ message: `Cannot delete subscription plan because related records exist in ${table.name}` });
+                res.status(400).json({
+                    message: `Cannot delete subscription plan because related records exist in ${table.name}`,
+                });
                 return;
             }
         }
@@ -810,7 +865,7 @@ const getAllCategories = (req, res) => __awaiter(void 0, void 0, void 0, functio
     const { name } = req.query;
     try {
         const categories = yield category_1.default.findAll({
-            where: name ? { name: { [sequelize_1.Op.like]: `%${name}%` } } : {},
+            where: name ? { name: { [sequelize_1.Op.like]: `%${name}%` } } : {}, // Search by name if provided
             attributes: {
                 include: [
                     [
@@ -925,9 +980,13 @@ const deleteCategory = (req, res) => __awaiter(void 0, void 0, void 0, function*
         ];
         // Check each related table
         for (const table of relatedTables) {
-            const count = yield table.model.count({ where: { [table.field]: category.id } });
+            const count = yield table.model.count({
+                where: { [table.field]: category.id },
+            });
             if (count > 0) {
-                res.status(400).json({ message: `Cannot delete category because related records exist in ${table.name}` });
+                res.status(400).json({
+                    message: `Cannot delete category because related records exist in ${table.name}`,
+                });
                 return;
             }
         }
@@ -956,7 +1015,7 @@ const getCategoriesWithSubCategories = (req, res) => __awaiter(void 0, void 0, v
                     as: "subCategories", // alias used in the association
                 },
             ],
-            attributes: ["id", "name", "image"],
+            attributes: ["id", "name", "image"], // select specific fields in Category
             order: [["name", "ASC"]], // sort categories alphabetically, for example
         });
         res.status(200).json({ data: categories });
@@ -1083,10 +1142,12 @@ const deleteSubCategory = (req, res) => __awaiter(void 0, void 0, void 0, functi
         // Check each related table
         for (const table of relatedTables) {
             const count = yield table.model.count({
-                where: { [table.field]: subCategory.id }
+                where: { [table.field]: subCategory.id },
             });
             if (count > 0) {
-                res.status(400).json({ message: `Cannot delete product because related records exist in ${table.name}` });
+                res.status(400).json({
+                    message: `Cannot delete product because related records exist in ${table.name}`,
+                });
                 return;
             }
         }
@@ -1393,12 +1454,16 @@ const addCurrency = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         return;
     }
     if (!symbol || typeof symbol !== "string") {
-        res.status(400).json({ message: "Symbol is required and must be a string." });
+        res
+            .status(400)
+            .json({ message: "Symbol is required and must be a string." });
         return;
     }
     // Validate if symbol is in allowed list
     if (!allowedSymbols.includes(symbol)) {
-        res.status(400).json({ message: `Currency symbol must be one of: ${allowedSymbols.join(", ")}` });
+        res.status(400).json({
+            message: `Currency symbol must be one of: ${allowedSymbols.join(", ")}`,
+        });
         return;
     }
     try {
@@ -1411,7 +1476,9 @@ const addCurrency = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             },
         });
         if (existingCurrency) {
-            res.status(400).json({ message: "Currency with the same name or symbol already exists." });
+            res.status(400).json({
+                message: "Currency with the same name or symbol already exists.",
+            });
             return;
         }
         const currency = yield currency_1.default.create({ name, symbol });
@@ -1464,9 +1531,7 @@ const updateCurrency = (req, res) => __awaiter(void 0, void 0, void 0, function*
             },
         });
         if (existingCurrency) {
-            res
-                .status(400)
-                .json({
+            res.status(400).json({
                 message: "Currency with the same name or symbol already exists.",
             });
             return;
@@ -1507,9 +1572,13 @@ const deleteCurrency = (req, res) => __awaiter(void 0, void 0, void 0, function*
         ];
         // Check each related table
         for (const table of relatedTables) {
-            const count = yield table.model.count({ where: { [table.field]: currency.id } });
+            const count = yield table.model.count({
+                where: { [table.field]: currency.id },
+            });
             if (count > 0) {
-                res.status(400).json({ message: `Cannot delete currency because related records exist in ${table.name}` });
+                res.status(400).json({
+                    message: `Cannot delete currency because related records exist in ${table.name}`,
+                });
                 return;
             }
         }
@@ -1574,6 +1643,7 @@ const getAllVendors = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 { lastName: { [sequelize_1.Op.like]: `%${search}%` } },
                 { email: { [sequelize_1.Op.like]: `%${search}%` } },
                 { phoneNumber: { [sequelize_1.Op.like]: `%${search}%` } },
+                { trackingId: { [sequelize_1.Op.like]: `%${search}%` } },
             ],
         };
         const { rows: vendors, count: totalVendors } = yield user_1.default.findAndCountAll({
@@ -1612,9 +1682,7 @@ const toggleUserStatus = (req, res) => __awaiter(void 0, void 0, void 0, functio
         user.status = user.status === "active" ? "inactive" : "active";
         yield user.save();
         const statusMessage = user.status === "active" ? "activated" : "deactivated";
-        res
-            .status(200)
-            .json({
+        res.status(200).json({
             message: `User successfully ${statusMessage}.`,
         });
     }
@@ -1641,7 +1709,9 @@ const viewUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             res.status(404).json({ message: "User not found." });
             return;
         }
-        res.status(200).json({ message: "User retrieved successfully.", data: user });
+        res
+            .status(200)
+            .json({ message: "User retrieved successfully.", data: user });
     }
     catch (error) {
         logger_1.default.error("Error retrieving user:", error);
@@ -1705,8 +1775,8 @@ const getGeneralStores = (req, res) => __awaiter(void 0, void 0, void 0, functio
                     ],
                 ],
             },
-            offset,
-            limit,
+            offset, // Apply offset for pagination
+            limit, // Apply limit for pagination
             order: [["createdAt", "DESC"]], // Order stores by creation date, newest first
         });
         // Check if any stores were found
@@ -1735,7 +1805,9 @@ const getGeneralStores = (req, res) => __awaiter(void 0, void 0, void 0, functio
     }
     catch (error) {
         logger_1.default.error("Error retrieving stores:", error);
-        res.status(500).json({ message: "Failed to retrieve stores", error: error.message });
+        res
+            .status(500)
+            .json({ message: "Failed to retrieve stores", error: error.message });
     }
 });
 exports.getGeneralStores = getGeneralStores;
@@ -1761,7 +1833,7 @@ const viewGeneralStore = (req, res) => __awaiter(void 0, void 0, void 0, functio
                 {
                     model: currency_1.default,
                     as: "currency",
-                    attributes: ['symbol']
+                    attributes: ["symbol"],
                 },
                 {
                     model: product_1.default,
@@ -1877,7 +1949,9 @@ const getGeneralProducts = (req, res) => __awaiter(void 0, void 0, void 0, funct
     }
     catch (error) {
         logger_1.default.error(error);
-        res.status(500).json({ message: "Failed to fetch products", error: error.message });
+        res
+            .status(500)
+            .json({ message: "Failed to fetch products", error: error.message });
     }
 });
 exports.getGeneralProducts = getGeneralProducts;
@@ -1907,9 +1981,9 @@ const viewGeneralProduct = (req, res) => __awaiter(void 0, void 0, void 0, funct
                         {
                             model: currency_1.default,
                             as: "currency",
-                            attributes: ['symbol']
+                            attributes: ["symbol"],
                         },
-                    ]
+                    ],
                 },
                 { model: subcategory_1.default, as: "sub_category" },
             ],
@@ -1944,15 +2018,20 @@ const deleteGeneralProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
         const relatedTables = [
             { name: "save_products", model: saveproduct_1.default, field: "productId" },
             { name: "review_products", model: reviewproduct_1.default, field: "productId" },
-            { name: "carts", model: cart_1.default, field: "productId" }
+            { name: "carts", model: cart_1.default, field: "productId" },
         ];
+        if (product.type === "dropship") {
+            yield dropshipProducts_1.default.destroy({ where: { productId: product.id } });
+        }
         // Check each related table
         for (const table of relatedTables) {
             const count = yield table.model.count({
-                where: { [table.field]: product.id }
+                where: { [table.field]: product.id },
             });
             if (count > 0) {
-                res.status(400).json({ message: `Cannot delete product because related records exist in ${table.name}` });
+                res.status(400).json({
+                    message: `Cannot delete product because related records exist in ${table.name}`,
+                });
                 return;
             }
         }
@@ -1971,18 +2050,20 @@ const unpublishProduct = (req, res) => __awaiter(void 0, void 0, void 0, functio
     const productId = req.query.productId;
     try {
         // Find the product by ID
-        const product = yield product_1.default.findByPk(productId, { include: [{ model: user_1.default, as: "vendor" }] });
+        const product = yield product_1.default.findByPk(productId, {
+            include: [{ model: user_1.default, as: "vendor" }],
+        });
         if (!product) {
             res.status(404).json({ message: "Product not found" });
             return;
         }
         // Check if the product is already unpublished
-        if (product.status === 'inactive') {
+        if (product.status === "inactive") {
             res.status(400).json({ message: "Product is already unpublished" });
             return;
         }
         // Update product status to inactive
-        product.status = 'inactive';
+        product.status = "inactive";
         yield product.save();
         // Remove the product from all carts
         yield cart_1.default.destroy({ where: { productId } });
@@ -2008,18 +2089,20 @@ const publishProduct = (req, res) => __awaiter(void 0, void 0, void 0, function*
     const productId = req.query.productId;
     try {
         // Find the product by ID
-        const product = yield product_1.default.findByPk(productId, { include: [{ model: user_1.default, as: "vendor" }] });
+        const product = yield product_1.default.findByPk(productId, {
+            include: [{ model: user_1.default, as: "vendor" }],
+        });
         if (!product) {
             res.status(404).json({ message: "Product not found" });
             return;
         }
         // Check if the product is already active
-        if (product.status === 'active') {
+        if (product.status === "active") {
             res.status(400).json({ message: "Product is already published" });
             return;
         }
         // Update product status to active
-        product.status = 'active';
+        product.status = "active";
         yield product.save();
         // Notify the vendor
         const notificationTitle = "Product Published";
@@ -2141,9 +2224,9 @@ const viewGeneralAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0
                         {
                             model: currency_1.default,
                             as: "currency",
-                            attributes: ['symbol']
+                            attributes: ["symbol"],
                         },
-                    ]
+                    ],
                 },
                 { model: subcategory_1.default, as: "sub_category" },
             ],
@@ -2192,16 +2275,16 @@ const deleteGeneralAuctionProduct = (req, res) => __awaiter(void 0, void 0, void
             });
             return;
         }
-        const relatedTables = [
-            { name: "bids", model: bid_1.default, field: "auctionProductId" },
-        ];
+        const relatedTables = [{ name: "bids", model: bid_1.default, field: "auctionProductId" }];
         // Check each related table
         for (const table of relatedTables) {
             const count = yield table.model.count({
-                where: { [table.field]: auctionProduct.id }
+                where: { [table.field]: auctionProduct.id },
             });
             if (count > 0) {
-                res.status(400).json({ message: `Cannot delete auction product because related records exist in ${table.name}` });
+                res.status(400).json({
+                    message: `Cannot delete auction product because related records exist in ${table.name}`,
+                });
                 return;
             }
         }
@@ -2242,8 +2325,8 @@ const getAllBiddersByAuctionProductId = (req, res) => __awaiter(void 0, void 0, 
                 },
                 {
                     model: auctionproduct_1.default,
-                    as: 'auctionProduct'
-                }
+                    as: "auctionProduct",
+                },
             ],
             order: [["createdAt", "DESC"]], // Order bids from newest to oldest
         });
@@ -2283,7 +2366,7 @@ const getAllGeneralOrders = (req, res) => __awaiter(void 0, void 0, void 0, func
                     attributes: [], // Do not include actual order items
                 },
             ],
-            group: ["Order.id"],
+            group: ["Order.id"], // Group by order to ensure correct counting
             order: [["createdAt", "DESC"]], // Order by createdAt
         });
         if (!orders || orders.length === 0) {
@@ -2353,7 +2436,7 @@ const getAllGeneralOrderItems = (req, res) => __awaiter(void 0, void 0, void 0, 
             message: "Order items retrieved successfully",
             data: orderItems,
             pagination: {
-                total: count,
+                total: count, // Total number of order items
                 page: pageNumber,
                 pages: totalPages,
                 limit: limitNumber,
@@ -2405,7 +2488,7 @@ const getGeneralPaymentDetails = (req, res) => __awaiter(void 0, void 0, void 0,
             message: "Payments retrieved successfully",
             data: payments,
             pagination: {
-                total: count,
+                total: count, // Total number of payments
                 page: pageNumber,
                 pages: totalPages,
                 limit: limitNumber,
@@ -2429,13 +2512,13 @@ const getAllSubscribers = (req, res) => __awaiter(void 0, void 0, void 0, functi
             filters.subscriptionPlanId = subscriptionPlanId;
         }
         if (isActive !== undefined) {
-            filters.isActive = isActive === 'true';
+            filters.isActive = isActive === "true";
         }
         // Fetch vendor subscriptions with pagination and filters
         const subscribers = yield vendorsubscription_1.default.findAndCountAll({
-            where: filters,
-            limit: Number(limit),
-            offset,
+            where: filters, // Apply filters (if any)
+            limit: Number(limit), // Limit results per page
+            offset, // Offset for pagination
             include: [
                 {
                     model: user_1.default,
@@ -2446,7 +2529,7 @@ const getAllSubscribers = (req, res) => __awaiter(void 0, void 0, void 0, functi
                     model: subscriptionplan_1.default,
                     as: "subscriptionPlans",
                     attributes: ["id", "name", "price", "duration"], // Specify which subscription plan fields to include
-                }
+                },
             ],
             order: [["createdAt", "DESC"]], // Optional: Order by creation date
         });
@@ -2460,7 +2543,7 @@ const getAllSubscribers = (req, res) => __awaiter(void 0, void 0, void 0, functi
             message: "Subscribers retrieved successfully",
             data: subscribers.rows,
             pagination: {
-                total: subscribers.count,
+                total: subscribers.count, // Total number of order items
                 page: Number(page),
                 pages: Math.ceil(subscribers.count / Number(limit)),
                 limit: Number(limit),
@@ -2475,8 +2558,8 @@ const getAllSubscribers = (req, res) => __awaiter(void 0, void 0, void 0, functi
 });
 exports.getAllSubscribers = getAllSubscribers;
 const getStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _c;
-    const adminId = (_c = req.admin) === null || _c === void 0 ? void 0 : _c.id;
+    var _a;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     try {
         const stores = yield store_1.default.findAll({
             where: { vendorId: adminId },
@@ -2521,7 +2604,9 @@ const getStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         });
         // Check if any stores were found
         if (stores.length === 0) {
-            res.status(404).json({ message: "No stores found for this admin.", data: [] });
+            res
+                .status(404)
+                .json({ message: "No stores found for this admin.", data: [] });
             return;
         }
         res.status(200).json({ data: stores });
@@ -2533,11 +2618,11 @@ const getStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.getStore = getStore;
 const createStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _d;
-    const adminId = (_d = req.admin) === null || _d === void 0 ? void 0 : _d.id;
-    const { currencyId, name, location, logo, businessHours, deliveryOptions, tipsOnFinding } = req.body;
+    var _a;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    const { currencyId, name, location, logo, businessHours, deliveryOptions, tipsOnFinding, } = req.body;
     if (!currencyId) {
-        res.status(400).json({ message: 'Currency ID is required.' });
+        res.status(400).json({ message: "Currency ID is required." });
         return;
     }
     try {
@@ -2554,7 +2639,7 @@ const createStore = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         // Find the currency by ID
         const currency = yield currency_1.default.findByPk(currencyId);
         if (!currency) {
-            res.status(404).json({ message: 'Currency not found' });
+            res.status(404).json({ message: "Currency not found" });
             return;
         }
         // Create the store
@@ -2579,9 +2664,9 @@ const createStore = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 });
 exports.createStore = createStore;
 const updateStore = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _e;
-    const adminId = (_e = req.admin) === null || _e === void 0 ? void 0 : _e.id;
-    const { storeId, currencyId, name, location, businessHours, deliveryOptions, tipsOnFinding, logo } = req.body;
+    var _a;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    const { storeId, currencyId, name, location, businessHours, deliveryOptions, tipsOnFinding, logo, } = req.body;
     try {
         const store = yield store_1.default.findOne({ where: { id: storeId } });
         if (!store) {
@@ -2591,7 +2676,7 @@ const updateStore = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         // Find the currency by ID
         const currency = yield currency_1.default.findByPk(currencyId);
         if (!currency) {
-            res.status(404).json({ message: 'Currency not found' });
+            res.status(404).json({ message: "Currency not found" });
             return;
         }
         // Check for unique name for this vendorId if name is being updated
@@ -2614,7 +2699,7 @@ const updateStore = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             businessHours,
             deliveryOptions,
             tipsOnFinding,
-            logo
+            logo,
         });
         res
             .status(200)
@@ -2637,21 +2722,25 @@ const deleteStore = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         }
         const relatedTables = [
             { name: "auction_products", model: auctionproduct_1.default, field: "storeId" },
-            { name: "products", model: product_1.default, field: "storeId" }
+            { name: "products", model: product_1.default, field: "storeId" },
         ];
         // Check each related table
         for (const table of relatedTables) {
             const count = yield table.model.count({
-                where: { [table.field]: store.id }
+                where: { [table.field]: store.id },
             });
             if (count > 0) {
-                res.status(400).json({ message: `Cannot delete store because related records exist in ${table.name}` });
+                res.status(400).json({
+                    message: `Cannot delete store because related records exist in ${table.name}`,
+                });
                 return;
             }
         }
         yield store.destroy({ transaction });
         yield transaction.commit();
-        res.status(200).json({ message: "Store and all associations deleted successfully" });
+        res
+            .status(200)
+            .json({ message: "Store and all associations deleted successfully" });
     }
     catch (error) {
         yield transaction.rollback();
@@ -2669,9 +2758,9 @@ const deleteStore = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 exports.deleteStore = deleteStore;
 // Product
 const createProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _f;
-    const adminId = (_f = req.admin) === null || _f === void 0 ? void 0 : _f.id;
-    const _g = req.body, { storeId, categoryId, name } = _g, otherData = __rest(_g, ["storeId", "categoryId", "name"]);
+    var _a;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    const _b = req.body, { storeId, categoryId, name } = _b, otherData = __rest(_b, ["storeId", "categoryId", "name"]);
     try {
         // Check for duplicates
         const existingProduct = yield product_1.default.findOne({
@@ -2688,21 +2777,15 @@ const createProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         const storeExists = yield store_1.default.findByPk(storeId);
         const categoryExists = yield subcategory_1.default.findByPk(categoryId);
         if (!vendorExists) {
-            res
-                .status(404)
-                .json({ message: "Admin not found." });
+            res.status(404).json({ message: "Admin not found." });
             return;
         }
         if (!storeExists) {
-            res
-                .status(404)
-                .json({ message: "Store not found." });
+            res.status(404).json({ message: "Store not found." });
             return;
         }
         if (!categoryExists) {
-            res
-                .status(404)
-                .json({ message: "Category not found." });
+            res.status(404).json({ message: "Category not found." });
             return;
         }
         // Generate a unique SKU (could also implement a more complex logic if needed)
@@ -2729,9 +2812,9 @@ const createProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.createProduct = createProduct;
 const updateProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _h;
-    const _j = req.body, { productId } = _j, updateData = __rest(_j, ["productId"]);
-    const adminId = (_h = req.admin) === null || _h === void 0 ? void 0 : _h.id;
+    var _a;
+    const _b = req.body, { productId } = _b, updateData = __rest(_b, ["productId"]);
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     try {
         const product = yield product_1.default.findOne({
             where: {
@@ -2756,9 +2839,9 @@ const updateProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.updateProduct = updateProduct;
 const deleteProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _k;
+    var _a;
     const { productId } = req.query;
-    const adminId = (_k = req.admin) === null || _k === void 0 ? void 0 : _k.id;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     try {
         const product = yield product_1.default.findOne({
             where: {
@@ -2773,15 +2856,17 @@ const deleteProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         const relatedTables = [
             { name: "save_products", model: saveproduct_1.default, field: "productId" },
             { name: "review_products", model: reviewproduct_1.default, field: "productId" },
-            { name: "carts", model: cart_1.default, field: "productId" }
+            { name: "carts", model: cart_1.default, field: "productId" },
         ];
         // Check each related table
         for (const table of relatedTables) {
             const count = yield table.model.count({
-                where: { [table.field]: product.id }
+                where: { [table.field]: product.id },
             });
             if (count > 0) {
-                res.status(400).json({ message: `Cannot delete product because related records exist in ${table.name}` });
+                res.status(400).json({
+                    message: `Cannot delete product because related records exist in ${table.name}`,
+                });
                 return;
             }
         }
@@ -2797,8 +2882,8 @@ const deleteProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.deleteProduct = deleteProduct;
 const fetchProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _l;
-    const adminId = (_l = req.admin) === null || _l === void 0 ? void 0 : _l.id;
+    var _a;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     const { name, sku, status, condition, categoryName } = req.query;
     try {
         const products = yield product_1.default.findAll(Object.assign({ where: { vendorId: adminId }, include: [
@@ -2810,14 +2895,14 @@ const fetchProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 {
                     model: store_1.default,
                     as: "store",
-                    attributes: ['name'],
+                    attributes: ["name"],
                     include: [
                         {
                             model: currency_1.default,
                             as: "currency",
-                            attributes: ['symbol']
+                            attributes: ["symbol"],
                         },
-                    ]
+                    ],
                 },
             ] }, ((name || sku || status || condition) && {
             where: Object.assign(Object.assign(Object.assign(Object.assign({}, (name && { name: { [sequelize_1.Op.like]: `%${name}%` } })), (sku && { sku })), (status && { status })), (condition && { condition })),
@@ -2833,10 +2918,10 @@ const fetchProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.fetchProducts = fetchProducts;
 const viewProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _m;
+    var _a;
     // Get productId from route params instead of query
     const { productId } = req.query;
-    const adminId = (_m = req.admin) === null || _m === void 0 ? void 0 : _m.id;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     try {
         const product = yield product_1.default.findOne({
             where: {
@@ -2851,9 +2936,9 @@ const viewProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                         {
                             model: currency_1.default,
                             as: "currency",
-                            attributes: ['symbol']
+                            attributes: ["symbol"],
                         },
-                    ]
+                    ],
                 },
                 { model: subcategory_1.default, as: "sub_category" },
             ],
@@ -2874,9 +2959,9 @@ const viewProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 });
 exports.viewProduct = viewProduct;
 const moveToDraft = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _o;
+    var _a;
     const { productId } = req.query; // Get productId from request query
-    const adminId = (_o = req.admin) === null || _o === void 0 ? void 0 : _o.id;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     try {
         // Validate productId type
         if (typeof productId !== "string") {
@@ -2913,9 +2998,9 @@ const moveToDraft = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 });
 exports.moveToDraft = moveToDraft;
 const changeProductStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _p;
+    var _a;
     const { productId, status } = req.body; // Get productId and status from request body
-    const adminId = (_p = req.admin) === null || _p === void 0 ? void 0 : _p.id;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     // Validate status
     if (!["active", "inactive", "draft"].includes(status)) {
         res.status(400).json({ message: "Invalid status." });
@@ -2950,8 +3035,8 @@ const changeProductStatus = (req, res) => __awaiter(void 0, void 0, void 0, func
 exports.changeProductStatus = changeProductStatus;
 // Auction Product
 const createAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _q;
-    const adminId = (_q = req.admin) === null || _q === void 0 ? void 0 : _q.id;
+    var _a;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     const { storeId, categoryId, name, condition, description, specification, price, bidIncrement, maxBidsPerUser, participantsInterestFee, startDate, endDate, image, additionalImages, } = req.body;
     try {
         // Check if adminId, storeId, and categoryId exist
@@ -2959,21 +3044,15 @@ const createAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
         const storeExists = yield store_1.default.findByPk(storeId);
         const categoryExists = yield subcategory_1.default.findByPk(categoryId);
         if (!vendorExists) {
-            res
-                .status(404)
-                .json({ message: "Admin not found." });
+            res.status(404).json({ message: "Admin not found." });
             return;
         }
         if (!storeExists) {
-            res
-                .status(404)
-                .json({ message: "Store not found." });
+            res.status(404).json({ message: "Store not found." });
             return;
         }
         if (!categoryExists) {
-            res
-                .status(404)
-                .json({ message: "Category not found." });
+            res.status(404).json({ message: "Category not found." });
             return;
         }
         // Generate a unique SKU
@@ -3018,8 +3097,8 @@ const createAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.createAuctionProduct = createAuctionProduct;
 const updateAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _r;
-    const adminId = (_r = req.admin) === null || _r === void 0 ? void 0 : _r.id;
+    var _a;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     const { auctionProductId, storeId, categoryId, name, condition, description, specification, price, bidIncrement, maxBidsPerUser, participantsInterestFee, startDate, endDate, image, additionalImages, } = req.body;
     try {
         // Find the auction product by ID
@@ -3060,21 +3139,15 @@ const updateAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
         const storeExists = yield store_1.default.findByPk(storeId);
         const categoryExists = yield subcategory_1.default.findByPk(categoryId);
         if (!vendorExists) {
-            res
-                .status(404)
-                .json({ message: "Admin not found." });
+            res.status(404).json({ message: "Admin not found." });
             return;
         }
         if (!storeExists) {
-            res
-                .status(404)
-                .json({ message: "Store not found." });
+            res.status(404).json({ message: "Store not found." });
             return;
         }
         if (!categoryExists) {
-            res
-                .status(404)
-                .json({ message: "Category not found." });
+            res.status(404).json({ message: "Category not found." });
             return;
         }
         // Update the auction product
@@ -3113,9 +3186,9 @@ const updateAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.updateAuctionProduct = updateAuctionProduct;
 const deleteAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _s;
+    var _a;
     const { auctionProductId } = req.query;
-    const adminId = (_s = req.admin) === null || _s === void 0 ? void 0 : _s.id;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     try {
         // Find the auction product by ID
         const auctionProduct = yield auctionproduct_1.default.findOne({
@@ -3144,16 +3217,16 @@ const deleteAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
             });
             return;
         }
-        const relatedTables = [
-            { name: "bids", model: bid_1.default, field: "auctionProductId" },
-        ];
+        const relatedTables = [{ name: "bids", model: bid_1.default, field: "auctionProductId" }];
         // Check each related table
         for (const table of relatedTables) {
             const count = yield table.model.count({
-                where: { [table.field]: auctionProduct.id }
+                where: { [table.field]: auctionProduct.id },
             });
             if (count > 0) {
-                res.status(400).json({ message: `Cannot delete auction product because related records exist in ${table.name}` });
+                res.status(400).json({
+                    message: `Cannot delete auction product because related records exist in ${table.name}`,
+                });
                 return;
             }
         }
@@ -3178,9 +3251,9 @@ const deleteAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.deleteAuctionProduct = deleteAuctionProduct;
 const cancelAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _t;
+    var _a;
     const { auctionProductId } = req.query;
-    const adminId = (_t = req.admin) === null || _t === void 0 ? void 0 : _t.id;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     try {
         // Find the auction product by ID
         const auctionProduct = yield auctionproduct_1.default.findOne({
@@ -3224,8 +3297,8 @@ const cancelAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.cancelAuctionProduct = cancelAuctionProduct;
 const fetchAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _u;
-    const adminId = (_u = req.admin) === null || _u === void 0 ? void 0 : _u.id;
+    var _a;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     const { name, sku, status, condition, categoryName } = req.query;
     try {
         // Fetch all auction products for the vendor
@@ -3240,22 +3313,23 @@ const fetchAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 0, fun
                 {
                     model: store_1.default,
                     as: "store",
-                    attributes: ['name'],
+                    attributes: ["name"],
                     include: [
                         {
                             model: currency_1.default,
                             as: "currency",
-                            attributes: ['symbol']
+                            attributes: ["symbol"],
                         },
-                    ]
+                    ],
                 },
             ] }, ((name || sku || status || condition) && {
             where: Object.assign(Object.assign(Object.assign(Object.assign({}, (name && { name: { [sequelize_1.Op.like]: `%${name}%` } })), (sku && { sku })), (status && { status })), (condition && { condition })),
         })));
         if (auctionProducts.length === 0) {
-            res
-                .status(404)
-                .json({ message: "No auction products found for this vendor.", data: [] });
+            res.status(404).json({
+                message: "No auction products found for this vendor.",
+                data: [],
+            });
             return;
         }
         res.status(200).json({
@@ -3272,10 +3346,10 @@ const fetchAuctionProducts = (req, res) => __awaiter(void 0, void 0, void 0, fun
 });
 exports.fetchAuctionProducts = fetchAuctionProducts;
 const viewAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _v;
+    var _a;
     // Get auctionProductId from route params instead of query
     const { auctionProductId } = req.query;
-    const adminId = (_v = req.admin) === null || _v === void 0 ? void 0 : _v.id;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     try {
         const product = yield auctionproduct_1.default.findOne({
             where: {
@@ -3290,9 +3364,9 @@ const viewAuctionProduct = (req, res) => __awaiter(void 0, void 0, void 0, funct
                         {
                             model: currency_1.default,
                             as: "currency",
-                            attributes: ['symbol']
+                            attributes: ["symbol"],
                         },
-                    ]
+                    ],
                 },
                 { model: subcategory_1.default, as: "sub_category" },
             ],
@@ -3329,8 +3403,8 @@ const getAllBidsByAuctionProductId = (req, res) => __awaiter(void 0, void 0, voi
                 },
                 {
                     model: auctionproduct_1.default,
-                    as: 'auctionProduct'
-                }
+                    as: "auctionProduct",
+                },
             ],
             order: [["createdAt", "DESC"]], // Order bids from newest to oldest
         });
@@ -3367,9 +3441,11 @@ const getTransactionsForAdmin = (req, res) => __awaiter(void 0, void 0, void 0, 
                     },
                 })),
             ],
-            where: Object.assign(Object.assign(Object.assign({}, (transactionType && { transactionType: { [sequelize_1.Op.like]: `%${transactionType}%` } })), (refId && { refId: { [sequelize_1.Op.like]: `%${refId}%` } })), (status && { status })),
-            offset,
-            limit: limitNumber,
+            where: Object.assign(Object.assign(Object.assign({}, (transactionType && {
+                transactionType: { [sequelize_1.Op.like]: `%${transactionType}%` },
+            })), (refId && { refId: { [sequelize_1.Op.like]: `%${refId}%` } })), (status && { status })),
+            offset, // Apply offset for pagination
+            limit: limitNumber, // Apply limit for pagination
             order: [["createdAt", "DESC"]], // Order by creation date (newest first)
         });
         // Check if transactions were found
@@ -3398,17 +3474,19 @@ const getTransactionsForAdmin = (req, res) => __awaiter(void 0, void 0, void 0, 
     }
     catch (error) {
         logger_1.default.error(error);
-        res.status(500).json({ message: "Failed to fetch transactions", error: error.message });
+        res
+            .status(500)
+            .json({ message: "Failed to fetch transactions", error: error.message });
     }
 });
 exports.getTransactionsForAdmin = getTransactionsForAdmin;
 // Adverts
 const activeProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _w;
-    const adminId = (_w = req.admin) === null || _w === void 0 ? void 0 : _w.id;
+    var _a;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     const { name } = req.query;
     try {
-        const products = yield product_1.default.findAll(Object.assign({ where: { vendorId: adminId, status: "active" } }, ((name) && {
+        const products = yield product_1.default.findAll(Object.assign({ where: { vendorId: adminId, status: "active" } }, (name && {
             where: Object.assign({}, (name && { name: { [sequelize_1.Op.like]: `%${name}%` } })),
         })));
         res.status(200).json({
@@ -3422,24 +3500,20 @@ const activeProducts = (req, res) => __awaiter(void 0, void 0, void 0, function*
 });
 exports.activeProducts = activeProducts;
 const createAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _x;
-    const adminId = (_x = req.admin) === null || _x === void 0 ? void 0 : _x.id;
-    const { categoryId, productId, title, description, media_url, showOnHomepage, link } = req.body;
+    var _a;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    const { categoryId, productId, title, description, media_url, showOnHomepage, link, } = req.body;
     try {
         // Check if categoryId and productId exist
         const categoryExists = yield subcategory_1.default.findByPk(categoryId);
         if (!categoryExists) {
-            res
-                .status(404)
-                .json({ message: "Category not found." });
+            res.status(404).json({ message: "Category not found." });
             return;
         }
         if (productId) {
             const productExists = yield product_1.default.findByPk(productId);
             if (!productExists) {
-                res
-                    .status(404)
-                    .json({ message: "Product not found." });
+                res.status(404).json({ message: "Product not found." });
                 return;
             }
         }
@@ -3452,7 +3526,7 @@ const createAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             media_url,
             status: "approved",
             showOnHomepage,
-            link
+            link,
         });
         res.status(201).json({
             message: "Advert created successfully",
@@ -3466,22 +3540,18 @@ const createAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* (
 });
 exports.createAdvert = createAdvert;
 const updateAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { advertId, categoryId, productId, title, description, media_url, showOnHomepage, link } = req.body;
+    const { advertId, categoryId, productId, title, description, media_url, showOnHomepage, link, } = req.body;
     try {
         // Check if categoryId and productId exist
         const categoryExists = yield subcategory_1.default.findByPk(categoryId);
         if (!categoryExists) {
-            res
-                .status(404)
-                .json({ message: "Category not found." });
+            res.status(404).json({ message: "Category not found." });
             return;
         }
         if (productId) {
             const productExists = yield product_1.default.findByPk(productId);
             if (!productExists) {
-                res
-                    .status(404)
-                    .json({ message: "Product not found." });
+                res.status(404).json({ message: "Product not found." });
                 return;
             }
         }
@@ -3510,9 +3580,9 @@ const updateAdvert = (req, res) => __awaiter(void 0, void 0, void 0, function* (
 });
 exports.updateAdvert = updateAdvert;
 const getAdverts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _y;
+    var _a;
     const { search, page = 1, limit = 10 } = req.query;
-    const adminId = (_y = req.admin) === null || _y === void 0 ? void 0 : _y.id;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     // Convert `page` and `limit` to numbers and ensure they are valid
     const pageNumber = parseInt(page, 10) || 1;
     const limitNumber = parseInt(limit, 10) || 10;
@@ -3530,7 +3600,7 @@ const getAdverts = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         const { count, rows: adverts } = yield advert_1.default.findAndCountAll({
             where: whereConditions,
             include: [
-                { model: product_1.default, as: "product", attributes: ['id', 'name'] },
+                { model: product_1.default, as: "product", attributes: ["id", "name"] },
                 { model: subcategory_1.default, as: "sub_category" },
             ],
             limit: limitNumber,
@@ -3557,7 +3627,7 @@ const getAdverts = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             message: "Adverts fetched successfully",
             data: adverts,
             pagination: {
-                total: count,
+                total: count, // Total number of adverts
                 page: pageNumber,
                 pages: totalPages,
                 limit: limitNumber,
@@ -3626,7 +3696,7 @@ const getGeneralAdverts = (req, res) => __awaiter(void 0, void 0, void 0, functi
             whereConditions[sequelize_1.Op.or] = [
                 { title: { [sequelize_1.Op.like]: `%${search}%` } },
                 { status: { [sequelize_1.Op.like]: `%${search}%` } },
-                { showOnHomepage: { [sequelize_1.Op.like]: `%${search}%` } }
+                { showOnHomepage: { [sequelize_1.Op.like]: `%${search}%` } },
             ];
         }
         // Fetch adverts with pagination, filters, and associated data
@@ -3643,7 +3713,7 @@ const getGeneralAdverts = (req, res) => __awaiter(void 0, void 0, void 0, functi
                     as: "admin",
                     attributes: ["id", "name", "email"],
                 },
-                { model: product_1.default, as: "product", attributes: ['id', 'name'] },
+                { model: product_1.default, as: "product", attributes: ["id", "name"] },
                 { model: subcategory_1.default, as: "sub_category" },
             ],
             limit: limitNumber,
@@ -3670,7 +3740,7 @@ const getGeneralAdverts = (req, res) => __awaiter(void 0, void 0, void 0, functi
             message: "Adverts fetched successfully",
             data: adverts,
             pagination: {
-                total: count,
+                total: count, // Total number of adverts
                 page: pageNumber,
                 pages: totalPages,
                 limit: limitNumber,
@@ -3726,12 +3796,16 @@ const approveOrRejectAdvert = (req, res) => __awaiter(void 0, void 0, void 0, fu
     }
     // Validate status value
     if (!["approved", "rejected"].includes(status)) {
-        res.status(400).json({ message: "Invalid status. Only 'approved' or 'rejected' allowed." });
+        res.status(400).json({
+            message: "Invalid status. Only 'approved' or 'rejected' allowed.",
+        });
         return;
     }
     // If rejected, ensure adminNote is provided
     if (status === "rejected" && !adminNote) {
-        res.status(400).json({ message: "Admin note is required when rejecting an advert." });
+        res
+            .status(400)
+            .json({ message: "Admin note is required when rejecting an advert." });
         return;
     }
     try {
@@ -3750,7 +3824,7 @@ const approveOrRejectAdvert = (req, res) => __awaiter(void 0, void 0, void 0, fu
         yield advert.save();
         // Send notification
         yield notification_1.default.create({
-            userId: advert.userId,
+            userId: advert.userId, // Notify the advert owner
             title: `Your advert has been ${status}`,
             message: status === "approved"
                 ? "Your advert has been approved and is now live."
@@ -3771,8 +3845,8 @@ const approveOrRejectAdvert = (req, res) => __awaiter(void 0, void 0, void 0, fu
 exports.approveOrRejectAdvert = approveOrRejectAdvert;
 // Orders
 const getOrderItems = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _z;
-    const adminId = (_z = req.admin) === null || _z === void 0 ? void 0 : _z.id;
+    var _a;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     try {
         // Fetch OrderItems related to the vendor
         const orderItems = yield orderitem_1.default.findAll({
@@ -3785,15 +3859,23 @@ const getOrderItems = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                         {
                             model: user_1.default,
                             as: "user",
-                            attributes: ["id", "firstName", "lastName", "email", "phoneNumber"], // Include user details
+                            attributes: [
+                                "id",
+                                "firstName",
+                                "lastName",
+                                "email",
+                                "phoneNumber",
+                            ], // Include user details
                         },
-                    ]
-                }
+                    ],
+                },
             ],
             order: [["createdAt", "DESC"]], // Sort by most recent
         });
         if (!orderItems || orderItems.length === 0) {
-            res.status(404).json({ message: "No order items found for this vendor." });
+            res
+                .status(404)
+                .json({ message: "No order items found for this vendor." });
             return;
         }
         res.status(200).json({
@@ -3802,7 +3884,9 @@ const getOrderItems = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         });
     }
     catch (error) {
-        res.status(500).json({ message: error.message || "Failed to retrieve order items." });
+        res
+            .status(500)
+            .json({ message: error.message || "Failed to retrieve order items." });
     }
 });
 exports.getOrderItems = getOrderItems;
@@ -3820,7 +3904,13 @@ const viewOrderItem = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                         {
                             model: user_1.default,
                             as: "user",
-                            attributes: ["id", "firstName", "lastName", "email", "phoneNumber"], // Include user details
+                            attributes: [
+                                "id",
+                                "firstName",
+                                "lastName",
+                                "email",
+                                "phoneNumber",
+                            ], // Include user details
                         },
                     ],
                 },
@@ -3844,6 +3934,108 @@ const viewOrderItem = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
 });
 exports.viewOrderItem = viewOrderItem;
+const getDropshipedOrderItemDetails = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    const { orderItemId } = req.query;
+    if (!orderItemId) {
+        res.status(400).json({ message: "Order item ID is required." });
+        return;
+    }
+    try {
+        // Fetch the order item along with its order and user details
+        const orderItem = yield orderitem_1.default.findOne({
+            where: { id: orderItemId },
+            include: [
+                {
+                    model: order_1.default,
+                    as: "order",
+                    include: [
+                        {
+                            model: user_1.default,
+                            as: "user",
+                            attributes: [
+                                "id",
+                                "firstName",
+                                "lastName",
+                                "email",
+                                "phoneNumber",
+                            ], // Include user details
+                        },
+                    ],
+                },
+            ],
+        });
+        if (!orderItem) {
+            res.status(404).json({ message: "Order item not found." });
+            return;
+        }
+        if (!orderItem.dropshipProductId) {
+            res.status(400).json({ message: "This order item is not dropshipped." });
+            return;
+        }
+        if (!orderItem.dropshipOrderItemIds || orderItem.dropshipOrderItemIds.length === 0) {
+            res.status(404).json({ message: "No dropshipped order item IDs found." });
+            return;
+        }
+        //@ts-ignore
+        const dropshipOrderItemDetails = yield Promise
+            .all(orderItem.dropshipOrderItemIds.map((dropshipOrderItemId) => 
+        //@ts-ignore
+        dropShippingService.getOrderDetails(adminId, dropshipOrderItemId)));
+        if (!dropshipOrderItemDetails || dropshipOrderItemDetails.length === 0 || dropshipOrderItemDetails.every(detail => !detail)) {
+            res.status(404).json({ message: "No dropshipped order item details found." });
+            return;
+        }
+        res.status(200).json({
+            message: "Dropshipped order item details retrieved successfully.",
+            data: dropshipOrderItemDetails,
+        });
+    }
+    catch (error) {
+        logger_1.default.error("Error retrieving dropshipped order item details:", error);
+        res
+            .status(500)
+            .json({ message: "Failed to retrieve dropshipped order item details." });
+    }
+});
+exports.getDropshipedOrderItemDetails = getDropshipedOrderItemDetails;
+const getDropshipOrderTrackingInfo = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    const { orderItemId } = req.query;
+    if (!orderItemId) {
+        res.status(400).json({ message: "Dropship order item ID is required." });
+        return;
+    }
+    const orderItem = yield orderitem_1.default.findOne({
+        where: { id: orderItemId },
+    });
+    if (!orderItem) {
+        res.status(404).json({ message: "Order item not found." });
+        return;
+    }
+    try {
+        const trackingInfo = yield Promise.all(orderItem.dropshipOrderItemIds.map((dropshipOrderItemId) => dropShippingService.trackOrder(adminId, 
+        //@ts-ignore
+        dropshipOrderItemId)));
+        if (!trackingInfo || trackingInfo.length === 0 || trackingInfo.every(info => !info)) {
+            res.status(404).json({ message: "No tracking information found." });
+            return;
+        }
+        res.status(200).json({
+            message: "Dropshipped order item tracking info retrieved successfully.",
+            data: trackingInfo,
+        });
+    }
+    catch (error) {
+        logger_1.default.error("Error tracking dropshipped order item:", error);
+        res
+            .status(500)
+            .json({ message: "Failed to track dropshipped order item." });
+    }
+});
+exports.getDropshipOrderTrackingInfo = getDropshipOrderTrackingInfo;
 const getOrderItemsInfo = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const orderId = req.query.orderId;
     try {
@@ -3865,20 +4057,28 @@ const getOrderItemsInfo = (req, res) => __awaiter(void 0, void 0, void 0, functi
         });
     }
     catch (error) {
-        res.status(500).json({ message: error.message || "Failed to retrieve order details." });
+        res
+            .status(500)
+            .json({ message: error.message || "Failed to retrieve order details." });
     }
 });
 exports.getOrderItemsInfo = getOrderItemsInfo;
 const updateOrderStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _0, _1, _2, _3, _4;
+    var _a, _b, _c, _d, _e;
     const { status, orderItemId } = req.body;
-    const adminId = (_0 = req.admin) === null || _0 === void 0 ? void 0 : _0.id;
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
     if (!adminId) {
         res.status(400).json({ message: "Admin must be authenticated" });
         return;
     }
     // Define allowed statuses
-    const allowedStatuses = ["pending", "processing", "shipped", "delivered", "cancelled"];
+    const allowedStatuses = [
+        "pending",
+        "processing",
+        "shipped",
+        "delivered",
+        "cancelled",
+    ];
     if (!allowedStatuses.includes(status)) {
         res.status(400).json({ message: "Invalid order status provided." });
         return;
@@ -3887,7 +4087,10 @@ const updateOrderStatus = (req, res) => __awaiter(void 0, void 0, void 0, functi
     const transaction = yield sequelize_service_1.default.connection.transaction();
     try {
         // Find the order item
-        const order = yield orderitem_1.default.findOne({ where: { id: orderItemId }, transaction });
+        const order = yield orderitem_1.default.findOne({
+            where: { id: orderItemId },
+            transaction,
+        });
         if (!order) {
             yield transaction.rollback();
             res.status(404).json({ message: "Order item not found." });
@@ -3909,7 +4112,7 @@ const updateOrderStatus = (req, res) => __awaiter(void 0, void 0, void 0, functi
         if (order.status === "delivered" || order.status === "cancelled") {
             yield transaction.rollback();
             res.status(400).json({
-                message: `Order is already ${order.status}. No further updates are allowed.`
+                message: `Order is already ${order.status}. No further updates are allowed.`,
             });
             return;
         }
@@ -3919,8 +4122,8 @@ const updateOrderStatus = (req, res) => __awaiter(void 0, void 0, void 0, functi
             productData = JSON.parse(order.product);
         }
         // Extract vendorId safely
-        const vendorId = (_1 = productData === null || productData === void 0 ? void 0 : productData.vendorId) !== null && _1 !== void 0 ? _1 : null;
-        const currencySymbol = (_4 = (_3 = (_2 = productData === null || productData === void 0 ? void 0 : productData.store) === null || _2 === void 0 ? void 0 : _2.currency) === null || _3 === void 0 ? void 0 : _3.symbol) !== null && _4 !== void 0 ? _4 : null;
+        const vendorId = (_b = productData === null || productData === void 0 ? void 0 : productData.vendorId) !== null && _b !== void 0 ? _b : null;
+        const currencySymbol = (_e = (_d = (_c = productData === null || productData === void 0 ? void 0 : productData.store) === null || _c === void 0 ? void 0 : _c.currency) === null || _d === void 0 ? void 0 : _d.symbol) !== null && _e !== void 0 ? _e : null;
         if (!vendorId) {
             yield transaction.rollback();
             res.status(400).json({ message: "Vendor ID not found in product data." });
@@ -3934,8 +4137,8 @@ const updateOrderStatus = (req, res) => __awaiter(void 0, void 0, void 0, functi
         // Update the order status
         order.status = status;
         // If status is shipped, generate delivery code and email customer
+        const deliveryCode = crypto_1.default.randomBytes(6).toString("hex").toUpperCase();
         if (status === "shipped") {
-            const deliveryCode = crypto_1.default.randomBytes(6).toString('hex').toUpperCase();
             mainOrder.deliveryCode = deliveryCode;
             yield mainOrder.save({ transaction });
             // Send email to customer
@@ -3949,7 +4152,7 @@ const updateOrderStatus = (req, res) => __awaiter(void 0, void 0, void 0, functi
             <p>Thanks for shopping with us!</p>
           `;
                 try {
-                    yield (0, mail_service_1.sendMail)(customer.email, 'Your order has been shipped!', html);
+                    yield (0, mail_service_1.sendMail)(customer.email, "Your order has been shipped!", html);
                 }
                 catch (emailError) {
                     logger_1.default.error("Error sending shipping email:", emailError);
@@ -3965,17 +4168,36 @@ const updateOrderStatus = (req, res) => __awaiter(void 0, void 0, void 0, functi
             res.status(404).json({ message: "Product owner not found." });
             return;
         }
-        // If the order is delivered, add funds to the vendor's wallet
-        if ((status === "delivered" && currencySymbol === "#" && vendor) || (status === "delivered" && currencySymbol === "₦" && vendor)) {
-            const price = Number(order.price);
-            vendor.wallet = (Number(vendor.wallet) + price);
+        // If the order is delivered, add funds to the vendor's wallet and deduct from pending
+        if ((status === "delivered" && (currencySymbol === "#" || currencySymbol === "₦") && vendor)) {
+            const totalIncome = Number(order.price) * Number(order.quantity);
+            vendor.wallet = Number(vendor.wallet) + totalIncome;
+            vendor.pendingWallet = Math.max(0, Number(vendor.pendingWallet) - totalIncome);
             yield vendor.save({ transaction });
+            // Update transaction status
+            yield transaction_1.default.update({ status: "completed" }, { where: { refId: order.id, transactionType: "sale" }, transaction });
         }
         // If the order is delivered and the currency is USD, add funds to the vendor's wallet
         if (status === "delivered" && currencySymbol === "$" && vendor) {
-            const price = Number(order.price);
-            vendor.dollarWallet = (Number(vendor.dollarWallet) + price);
+            const totalIncome = Number(order.price) * Number(order.quantity);
+            vendor.dollarWallet = Number(vendor.dollarWallet) + totalIncome;
+            vendor.pendingDollarWallet = Math.max(0, Number(vendor.pendingDollarWallet) - totalIncome);
             yield vendor.save({ transaction });
+            // Update transaction status
+            yield transaction_1.default.update({ status: "completed" }, { where: { refId: order.id, transactionType: "sale" }, transaction });
+        }
+        // If the order is cancelled, deduct from pending wallet
+        if (status === "cancelled" && vendor) {
+            const totalIncome = Number(order.price) * Number(order.quantity);
+            if (currencySymbol === "#" || currencySymbol === "₦") {
+                vendor.pendingWallet = Math.max(0, Number(vendor.pendingWallet) - totalIncome);
+            }
+            else if (currencySymbol === "$") {
+                vendor.pendingDollarWallet = Math.max(0, Number(vendor.pendingDollarWallet) - totalIncome);
+            }
+            yield vendor.save({ transaction });
+            // Update transaction status
+            yield transaction_1.default.update({ status: "failed" }, { where: { refId: order.id, transactionType: "sale" }, transaction });
         }
         // Send a notification to the buyer
         yield notification_1.default.create({
@@ -3994,7 +4216,7 @@ const updateOrderStatus = (req, res) => __awaiter(void 0, void 0, void 0, functi
         // Commit transaction
         yield transaction.commit();
         // Send mail (outside of transaction)
-        const message = messages_1.emailTemplates.orderStatusUpdateNotification(buyer, status, productData === null || productData === void 0 ? void 0 : productData.name);
+        const message = messages_1.emailTemplates.orderStatusUpdateNotification(buyer, status, productData === null || productData === void 0 ? void 0 : productData.name, deliveryCode);
         try {
             yield (0, mail_service_1.sendMail)(buyer.email, `${process.env.APP_NAME} - Order Status Update`, message);
         }
@@ -4009,7 +4231,9 @@ const updateOrderStatus = (req, res) => __awaiter(void 0, void 0, void 0, functi
     catch (error) {
         yield transaction.rollback();
         logger_1.default.error("Error updating order status:", error);
-        res.status(500).json({ message: "An error occurred while updating the order status." });
+        res
+            .status(500)
+            .json({ message: "An error occurred while updating the order status." });
     }
 });
 exports.updateOrderStatus = updateOrderStatus;
@@ -4021,7 +4245,12 @@ const createTestimonial = (req, res) => __awaiter(void 0, void 0, void 0, functi
             res.status(400).json({ message: "Name and message are required" });
             return;
         }
-        const newTestimonial = yield testimonial_1.default.create({ name, position, photo, message });
+        const newTestimonial = yield testimonial_1.default.create({
+            name,
+            position,
+            photo,
+            message,
+        });
         res.status(200).json({
             message: "Testimonial created successfully",
             data: newTestimonial,
@@ -4029,7 +4258,9 @@ const createTestimonial = (req, res) => __awaiter(void 0, void 0, void 0, functi
     }
     catch (error) {
         logger_1.default.error(`Error creating testimonial: ${error.message}`);
-        res.status(500).json({ message: "An unexpected error occurred while creating the testimonial. Please try again later." });
+        res.status(500).json({
+            message: "An unexpected error occurred while creating the testimonial. Please try again later.",
+        });
     }
 });
 exports.createTestimonial = createTestimonial;
@@ -4043,11 +4274,15 @@ const updateTestimonial = (req, res) => __awaiter(void 0, void 0, void 0, functi
             return;
         }
         yield testimonial.update({ name, position, photo, message });
-        res.status(200).json({ message: "Testimonial updated successfully", data: testimonial });
+        res
+            .status(200)
+            .json({ message: "Testimonial updated successfully", data: testimonial });
     }
     catch (error) {
         logger_1.default.error(`Error updating testimonial ID ${id}: ${error.message}`);
-        res.status(500).json({ message: "An error occurred while updating the testimonial. Please try again later." });
+        res.status(500).json({
+            message: "An error occurred while updating the testimonial. Please try again later.",
+        });
     }
 });
 exports.updateTestimonial = updateTestimonial;
@@ -4059,7 +4294,9 @@ const getAllTestimonials = (req, res) => __awaiter(void 0, void 0, void 0, funct
     }
     catch (error) {
         logger_1.default.error(`Error retrieving testimonials: ${error.message}`);
-        res.status(500).json({ message: "An error occurred while retrieving testimonials. Please try again later." });
+        res.status(500).json({
+            message: "An error occurred while retrieving testimonials. Please try again later.",
+        });
     }
 });
 exports.getAllTestimonials = getAllTestimonials;
@@ -4076,7 +4313,9 @@ const getTestimonial = (req, res) => __awaiter(void 0, void 0, void 0, function*
     }
     catch (error) {
         logger_1.default.error(`Error fetching testimonial ID ${id}: ${error.message}`);
-        res.status(500).json({ message: "An error occurred while fetching the testimonial. Please try again later." });
+        res.status(500).json({
+            message: "An error occurred while fetching the testimonial. Please try again later.",
+        });
     }
 });
 exports.getTestimonial = getTestimonial;
@@ -4094,7 +4333,9 @@ const deleteTestimonial = (req, res) => __awaiter(void 0, void 0, void 0, functi
     }
     catch (error) {
         logger_1.default.error(`Error deleting testimonial ID ${id}: ${error.message}`);
-        res.status(500).json({ message: "An error occurred while deleting the testimonial. Please try again later." });
+        res.status(500).json({
+            message: "An error occurred while deleting the testimonial. Please try again later.",
+        });
     }
 });
 exports.deleteTestimonial = deleteTestimonial;
@@ -4107,11 +4348,16 @@ const createFaqCategory = (req, res) => __awaiter(void 0, void 0, void 0, functi
             return;
         }
         const newCategory = yield faqcategory_1.default.create({ name });
-        res.status(200).json({ message: "FAQ category created successfully", data: newCategory });
+        res.status(200).json({
+            message: "FAQ category created successfully",
+            data: newCategory,
+        });
     }
     catch (error) {
         logger_1.default.error(`Error creating FAQ category: ${error.message}`);
-        res.status(500).json({ message: "An unexpected error occurred while creating the FAQ category." });
+        res.status(500).json({
+            message: "An unexpected error occurred while creating the FAQ category.",
+        });
     }
 });
 exports.createFaqCategory = createFaqCategory;
@@ -4137,7 +4383,9 @@ const getAllFaqCategories = (_req, res) => __awaiter(void 0, void 0, void 0, fun
     }
     catch (error) {
         logger_1.default.error(`Error retrieving FAQ categories: ${error.message}`);
-        res.status(500).json({ message: "An error occurred while retrieving FAQ categories." });
+        res
+            .status(500)
+            .json({ message: "An error occurred while retrieving FAQ categories." });
     }
 });
 exports.getAllFaqCategories = getAllFaqCategories;
@@ -4162,7 +4410,9 @@ const getFaqCategory = (req, res) => __awaiter(void 0, void 0, void 0, function*
     }
     catch (error) {
         logger_1.default.error(`Error fetching FAQ category ID ${id}: ${error.message}`);
-        res.status(500).json({ message: "An error occurred while fetching the FAQ category." });
+        res
+            .status(500)
+            .json({ message: "An error occurred while fetching the FAQ category." });
     }
 });
 exports.getFaqCategory = getFaqCategory;
@@ -4176,11 +4426,15 @@ const updateFaqCategory = (req, res) => __awaiter(void 0, void 0, void 0, functi
             return;
         }
         yield category.update({ name });
-        res.status(200).json({ message: "FAQ category updated successfully", data: category });
+        res
+            .status(200)
+            .json({ message: "FAQ category updated successfully", data: category });
     }
     catch (error) {
         logger_1.default.error(`Error updating FAQ category ID ${id}: ${error.message}`);
-        res.status(500).json({ message: "An error occurred while updating the FAQ category." });
+        res
+            .status(500)
+            .json({ message: "An error occurred while updating the FAQ category." });
     }
 });
 exports.updateFaqCategory = updateFaqCategory;
@@ -4200,7 +4454,9 @@ const deleteFaqCategory = (req, res) => __awaiter(void 0, void 0, void 0, functi
     }
     catch (error) {
         logger_1.default.error(`Error deleting FAQ category ID ${id}: ${error.message}`);
-        res.status(500).json({ message: "An error occurred while deleting the FAQ category." });
+        res
+            .status(500)
+            .json({ message: "An error occurred while deleting the FAQ category." });
     }
 });
 exports.deleteFaqCategory = deleteFaqCategory;
@@ -4209,7 +4465,9 @@ const createFaq = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { categoryId, question, answer } = req.body;
     try {
         if (!categoryId || !question || !answer) {
-            res.status(400).json({ message: "Category ID, question, and answer are required" });
+            res
+                .status(400)
+                .json({ message: "Category ID, question, and answer are required" });
             return;
         }
         const categoryExists = yield faqcategory_1.default.findByPk(categoryId);
@@ -4218,25 +4476,33 @@ const createFaq = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             return;
         }
         const newFaq = yield faq_1.default.create({
-            faqCategoryId: categoryId, question, answer
+            faqCategoryId: categoryId,
+            question,
+            answer,
         });
         res.status(200).json({ message: "FAQ created successfully", data: newFaq });
     }
     catch (error) {
         logger_1.default.error(`Error creating FAQ: ${error.message}`);
-        res.status(500).json({ message: "An unexpected error occurred while creating the FAQ." });
+        res.status(500).json({
+            message: "An unexpected error occurred while creating the FAQ.",
+        });
     }
 });
 exports.createFaq = createFaq;
 // Get all FAQs
 const getAllFaqs = (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const faqs = yield faq_1.default.findAll({ include: [{ model: faqcategory_1.default, as: "faqCategory" }] });
+        const faqs = yield faq_1.default.findAll({
+            include: [{ model: faqcategory_1.default, as: "faqCategory" }],
+        });
         res.status(200).json({ data: faqs });
     }
     catch (error) {
         logger_1.default.error(`Error retrieving FAQs: ${error.message}`);
-        res.status(500).json({ message: "An error occurred while retrieving FAQs." });
+        res
+            .status(500)
+            .json({ message: "An error occurred while retrieving FAQs." });
     }
 });
 exports.getAllFaqs = getAllFaqs;
@@ -4244,7 +4510,9 @@ exports.getAllFaqs = getAllFaqs;
 const getFaq = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const id = req.query.id;
     try {
-        const faq = yield faq_1.default.findByPk(id, { include: [{ model: faqcategory_1.default, as: "faqCategory" }] });
+        const faq = yield faq_1.default.findByPk(id, {
+            include: [{ model: faqcategory_1.default, as: "faqCategory" }],
+        });
         if (!faq) {
             res.status(404).json({ message: "FAQ not found" });
             return;
@@ -4253,7 +4521,9 @@ const getFaq = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
     catch (error) {
         logger_1.default.error(`Error fetching FAQ ID ${id}: ${error.message}`);
-        res.status(500).json({ message: "An error occurred while fetching the FAQ." });
+        res
+            .status(500)
+            .json({ message: "An error occurred while fetching the FAQ." });
     }
 });
 exports.getFaq = getFaq;
@@ -4267,13 +4537,17 @@ const updateFaq = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             return;
         }
         yield faq.update({
-            faqCategoryId: categoryId, question, answer
+            faqCategoryId: categoryId,
+            question,
+            answer,
         });
         res.status(200).json({ message: "FAQ updated successfully", data: faq });
     }
     catch (error) {
         logger_1.default.error(`Error updating FAQ ID ${id}: ${error.message}`);
-        res.status(500).json({ message: "An error occurred while updating the FAQ." });
+        res
+            .status(500)
+            .json({ message: "An error occurred while updating the FAQ." });
     }
 });
 exports.updateFaq = updateFaq;
@@ -4291,7 +4565,9 @@ const deleteFaq = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
     catch (error) {
         logger_1.default.error(`Error deleting FAQ ID ${id}: ${error.message}`);
-        res.status(500).json({ message: "An error occurred while deleting the FAQ." });
+        res
+            .status(500)
+            .json({ message: "An error occurred while deleting the FAQ." });
     }
 });
 exports.deleteFaq = deleteFaq;
@@ -4376,10 +4652,10 @@ const deleteContactById = (req, res) => __awaiter(void 0, void 0, void 0, functi
 exports.deleteContactById = deleteContactById;
 // JOB
 const postJob = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _5;
+    var _a;
     try {
-        const { title, workplaceType, jobType, location, description, } = req.body;
-        const adminId = (_5 = req.admin) === null || _5 === void 0 ? void 0 : _5.id;
+        const { title, workplaceType, jobType, location, description } = req.body;
+        const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
         // Create the job
         const newJob = yield job_1.default.create({
             creatorId: adminId,
@@ -4413,7 +4689,7 @@ const getJobs = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 include: [
                     [
                         sequelize_1.Sequelize.fn("COUNT", sequelize_1.Sequelize.col("applicants.id")),
-                        "applicantCount"
+                        "applicantCount",
                     ],
                 ],
             },
@@ -4424,7 +4700,7 @@ const getJobs = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                     attributes: [], // We don't need applicant details, just the count
                 },
             ],
-            group: ["Job.id"],
+            group: ["Job.id"], // Group by job ID to avoid duplicate rows
             order: [["createdAt", "DESC"]],
         });
         res.status(200).json({
@@ -4583,7 +4859,7 @@ const getJobApplicants = (req, res) => __awaiter(void 0, void 0, void 0, functio
             return;
         }
         const applicants = yield applicant_1.default.findAll({
-            where: { jobId }
+            where: { jobId },
         });
         res.status(200).json({
             message: "All applicants retrieved successfully.",
@@ -4632,10 +4908,10 @@ const viewApplicant = (req, res) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.viewApplicant = viewApplicant;
 const repostJob = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _6;
+    var _a;
     try {
         const { jobId } = req.body;
-        const adminId = (_6 = req.admin) === null || _6 === void 0 ? void 0 : _6.id;
+        const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
         const job = yield job_1.default.findByPk(jobId);
         if (!job) {
             res.status(404).json({
@@ -4708,13 +4984,15 @@ const downloadApplicantResume = (req, res) => __awaiter(void 0, void 0, void 0, 
     }
     catch (error) {
         logger_1.default.error("Error in downloadFile:", error);
-        res.status(500).json({ message: "An error occurred while downloading the file" });
+        res
+            .status(500)
+            .json({ message: "An error occurred while downloading the file" });
     }
 });
 exports.downloadApplicantResume = downloadApplicantResume;
 // Update withdrawal status (Admin action)
 const updateWithdrawalStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _7, _8;
+    var _a, _b;
     const transaction = yield sequelize_service_1.default.connection.transaction();
     try {
         const { id, status, paymentReceipt, note } = req.body; // Ensure 'note' is provided for rejection
@@ -4735,7 +5013,9 @@ const updateWithdrawalStatus = (req, res) => __awaiter(void 0, void 0, void 0, f
         // If already approved, return a message with no further action
         if (withdrawal.status === "approved") {
             yield transaction.commit();
-            res.status(200).json({ message: "Withdrawal has already been approved. No further action is required." });
+            res.status(200).json({
+                message: "Withdrawal has already been approved. No further action is required.",
+            });
             return;
         }
         // If status is "rejected", ensure a note is provided
@@ -4748,10 +5028,10 @@ const updateWithdrawalStatus = (req, res) => __awaiter(void 0, void 0, void 0, f
         if (status === "rejected") {
             const refundAmount = Number(withdrawal.amount); // Ensure it's a number
             if (withdrawal.currency === "USD") {
-                vendor.dollarWallet = (Number((_7 = vendor.dollarWallet) !== null && _7 !== void 0 ? _7 : 0)) + refundAmount;
+                vendor.dollarWallet = Number((_a = vendor.dollarWallet) !== null && _a !== void 0 ? _a : 0) + refundAmount;
             }
             else {
-                vendor.wallet = (Number((_8 = vendor.wallet) !== null && _8 !== void 0 ? _8 : 0)) + refundAmount;
+                vendor.wallet = Number((_b = vendor.wallet) !== null && _b !== void 0 ? _b : 0) + refundAmount;
             }
             yield vendor.save({ transaction });
         }
@@ -4760,6 +5040,18 @@ const updateWithdrawalStatus = (req, res) => __awaiter(void 0, void 0, void 0, f
         withdrawal.paymentReceipt = paymentReceipt || withdrawal.paymentReceipt; // Update if provided
         withdrawal.note = note || withdrawal.note; // Store rejection note
         yield withdrawal.save({ transaction });
+        // Update the corresponding Transaction record
+        const existingTransaction = yield transaction_1.default.findOne({
+            where: { refId: withdrawal.id, transactionType: "withdrawal" },
+            transaction,
+        });
+        if (existingTransaction) {
+            existingTransaction.status = status === "approved" ? "completed" : "failed";
+            if (status === "rejected") {
+                existingTransaction.metadata = Object.assign(Object.assign({}, (existingTransaction.metadata || {})), { reason: note });
+            }
+            yield existingTransaction.save({ transaction });
+        }
         // Notify Vendor
         yield notification_1.default.create({
             userId: vendor.id,
@@ -4789,11 +5081,17 @@ const getWithdrawals = (req, res) => __awaiter(void 0, void 0, void 0, function*
         const withdrawals = yield withdrawal_1.default.findAll({
             where: whereClause,
             include: [
-                { model: user_1.default, as: "vendor", attributes: ['id', 'firstName', 'lastName', 'email'] }
+                {
+                    model: user_1.default,
+                    as: "vendor",
+                    attributes: ["id", "firstName", "lastName", "email"],
+                },
             ],
             order: [["createdAt", "DESC"]], // Latest withdrawals first
         });
-        res.status(200).json({ message: "Withdrawals fetched successfully", data: withdrawals });
+        res
+            .status(200)
+            .json({ message: "Withdrawals fetched successfully", data: withdrawals });
     }
     catch (error) {
         logger_1.default.error("Error fetching withdrawals:", error);
@@ -4806,20 +5104,22 @@ const getWithdrawalById = (req, res) => __awaiter(void 0, void 0, void 0, functi
         const id = req.query.id;
         // Find withdrawal with associated Vendor details
         const withdrawal = yield withdrawal_1.default.findOne({
-            where: { id },
+            where: { id }, // Correct placement of the ID filter
             include: [
                 {
                     model: user_1.default,
                     as: "vendor",
-                    attributes: ['id', 'firstName', 'lastName', 'email']
-                }
-            ]
+                    attributes: ["id", "firstName", "lastName", "email"],
+                },
+            ],
         });
         if (!withdrawal) {
             res.status(404).json({ message: "Withdrawal not found" });
             return;
         }
-        res.status(200).json({ message: "Withdrawal retrieved successfully", data: withdrawal });
+        res
+            .status(200)
+            .json({ message: "Withdrawal retrieved successfully", data: withdrawal });
     }
     catch (error) {
         logger_1.default.error("Error retrieving withdrawal:", error);
@@ -4843,7 +5143,9 @@ const createBanner = (req, res) => __awaiter(void 0, void 0, void 0, function* (
     }
     catch (error) {
         logger_1.default.error(`Error creating banner: ${error.message}`);
-        res.status(500).json({ message: "An unexpected error occurred while creating the banner. Please try again later." });
+        res.status(500).json({
+            message: "An unexpected error occurred while creating the banner. Please try again later.",
+        });
     }
 });
 exports.createBanner = createBanner;
@@ -4857,11 +5159,15 @@ const updateBanner = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             return;
         }
         yield banner.update({ image });
-        res.status(200).json({ message: "Banner updated successfully", data: banner });
+        res
+            .status(200)
+            .json({ message: "Banner updated successfully", data: banner });
     }
     catch (error) {
         logger_1.default.error(`Error updating banner ID ${id}: ${error.message}`);
-        res.status(500).json({ message: "An error occurred while updating the banner. Please try again later." });
+        res.status(500).json({
+            message: "An error occurred while updating the banner. Please try again later.",
+        });
     }
 });
 exports.updateBanner = updateBanner;
@@ -4873,7 +5179,9 @@ const getAllBanners = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
     catch (error) {
         logger_1.default.error(`Error retrieving banners: ${error.message}`);
-        res.status(500).json({ message: "An error occurred while retrieving banners. Please try again later." });
+        res.status(500).json({
+            message: "An error occurred while retrieving banners. Please try again later.",
+        });
     }
 });
 exports.getAllBanners = getAllBanners;
@@ -4890,7 +5198,9 @@ const getBanner = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
     catch (error) {
         logger_1.default.error(`Error fetching banner ID ${id}: ${error.message}`);
-        res.status(500).json({ message: "An error occurred while fetching the banner. Please try again later." });
+        res.status(500).json({
+            message: "An error occurred while fetching the banner. Please try again later.",
+        });
     }
 });
 exports.getBanner = getBanner;
@@ -4908,18 +5218,27 @@ const deleteBanner = (req, res) => __awaiter(void 0, void 0, void 0, function* (
     }
     catch (error) {
         logger_1.default.error(`Error deleting banner ID ${id}: ${error.message}`);
-        res.status(500).json({ message: "An error occurred while deleting the banner. Please try again later." });
+        res.status(500).json({
+            message: "An error occurred while deleting the banner. Please try again later.",
+        });
     }
 });
 exports.deleteBanner = deleteBanner;
 // Get all admin notifications
 const getAdminNotifications = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const notifications = yield adminnotification_1.default.findAll({ order: [['createdAt', 'DESC']] });
-        res.status(200).json({ data: notifications });
+        const { limit, page } = req.query;
+        const offset = (Number(page || 1) - 1) * Number(limit || 10);
+        const notifications = yield adminnotification_1.default.findAll({
+            limit: Number(limit) || 10, // Default to 10 if not provided
+            offset: offset || 0, // Default to 0 if page or limit is invalid
+            order: [["createdAt", "DESC"]],
+        });
+        res.status(200).json({ data: notifications, pagination: { limit, page } });
     }
     catch (error) {
-        res.status(500).json({ message: 'Failed to fetch notifications' });
+        console.log(error);
+        res.status(500).json({ message: "Failed to fetch notifications" });
     }
 });
 exports.getAdminNotifications = getAdminNotifications;
@@ -4929,16 +5248,1657 @@ const markAdminNotificationAsRead = (req, res) => __awaiter(void 0, void 0, void
     try {
         const notification = yield adminnotification_1.default.findByPk(id);
         if (!notification) {
-            res.status(404).json({ message: 'Notification not found' });
+            res.status(404).json({ message: "Notification not found" });
             return;
         }
         notification.read = true;
         yield notification.save();
-        res.status(200).json({ message: 'Notification marked as read' });
+        res.status(200).json({ message: "Notification marked as read" });
     }
     catch (error) {
-        res.status(500).json({ message: 'Failed to update notification' });
+        res.status(500).json({ message: "Failed to update notification" });
     }
 });
 exports.markAdminNotificationAsRead = markAdminNotificationAsRead;
+const createProductCharge = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { name, description, charge_amount, charge_percentage, charge_currency, calculation_type, minimum_product_amount, maximum_product_amount, } = req.body;
+    try {
+        if (!name || !description || !charge_currency || !calculation_type) {
+            res.status(400).json({
+                message: "Name, description, currency, and calculation type are required.",
+            });
+            return;
+        }
+        if (calculation_type !== "fixed" && calculation_type !== "percentage") {
+            res.status(400).json({
+                message: "Calculation type must be either 'fixed' or 'percentage'.",
+            });
+            return;
+        }
+        if (calculation_type === "fixed" && !charge_amount) {
+            res.status(400).json({
+                message: "Charge amount is required for fixed calculation type.",
+            });
+            return;
+        }
+        if (calculation_type === "percentage" && !charge_percentage) {
+            res.status(400).json({
+                message: "Charge percentage is required for percentage calculation type.",
+            });
+            return;
+        }
+        const chargeOverlap = yield productcharge_1.default.findOne({
+            where: {
+                charge_currency,
+                minimum_product_amount: { [sequelize_1.Op.lte]: maximum_product_amount },
+                maximum_product_amount: { [sequelize_1.Op.gte]: minimum_product_amount },
+            },
+        });
+        if (chargeOverlap) {
+            res.status(400).json({
+                message: "The minimum and maximum product amounts overlap with an existing charge.",
+            });
+            return;
+        }
+        const newCharge = yield productcharge_1.default.create({
+            name,
+            description,
+            charge_amount: calculation_type === "fixed" ? charge_amount : null,
+            charge_currency,
+            charge_percentage: calculation_type === "percentage" ? charge_percentage : null,
+            calculation_type,
+            minimum_product_amount: minimum_product_amount || 0,
+            maximum_product_amount: maximum_product_amount || 0,
+        });
+        res.status(200).json({
+            message: "Product charge created successfully",
+            data: newCharge,
+        });
+    }
+    catch (error) {
+        logger_1.default.error(`Error creating product charge: ${error.message}`);
+        if (error.name === "SequelizeUniqueConstraintError") {
+            res.status(400).json({
+                message: "A product charge with this name already exists.",
+            });
+            return;
+        }
+        res.status(500).json({
+            message: "An unexpected error occurred while creating the product charge.",
+        });
+    }
+});
+exports.createProductCharge = createProductCharge;
+const updateProductCharge = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const productChargeId = req.params.id;
+    const { name, description, charge_amount, charge_percentage, charge_currency, calculation_type, minimum_product_amount, maximum_product_amount, } = req.body;
+    if (calculation_type !== "fixed" && calculation_type !== "percentage") {
+        res.status(400).json({
+            message: "Calculation type must be either 'fixed' or 'percentage'.",
+        });
+        return;
+    }
+    if (calculation_type === "fixed" && !charge_amount) {
+        res.status(400).json({
+            message: "Charge amount is required for fixed calculation type.",
+        });
+        return;
+    }
+    if (calculation_type === "percentage" && !charge_percentage) {
+        res.status(400).json({
+            message: "Charge percentage is required for percentage calculation type.",
+        });
+        return;
+    }
+    try {
+        const charge = yield productcharge_1.default.findByPk(productChargeId);
+        if (!charge) {
+            res.status(404).json({ message: "Product charge not found" });
+            return;
+        }
+        const chargeOverlap = yield productcharge_1.default.findOne({
+            where: {
+                id: { [sequelize_1.Op.ne]: productChargeId },
+                charge_currency,
+                minimum_product_amount: { [sequelize_1.Op.lte]: maximum_product_amount },
+                maximum_product_amount: { [sequelize_1.Op.gte]: minimum_product_amount },
+            },
+        });
+        if (chargeOverlap) {
+            res.status(400).json({
+                message: "The minimum and maximum product amounts overlap with an existing charge.",
+            });
+            return;
+        }
+        yield charge.update({
+            name,
+            description,
+            charge_amount: calculation_type === "fixed" ? charge_amount : null,
+            charge_currency,
+            charge_percentage: calculation_type === "percentage" ? charge_percentage : null,
+            calculation_type,
+            minimum_product_amount: minimum_product_amount || 0,
+            maximum_product_amount: maximum_product_amount || 0,
+        }, {
+            where: { id: productChargeId },
+        });
+        res.status(200).json({
+            message: "Product charge updated successfully",
+            data: charge,
+        });
+    }
+    catch (error) {
+        logger_1.default.error(`Error updating product charge: ${error.message}`);
+        res.status(500).json({
+            message: "An error occurred while updating the product charge. Please try again later.",
+        });
+    }
+});
+exports.updateProductCharge = updateProductCharge;
+const getAllProductCharges = (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const charges = yield productcharge_1.default.findAll({});
+        res.status(200).json({ data: charges });
+    }
+    catch (error) {
+        logger_1.default.error(`Error retrieving product charges: ${error.message}`);
+        res.status(500).json({
+            message: "An error occurred while retrieving product charges. Please try again later.",
+        });
+    }
+});
+exports.getAllProductCharges = getAllProductCharges;
+const deleteProductCharge = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const productChargeId = req.params.id;
+    try {
+        const charge = yield productcharge_1.default.findByPk(productChargeId);
+        if (!charge) {
+            res.status(404).json({ message: "Product charge not found" });
+            return;
+        }
+        yield charge.destroy();
+        res.status(200).json({
+            message: "Product charge deleted successfully",
+        });
+    }
+    catch (error) {
+        logger_1.default.error(`Error deleting product charge: ${error.message}`);
+        res.status(500).json({
+            message: "An error occurred while deleting the product charge. Please try again later.",
+        });
+    }
+});
+exports.deleteProductCharge = deleteProductCharge;
+const markProductChargeAsInactive = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const productChargeId = req.params.id;
+    try {
+        const charge = yield productcharge_1.default.findByPk(productChargeId);
+        if (!charge) {
+            res.status(404).json({ message: "Product charge not found" });
+            return;
+        }
+        if (!charge.is_active) {
+            res.status(400).json({ message: "Product charge is already inactive" });
+            return;
+        }
+        yield charge.update({
+            is_active: false,
+        }, {
+            where: { id: productChargeId },
+        });
+        res.status(200).json({
+            message: "Product charge marked as inactive successfully",
+            data: charge,
+        });
+    }
+    catch (error) {
+        console.error(error);
+        logger_1.default.error(`Error marking product charge as inactive: ${error.message}`);
+        res.status(500).json({
+            message: "An error occurred while marking the product charge as inactive. Please try again later.",
+        });
+    }
+});
+exports.markProductChargeAsInactive = markProductChargeAsInactive;
+const markProductChargeAsActive = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const productChargeId = req.params.id;
+    try {
+        const charge = yield productcharge_1.default.findByPk(productChargeId);
+        if (!charge) {
+            res.status(404).json({ message: "Product charge not found" });
+            return;
+        }
+        if (charge.is_active) {
+            res.status(400).json({
+                message: "Product charge is already active",
+            });
+            return;
+        }
+        yield charge.update({ is_active: true }, {
+            where: { id: productChargeId },
+        });
+        res.status(200).json({
+            message: "Product charge marked as active successfully",
+            data: charge,
+        });
+    }
+    catch (error) {
+        logger_1.default.error(`Error marking product charge as active: ${error.message}`);
+        res.status(500).json({
+            message: "An error occurred while marking the product charge as active. Please try again later.",
+        });
+    }
+});
+exports.markProductChargeAsActive = markProductChargeAsActive;
+const createServiceCategory = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { name, image } = req.body;
+    try {
+        if (!name) {
+            res.status(400).json({ message: "Name is required" });
+            return;
+        }
+        const newService = yield serviceCategories_1.default.create({ name, image });
+        res.status(200).json({
+            message: "Service category created successfully",
+            data: newService,
+        });
+    }
+    catch (error) {
+        if (error.name === "SequelizeUniqueConstraintError") {
+            res.status(400).json({
+                message: "A service category with this name already exists.",
+            });
+            return;
+        }
+        logger_1.default.error(`Error creating service: ${error.message}`);
+        res.status(500).json({
+            message: "An unexpected error occurred while creating the service.",
+        });
+    }
+});
+exports.createServiceCategory = createServiceCategory;
+const updateServiceCategory = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const id = req.params.id;
+    const { name, image } = req.body;
+    try {
+        if (!id) {
+            res.status(400).json({ message: "Service category ID is required" });
+            return;
+        }
+        if (!name) {
+            res.status(400).json({ message: "Name is required" });
+            return;
+        }
+        const service = yield serviceCategories_1.default.findByPk(id);
+        if (!service) {
+            res.status(404).json({ message: "Service category not found" });
+            return;
+        }
+        yield service.update({ name, image }, {
+            where: { id },
+        });
+        res.status(200).json({
+            message: "Service category updated successfully",
+            data: service,
+        });
+    }
+    catch (error) {
+        if (error.name === "SequelizeUniqueConstraintError") {
+            res.status(400).json({
+                message: "A service category with this name already exists.",
+            });
+            return;
+        }
+        logger_1.default.error(`Error updating service category: ${error.message}`);
+        res.status(500).json({
+            message: "An error occurred while updating the service category. Please try again later.",
+        });
+    }
+});
+exports.updateServiceCategory = updateServiceCategory;
+const getAllServiceCategories = (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { page, limit } = _req.query;
+    try {
+        const offset = (Number(page) - 1) * Number(limit);
+        const services = yield serviceCategories_1.default.findAll({
+            limit: Number(limit) || 10,
+            offset: offset || 0,
+            order: [["createdAt", "DESC"]],
+        });
+        res.status(200).json({ data: services });
+    }
+    catch (error) {
+        logger_1.default.error(`Error retrieving service categories: ${error.message}`);
+        res.status(500).json({
+            message: "An error occurred while retrieving service categories. Please try again later.",
+        });
+    }
+});
+exports.getAllServiceCategories = getAllServiceCategories;
+const deleteServiceCategory = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const id = req.params.id; // Get the service category ID from the request parameters
+    try {
+        if (!id) {
+            res.status(400).json({ message: "Service category ID is required" });
+            return;
+        }
+        const service = yield serviceCategories_1.default.findByPk(id);
+        if (!service) {
+            res.status(404).json({ message: "Service category not found" });
+            return;
+        }
+        yield service.destroy();
+        res.status(200).json({
+            message: "Service category deleted successfully",
+        });
+    }
+    catch (error) {
+        logger_1.default.error(`Error deleting service category: ${error.message}`);
+        res.status(500).json({
+            message: "An error occurred while deleting the service category. Please try again later.",
+        });
+    }
+});
+exports.deleteServiceCategory = deleteServiceCategory;
+const createServiceSubCategory = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { name, image, categoryId: serviceCategoryId } = req.body;
+    try {
+        if (!name || !serviceCategoryId) {
+            res.status(400).json({
+                message: "Name and category ID are required.",
+            });
+            return;
+        }
+        const newSubCategory = yield serviceSubCategories_1.default.create({
+            name,
+            image,
+            serviceCategoryId,
+        });
+        res.status(200).json({
+            message: "Service sub-category created successfully",
+            data: newSubCategory,
+        });
+    }
+    catch (error) {
+        if (error.name === "SequelizeUniqueConstraintError") {
+            res.status(400).json({
+                message: "A service sub-category with this name already exists.",
+            });
+            return;
+        }
+        if (error.name === "SequelizeForeignKeyConstraintError") {
+            res.status(400).json({
+                message: "The service category ID provided does not exist.",
+            });
+            return;
+        }
+        logger_1.default.error(`Error creating service sub-category: ${error.message}`);
+        res.status(500).json({
+            message: "An unexpected error occurred while creating the service sub-category.",
+        });
+    }
+});
+exports.createServiceSubCategory = createServiceSubCategory;
+const updateServiceSubCategory = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const id = req.params.id;
+    const { name, image, categoryId: serviceCategoryId } = req.body;
+    try {
+        if (!id) {
+            res.status(400).json({ message: "Service sub-category ID is required" });
+            return;
+        }
+        if (!name || !serviceCategoryId) {
+            res.status(400).json({
+                message: "Name and category ID are required.",
+            });
+            return;
+        }
+        const subCategory = yield serviceSubCategories_1.default.findByPk(id);
+        if (!subCategory) {
+            res.status(404).json({ message: "Service sub-category not found" });
+            return;
+        }
+        yield subCategory.update({ name, image, serviceCategoryId }, {
+            where: { id },
+        });
+        res.status(200).json({
+            message: "Service sub-category updated successfully",
+            data: subCategory,
+        });
+    }
+    catch (error) {
+        logger_1.default.error(`Error updating service sub-category: ${error.message}`);
+        if (error.name === "SequelizeUniqueConstraintError") {
+            res.status(400).json({
+                message: "A service sub-category with this name already exists.",
+            });
+            return;
+        }
+        if (error.name === "SequelizeForeignKeyConstraintError") {
+            res.status(400).json({
+                message: "The service category ID provided does not exist.",
+            });
+            return;
+        }
+        res.status(500).json({
+            message: "An error occurred while updating the service sub-category. Please try again later.",
+        });
+    }
+});
+exports.updateServiceSubCategory = updateServiceSubCategory;
+const getAllServiceSubCategories = (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { id: serviceCategoryId } = _req.params;
+    const { page, limit } = _req.query;
+    try {
+        const offset = (Number(page) - 1) * Number(limit);
+        const subCategories = yield serviceSubCategories_1.default.findAll({
+            limit: Number(limit) || 10,
+            offset: offset || 0,
+            order: [["createdAt", "DESC"]],
+            where: {
+                serviceCategoryId,
+            },
+        });
+        res.status(200).json({ data: subCategories });
+    }
+    catch (error) {
+        logger_1.default.error(`Error retrieving service sub-categories: ${error.message}`);
+        res.status(500).json({
+            message: "An error occurred while retrieving service sub-categories. Please try again later.",
+        });
+    }
+});
+exports.getAllServiceSubCategories = getAllServiceSubCategories;
+const deleteServiceSubCategory = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const id = req.params.id;
+    try {
+        if (!id) {
+            res.status(400).json({ message: "Service sub-category ID is required" });
+            return;
+        }
+        const subCategory = yield serviceSubCategories_1.default.findByPk(id);
+        if (!subCategory) {
+            res.status(404).json({ message: "Service sub-category not found" });
+            return;
+        }
+        yield subCategory.destroy();
+        res.status(200).json({
+            message: "Service sub-category deleted successfully",
+        });
+    }
+    catch (error) {
+        logger_1.default.error(`Error deleting service sub-category: ${error.message}`);
+        res.status(500).json({
+            message: "An error occurred while deleting the service sub-category. Please try again later.",
+        });
+    }
+});
+exports.deleteServiceSubCategory = deleteServiceSubCategory;
+const createServiceAttribute = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { attributes, } = req.body;
+    try {
+        if (!attributes || !Array.isArray(attributes) || attributes.length === 0) {
+            res.status(400).json({
+                message: "Attributes must be a non-empty array.",
+            });
+            return;
+        }
+        const optionValuesMap = new Map();
+        const serviceAttributeDefinitions = [];
+        for (const attr of attributes) {
+            const { name, input_type, value } = attr;
+            if (!name) {
+                res.status(400).json({
+                    message: "Each attribute must include name.",
+                });
+                return;
+            }
+            if ((input_type === helpers_1.ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.MULTI_SELECT || input_type === helpers_1.ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.SINGLE_SELECT) && (!value || !Array.isArray(value) || value.length === 0)) {
+                res.status(400).json({
+                    message: `Attribute ${name} of type ${input_type} must include non-empty value array.`,
+                });
+                return;
+            }
+            if (!input_type ||
+                !helpers_1.ALLOWED_SERVICE_ATTRIBUTE_INPUT.includes(input_type)) {
+                res.status(400).json({
+                    message: `Input type must be one of the following: ${helpers_1.ALLOWED_SERVICE_ATTRIBUTE_INPUT.join(", ")}`,
+                });
+                return;
+            }
+            switch (input_type) {
+                case helpers_1.ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.INT_INPUT:
+                    serviceAttributeDefinitions.push({
+                        name,
+                        input_type,
+                        data_type: helpers_1.ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ.INT,
+                    });
+                    break;
+                case helpers_1.ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.STR_INPUT:
+                    serviceAttributeDefinitions.push({
+                        name,
+                        input_type,
+                        data_type: helpers_1.ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ.STR,
+                    });
+                    break;
+                case helpers_1.ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.BOOL_INPUT:
+                    serviceAttributeDefinitions.push({
+                        name,
+                        input_type,
+                        data_type: helpers_1.ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ.BOOL,
+                    });
+                    break;
+                case helpers_1.ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.MULTI_SELECT:
+                    if (!Array.isArray(value) || value.length === 0) {
+                        res.status(400).json({
+                            message: `Value for attribute ${name} must be a non-empty array.`,
+                        });
+                        return;
+                    }
+                    optionValuesMap.set(name, value);
+                    serviceAttributeDefinitions.push({
+                        name,
+                        input_type,
+                        data_type: helpers_1.ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ.STR_ARRAY,
+                    });
+                    break;
+                case helpers_1.ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.SINGLE_SELECT:
+                    if (!Array.isArray(value) || value.length === 0) {
+                        res.status(400).json({
+                            message: `Value for attribute ${name} must be a non-empty array.`,
+                        });
+                        return;
+                    }
+                    optionValuesMap.set(name, value);
+                    serviceAttributeDefinitions.push({
+                        name,
+                        input_type,
+                        data_type: helpers_1.ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ.STR_ARRAY,
+                    });
+                    break;
+                default:
+                    res.status(400).json({
+                        message: `Unsupported input type: ${input_type} for attribute ${name}.`,
+                    });
+                    return;
+            }
+        }
+        let newAttribute;
+        try {
+            yield sequelize_2.default.transaction((t) => __awaiter(void 0, void 0, void 0, function* () {
+                newAttribute = yield attributeDefinitions_1.default.bulkCreate(serviceAttributeDefinitions, {
+                    validate: true,
+                    individualHooks: true,
+                    transaction: t,
+                });
+                for (let i = 0; i < serviceAttributeDefinitions.length; i++) {
+                    const definition = serviceAttributeDefinitions[i];
+                    const createdDefinition = newAttribute[i];
+                    if (definition.data_type ===
+                        helpers_1.ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ.STR_ARRAY) {
+                        const options = optionValuesMap.get(definition.name) || [];
+                        const optionRecords = options.map((opt) => ({
+                            attribute_id: createdDefinition.id,
+                            option_value: opt,
+                        }));
+                        if (optionRecords.length > 0) {
+                            yield attributeOptions_1.default.bulkCreate(optionRecords, {
+                                transaction: t,
+                            });
+                        }
+                    }
+                }
+            }));
+        }
+        catch (error) {
+            if (error.name === "SequelizeUniqueConstraintError") {
+                res.status(400).json({
+                    message: "A service attribute with this name already exists.",
+                });
+                return;
+            }
+            if (error.name === "SequelizeForeignKeyConstraintError") {
+                res.status(400).json({
+                    message: "The service category ID provided does not exist.",
+                });
+                return;
+            }
+            throw error;
+        }
+        res.status(200).json({
+            message: "Service attribute created successfully",
+            data: newAttribute,
+        });
+    }
+    catch (error) {
+        if (error.name === "SequelizeUniqueConstraintError") {
+            res.status(400).json({
+                message: "A service attribute with this name already exists.",
+            });
+            return;
+        }
+        if (error.name === "SequelizeForeignKeyConstraintError") {
+            res.status(400).json({
+                message: "The service sub-category ID provided does not exist.",
+            });
+            return;
+        }
+        logger_1.default.error(`Error creating service attribute: ${error.message}`);
+        res.status(500).json({
+            message: "An unexpected error occurred while creating the service attribute.",
+        });
+    }
+});
+exports.createServiceAttribute = createServiceAttribute;
+const deleteServiceAttribute = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const id = req.params.id;
+    try {
+        if (!id) {
+            res.status(400).json({ message: "Service attribute ID is required" });
+            return;
+        }
+        if (typeof Number(id) !== 'number') {
+            res.status(400).json({ message: "Service attribute ID must be a number" });
+            return;
+        }
+        const attribute = yield attributeDefinitions_1.default.findByPk(id);
+        if (!attribute) {
+            res.status(404).json({ message: "Service attribute not found" });
+            return;
+        }
+        yield attribute.destroy();
+        res.status(200).json({
+            message: "Service attribute deleted successfully",
+        });
+    }
+    catch (error) {
+        logger_1.default.error(`Error deleting service attribute: ${error.message}`);
+        res.status(500).json({
+            message: "An error occurred while deleting the service attribute. Please try again later.",
+        });
+    }
+});
+exports.deleteServiceAttribute = deleteServiceAttribute;
+const addAttributeOptions = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const attributeId = req.params.attributeId;
+    const { options } = req.body;
+    try {
+        if (!attributeId) {
+            res.status(400).json({ message: "Attribute ID is required." });
+            return;
+        }
+        if (!options || !Array.isArray(options) || options.length === 0) {
+            res.status(400).json({
+                message: "Options must be a non-empty array.",
+            });
+            return;
+        }
+        const attribute = yield attributeDefinitions_1.default.findByPk(attributeId);
+        if (!attribute) {
+            res.status(404).json({ message: "Attribute not found." });
+            return;
+        }
+        if (attribute.data_type !== helpers_1.ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ.STR_ARRAY ||
+            (attribute.input_type !== helpers_1.ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.SINGLE_SELECT &&
+                attribute.input_type !== helpers_1.ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.MULTI_SELECT)) {
+            res.status(400).json({
+                message: "Options can only be added to attributes with 'single_select' or 'multi_select' input types.",
+            });
+            return;
+        }
+        const optionRecords = options.map((opt) => ({
+            attribute_id: attribute.id,
+            option_value: opt,
+        }));
+        const newOptions = yield attributeOptions_1.default.bulkCreate(optionRecords, {
+            validate: true,
+            individualHooks: true,
+            ignoreDuplicates: true,
+        });
+        res.status(200).json({
+            message: "Options added successfully",
+            data: newOptions,
+        });
+    }
+    catch (error) {
+        if (error.name === "SequelizeUniqueConstraintError") {
+            res.status(400).json({
+                message: "One or more options already exist for this attribute.",
+            });
+            return;
+        }
+        logger_1.default.error(`Error adding attribute options: ${error.message}`);
+        res.status(500).json({
+            message: "An unexpected error occurred while adding attribute options.",
+        });
+    }
+});
+exports.addAttributeOptions = addAttributeOptions;
+const getAllServiceAttributes = (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { page, limit } = _req.query;
+    try {
+        const offset = (Number(page) - 1) * Number(limit);
+        const attributes = yield attributeDefinitions_1.default.findAll({
+            limit: Number(limit) || 10,
+            offset: offset || 0,
+            order: [["id", "ASC"]],
+            include: [
+                {
+                    model: attributeOptions_1.default,
+                    as: "options",
+                    attributes: ["id", "option_value"],
+                },
+            ],
+        });
+        res.status(200).json({ data: attributes });
+    }
+    catch (error) {
+        logger_1.default.error(`Error retrieving service attributes: ${error.message}`);
+        res.status(500).json({
+            message: "An error occurred while retrieving service attributes. Please try again later.",
+        });
+    }
+});
+exports.getAllServiceAttributes = getAllServiceAttributes;
+const deleteAttributeOption = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const optionId = req.params.optionId;
+    try {
+        if (!optionId) {
+            res.status(400).json({ message: "Option ID is required." });
+            return;
+        }
+        const option = yield attributeOptions_1.default.findByPk(optionId);
+        if (!option) {
+            res.status(404).json({ message: "Option not found." });
+            return;
+        }
+        if (typeof Number(optionId) !== 'number') {
+            res.status(400).json({ message: "Option ID must be a number" });
+            return;
+        }
+        yield option.destroy();
+        res.status(200).json({
+            message: "Option deleted successfully",
+        });
+    }
+    catch (error) {
+        logger_1.default.error(`Error deleting attribute option: ${error.message}`);
+        res.status(500).json({
+            message: "An error occurred while deleting the attribute option. Please try again later.",
+        });
+    }
+});
+exports.deleteAttributeOption = deleteAttributeOption;
+const addAttributeToServiceCategory = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const categoryId = req.params.categoryId;
+    const { attributeIds } = req.body;
+    try {
+        if (!categoryId) {
+            res.status(400).json({ message: "Service category ID is required." });
+            return;
+        }
+        if (!attributeIds ||
+            !Array.isArray(attributeIds) ||
+            attributeIds.length === 0) {
+            res.status(400).json({
+                message: "Attribute IDs must be a non-empty array.",
+            });
+            return;
+        }
+        const serviceCategory = yield serviceCategories_1.default.findByPk(categoryId);
+        if (!serviceCategory) {
+            res.status(404).json({ message: "Service category not found." });
+            return;
+        }
+        const attributes = yield attributeDefinitions_1.default.findAll({
+            where: {
+                id: {
+                    [sequelize_1.Op.in]: attributeIds,
+                },
+            }
+        });
+        if (attributes.length !== attributeIds.length) {
+            res.status(400).json({
+                message: "One or more attribute IDs are invalid and do not exist.",
+            });
+            return;
+        }
+        const attributeToServiceCategoryRecords = attributeIds.map((attrId) => ({
+            service_category_id: categoryId,
+            attribute_id: attrId,
+        }));
+        yield serviceCategoryToAttributeMap_1.default.bulkCreate(attributeToServiceCategoryRecords, {
+            validate: true,
+            individualHooks: true,
+            ignoreDuplicates: true,
+        });
+        res.status(200).json({
+            message: "Attributes added to service category successfully",
+        });
+    }
+    catch (error) {
+        if (error.name === "SequelizeForeignKeyConstraintError") {
+            res.status(400).json({
+                message: "One or more attribute IDs are invalid and do not exist.",
+            });
+            return;
+        }
+        if (error.name === "SequelizeUniqueConstraintError") {
+            res.status(400).json({
+                message: "One or more attributes are already associated with this service category.",
+            });
+            return;
+        }
+        logger_1.default.error(`Error adding attributes to service category: ${error.message}`);
+        res.status(500).json({
+            message: "An unexpected error occurred while adding attributes to the service category.",
+        });
+    }
+});
+exports.addAttributeToServiceCategory = addAttributeToServiceCategory;
+const removeAttributeFromServiceCategory = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const categoryId = req.params.categoryId;
+    const { attributeIds } = req.body;
+    if (!categoryId) {
+        res.status(400).json({ message: "Service category ID is required." });
+        return;
+    }
+    try {
+        const serviceCategory = yield serviceCategories_1.default.findByPk(Number(categoryId));
+        if (!serviceCategory) {
+            res.status(404).json({ message: "Service category not found." });
+            return;
+        }
+        const deleteCount = yield serviceCategoryToAttributeMap_1.default.destroy({
+            where: {
+                service_category_id: categoryId,
+                attribute_id: {
+                    [sequelize_1.Op.in]: attributeIds,
+                },
+            },
+        });
+        if (deleteCount === 0) {
+            res.status(404).json({
+                message: "No matching attribute mappings found for deletion.",
+            });
+            return;
+        }
+        res.status(200).json({
+            message: "Attributes removed from service category successfully",
+        });
+    }
+    catch (error) {
+        logger_1.default.error(`Error removing attributes from service category: ${error.message}`);
+        res.status(500).json({
+            message: "An unexpected error occurred while removing attributes from the service category.",
+        });
+    }
+});
+exports.removeAttributeFromServiceCategory = removeAttributeFromServiceCategory;
+const suspendService = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const serviceId = req.params.serviceId;
+    try {
+        if (!serviceId) {
+            res.status(400).json({ message: "Service ID is required." });
+            return;
+        }
+        const service = yield services_1.default.findByPk(serviceId);
+        if (!service) {
+            res.status(404).json({ message: "Service not found." });
+            return;
+        }
+        if (service.status === 'suspended') {
+            res.status(400).json({ message: "Service is already suspended." });
+            return;
+        }
+        service.status = 'suspended';
+        yield service.save();
+        res.status(200).json({
+            message: "Service suspended successfully",
+            data: service,
+        });
+    }
+    catch (error) {
+        logger_1.default.error(`Error suspending service: ${error.message}`);
+        res.status(500).json({
+            message: "An unexpected error occurred while suspending the service.",
+        });
+    }
+});
+exports.suspendService = suspendService;
+const activateService = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const serviceId = req.params.serviceId;
+    try {
+        if (!serviceId) {
+            res.status(400).json({ message: "Service ID is required." });
+            return;
+        }
+        const service = yield services_1.default.findByPk(serviceId);
+        if (!service) {
+            res.status(404).json({ message: "Service not found." });
+            return;
+        }
+        if (service.status === 'active') {
+            res.status(400).json({ message: "Service is already active." });
+            return;
+        }
+        service.status = 'active';
+        yield service.save();
+        res.status(200).json({
+            message: "Service activated successfully",
+            data: service,
+        });
+    }
+    catch (error) {
+        logger_1.default.error(`Error activating service: ${error.message}`);
+        res.status(500).json({
+            message: "An unexpected error occurred while activating the service.",
+        });
+    }
+});
+exports.activateService = activateService;
+const getAllServices = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { page, limit, status, categoryId, subCategoryId } = req.query;
+    try {
+        const offset = (Number(page) - 1) * Number(limit);
+        const whereClause = {};
+        if (status && (status === 'active' || status === 'suspended')) {
+            whereClause.status = status;
+        }
+        if (categoryId) {
+            whereClause.serviceCategoryId = categoryId;
+        }
+        if (subCategoryId) {
+            whereClause.serviceSubCategoryId = subCategoryId;
+        }
+        const services = yield services_1.default.findAll({
+            where: whereClause,
+            limit: Number(limit) || 10,
+            offset: offset || 0,
+            order: [["createdAt", "DESC"]],
+            include: [
+                {
+                    model: serviceCategories_1.default,
+                    as: "category",
+                    attributes: ["id", "name"],
+                },
+                {
+                    model: serviceSubCategories_1.default,
+                    as: "subCategory",
+                    attributes: ["id", "name"],
+                },
+                {
+                    model: user_1.default,
+                    as: "provider",
+                }
+            ],
+        });
+        res.status(200).json({ data: services });
+    }
+    catch (error) {
+        logger_1.default.error(`Error retrieving services: ${error.message}`);
+        res.status(500).json({
+            message: "An error occurred while retrieving services. Please try again later.",
+        });
+    }
+});
+exports.getAllServices = getAllServices;
+const getServiceById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { serviceId } = req.params;
+    try {
+        if (!serviceId) {
+            res.status(400).json({ message: "Service ID is required" });
+            return;
+        }
+        // Fetch the service by ID (admin can view any status)
+        const service = yield services_1.default.findOne({
+            where: { id: serviceId },
+            include: [
+                {
+                    model: user_1.default,
+                    as: "provider",
+                    include: [
+                        {
+                            model: kyc_1.default,
+                            as: "kyc",
+                            attributes: ["isVerified"],
+                        },
+                    ],
+                },
+                {
+                    model: serviceCategories_1.default,
+                    as: "category",
+                    attributes: ["id", "name"],
+                },
+                {
+                    model: serviceSubCategories_1.default,
+                    as: "subCategory",
+                    attributes: ["id", "name"],
+                },
+            ],
+        });
+        if (!service) {
+            res.status(404).json({ message: "Service not found" });
+            return;
+        }
+        // Add isVerified to provider if exists
+        if (service.provider) {
+            const kyc = yield kyc_1.default.findOne({
+                where: { vendorId: service.provider.id },
+            });
+            service.provider.setDataValue("isVerified", kyc ? kyc.isVerified : false);
+        }
+        res.status(200).json({ data: service });
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching service:", error);
+        res.status(500).json({
+            message: error.message || "An error occurred while fetching the service.",
+        });
+    }
+});
+exports.getServiceById = getServiceById;
+const getAliExpressCategories = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const vendorId = req.adminId;
+    try {
+        const categories = yield dropShippingService.getProductCategories(vendorId);
+        if (categories.length === 0) {
+            res.status(404).json({ message: "No categories found" });
+            return;
+        }
+        res.status(200).json({ data: categories });
+    }
+    catch (error) {
+        // logger.error(
+        // 	`Error retrieving dropshipping product categories: ${error.message}`,
+        // );
+        res.status(500).json({
+            message: "An error occurred while retrieving dropshipping product categories.",
+        });
+    }
+});
+exports.getAliExpressCategories = getAliExpressCategories;
+const getAliExpressProducts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const vendorId = req.adminId;
+        const keywords = req.query.keywords;
+        const page = req.query.page ? parseInt(req.query.page, 10) : 1;
+        const categoryId = req.query.categoryId;
+        const currency = req.query.currency;
+        const pageSize = req.query.pageSize ? parseInt(req.query.pageSize, 10) : 20;
+        const shippingCountry = req.query.shippingCountry;
+        if (!categoryId) {
+            res.status(400).json({ message: "Category ID is required" });
+            return;
+        }
+        if (currency && currency !== 'USD' && currency !== "NGN") {
+            res.status(400).json({ message: "Currency must be either 'USD' or 'NGN'" });
+            return;
+        }
+        if (keywords && keywords.trim().length === 0) {
+            res.status(400).json({ message: "Keywords cannot be empty" });
+            return;
+        }
+        if (!shippingCountry) {
+            res.status(400).json({ message: "Shipping country is required" });
+            return;
+        }
+        const products = yield dropShippingService.getProducts({
+            keywords,
+            pageNo: page,
+            pageSize,
+            categoryId,
+            shipToCountry: shippingCountry,
+            currency: currency,
+            vendorId,
+        });
+        res.status(200).json({ data: products });
+    }
+    catch (error) {
+        logger_1.default.error(`Error retrieving dropshipping products: ${error.message}`);
+        res.status(500).json({
+            message: "An error occurred while retrieving dropshipping products.",
+        });
+    }
+});
+exports.getAliExpressProducts = getAliExpressProducts;
+function getAliExpressProductDetails(req, res) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const vendorId = req.adminId;
+            const productId = req.params.productId;
+            const shipToCountry = req.query.shippingCountry;
+            const currency = req.query.currency;
+            if (!productId) {
+                res.status(400).json({ message: "Product ID is required" });
+                return;
+            }
+            if (!shipToCountry) {
+                res.status(400).json({ message: "Shipping country is required" });
+                return;
+            }
+            if (currency && currency !== 'USD' && currency !== "NGN") {
+                res.status(400).json({ message: "Currency must be either 'USD' or 'NGN'" });
+                return;
+            }
+            const productDetails = yield dropShippingService.getProductById(vendorId, Number(productId), shipToCountry, currency);
+            if (!productDetails) {
+                res.status(404).json({ message: "Product not found" });
+                return;
+            }
+            res.status(200).json({ data: productDetails });
+        }
+        catch (error) {
+            logger_1.default.error(`Error retrieving dropshipping product details: ${error.message}`);
+            res.status(500).json({
+                message: "An error occurred while retrieving dropshipping product details.",
+            });
+        }
+    });
+}
+function addAliexpressProductToInventory(req, res) {
+    return __awaiter(this, void 0, void 0, function* () {
+        var _a, _b, _c;
+        const transaction = yield sequelize_service_1.default.connection.transaction();
+        try {
+            const { productId, shippingCountry, currency, storeId, categoryId, priceIncrementPercent } = req.body;
+            // @ts-ignore
+            const vendorId = req.adminId;
+            if (!productId) {
+                res.status(400).json({ message: "Product ID is required" });
+                yield transaction.rollback();
+                return;
+            }
+            if (!shippingCountry) {
+                res.status(400).json({ message: "Shipping country is required" });
+                yield transaction.rollback();
+                return;
+            }
+            if (shippingCountry.trim() === "") {
+                res.status(400).json({ message: "Shipping country cannot be empty" });
+                yield transaction.rollback();
+                return;
+            }
+            if (shippingCountry !== "US" && shippingCountry !== "NG" && shippingCountry !== "UK") {
+                res.status(400).json({ message: "Shipping country must be either 'US', 'NG' or 'UK'" });
+                yield transaction.rollback();
+                return;
+            }
+            if (currency && currency !== 'USD' && currency !== "NGN") {
+                res.status(400).json({ message: "Currency must be either 'USD' or 'NGN'" });
+                yield transaction.rollback();
+                return;
+            }
+            if (!storeId) {
+                res.status(400).json({ message: "Store ID is required" });
+                yield transaction.rollback();
+                return;
+            }
+            const store = yield store_1.default.findByPk(storeId, {
+                include: [
+                    {
+                        model: currency_1.default,
+                        as: "currency",
+                    },
+                ],
+            });
+            if (!store) {
+                res.status(404).json({ message: "Store not found" });
+                yield transaction.rollback();
+                return;
+            }
+            if (!store.currency) {
+                res.status(400).json({ message: "Store does not have a currency set" });
+                yield transaction.rollback();
+                return;
+            }
+            if (store.currency.name.toLowerCase() === "dollar" && currency !== 'USD' || store.currency.name.toLowerCase() === "naira" && currency !== 'NGN') {
+                res.status(400).json({ message: `Currency mismatch: Store currency is ${store.currency.name}, but received ${currency}` });
+                yield transaction.rollback();
+                return;
+            }
+            const productDetails = yield dropShippingService.getProductById(vendorId, Number(productId), shippingCountry, currency);
+            if (!productDetails) {
+                res.status(404).json({ message: "Product not found" });
+                yield transaction.rollback();
+                return;
+            }
+            const lowestPricedVariant = productDetails.ae_item_sku_info_dtos.reduce((prev, curr) => {
+                return (prev.offer_sale_price < curr.offer_sale_price) ? prev : curr;
+            });
+            const productImages = productDetails.ae_multimedia_info_dto.image_urls.split(';');
+            //@ts-ignore
+            const productVideoUrl = (_c = (_b = (_a = productDetails === null || productDetails === void 0 ? void 0 : productDetails.ae_multimedia_info_dto.ae_video_dtos) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b.media_url) !== null && _c !== void 0 ? _c : "";
+            const productPrice = new decimal_js_1.default(lowestPricedVariant.offer_sale_price).plus(new decimal_js_1.default(lowestPricedVariant.offer_sale_price)
+                .mul(new decimal_js_1.default(priceIncrementPercent))
+                .div(new decimal_js_1.default(100))).toFixed(2);
+            const variantIncrementedPrices = productDetails.ae_item_sku_info_dtos.map(variant => {
+                const incrementedPrice = new decimal_js_1.default(variant.offer_sale_price).plus(new decimal_js_1.default(variant.offer_sale_price)
+                    .mul(new decimal_js_1.default(priceIncrementPercent))
+                    .div(new decimal_js_1.default(100))).toFixed(2);
+                return Object.assign(Object.assign({}, variant), { offer_sale_price: incrementedPrice });
+            });
+            const newProduct = yield product_1.default.create({
+                storeId: store.id,
+                vendorId,
+                categoryId: categoryId || null,
+                name: productDetails.ae_item_base_info_dto.subject,
+                description: productDetails.ae_item_base_info_dto.detail,
+                specification: productDetails.ae_item_base_info_dto.mobile_detail,
+                sku: `KDM-${(0, uuid_1.v4)()}`,
+                type: 'dropship',
+                price: lowestPricedVariant.sku_price,
+                discount_price: productPrice,
+                condition: "brand_new",
+                quantity: lowestPricedVariant.sku_available_stock,
+                image_url: productImages[0],
+                video_url: productVideoUrl || null,
+                additional_images: productImages,
+                variants: variantIncrementedPrices,
+            }, { transaction });
+            yield dropshipProducts_1.default.create({
+                productId: newProduct.id,
+                dropshipProductId: String(productDetails.ae_item_base_info_dto.product_id),
+                vendorId,
+                priceIncrementPercent,
+            }, { transaction });
+            yield transaction.commit();
+            res.status(200).json({
+                message: "Dropshipping product added to inventory successfully",
+                data: newProduct,
+            });
+        }
+        catch (error) {
+            console.error(error);
+            logger_1.default.error(error);
+            logger_1.default.error(`Error adding dropshipping product to catalog: ${error.message}`);
+            yield transaction.rollback();
+            res.status(500).json({
+                message: "An error occurred while adding dropshipping product to catalog.",
+            });
+        }
+    });
+}
+// export async function getAliExpressDropshipCredsStatus(req: Request, res: Response): Promise<void> {
+//   try {
+//     const vendorId = (req as any).adminId;
+//
+//     const credsStatus = await DropShippingCred.findOne({
+//       where: {
+//         vendorId,
+//       },
+//     });
+//
+//     if (!credsStatus) {
+//       res.status(200).json({ data: { message: "No credentials found", isSet: false } });
+//       return;
+//     }
+//
+//     res.status(200)
+//       .json({  data: { message: "Credentials found", creds: credsStatus, isSet: true } });
+//   }
+//   catch (error: any) {
+//     logger.error(
+//       `Error retrieving dropshipping credentials status: ${error.message}`,
+//     );
+//     res.status(500).json({
+//       message:
+//         "An error occurred while retrieving dropshipping credentials status.",
+//     });
+//   }
+// }
+function getAliExpressDropshipCredsStatus(req, res) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const vendorId = req.adminId;
+            const credsStatus = yield dropshippngCreds_1.default.findOne({
+                where: {
+                    vendorId,
+                },
+            });
+            if (!credsStatus) {
+                res.status(200).json({
+                    data: {
+                        isConnected: false,
+                        message: "No AliExpress account connected",
+                        statusColor: "gray",
+                    },
+                });
+                return;
+            }
+            // Check if tokens are expired
+            const now = Date.now();
+            const isAccessTokenExpired = credsStatus.expireTime < now;
+            const isRefreshTokenExpired = credsStatus.refreshTokenValidTime < now;
+            // Calculate time remaining
+            const accessTokenMinutes = Math.max(0, Math.floor((credsStatus.expireTime - now) / 1000 / 60));
+            const refreshTokenHours = Math.max(0, Math.floor((credsStatus.refreshTokenValidTime - now) / 1000 / 60 / 60));
+            // Format expiry times in human-readable format
+            const formatExpiryTime = (minutes) => {
+                if (minutes === 0)
+                    return "Expired";
+                if (minutes < 60)
+                    return `${minutes} minute${minutes !== 1 ? "s" : ""}`;
+                const hours = Math.floor(minutes / 60);
+                const mins = minutes % 60;
+                if (mins === 0)
+                    return `${hours} hour${hours !== 1 ? "s" : ""}`;
+                return `${hours} hour${hours !== 1 ? "s" : ""} ${mins} minute${mins !== 1 ? "s" : ""}`;
+            };
+            const formatRefreshExpiryTime = (hours) => {
+                if (hours === 0)
+                    return "Expired";
+                if (hours < 24)
+                    return `${hours} hour${hours !== 1 ? "s" : ""}`;
+                const days = Math.floor(hours / 24);
+                const remainingHours = hours % 24;
+                if (remainingHours === 0)
+                    return `${days} day${days !== 1 ? "s" : ""}`;
+                return `${days} day${days !== 1 ? "s" : ""} ${remainingHours} hour${remainingHours !== 1 ? "s" : ""}`;
+            };
+            // Format dates
+            const formatDate = (date) => {
+                return new Date(date).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                });
+            };
+            // Determine connection status
+            let status;
+            let statusMessage;
+            let statusBadge;
+            let statusColor;
+            let showReconnectButton;
+            if (isRefreshTokenExpired) {
+                status = "expired";
+                statusBadge = "✗ Expired";
+                statusMessage =
+                    "Your AliExpress connection has expired. Please reconnect your account to continue dropshipping.";
+                statusColor = "red";
+                showReconnectButton = true;
+            }
+            else if (accessTokenMinutes < 60) {
+                // Less than 1 hour
+                status = "expiring_soon";
+                statusBadge = "⚠ Expiring Soon";
+                statusMessage =
+                    "Your AliExpress connection will expire soon. It will automatically refresh. ";
+                statusColor = "orange";
+                showReconnectButton = false;
+            }
+            else {
+                status = "active";
+                statusBadge = "✓ Active";
+                statusMessage =
+                    "Your AliExpress account is connected and working properly.";
+                statusColor = "green";
+                showReconnectButton = false;
+            }
+            res.status(200).json({
+                data: {
+                    isConnected: true,
+                    status,
+                    statusBadge,
+                    statusColor,
+                    message: statusMessage,
+                    showReconnectButton,
+                    account: {
+                        email: credsStatus.account,
+                        nickname: credsStatus.userNick,
+                        sellerId: credsStatus.sellerId,
+                        platform: credsStatus.accountPlatform === "seller_center"
+                            ? "Seller Center"
+                            : credsStatus.accountPlatform,
+                    },
+                    expiryInfo: {
+                        accessToken: {
+                            label: "Access Token",
+                            expiresIn: formatExpiryTime(accessTokenMinutes),
+                            isExpired: isAccessTokenExpired,
+                        },
+                        refreshToken: {
+                            label: "Refresh Token",
+                            expiresIn: formatRefreshExpiryTime(refreshTokenHours),
+                            isExpired: isRefreshTokenExpired,
+                        },
+                    },
+                    timestamps: {
+                        connectedAt: formatDate(credsStatus.createdAt),
+                        lastUpdated: formatDate(credsStatus.updatedAt),
+                    },
+                },
+            });
+        }
+        catch (error) {
+            logger_1.default.error(`Error retrieving dropshipping credentials status: ${error.message}`);
+            res.status(500).json({
+                message: "An error occurred while retrieving dropshipping credentials status.",
+            });
+        }
+    });
+}
+;
+const getVendorPayoutReports = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { status, currency, vendorId } = req.query;
+        const where = {};
+        if (status)
+            where.status = status;
+        if (currency)
+            where.currency = currency;
+        if (vendorId)
+            where.vendorId = vendorId;
+        const withdrawals = yield withdrawal_1.default.findAll({
+            where,
+            include: [
+                {
+                    model: user_1.default,
+                    as: "vendor",
+                    attributes: ["id", "firstName", "lastName", "email", "phoneNumber"],
+                },
+            ],
+            order: [["createdAt", "DESC"]],
+        });
+        res.status(200).json({ data: withdrawals });
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching payout reports:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+exports.getVendorPayoutReports = getVendorPayoutReports;
+const getVendorEarningsReport = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { vendorId, startDate, endDate } = req.query;
+        const where = { transactionType: "sale", status: "completed" };
+        if (vendorId)
+            where.userId = vendorId;
+        if (startDate && endDate) {
+            where.createdAt = {
+                [sequelize_1.Op.between]: [new Date(startDate), new Date(endDate)],
+            };
+        }
+        const sales = yield transaction_1.default.findAll({
+            where,
+            attributes: [
+                "currency",
+                [sequelize_1.Sequelize.fn("SUM", sequelize_1.Sequelize.col("amount")), "totalEarnings"],
+                [sequelize_1.Sequelize.fn("COUNT", sequelize_1.Sequelize.col("id")), "totalOrders"],
+            ],
+            group: ["currency"],
+            include: vendorId
+                ? [
+                    {
+                        model: user_1.default,
+                        as: "user",
+                        attributes: ["id", "firstName", "lastName", "email"],
+                    },
+                ]
+                : [],
+        });
+        res.status(200).json({ data: sales });
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching earnings report:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+exports.getVendorEarningsReport = getVendorEarningsReport;
+const getOverallPayoutStats = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const stats = yield withdrawal_1.default.findAll({
+            attributes: [
+                "currency",
+                "status",
+                [sequelize_1.Sequelize.fn("SUM", sequelize_1.Sequelize.col("amount")), "totalAmount"],
+                [sequelize_1.Sequelize.fn("COUNT", sequelize_1.Sequelize.col("id")), "count"],
+            ],
+            group: ["currency", "status"],
+        });
+        res.status(200).json({ data: stats });
+    }
+    catch (error) {
+        logger_1.default.error("Error fetching payout stats:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+exports.getOverallPayoutStats = getOverallPayoutStats;
+const getAllOffers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { page, limit, status, productId, ownerType } = req.query;
+    const offset = (Number(page) - 1) * Number(limit) || 0;
+    const where = {};
+    if (status)
+        where.status = String(status);
+    if (productId)
+        where.productId = String(productId);
+    // ownerType=admin → only offers on admin-owned products
+    // ownerType=vendor → only offers on vendor-owned products
+    // no ownerType → all offers (oversight)
+    const productInclude = {
+        model: product_1.default,
+        as: "product",
+        attributes: ["id", "name", "price", "image_url", "vendorId"],
+        required: true,
+    };
+    if (ownerType === "admin") {
+        productInclude.include = [{
+                model: admin_1.default,
+                as: "admin",
+                attributes: ["id"],
+                required: true,
+            }];
+    }
+    else if (ownerType === "vendor") {
+        productInclude.include = [{
+                model: admin_1.default,
+                as: "admin",
+                attributes: ["id"],
+                required: false,
+            }];
+        productInclude.where = { "$product.admin.id$": null };
+    }
+    try {
+        const { count, rows: offers } = yield productoffer_1.default.findAndCountAll({
+            where,
+            subQuery: false,
+            include: [
+                productInclude,
+                {
+                    model: user_1.default,
+                    as: "buyer",
+                    attributes: ["id", "firstName", "lastName", "email"],
+                },
+            ],
+            order: [["createdAt", "DESC"]],
+            limit: Number(limit) || 10,
+            offset,
+        });
+        res.status(200).json({ data: offers, total: count });
+    }
+    catch (error) {
+        logger_1.default.error(`Error fetching offers: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while fetching offers." });
+    }
+});
+exports.getAllOffers = getAllOffers;
+const respondToOffer = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const { offerId } = req.params;
+    const { status, counterPrice } = req.body;
+    const allowedStatuses = ["accepted", "rejected", "countered"];
+    if (!status || !allowedStatuses.includes(status)) {
+        res.status(400).json({ message: "Status must be one of: accepted, rejected, countered." });
+        return;
+    }
+    if (status === "countered" && (!counterPrice || isNaN(Number(counterPrice)) || Number(counterPrice) <= 0)) {
+        res.status(400).json({ message: "A valid counter price is required when countering an offer." });
+        return;
+    }
+    const adminId = (_a = req.admin) === null || _a === void 0 ? void 0 : _a.id;
+    try {
+        const offer = yield productoffer_1.default.findByPk(offerId, {
+            include: [
+                { model: product_1.default, as: "product", attributes: ["id", "name", "vendorId"] },
+                { model: user_1.default, as: "buyer", attributes: ["id", "firstName", "fcmToken"] },
+            ],
+        });
+        if (!offer) {
+            res.status(404).json({ message: "Offer not found." });
+            return;
+        }
+        const product = offer.product;
+        if (product.vendorId !== adminId) {
+            res.status(403).json({ message: "You can only respond to offers on your own products." });
+            return;
+        }
+        if (offer.status !== "pending") {
+            res.status(400).json({ message: "This offer has already been responded to." });
+            return;
+        }
+        yield offer.update({
+            status,
+            counterPrice: status === "countered" ? Number(counterPrice) : null,
+        });
+        const buyer = offer.buyer;
+        const notificationMessages = {
+            accepted: `Your offer on "${product.name}" has been accepted!`,
+            rejected: `Your offer on "${product.name}" has been declined.`,
+            countered: `The admin has made a counter offer of ${counterPrice} on "${product.name}".`,
+        };
+        yield notification_1.default.create({
+            userId: buyer.id,
+            title: status === "accepted" ? "Offer Accepted" : status === "rejected" ? "Offer Declined" : "Counter Offer Received",
+            message: notificationMessages[status],
+            type: `OFFER_${status.toUpperCase()}`,
+            isRead: false,
+        });
+        if (buyer.fcmToken) {
+            try {
+                yield (0, pushNotification_1.sendPushNotificationSingle)({
+                    token: buyer.fcmToken,
+                    notification: {
+                        title: status === "accepted" ? "Offer Accepted" : status === "rejected" ? "Offer Declined" : "Counter Offer",
+                        body: notificationMessages[status],
+                    },
+                    data: {
+                        offerId: offer.id,
+                        type: index_1.PushNotificationTypes.ORDER_STATUS_UPDATE,
+                    },
+                });
+            }
+            catch (pushError) {
+                logger_1.default.error("Error sending push notification:", pushError);
+            }
+        }
+        res.status(200).json({ message: "Offer response sent successfully.", data: offer });
+    }
+    catch (error) {
+        logger_1.default.error(`Error responding to offer: ${error.message}`);
+        res.status(500).json({ message: "An error occurred while responding to the offer." });
+    }
+});
+exports.respondToOffer = respondToOffer;
 //# sourceMappingURL=adminController.js.map

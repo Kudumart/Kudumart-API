@@ -52,12 +52,12 @@ passport_1.default.use(new passport_facebook_1.Strategy({
         // Create a new user if they don't exist
         const newUser = yield user_1.default.create({
             email,
-            firstName: (_c = profile.name) === null || _c === void 0 ? void 0 : _c.givenName,
-            lastName: (_d = profile.name) === null || _d === void 0 ? void 0 : _d.familyName,
+            firstName: (_c = profile.name) === null || _c === void 0 ? void 0 : _c.givenName, // Optional chaining
+            lastName: (_d = profile.name) === null || _d === void 0 ? void 0 : _d.familyName, // Optional chaining
             accountType: "Customer",
             password: yield generateUniquePhoneNumber(),
-            phoneNumber: yield generateUniquePhoneNumber(),
-            facebookId: (_e = profile.id) !== null && _e !== void 0 ? _e : "Facebook",
+            phoneNumber: yield generateUniquePhoneNumber(), // ✅ Generate unique phone number
+            facebookId: (_e = profile.id) !== null && _e !== void 0 ? _e : "Facebook", // Save Facebook ID to associate with the user
             email_verified_at: new Date()
         });
         // Generate token
@@ -75,7 +75,7 @@ passport_1.default.use(new passport_google_oauth20_1.Strategy({
     callbackURL: process.env.GOOGLE_CALLBACK_URL,
     passReqToCallback: true, // To access 'req' in the callback
 }, (req, token, tokenSecret, profile, done) => __awaiter(void 0, void 0, void 0, function* () {
-    var _f, _g;
+    var _a, _b;
     try {
         // Extract the account type passed as 'state'
         const accountType = req.query.state;
@@ -95,12 +95,12 @@ passport_1.default.use(new passport_google_oauth20_1.Strategy({
         // Create a new user if they don't exist
         const newUser = yield user_1.default.create({
             email,
-            firstName: (_f = profile.name) === null || _f === void 0 ? void 0 : _f.givenName,
-            lastName: (_g = profile.name) === null || _g === void 0 ? void 0 : _g.familyName,
-            accountType,
-            password: yield generateUniquePhoneNumber(),
-            phoneNumber: yield generateUniquePhoneNumber(),
-            googleId: profile.id,
+            firstName: (_a = profile.name) === null || _a === void 0 ? void 0 : _a.givenName, // Optional chaining
+            lastName: (_b = profile.name) === null || _b === void 0 ? void 0 : _b.familyName, // Optional chaining
+            accountType, // Save accountType (Customer or Vendor)
+            password: yield generateUniquePhoneNumber(), // Generate unique phone number
+            phoneNumber: yield generateUniquePhoneNumber(), // Generate unique phone number
+            googleId: profile.id, // Save Google ID to associate with the user
             email_verified_at: new Date(),
         });
         // Generate JWT token for the user

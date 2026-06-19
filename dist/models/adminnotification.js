@@ -1,10 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.initAdminNotificationModel = void 0;
+exports.initModel = void 0;
 const sequelize_1 = require("sequelize");
 class AdminNotification extends sequelize_1.Model {
 }
-const initAdminNotificationModel = (sequelize) => {
+const initModel = (sequelize) => {
     AdminNotification.init({
         id: {
             type: sequelize_1.DataTypes.INTEGER,
@@ -34,6 +34,6 @@ const initAdminNotificationModel = (sequelize) => {
         timestamps: true,
     });
 };
-exports.initAdminNotificationModel = initAdminNotificationModel;
+exports.initModel = initModel;
 exports.default = AdminNotification;
 //# sourceMappingURL=adminnotification.js.map

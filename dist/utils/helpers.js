@@ -12,7 +12,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.initStripe = exports.getJobsBySearch = exports.generateUniquePhoneNumber = exports.hasPurchasedProduct = exports.shuffleArray = exports.verifyPayment = exports.checkAdvertLimit = exports.checkVendorAuctionProductLimit = exports.checkVendorProductLimit = exports.fetchAdminWithPermissions = exports.sendSMS = exports.capitalizeFirstLetter = exports.generateOTP = exports.getStripeSecretKey = void 0;
+exports.generateHashedOTPToken = exports.generateOTPToken = exports.initStripe = exports.getJobsBySearch = exports.generateUniquePhoneNumber = exports.hasPurchasedProduct = exports.shuffleArray = exports.verifyStripePayment = exports.verifyPayment = exports.initializePaystackPayment = exports.checkAdvertLimit = exports.checkVendorAuctionProductLimit = exports.checkVendorProductLimit = exports.fetchAdminWithPermissions = exports.sendSMS = exports.generateOTP = exports.getStripeSecretKey = exports.ALLOWED_SERVICE_ATTRIBUTE_DATA = exports.ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ = exports.ALLOWED_SERVICE_ATTRIBUTE_INPUT = exports.ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ = void 0;
+exports.capitalizeFirstLetter = capitalizeFirstLetter;
+exports.splitPhoneNumber = splitPhoneNumber;
 // utils/helpers.ts
 const http_1 = __importDefault(require("http"));
 const https_1 = __importDefault(require("https"));
@@ -31,47 +33,72 @@ const orderitem_1 = __importDefault(require("../models/orderitem"));
 const user_1 = __importDefault(require("../models/user"));
 const job_1 = __importDefault(require("../models/job"));
 const stripe_1 = __importDefault(require("stripe"));
-const paymentgateway_1 = __importDefault(require("../models/paymentgateway"));
+const crypto_1 = require("crypto");
+exports.ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ = {
+    STR_INPUT: "str_input",
+    INT_INPUT: "int_input",
+    BOOL_INPUT: "bool_input",
+    SINGLE_SELECT: "single_select",
+    MULTI_SELECT: "multi_select",
+};
+exports.ALLOWED_SERVICE_ATTRIBUTE_INPUT = Object.values(exports.ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ);
+exports.ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ = {
+    STR: "str",
+    INT: "int",
+    BOOL: "bool",
+    STR_ARRAY: "str_array",
+};
+exports.ALLOWED_SERVICE_ATTRIBUTE_DATA = Object.values(exports.ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ);
 // Function to generate a 6-digit OTP
 const generateOTP = () => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
     return otp;
 };
 exports.generateOTP = generateOTP;
+// Function to generate a token
+const generateOTPToken = () => {
+    const token = (0, crypto_1.randomBytes)(32).toString("hex");
+    return token;
+};
+exports.generateOTPToken = generateOTPToken;
+const generateHashedOTPToken = (token) => {
+    const hashedToken = (0, crypto_1.createHash)("sha256").update(token).digest("hex");
+    return hashedToken;
+};
+exports.generateHashedOTPToken = generateHashedOTPToken;
 // Utility function to capitalize the first letter of a string
 function capitalizeFirstLetter(string) {
     return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
 }
-exports.capitalizeFirstLetter = capitalizeFirstLetter;
 const sendSMS = (mobile, messageContent) => __awaiter(void 0, void 0, void 0, function* () {
-    const apiUrl = 'portal.nigeriabulksms.com';
+    const apiUrl = "portal.nigeriabulksms.com";
     const data = querystring_1.default.stringify({
-        username: process.env.SMS_USERNAME,
-        password: process.env.SMS_PASSWORD,
-        sender: process.env.APP_NAME,
+        username: process.env.SMS_USERNAME, // Your SMS API username
+        password: process.env.SMS_PASSWORD, // Your SMS API password
+        sender: process.env.APP_NAME, // Sender ID
         message: messageContent,
         mobiles: mobile,
     });
     const options = {
         hostname: apiUrl,
-        path: '/api/',
-        method: 'POST',
+        path: "/api/",
+        method: "POST",
         headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Content-Length': data.length,
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Content-Length": data.length,
         },
     };
     return new Promise((resolve, reject) => {
         const req = http_1.default.request(options, (res) => {
-            let responseData = '';
-            res.on('data', (chunk) => {
+            let responseData = "";
+            res.on("data", (chunk) => {
                 responseData += chunk;
             });
-            res.on('end', () => {
+            res.on("end", () => {
                 try {
                     const result = JSON.parse(responseData);
-                    if (result.status && result.status.toUpperCase() === 'OK') {
-                        logger_1.default.info('SMS sent successfully');
+                    if (result.status && result.status.toUpperCase() === "OK") {
+                        logger_1.default.info("SMS sent successfully");
                         resolve();
                     }
                     else {
@@ -79,11 +106,11 @@ const sendSMS = (mobile, messageContent) => __awaiter(void 0, void 0, void 0, fu
                     }
                 }
                 catch (error) {
-                    reject(new Error('Failed to parse SMS response'));
+                    reject(new Error("Failed to parse SMS response"));
                 }
             });
         });
-        req.on('error', (error) => {
+        req.on("error", (error) => {
             reject(new Error(`Failed to send SMS: ${error.message}`));
         });
         // Send the request with the post data
@@ -118,12 +145,15 @@ const checkVendorProductLimit = (vendorId) => __awaiter(void 0, void 0, void 0, 
             },
         });
         if (!activeSubscription) {
-            return { status: false, message: 'Vendor does not have an active subscription.' };
+            return {
+                status: false,
+                message: "Vendor does not have an active subscription.",
+            };
         }
         // Fetch the subscription plan details
         const subscriptionPlan = yield subscriptionplan_1.default.findByPk(activeSubscription.subscriptionPlanId);
         if (!subscriptionPlan) {
-            return { status: false, message: 'Subscription plan not found.' };
+            return { status: false, message: "Subscription plan not found." };
         }
         const { productLimit } = subscriptionPlan;
         // Count the number of products already created by the vendor
@@ -131,13 +161,16 @@ const checkVendorProductLimit = (vendorId) => __awaiter(void 0, void 0, void 0, 
             where: { vendorId },
         });
         if (productCount >= productLimit) {
-            return { status: false, message: 'You have reached the maximum number of products allowed for your current subscription plan. Please upgrade your plan to add more products.' };
+            return {
+                status: false,
+                message: "You have reached the maximum number of products allowed for your current subscription plan. Please upgrade your plan to add more products.",
+            };
         }
-        return { status: true, message: 'Vendor can create more products.' };
+        return { status: true, message: "Vendor can create more products." };
     }
     catch (error) {
         // Error type should be handled more gracefully if you have custom error types
-        throw new Error(error.message || 'An error occurred while checking the product limit.');
+        throw new Error(error.message || "An error occurred while checking the product limit.");
     }
 });
 exports.checkVendorProductLimit = checkVendorProductLimit;
@@ -151,35 +184,51 @@ const checkVendorAuctionProductLimit = (vendorId) => __awaiter(void 0, void 0, v
             },
         });
         if (!activeSubscription) {
-            return { status: false, message: 'Vendor does not have an active subscription.' };
+            return {
+                status: false,
+                message: "Vendor does not have an active subscription.",
+            };
         }
         // Fetch the subscription plan details
         const subscriptionPlan = yield subscriptionplan_1.default.findByPk(activeSubscription.subscriptionPlanId);
         if (!subscriptionPlan) {
-            return { status: false, message: 'Subscription plan not found.' };
+            return { status: false, message: "Subscription plan not found." };
         }
         const auctionProductLimit = subscriptionPlan.auctionProductLimit;
         const allowAuctionProduct = subscriptionPlan.allowsAuction;
         // Handle the case where allowAuctionProduct is false
         if (!allowAuctionProduct) {
-            return { status: false, message: 'Your subscription plan does not allow auctions.' };
+            return {
+                status: false,
+                message: "Your subscription plan does not allow auctions.",
+            };
         }
         // Handle the case where auctionProductLimit is null
         if (auctionProductLimit === null) {
-            return { status: false, message: 'Your subscription plan does not define a limit for auction products.' };
+            return {
+                status: false,
+                message: "Your subscription plan does not define a limit for auction products.",
+            };
         }
         // Count the number of products already created by the vendor
         const auctionProductCount = yield auctionproduct_1.default.count({
             where: { vendorId },
         });
         if (auctionProductCount >= auctionProductLimit) {
-            return { status: false, message: 'You have reached the maximum number of auction products allowed for your current subscription plan. Please upgrade your plan to add more auction products.' };
+            return {
+                status: false,
+                message: "You have reached the maximum number of auction products allowed for your current subscription plan. Please upgrade your plan to add more auction products.",
+            };
         }
-        return { status: true, message: 'Vendor can create more auction products.' };
+        return {
+            status: true,
+            message: "Vendor can create more auction products.",
+        };
     }
     catch (error) {
         // Error type should be handled more gracefully if you have custom error types
-        throw new Error(error.message || 'An error occurred while checking the auction product limit.');
+        throw new Error(error.message ||
+            "An error occurred while checking the auction product limit.");
     }
 });
 exports.checkVendorAuctionProductLimit = checkVendorAuctionProductLimit;
@@ -193,33 +242,87 @@ const checkAdvertLimit = (vendorId) => __awaiter(void 0, void 0, void 0, functio
             },
         });
         if (!activeSubscription) {
-            return { status: false, message: 'Vendor does not have an active subscription.' };
+            return {
+                status: false,
+                message: "Vendor does not have an active subscription.",
+            };
         }
         // Fetch the subscription plan details
         const subscriptionPlan = yield subscriptionplan_1.default.findByPk(activeSubscription.subscriptionPlanId);
         if (!subscriptionPlan) {
-            return { status: false, message: 'Subscription plan not found.' };
+            return { status: false, message: "Subscription plan not found." };
         }
         const maxAds = subscriptionPlan.maxAds;
         // Handle the case where maxAds is null
         if (maxAds === null) {
-            return { status: false, message: 'Your subscription plan does not define a limit for adverts.' };
+            return {
+                status: false,
+                message: "Your subscription plan does not define a limit for adverts.",
+            };
         }
         // Count the number of adverts already created by the vendor
         const maxAdsCount = yield advert_1.default.count({
             where: { userId: vendorId },
         });
         if (maxAdsCount >= maxAds) {
-            return { status: false, message: 'You have reached the maximum number of adverts allowed for your current subscription plan. Please upgrade your plan to add more adverts.' };
+            return {
+                status: false,
+                message: "You have reached the maximum number of adverts allowed for your current subscription plan. Please upgrade your plan to add more adverts.",
+            };
         }
-        return { status: true, message: 'Vendor can create more adverts.' };
+        return { status: true, message: "Vendor can create more adverts." };
     }
     catch (error) {
         // Error type should be handled more gracefully if you have custom error types
-        throw new Error(error.message || 'An error occurred while checking the advert limit.');
+        throw new Error(error.message || "An error occurred while checking the advert limit.");
     }
 });
 exports.checkAdvertLimit = checkAdvertLimit;
+const initializePaystackPayment = (refId, amount, email, paystackSecretKey) => {
+    return new Promise((resolve, reject) => {
+        const postData = JSON.stringify({
+            reference: refId,
+            amount: amount * 100, // Paystack expects amount in kobo
+            email: email,
+        });
+        const options = {
+            hostname: "api.paystack.co",
+            path: "/transaction/initialize",
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${paystackSecretKey}`, // Use dynamic key
+                "Content-Type": "application/json",
+                "Content-Length": Buffer.byteLength(postData),
+            },
+        };
+        const req = https_1.default.request(options, (res) => {
+            let data = "";
+            res.on("data", (chunk) => {
+                data += chunk;
+            });
+            res.on("end", () => {
+                try {
+                    const response = JSON.parse(data);
+                    if (response.status) {
+                        resolve(response.data);
+                    }
+                    else {
+                        reject(new Error(`Paystack Error: ${response.message}`));
+                    }
+                }
+                catch (err) {
+                    reject(new Error("Invalid response from Paystack"));
+                }
+            });
+        });
+        req.on("error", (e) => {
+            reject(new Error(`Error initializing payment: ${e.message}`));
+        });
+        req.write(postData);
+        req.end();
+    });
+};
+exports.initializePaystackPayment = initializePaystackPayment;
 const verifyPayment = (refId, paystackSecretKey) => {
     return new Promise((resolve, reject) => {
         const options = {
@@ -257,6 +360,11 @@ const verifyPayment = (refId, paystackSecretKey) => {
     });
 };
 exports.verifyPayment = verifyPayment;
+const verifyStripePayment = (paymentIntentId) => __awaiter(void 0, void 0, void 0, function* () {
+    const stripe = yield initStripe();
+    return yield stripe.paymentIntents.retrieve(paymentIntentId);
+});
+exports.verifyStripePayment = verifyStripePayment;
 // Utility function to shuffle an array
 const shuffleArray = (array) => {
     for (let i = array.length - 1; i > 0; i--) {
@@ -271,8 +379,8 @@ const hasPurchasedProduct = (orderId, productId) => __awaiter(void 0, void 0, vo
         where: {
             orderId,
             status: "delivered",
-            [sequelize_1.Op.and]: sequelize_1.Sequelize.literal(`JSON_UNQUOTE(JSON_EXTRACT(product, '$.id')) = '${productId}'`)
-        }
+            [sequelize_1.Op.and]: sequelize_1.Sequelize.literal(`JSON_UNQUOTE(JSON_EXTRACT(product, '$.id')) = '${productId}'`),
+        },
     });
     return !!orderItem; // Returns true if found, false otherwise
 });
@@ -293,7 +401,7 @@ const generateUniquePhoneNumber = () => __awaiter(void 0, void 0, void 0, functi
 });
 exports.generateUniquePhoneNumber = generateUniquePhoneNumber;
 const getJobsBySearch = (searchTerm, number) => __awaiter(void 0, void 0, void 0, function* () {
-    const where = { status: 'active' };
+    const where = { status: "active" };
     if (searchTerm) {
         const searchRegex = { [sequelize_1.Op.iLike]: `%${searchTerm}%` }; // Use Sequelize's Op.iLike for case-insensitive search.
         where[sequelize_1.Op.or] = [
@@ -305,29 +413,13 @@ const getJobsBySearch = (searchTerm, number) => __awaiter(void 0, void 0, void 0
     }
     return yield job_1.default.findAll({
         where,
-        order: [['createdAt', 'DESC']],
+        order: [["createdAt", "DESC"]], // Sort by createdAt in descending order.
         limit: number, // Limit the number of results.
     });
 });
 exports.getJobsBySearch = getJobsBySearch;
 const getStripeSecretKey = () => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const paymentGateway = yield paymentgateway_1.default.findOne({
-            where: {
-                isActive: true,
-                name: "stripe", // Assuming 'name' is the field storing the gateway name
-            },
-        });
-        if (!paymentGateway) {
-            logger_1.default.error("No active Stripe gateway found.");
-            return null;
-        }
-        return paymentGateway.secretKey; // Ensure your model has this field
-    }
-    catch (error) {
-        logger_1.default.error("Error fetching Stripe secret key:", error);
-        return null;
-    }
+    return process.env.STRIPE_SECRET_KEY || null;
 });
 exports.getStripeSecretKey = getStripeSecretKey;
 const initStripe = () => __awaiter(void 0, void 0, void 0, function* () {
@@ -340,4 +432,23 @@ const initStripe = () => __awaiter(void 0, void 0, void 0, function* () {
     });
 });
 exports.initStripe = initStripe;
+/**
+ * Normalize phone numbers for AliExpress.
+ * Supports Nigeria (+234), USA (+1), UK (+44)
+ */
+function splitPhoneNumber(raw) {
+    // Remove spaces, hyphens, parentheses
+    const cleaned = raw.replace(/[\s()-]/g, "");
+    // Match +countryCode at start
+    const match = cleaned.match(/^\+(\d{1,3})(\d+)$/);
+    if (!match) {
+        throw new Error("Invalid phone number format");
+    }
+    const countryCode = "+" + match[1];
+    const number = match[2];
+    return {
+        phone_country: countryCode,
+        phone_number: number,
+    };
+}
 //# sourceMappingURL=helpers.js.map

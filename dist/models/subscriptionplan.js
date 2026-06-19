@@ -6,12 +6,12 @@ const sequelize_1 = require("sequelize");
 class SubscriptionPlan extends sequelize_1.Model {
     static associate(models) {
         this.hasMany(models.VendorSubscription, {
-            as: 'vendorSubscriptions',
-            foreignKey: 'subscriptionPlanId',
+            as: "vendorSubscriptions",
+            foreignKey: "subscriptionPlanId",
         });
         this.belongsTo(models.Currency, {
-            as: 'currency',
-            foreignKey: 'currencyId'
+            as: "currency",
+            foreignKey: "currencyId",
         });
     }
 }
@@ -27,7 +27,7 @@ const initModel = (sequelize) => {
             allowNull: false,
         },
         duration: {
-            type: sequelize_1.DataTypes.INTEGER,
+            type: sequelize_1.DataTypes.INTEGER, // Duration in days
             allowNull: false,
         },
         price: {
@@ -48,26 +48,35 @@ const initModel = (sequelize) => {
             type: sequelize_1.DataTypes.INTEGER,
             allowNull: true, // Null if auctions are not allowed
         },
+        allowsServiceAds: {
+            type: sequelize_1.DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false, // Free plan may not allow service ads
+        },
+        serviceAdsLimit: {
+            type: sequelize_1.DataTypes.INTEGER,
+            allowNull: true, // Null if service ads are not allowed
+        },
         maxAds: {
             type: sequelize_1.DataTypes.INTEGER,
-            allowNull: true,
-            defaultValue: 0
+            allowNull: true, // Null if auctions are not allowed
+            defaultValue: 0,
         },
         adsDurationDays: {
             type: sequelize_1.DataTypes.INTEGER,
-            allowNull: true,
-            defaultValue: 0
+            allowNull: true, // Null if auctions are not allowed
+            defaultValue: 0,
         },
         currencyId: {
             type: sequelize_1.DataTypes.UUID,
-            allowNull: true
+            allowNull: true,
         },
     }, {
         sequelize,
         modelName: "SubscriptionPlan",
         timestamps: true,
         paranoid: false,
-        tableName: "subscription_plans"
+        tableName: "subscription_plans",
     });
 };
 exports.initModel = initModel;

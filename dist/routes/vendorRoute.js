@@ -15,13 +15,23 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -64,8 +74,8 @@ vendorRoutes.post("/subscribe", authMiddleware_1.default, authorizeVendor_1.defa
 vendorRoutes.post("/subscribe/dollar", authMiddleware_1.default, authorizeVendor_1.default, vendorController.subscribeDollar);
 vendorRoutes.delete("/subscription/cancel", authMiddleware_1.default, authorizeVendor_1.default, vendorController.cancelSubscription);
 vendorRoutes.get("/verifyCAC", authMiddleware_1.default, authorizeVendor_1.default, vendorController.verifyCAC);
-vendorRoutes.get('/currencies', authMiddleware_1.default, authorizeVendor_1.default, vendorController.getAllCurrencies);
-vendorRoutes.get('/categories', authMiddleware_1.default, authorizeVendor_1.default, vendorController.getAllSubCategories);
+vendorRoutes.get("/currencies", authMiddleware_1.default, authorizeVendor_1.default, vendorController.getAllCurrencies);
+vendorRoutes.get("/categories", authMiddleware_1.default, authorizeVendor_1.default, vendorController.getAllSubCategories);
 vendorRoutes.get("/order/items", authMiddleware_1.default, vendorController.getVendorOrderItems);
 vendorRoutes.get("/order/item/details", authMiddleware_1.default, vendorController.getOrderItemsInfo);
 // Adverts
@@ -77,14 +87,32 @@ vendorRoutes.get("/advert", authMiddleware_1.default, vendorController.viewAdver
 vendorRoutes.delete("/adverts", authMiddleware_1.default, vendorController.deleteAdvert); // Delete an advert
 // Bank Information
 vendorRoutes.post("/bank/informations", authMiddleware_1.default, vendorController.addBankInformation);
+vendorRoutes.post("/bank/informations/v2", authMiddleware_1.default, vendorController.addBankInformationV2);
 vendorRoutes.put("/bank/informations", authMiddleware_1.default, vendorController.updateBankInformation);
+vendorRoutes.put("/bank/informations/v2", authMiddleware_1.default, vendorController.updateBankInformationV2);
 vendorRoutes.get("/bank/informations", authMiddleware_1.default, vendorController.getBankInformation);
 vendorRoutes.get("/bank/information", authMiddleware_1.default, vendorController.getSingleBankInformation);
 vendorRoutes.delete("/bank/information", authMiddleware_1.default, vendorController.deleteBankInformation);
 // Withdrawals
 vendorRoutes.post("/withdrawal", authMiddleware_1.default, vendorController.requestWithdrawal);
+vendorRoutes.get("/wallet/stats", authMiddleware_1.default, vendorController.getVendorWalletStats);
+vendorRoutes.get("/wallet/transactions", authMiddleware_1.default, vendorController.getVendorTransactions);
 vendorRoutes.put("/withdrawal", authMiddleware_1.default, vendorController.updateWithdrawal);
 vendorRoutes.get("/withdrawals", authMiddleware_1.default, vendorController.getWithdrawals);
 vendorRoutes.get("/withdrawal", authMiddleware_1.default, vendorController.getWithdrawalById);
+// Services
+vendorRoutes.post("/services", (0, validations_1.ServiceValidation)(), validations_1.validate, authMiddleware_1.default, authorizeVendor_1.default, vendorController.createService);
+vendorRoutes.put("/services/:serviceId", (0, validations_1.ServiceValidation)(), (0, validations_1.validateUUIDParam)("serviceId"), validations_1.validate, authMiddleware_1.default, authorizeVendor_1.default, vendorController.updateService);
+vendorRoutes.get("/services/:serviceId", (0, validations_1.validateUUIDParam)("serviceId"), validations_1.validate, authMiddleware_1.default, authorizeVendor_1.default, vendorController.getService);
+vendorRoutes.get("/services", (0, validations_1.paginationQueryParamsValidation)(), validations_1.validate, authMiddleware_1.default, authorizeVendor_1.default, vendorController.getVendorServices);
+vendorRoutes.delete("/services/:serviceId", (0, validations_1.validateUUIDParam)("serviceId"), validations_1.validate, authMiddleware_1.default, authorizeVendor_1.default, vendorController.deleteService);
+vendorRoutes.patch("/services/:serviceId/publish", (0, validations_1.validateUUIDParam)("serviceId"), validations_1.validate, authMiddleware_1.default, authorizeVendor_1.default, vendorController.publishService);
+vendorRoutes.patch("/services/:serviceId/unpublish", (0, validations_1.validateUUIDParam)("serviceId"), validations_1.validate, authMiddleware_1.default, authorizeVendor_1.default, vendorController.unpublishService);
+// Product offer routes
+vendorRoutes.get("/offers", authMiddleware_1.default, authorizeVendor_1.default, vendorController.getVendorOffers);
+vendorRoutes.put("/offers/:offerId", (0, validations_1.validateUUIDParam)("offerId"), validations_1.validate, authMiddleware_1.default, authorizeVendor_1.default, vendorController.respondToVendorOffer);
+vendorRoutes.get("/service/bookings", (0, validations_1.paginationQueryParamsValidation)(), validations_1.validate, authMiddleware_1.default, authorizeVendor_1.default, vendorController.getServiceBookings);
+vendorRoutes.patch("/service/bookings/:bookingId/confirm", (0, validations_1.validateUUIDParam)("bookingId"), validations_1.validate, authMiddleware_1.default, authorizeVendor_1.default, vendorController.markServiceBookingAsConfirmed);
+vendorRoutes.patch("/service/bookings/:bookingId/cancel", (0, validations_1.validateUUIDParam)("bookingId"), validations_1.validate, authMiddleware_1.default, authorizeVendor_1.default, vendorController.markServiceBookingAsCancelled);
 exports.default = vendorRoutes;
 //# sourceMappingURL=vendorRoute.js.map

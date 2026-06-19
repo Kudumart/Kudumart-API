@@ -17,6 +17,7 @@ exports.initModel = void 0;
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const sequelize_1 = require("sequelize");
 const kyc_1 = __importDefault(require("./kyc"));
+const trackingId_1 = require("../utils/trackingId");
 class User extends sequelize_1.Model {
     // Method to hash the password before saving
     static hashPassword(password) {
@@ -29,29 +30,30 @@ class User extends sequelize_1.Model {
         return bcrypt_1.default.compare(password, this.password);
     }
     static associate(models) {
+        // Define expected model types
         this.hasOne(models.OTP, {
-            as: 'otp',
-            foreignKey: 'userId',
-            onDelete: 'RESTRICT'
+            as: "otp",
+            foreignKey: "userId", // Ensure the OTP model has a 'userId' column
+            onDelete: "RESTRICT",
         });
         this.hasMany(models.VendorSubscription, {
-            as: 'subscriptions',
-            foreignKey: 'vendorId',
-            onDelete: 'RESTRICT',
+            as: "subscriptions",
+            foreignKey: "vendorId",
+            onDelete: "RESTRICT",
         });
         this.hasMany(models.Store, {
-            as: 'stores',
-            foreignKey: 'vendorId',
-            onDelete: 'RESTRICT',
+            as: "stores",
+            foreignKey: "vendorId",
+            onDelete: "RESTRICT",
         });
         this.hasMany(models.Bid, {
-            foreignKey: 'bidderId',
-            as: 'bids',
+            foreignKey: "bidderId",
+            as: "bids",
         });
         this.hasOne(models.KYC, {
-            as: 'kyc',
-            foreignKey: 'vendorId',
-            onDelete: 'RESTRICT'
+            as: "kyc",
+            foreignKey: "vendorId",
+            onDelete: "RESTRICT",
         });
     }
     // Add method to fetch KYC record
@@ -68,12 +70,18 @@ const initModel = (sequelize) => {
             primaryKey: true,
             defaultValue: sequelize_1.DataTypes.UUIDV4, // Automatically generate UUIDs
         },
+        trackingId: {
+            // only for vendors
+            type: sequelize_1.DataTypes.STRING,
+            unique: true, // Ensure unique tracking IDs
+            allowNull: true,
+        },
         firstName: sequelize_1.DataTypes.STRING,
         lastName: sequelize_1.DataTypes.STRING,
         gender: sequelize_1.DataTypes.STRING,
         email: {
             type: sequelize_1.DataTypes.STRING,
-            unique: true,
+            unique: true, // Ensure unique emails
             allowNull: false, // You might want to enforce this
         },
         email_verified_at: sequelize_1.DataTypes.DATE,
@@ -89,24 +97,27 @@ const initModel = (sequelize) => {
         dateOfBirth: sequelize_1.DataTypes.STRING,
         location: {
             type: sequelize_1.DataTypes.JSON,
-            defaultValue: [],
+            defaultValue: [], // Ensures it's an array by default
             get() {
-                const value = this.getDataValue('location');
-                return typeof value === 'string' ? JSON.parse(value) : value;
-            }
+                const value = this.getDataValue("location");
+                return typeof value === "string" ? JSON.parse(value) : value;
+            },
         },
         photo: sequelize_1.DataTypes.TEXT,
+        fcmToken: sequelize_1.DataTypes.STRING,
         wallet: sequelize_1.DataTypes.DECIMAL(20, 2),
+        pendingWallet: sequelize_1.DataTypes.DECIMAL(20, 2),
         dollarWallet: sequelize_1.DataTypes.DECIMAL(20, 2),
+        pendingDollarWallet: sequelize_1.DataTypes.DECIMAL(20, 2),
         facebookId: sequelize_1.DataTypes.STRING,
         googleId: sequelize_1.DataTypes.STRING,
-        accountType: sequelize_1.DataTypes.ENUM('Vendor', 'Customer'),
+        accountType: sequelize_1.DataTypes.ENUM("Vendor", "Customer"),
         status: sequelize_1.DataTypes.ENUM("active", "inactive"),
         isVerified: {
             type: sequelize_1.DataTypes.VIRTUAL,
             get() {
                 // This will be populated during the query
-                return this.getDataValue('isVerified') === true;
+                return this.getDataValue("isVerified") === true;
             },
         },
     }, {
@@ -135,10 +146,10 @@ const initModel = (sequelize) => {
                 where: { vendorId: userInstance.id },
             });
             if (kyc) {
-                userInstance.setDataValue('isVerified', kyc.isVerified); // Set it correctly based on KYC data
+                userInstance.setDataValue("isVerified", kyc.isVerified); // Set it correctly based on KYC data
             }
             else {
-                userInstance.setDataValue('isVerified', false); // Set as false if no KYC record exists
+                userInstance.setDataValue("isVerified", false); // Set as false if no KYC record exists
             }
         });
         // If the result is an array of users (e.g., when using includes in a query), set for each one
@@ -154,6 +165,25 @@ const initModel = (sequelize) => {
     User.addHook("beforeSave", (user) => __awaiter(void 0, void 0, void 0, function* () {
         if (user.changed("password") || user.isNewRecord) {
             user.password = yield User.hashPassword(user.password);
+        }
+    }));
+    User.addHook("beforeCreate", (user) => __awaiter(void 0, void 0, void 0, function* () {
+        // Only generate tracking ID for vendors
+        if (user.accountType === "Vendor") {
+            user.trackingId = (0, trackingId_1.generateVendorTrackingId)(user.id);
+        }
+    }));
+    User.addHook("beforeUpdate", (user) => __awaiter(void 0, void 0, void 0, function* () {
+        // Only generate tracking ID for vendors
+        if (user.changed("accountType")) {
+            if (user.accountType === "Vendor" && !user.trackingId) {
+                // User became a vendor, generate tracking ID
+                user.trackingId = (0, trackingId_1.generateVendorTrackingId)(user.id);
+            }
+            else if (user.accountType !== "Vendor" && user.trackingId) {
+                // User is no longer a vendor, remove tracking ID
+                user.trackingId = null;
+            }
         }
     }));
 };

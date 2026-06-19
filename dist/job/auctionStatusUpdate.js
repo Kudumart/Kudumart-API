@@ -23,20 +23,20 @@ const messages_1 = require("../utils/messages");
 const user_1 = __importDefault(require("../models/user"));
 // Runs every minute to check and update auction statuses
 const auctionStatusUpdate = () => {
-    node_cron_1.default.schedule('* * * * *', () => __awaiter(void 0, void 0, void 0, function* () {
-        logger_1.default.info('Running auction status update...');
+    node_cron_1.default.schedule("* * * * *", () => __awaiter(void 0, void 0, void 0, function* () {
+        logger_1.default.info("Running auction status update...");
         try {
             // Move 'upcoming' auctions to 'ongoing' when startDate is reached
-            yield auctionproduct_1.default.update({ auctionStatus: 'ongoing' }, {
+            yield auctionproduct_1.default.update({ auctionStatus: "ongoing" }, {
                 where: {
-                    auctionStatus: 'upcoming',
+                    auctionStatus: "upcoming",
                     startDate: { [sequelize_1.Op.lte]: new Date(new Date().toISOString()) }, // startDate <= now
                 },
             });
             // Find auctions that have ended
             const endedAuctions = yield auctionproduct_1.default.findAll({
                 where: {
-                    auctionStatus: 'ongoing',
+                    auctionStatus: "ongoing",
                     endDate: { [sequelize_1.Op.lte]: new Date() }, // endDate <= now
                 },
             });
@@ -44,18 +44,18 @@ const auctionStatusUpdate = () => {
                 // Find the highest bid
                 const highestBid = yield bid_1.default.findOne({
                     where: { auctionProductId: auction.id, isWinningBid: true },
-                    order: [['bidAmount', 'DESC']], // Get highest bid
+                    order: [["bidAmount", "DESC"]], // Get highest bid
                 });
                 const winnerId = highestBid ? highestBid.bidderId : null;
                 const winningBid = highestBid ? highestBid.bidAmount : 0;
                 // Update auction status to 'ended'
-                yield auctionproduct_1.default.update({ auctionStatus: 'ended' }, { where: { id: auction.id } });
+                yield auctionproduct_1.default.update({ auctionStatus: "ended" }, { where: { id: auction.id } });
                 // If there's a winner, send an email notification
                 if (winnerId) {
                     const winner = yield user_1.default.findByPk(winnerId);
                     if (winner) {
                         // Emit auctionEnded event to all clients
-                        index_1.io.to(auction.id).emit('auctionEnded', {
+                        index_1.io.to(auction.id).emit("auctionEnded", {
                             auctionProductId: auction.id,
                             winner,
                             winningBid,
@@ -73,10 +73,10 @@ const auctionStatusUpdate = () => {
                     }
                 }
             }
-            logger_1.default.info('Auction status updated successfully.');
+            logger_1.default.info("Auction status updated successfully.");
         }
         catch (error) {
-            logger_1.default.info('Error updating auction status:', error);
+            logger_1.default.info("Error updating auction status:", error);
         }
     }));
 };

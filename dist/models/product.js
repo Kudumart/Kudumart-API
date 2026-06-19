@@ -7,39 +7,49 @@ class Product extends sequelize_1.Model {
     static associate(models) {
         // Define associations here
         this.belongsTo(models.User, {
-            as: 'vendor',
-            foreignKey: 'vendorId',
-            onDelete: 'RESTRICT'
+            as: "vendor",
+            foreignKey: "vendorId",
+            onDelete: "RESTRICT",
         });
         this.belongsTo(models.Admin, {
-            as: 'admin',
-            foreignKey: 'vendorId',
-            onDelete: 'RESTRICT'
+            as: "admin",
+            foreignKey: "vendorId",
+            onDelete: "RESTRICT",
         });
         this.belongsTo(models.Store, {
-            as: 'store',
-            foreignKey: 'storeId',
-            onDelete: 'RESTRICT'
+            as: "store",
+            foreignKey: "storeId",
+            onDelete: "RESTRICT",
         });
         this.belongsTo(models.SubCategory, {
-            as: 'sub_category',
-            foreignKey: 'categoryId',
-            onDelete: 'RESTRICT'
+            as: "sub_category",
+            foreignKey: "categoryId",
+            onDelete: "RESTRICT",
         });
         this.hasMany(models.SaveProduct, {
-            as: 'savedProducts',
-            foreignKey: 'productId',
-            onDelete: 'RESTRICT'
+            as: "savedProducts",
+            foreignKey: "productId",
+            onDelete: "RESTRICT",
         });
         this.hasMany(models.ReviewProduct, {
-            as: 'reviews',
-            foreignKey: 'productId',
-            onDelete: 'RESTRICT'
+            as: "reviews",
+            foreignKey: "productId",
+            onDelete: "RESTRICT",
         });
         this.hasMany(models.Cart, {
-            as: 'carts',
-            foreignKey: 'productId',
-            onDelete: 'RESTRICT'
+            as: "carts",
+            foreignKey: "productId",
+            onDelete: "RESTRICT",
+        });
+        this.hasOne(models.DropshipProducts, {
+            as: "dropshipDetails",
+            foreignKey: "productId",
+            sourceKey: "id",
+        });
+        this.hasMany(models.ProductOffer, {
+            as: "offers",
+            foreignKey: "productId",
+            onDelete: "CASCADE",
         });
     }
 }
@@ -53,25 +63,25 @@ const initModel = (sequelize) => {
         },
         vendorId: {
             type: sequelize_1.DataTypes.UUID,
-            allowNull: false
+            allowNull: false,
         },
         storeId: {
             type: sequelize_1.DataTypes.UUID,
             allowNull: false,
             references: {
-                model: 'stores',
-                key: 'id',
+                model: "stores",
+                key: "id",
             },
-            onDelete: 'RESTRICT',
+            onDelete: "RESTRICT",
         },
         categoryId: {
             type: sequelize_1.DataTypes.UUID,
             allowNull: false,
             references: {
-                model: 'sub_categories',
-                key: 'id',
+                model: "sub_categories",
+                key: "id",
             },
-            onDelete: 'RESTRICT',
+            onDelete: "RESTRICT",
         },
         name: {
             type: sequelize_1.DataTypes.STRING,
@@ -83,8 +93,13 @@ const initModel = (sequelize) => {
             allowNull: false,
         },
         condition: {
-            type: sequelize_1.DataTypes.ENUM('brand_new', 'fairly_used', 'fairly_foreign', 'refurbished'),
+            type: sequelize_1.DataTypes.ENUM("brand_new", "fairly_used", "fairly_foreign", "refurbished"),
             allowNull: false,
+        },
+        type: {
+            type: sequelize_1.DataTypes.ENUM("dropship", "in_stock"),
+            allowNull: false,
+            defaultValue: "in_stock",
         },
         description: {
             type: sequelize_1.DataTypes.TEXT,
@@ -97,7 +112,7 @@ const initModel = (sequelize) => {
         quantity: {
             type: sequelize_1.DataTypes.INTEGER,
             allowNull: false,
-            defaultValue: 0
+            defaultValue: 0,
         },
         price: {
             type: sequelize_1.DataTypes.DECIMAL(20, 2),
@@ -111,14 +126,18 @@ const initModel = (sequelize) => {
             type: sequelize_1.DataTypes.STRING,
             allowNull: true,
         },
+        video_url: {
+            type: sequelize_1.DataTypes.STRING,
+            allowNull: true,
+        },
         additional_images: {
             type: sequelize_1.DataTypes.JSON,
             allowNull: true,
-            defaultValue: [],
+            defaultValue: [], // Ensures it's an array by default
             get() {
-                const value = this.getDataValue('additional_images');
-                return typeof value === 'string' ? JSON.parse(value) : value;
-            }
+                const value = this.getDataValue("additional_images");
+                return typeof value === "string" ? JSON.parse(value) : value;
+            },
         },
         warranty: {
             type: sequelize_1.DataTypes.STRING,
@@ -143,19 +162,32 @@ const initModel = (sequelize) => {
         views: {
             type: sequelize_1.DataTypes.INTEGER,
             allowNull: true,
-            defaultValue: 0
+            defaultValue: 0,
         },
         status: {
-            type: sequelize_1.DataTypes.ENUM('active', 'inactive', 'draft'),
-            defaultValue: 'active',
+            type: sequelize_1.DataTypes.ENUM("active", "inactive", "draft"),
+            defaultValue: "active",
             allowNull: false,
+        },
+        variants: {
+            type: sequelize_1.DataTypes.JSON,
+            allowNull: true,
+            defaultValue: [],
+            get() {
+                const value = this.getDataValue("variants");
+                return typeof value === "string" ? JSON.parse(value) : value;
+            },
+        },
+        last_synced_at: {
+            type: sequelize_1.DataTypes.DATE,
+            allowNull: true,
         },
     }, {
         sequelize,
-        modelName: 'Product',
+        modelName: "Product",
         timestamps: true,
         paranoid: false,
-        tableName: 'products',
+        tableName: "products",
     });
 };
 exports.initModel = initModel;

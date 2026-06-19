@@ -13,6 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.io = void 0;
+require("./sentry/instrument");
 const dotenv_1 = __importDefault(require("dotenv"));
 const http_1 = __importDefault(require("http"));
 const socket_io_1 = require("socket.io");
@@ -24,6 +25,9 @@ require("./config/passportConfig"); // Import Password Configuration
 const passport_1 = __importDefault(require("passport"));
 const subscriptionCron_1 = __importDefault(require("./job/subscriptionCron")); // Import the cron job
 const auctionStatusUpdate_1 = __importDefault(require("./job/auctionStatusUpdate")); // Import the cron job
+const auctionReminder_1 = require("./job/auctionReminder");
+const updateDropshippedProducts_1 = __importDefault(require("./job/updateDropshippedProducts"));
+const refreshAliexpressTokenCron_1 = __importDefault(require("./job/refreshAliexpressTokenCron"));
 dotenv_1.default.config();
 // Initialize the Express app
 const app = (0, express_service_1.default)();
@@ -32,13 +36,13 @@ const server = http_1.default.createServer(app);
 // Attach Socket.IO to the HTTP server
 const io = new socket_io_1.Server(server, {
     cors: {
-        origin: '*', // Change to specific origins in production
+        origin: "*", // Change to specific origins in production
     },
 });
 exports.io = io;
 app.use(passport_1.default.initialize());
-app.use('/api', authRoute_1.default); // Mount the router to /api
-app.set('trust proxy', true);
+app.use("/api", authRoute_1.default); // Mount the router to /api
+app.set("trust proxy", true);
 // Configure Socket.IO
 (0, socket_service_1.configureSocket)(io);
 // Initialize and sync Sequelize
@@ -47,31 +51,33 @@ sequelize_service_1.default
     .then(() => __awaiter(void 0, void 0, void 0, function* () {
     if (sequelize_service_1.default.connection) {
         yield sequelize_service_1.default.connection.authenticate(); // Ensure the connection is established
-        sequelize_service_1.default.connection.sync({ force: true });
-        console.log('Database connected successfully');
+        console.log("Database connected successfully");
     }
     else {
-        console.error('Database connection is not initialized.');
+        console.error("Database connection is not initialized.");
     }
 }))
-    .catch((error) => console.error('Error connecting to the database:', error));
+    .catch((error) => console.error("Error connecting to the database:", error));
 // Create and start the HTTP server
-const port = process.env.SERVER_PORT || 3001; // Get the port from the environment variables
+const port = process.env.PORT || 3001; // Get the port from the environment variables
 // Start the cron job
 (0, subscriptionCron_1.default)();
 (0, auctionStatusUpdate_1.default)();
+(0, auctionReminder_1.auctionReminderJob)();
+(0, updateDropshippedProducts_1.default)();
+(0, refreshAliexpressTokenCron_1.default)();
 server.timeout = 300000;
 server.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);
 });
 // Graceful shutdown
-process.on('SIGINT', () => {
-    console.log('Shutting down gracefully...');
+process.on("SIGINT", () => {
+    console.log("Shutting down gracefully...");
     server.close(() => {
         var _a;
-        console.log('HTTP server closed.');
+        console.log("HTTP server closed.");
         (_a = sequelize_service_1.default.connection) === null || _a === void 0 ? void 0 : _a.close().then(() => {
-            console.log('Database connection closed.');
+            console.log("Database connection closed.");
             process.exit(0);
         });
     });

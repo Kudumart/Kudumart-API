@@ -20,7 +20,7 @@ const subscriptionplan_1 = __importDefault(require("../models/subscriptionplan")
 const notification_1 = __importDefault(require("../models/notification"));
 const runSubscriptionCron = () => {
     node_cron_1.default.schedule("0 0 * * *", () => __awaiter(void 0, void 0, void 0, function* () {
-        logger_1.default.info('Welcome to kudumart cron job');
+        logger_1.default.info("Welcome to kudumart cron job");
         try {
             const today = new Date(new Date().toISOString()); // Ensures UTC
             const nextWeek = new Date(new Date().toISOString()); // Ensures UTC
@@ -33,7 +33,9 @@ const runSubscriptionCron = () => {
                 },
             });
             for (const subscription of expiredSubscriptions) {
-                const freePlan = yield subscriptionplan_1.default.findOne({ where: { name: "Free Plan" } });
+                const freePlan = yield subscriptionplan_1.default.findOne({
+                    where: { name: "Free Plan" },
+                });
                 if (!freePlan) {
                     logger_1.default.error("Free plan not found.");
                     continue;
@@ -43,7 +45,7 @@ const runSubscriptionCron = () => {
                     vendorId: subscription.vendorId,
                     subscriptionPlanId: freePlan.id,
                     startDate: today,
-                    endDate: new Date(today.setFullYear(today.getFullYear() + 10)),
+                    endDate: new Date(today.setFullYear(today.getFullYear() + 10)), // Long validity
                     isActive: true,
                 });
                 yield notification_1.default.create({

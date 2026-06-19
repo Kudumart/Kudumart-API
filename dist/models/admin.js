@@ -33,13 +33,13 @@ class Admin extends sequelize_1.Model {
     // Association with Role model
     static associate(models) {
         this.belongsTo(models.Role, {
-            as: 'role',
-            foreignKey: 'roleId',
+            as: "role",
+            foreignKey: "roleId",
         });
         this.hasMany(models.Store, {
-            as: 'stores',
-            foreignKey: 'vendorId',
-            onDelete: 'RESTRICT',
+            as: "stores",
+            foreignKey: "vendorId",
+            onDelete: "RESTRICT",
         });
     }
 }
@@ -55,6 +55,7 @@ const initModel = (sequelize) => {
             type: sequelize_1.DataTypes.STRING,
             unique: true, // Ensure unique emails
         },
+        fcmToken: sequelize_1.DataTypes.STRING,
         password: sequelize_1.DataTypes.STRING,
         photo: sequelize_1.DataTypes.TEXT,
         roleId: sequelize_1.DataTypes.UUID,

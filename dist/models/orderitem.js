@@ -7,19 +7,19 @@ class OrderItem extends sequelize_1.Model {
     static associate(models) {
         // Define associations here
         this.belongsTo(models.Order, {
-            as: 'order',
-            foreignKey: 'orderId',
-            onDelete: 'RESTRICT',
+            as: "order",
+            foreignKey: "orderId",
+            onDelete: "RESTRICT",
         });
         this.belongsTo(models.User, {
-            as: 'vendor',
-            foreignKey: 'vendorId',
-            onDelete: 'RESTRICT'
+            as: "vendor",
+            foreignKey: "vendorId",
+            onDelete: "RESTRICT",
         });
         this.belongsTo(models.Admin, {
-            as: 'admin',
-            foreignKey: 'vendorId',
-            onDelete: 'RESTRICT'
+            as: "admin",
+            foreignKey: "vendorId",
+            onDelete: "RESTRICT",
         });
     }
 }
@@ -47,11 +47,11 @@ const initModel = (sequelize) => {
         product: {
             type: sequelize_1.DataTypes.JSON,
             allowNull: false,
-            defaultValue: [],
+            defaultValue: [], // Ensures it's an array by default
             get() {
-                const value = this.getDataValue('product');
-                return typeof value === 'string' ? JSON.parse(value) : value;
-            }
+                const value = this.getDataValue("product");
+                return typeof value === "string" ? JSON.parse(value) : value;
+            },
         },
         quantity: {
             type: sequelize_1.DataTypes.INTEGER,
@@ -66,12 +66,21 @@ const initModel = (sequelize) => {
             allowNull: false,
             defaultValue: "pending",
         },
+        dropshipProductId: {
+            type: sequelize_1.DataTypes.STRING,
+            allowNull: true,
+        },
+        dropshipOrderItemIds: {
+            type: sequelize_1.DataTypes.JSON,
+            allowNull: true,
+            defaultValue: [],
+        },
     }, {
         sequelize,
-        modelName: 'OrderItem',
+        modelName: "OrderItem",
         timestamps: true,
         paranoid: false,
-        tableName: 'order_items',
+        tableName: "order_items",
     });
 };
 exports.initModel = initModel;

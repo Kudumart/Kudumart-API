@@ -7,8 +7,8 @@ class Permission extends sequelize_1.Model {
     static associate(models) {
         // Many-to-Many relationship between Permission and Role
         this.belongsToMany(models.Role, {
-            through: 'role_permissions',
-            foreignKey: 'permissionId',
+            through: 'role_permissions', // The join table
+            foreignKey: 'permissionId', // Foreign key for Permission in the join table
             as: 'roles', // Alias for accessing roles from a permission
         });
     }
@@ -25,6 +25,10 @@ const initModel = (sequelize) => {
             type: sequelize_1.DataTypes.STRING,
             allowNull: false,
             unique: true,
+        },
+        description: {
+            type: sequelize_1.DataTypes.STRING,
+            allowNull: true,
         },
     }, {
         sequelize,

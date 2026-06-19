@@ -7,29 +7,29 @@ class AuctionProduct extends sequelize_1.Model {
     static associate(models) {
         // Define associations here
         this.belongsTo(models.User, {
-            as: 'vendor',
-            foreignKey: 'vendorId',
-            onDelete: 'RESTRICT',
+            as: "vendor",
+            foreignKey: "vendorId",
+            onDelete: "RESTRICT",
         });
         this.belongsTo(models.Admin, {
-            as: 'admin',
-            foreignKey: 'vendorId',
-            onDelete: 'RESTRICT',
+            as: "admin",
+            foreignKey: "vendorId",
+            onDelete: "RESTRICT",
         });
         this.belongsTo(models.Store, {
-            as: 'store',
-            foreignKey: 'storeId',
-            onDelete: 'RESTRICT',
+            as: "store",
+            foreignKey: "storeId",
+            onDelete: "RESTRICT",
         });
         this.belongsTo(models.SubCategory, {
-            as: 'sub_category',
-            foreignKey: 'categoryId',
-            onDelete: 'RESTRICT',
+            as: "sub_category",
+            foreignKey: "categoryId",
+            onDelete: "RESTRICT",
         });
         this.hasMany(models.Bid, {
-            as: 'bids',
-            foreignKey: 'auctionProductId',
-            onDelete: 'CASCADE',
+            as: "bids",
+            foreignKey: "auctionProductId",
+            onDelete: "CASCADE",
         });
     }
 }
@@ -43,25 +43,25 @@ const initModel = (sequelize) => {
         },
         vendorId: {
             type: sequelize_1.DataTypes.UUID,
-            allowNull: false
+            allowNull: false,
         },
         storeId: {
             type: sequelize_1.DataTypes.UUID,
             allowNull: false,
             references: {
-                model: 'stores',
-                key: 'id',
+                model: "stores",
+                key: "id",
             },
-            onDelete: 'RESTRICT',
+            onDelete: "RESTRICT",
         },
         categoryId: {
             type: sequelize_1.DataTypes.UUID,
             allowNull: false,
             references: {
-                model: 'sub_categories',
-                key: 'id',
+                model: "sub_categories",
+                key: "id",
             },
-            onDelete: 'RESTRICT',
+            onDelete: "RESTRICT",
         },
         name: {
             type: sequelize_1.DataTypes.STRING,
@@ -73,7 +73,7 @@ const initModel = (sequelize) => {
             allowNull: false,
         },
         condition: {
-            type: sequelize_1.DataTypes.ENUM('brand_new', 'fairly_used', 'fairly_foreign', 'refurbished'),
+            type: sequelize_1.DataTypes.ENUM("brand_new", "fairly_used", "fairly_foreign", "refurbished"),
             allowNull: false,
         },
         description: {
@@ -117,26 +117,30 @@ const initModel = (sequelize) => {
             type: sequelize_1.DataTypes.STRING,
             allowNull: true,
         },
+        video: {
+            type: sequelize_1.DataTypes.STRING,
+            allowNull: true,
+        },
         additionalImages: {
             type: sequelize_1.DataTypes.JSON,
             allowNull: true,
-            defaultValue: [],
+            defaultValue: [], // Ensures it's an array by default
             get() {
-                const value = this.getDataValue('additionalImages');
-                return typeof value === 'string' ? JSON.parse(value) : value;
-            }
+                const value = this.getDataValue("additionalImages");
+                return typeof value === "string" ? JSON.parse(value) : value;
+            },
         },
         auctionStatus: {
-            type: sequelize_1.DataTypes.ENUM('upcoming', 'ongoing', 'cancelled', 'ended'),
-            defaultValue: 'upcoming',
+            type: sequelize_1.DataTypes.ENUM("upcoming", "ongoing", "cancelled", "ended"),
+            defaultValue: "upcoming",
             allowNull: false,
         },
     }, {
         sequelize,
-        modelName: 'AuctionProduct',
+        modelName: "AuctionProduct",
         timestamps: true,
         paranoid: false,
-        tableName: 'auction_products',
+        tableName: "auction_products",
     });
 };
 exports.initModel = initModel;

@@ -1,7 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validate = exports.postJobValidationRules = exports.updateAdvertValidation = exports.createAdvertValidation = exports.validateShowInterest = exports.validateUpdateCartItem = exports.validateAddItemToCart = exports.validatePlaceBid = exports.validateSendMessage = exports.validatePaymentGateway = exports.updateAuctionProductValidation = exports.auctionProductValidation = exports.updateProductValidation = exports.addProductValidation = exports.updateStoreValidation = exports.createStoreValidation = exports.validateKYCNotification = exports.kycValidationRules = exports.updateSubscriptionPlanValidationRules = exports.createSubscriptionPlanValidationRules = exports.updateSubAdminValidationRules = exports.createSubAdminValidationRules = exports.adminUpdateProfileValidationRules = exports.confirmProfilePhoneNumberValidationRules = exports.updateProfilePhoneNumberValidationRules = exports.confirmProfileEmailValidationRules = exports.updateProfileEmailValidationRules = exports.updatePasswordValidationRules = exports.resetPasswordValidationRules = exports.forgotPasswordValidationRules = exports.resendVerificationValidationRules = exports.loginValidationRules = exports.verificationValidationRules = exports.registrationValidationRules = void 0;
+exports.validate = exports.addAliexpressProductValidation = exports.ValidateServiceBooking = exports.ServiceValidation = exports.RemoveServiceCategoryFromAttributeValidation = exports.AddServiceCategoryToAttributeValidation = exports.AddServiceAttributeOptionsValidation = exports.CreateServiceAttributeValidation = exports.ServiceSubCategoryValidation = exports.validateUUIDParam = exports.ServiceIdValidation = exports.ServiceCategoryValidation = exports.productChargeValidation = exports.paginationQueryParamsValidation = exports.postJobValidationRules = exports.updateAdvertValidation = exports.createAdvertValidation = exports.validateShowInterest = exports.validateUpdateCartItem = exports.validateAddItemToCart = exports.validatePlaceBid = exports.validateSendMessage = exports.validatePaymentGateway = exports.updateAuctionProductValidation = exports.auctionProductValidation = exports.updateProductValidation = exports.addProductValidation = exports.updateStoreValidation = exports.createStoreValidation = exports.validateKYCNotification = exports.kycValidationRules = exports.updateSubscriptionPlanValidationRules = exports.createSubscriptionPlanValidationRules = exports.updateSubAdminValidationRules = exports.createSubAdminValidationRules = exports.adminUpdateProfileValidationRules = exports.confirmProfilePhoneNumberValidationRules = exports.updateProfilePhoneNumberValidationRules = exports.confirmProfileEmailValidationRules = exports.updateProfileEmailValidationRules = exports.updatePasswordValidationRules = exports.resetPasswordValidationRules = exports.forgotPasswordValidationRules = exports.resendVerificationValidationRules = exports.loginValidationRules = exports.verificationTokenValidationRules = exports.verificationValidationRules = exports.registrationValidationRules = void 0;
 const express_validator_1 = require("express-validator");
+const helpers_1 = require("./helpers");
 // Validation rules for different functionalities
 // Registration validation rules
 const registrationValidationRules = () => {
@@ -12,6 +13,12 @@ const registrationValidationRules = () => {
             .withMessage("Password must be at least 6 characters"),
         (0, express_validator_1.check)("firstName").not().isEmpty().withMessage("First name is required"),
         (0, express_validator_1.check)("lastName").not().isEmpty().withMessage("Last name is required"),
+        (0, express_validator_1.check)("platform")
+            .optional()
+            .isString()
+            .withMessage("Platform must be a string")
+            .isIn(["mobile", "web"])
+            .withMessage('Platform must be either "mobile" or "web"'),
         (0, express_validator_1.check)("phoneNumber")
             .isMobilePhone("any")
             .withMessage("Invalid phone number")
@@ -36,6 +43,13 @@ const verificationValidationRules = () => {
     ];
 };
 exports.verificationValidationRules = verificationValidationRules;
+const verificationTokenValidationRules = () => {
+    return [
+        (0, express_validator_1.check)("email").isEmail().withMessage("Please provide a valid email"),
+        (0, express_validator_1.check)("token").notEmpty().withMessage("Please provide a token"),
+    ];
+};
+exports.verificationTokenValidationRules = verificationTokenValidationRules;
 // Login validation rules
 const loginValidationRules = () => {
     return [
@@ -43,12 +57,30 @@ const loginValidationRules = () => {
         (0, express_validator_1.check)("password")
             .isLength({ min: 6 })
             .withMessage("Password must be at least 6 characters"),
+        (0, express_validator_1.check)("platform")
+            .optional()
+            .isString()
+            .withMessage("Platform must be a string")
+            .isIn(["mobile", "web"])
+            .withMessage('Platform must be either "mobile" or "web"'),
+        (0, express_validator_1.check)("fcmToken")
+            .isString()
+            .optional()
+            .withMessage("FCM token must be a string"),
     ];
 };
 exports.loginValidationRules = loginValidationRules;
 // Login validation rules
 const resendVerificationValidationRules = () => {
-    return [(0, express_validator_1.check)("email").isEmail().withMessage("Please provide a valid email")];
+    return [
+        (0, express_validator_1.check)("email").isEmail().withMessage("Please provide a valid email"),
+        (0, express_validator_1.check)("platform")
+            .optional()
+            .isString()
+            .withMessage("Platform must be a string")
+            .isIn(["mobile", "web"])
+            .withMessage('Platform must be either "mobile" or "web"'),
+    ];
 };
 exports.resendVerificationValidationRules = resendVerificationValidationRules;
 // Forgot password validation rules
@@ -75,12 +107,14 @@ exports.resetPasswordValidationRules = resetPasswordValidationRules;
 // Password update validation rules
 const updatePasswordValidationRules = () => {
     return [
-        (0, express_validator_1.check)("oldPassword").notEmpty().withMessage("Old password is required."),
+        (0, express_validator_1.check)("oldPassword")
+            .notEmpty()
+            .withMessage("Old password is required."), // Check for old password
         (0, express_validator_1.check)("newPassword")
             .notEmpty()
             .withMessage("New password is required.") // Check for new password
             .isLength({ min: 6 })
-            .withMessage("New password must be at least 6 characters long."),
+            .withMessage("New password must be at least 6 characters long."), // Ensure minimum length
         (0, express_validator_1.check)("confirmNewPassword")
             .notEmpty()
             .withMessage("Confirmation password is required.") // Check for confirmation password
@@ -232,6 +266,13 @@ const createSubscriptionPlanValidationRules = () => {
             .optional({ checkFalsy: true })
             .isInt({ min: 0 })
             .withMessage("Auction product limit must be a non-negative integer"),
+        (0, express_validator_1.check)("allowsServiceAds")
+            .isBoolean()
+            .withMessage("Allows service ads must be a boolean value"),
+        (0, express_validator_1.check)("serviceAdsLimit")
+            .optional({ checkFalsy: true })
+            .isInt({ min: 0 })
+            .withMessage("Service ads limit must be a non-negative integer"),
     ];
 };
 exports.createSubscriptionPlanValidationRules = createSubscriptionPlanValidationRules;
@@ -461,6 +502,10 @@ const addProductValidation = () => {
             .optional({ checkFalsy: true })
             .isString()
             .withMessage("Image URL must be a valid string."),
+        (0, express_validator_1.check)("video_url")
+            .optional({ checkFalsy: true })
+            .isString()
+            .withMessage("Video URL must be a valid string."),
         (0, express_validator_1.check)("additional_images")
             .optional({ checkFalsy: true })
             .isArray({ min: 1 })
@@ -468,8 +513,7 @@ const addProductValidation = () => {
             .custom((array) => {
             // Ensure each item in the array is a valid URL
             array.forEach((url) => {
-                if (typeof url !== "string" ||
-                    !url.match(/^(https):\/\/[^ "]+$/)) {
+                if (typeof url !== "string" || !url.match(/^(https):\/\/[^ "]+$/)) {
                     throw new Error("Each item in additional images must be a valid URL.");
                 }
             });
@@ -537,6 +581,10 @@ const updateProductValidation = () => {
             .optional({ checkFalsy: true })
             .isString()
             .withMessage("Image URL must be a valid string."),
+        (0, express_validator_1.check)("video_url")
+            .optional({ checkFalsy: true })
+            .isString()
+            .withMessage("Video URL must be a valid string."),
         (0, express_validator_1.check)("additional_images")
             .optional({ checkFalsy: true })
             .isArray({ min: 1 })
@@ -544,8 +592,7 @@ const updateProductValidation = () => {
             .custom((array) => {
             // Ensure each item in the array is a valid URL
             array.forEach((url) => {
-                if (typeof url !== "string" ||
-                    !url.match(/^(https):\/\/[^ "]+$/)) {
+                if (typeof url !== "string" || !url.match(/^(https):\/\/[^ "]+$/)) {
                     throw new Error("Each item in additional images must be a valid URL.");
                 }
             });
@@ -621,6 +668,10 @@ const auctionProductValidation = () => {
             .optional({ checkFalsy: true })
             .isString()
             .withMessage("Image must be a valid url."),
+        (0, express_validator_1.check)("video")
+            .optional({ checkFalsy: true })
+            .isString()
+            .withMessage("Video must be a valid URL."),
         (0, express_validator_1.check)("additionalImages")
             .optional({ checkFalsy: true })
             .isArray({ min: 1 })
@@ -628,8 +679,7 @@ const auctionProductValidation = () => {
             .custom((array) => {
             // Ensure each item in the array is a valid URL
             array.forEach((url) => {
-                if (typeof url !== "string" ||
-                    !url.match(/^(https):\/\/[^ "]+$/)) {
+                if (typeof url !== "string" || !url.match(/^(https):\/\/[^ "]+$/)) {
                     throw new Error("Each item in additional images must be a valid URL.");
                 }
             });
@@ -684,6 +734,10 @@ const updateAuctionProductValidation = () => {
             .optional({ checkFalsy: true })
             .isString()
             .withMessage("Image must be a valid url."),
+        (0, express_validator_1.check)("video")
+            .optional({ checkFalsy: true })
+            .isString()
+            .withMessage("Video must be a valid URL."),
         (0, express_validator_1.check)("additionalImages")
             .optional({ checkFalsy: true })
             .isArray({ min: 1 })
@@ -691,8 +745,7 @@ const updateAuctionProductValidation = () => {
             .custom((array) => {
             // Ensure each item in the array is a valid URL
             array.forEach((url) => {
-                if (typeof url !== "string" ||
-                    !url.match(/^(https):\/\/[^ "]+$/)) {
+                if (typeof url !== "string" || !url.match(/^(https):\/\/[^ "]+$/)) {
                     throw new Error("Each item in additional images must be a valid URL.");
                 }
             });
@@ -768,7 +821,7 @@ const validatePlaceBid = () => {
         // Validate bidAmount
         (0, express_validator_1.check)("bidAmount")
             .isNumeric()
-            .withMessage("BidAmount is required and must be a numerical value")
+            .withMessage("BidAmount is required and must be a numerical value"),
     ];
 };
 exports.validatePlaceBid = validatePlaceBid;
@@ -835,7 +888,7 @@ const createAdvertValidation = () => {
             .withMessage("Media URL must be a valid string."),
         (0, express_validator_1.check)("status")
             .optional({ checkFalsy: true })
-            .isIn(['pending', 'approved', 'rejected'])
+            .isIn(["pending", "approved", "rejected"])
             .withMessage("Status must be one of 'pending', 'approved', or 'rejected'."),
         (0, express_validator_1.check)("productId")
             .optional({ checkFalsy: true })
@@ -864,7 +917,7 @@ const updateAdvertValidation = () => {
             .withMessage("Media URL must be a valid string."),
         (0, express_validator_1.check)("status")
             .optional({ checkFalsy: true })
-            .isIn(['pending', 'approved', 'rejected'])
+            .isIn(["pending", "approved", "rejected"])
             .withMessage("Status must be one of 'pending', 'approved', or 'rejected'."),
         (0, express_validator_1.check)("productId")
             .optional({ checkFalsy: true })
@@ -926,6 +979,366 @@ const postJobValidationRules = () => {
     ];
 };
 exports.postJobValidationRules = postJobValidationRules;
+const paginationQueryParamsValidation = () => {
+    return [
+        (0, express_validator_1.check)("page")
+            .optional()
+            .isInt({ min: 1 })
+            .withMessage("Page must be a positive integer")
+            .default(1),
+        (0, express_validator_1.check)("limit")
+            .optional()
+            .isInt({ min: 1, max: 50 })
+            .withMessage("Limit must be a positive integer between 1 and 50")
+            .default(10),
+    ];
+};
+exports.paginationQueryParamsValidation = paginationQueryParamsValidation;
+const productChargeValidation = () => {
+    return [
+        (0, express_validator_1.check)("name").notEmpty().withMessage("Name is required"),
+        (0, express_validator_1.check)("description")
+            .optional()
+            .isLength({ min: 5 })
+            .withMessage("Description must be at least 5 characters long"),
+        (0, express_validator_1.check)("charge_currency")
+            .notEmpty()
+            .withMessage("Currency is required")
+            .isIn(["USD", "NGN"])
+            .withMessage("Currency must be either USD or NGN"),
+        (0, express_validator_1.check)("charge_amount")
+            .optional()
+            .isDecimal({ decimal_digits: "0,2" })
+            .withMessage("Charge amount must be a valid decimal number with up to two decimal places")
+            .custom((value, { req }) => {
+            if (req.body.calculation_type === "fixed" && value <= 0) {
+                throw new Error("Charge amount must be greater than 0 for fixed calculation type");
+            }
+            return true;
+        }),
+        (0, express_validator_1.check)("charge_percentage")
+            .optional()
+            .isDecimal({ decimal_digits: "0,2" })
+            .withMessage("Charge percentage must be a valid decimal number with up to two decimal places")
+            .custom((value, { req }) => {
+            if (req.body.calculation_type === "percentage" &&
+                (value <= 0 || value > 100)) {
+                throw new Error("Charge percentage must be greater than 0 and less than or equal to 100 for percentage calculation type");
+            }
+            return true;
+        }),
+        (0, express_validator_1.check)("calculation_type")
+            .notEmpty()
+            .withMessage("Calculation type is required")
+            .isIn(["fixed", "percentage"])
+            .withMessage("Calculation type must be either 'fixed' or 'percentage'"),
+        (0, express_validator_1.check)("minimum_product_amount")
+            .isDecimal({ decimal_digits: "0,2" })
+            .withMessage("Minimum product amount must be a valid decimal number with up to two decimal places"),
+        (0, express_validator_1.check)("maximum_product_amount")
+            .isDecimal({ decimal_digits: "0,2" })
+            .withMessage("Maximum product amount must be a valid decimal number with up to two decimal places"),
+    ];
+};
+exports.productChargeValidation = productChargeValidation;
+const ServiceCategoryValidation = () => {
+    return [
+        (0, express_validator_1.check)("name")
+            .not()
+            .isEmpty()
+            .withMessage("Name is required")
+            .isString()
+            .withMessage("Name must be a valid string")
+            .isLength({ min: 2, max: 50 })
+            .withMessage("Name must be between 2 and 50 characters"),
+        (0, express_validator_1.check)("image")
+            .optional({ checkFalsy: true })
+            .isString()
+            .withMessage("Image must be a valid string"),
+    ];
+};
+exports.ServiceCategoryValidation = ServiceCategoryValidation;
+const ServiceIdValidation = () => {
+    return [
+        (0, express_validator_1.param)("id")
+            .isNumeric()
+            .withMessage("Service ID must be a valid number")
+            .notEmpty()
+            .withMessage("Service ID is required"),
+    ];
+};
+exports.ServiceIdValidation = ServiceIdValidation;
+const validateUUIDParam = (paramName) => {
+    return [
+        (0, express_validator_1.param)(paramName)
+            .isUUID()
+            .withMessage(`${paramName} must be a valid UUID`)
+            .notEmpty()
+            .withMessage(`${paramName} is required`),
+    ];
+};
+exports.validateUUIDParam = validateUUIDParam;
+const ServiceSubCategoryValidation = () => {
+    return [
+        (0, express_validator_1.check)("name")
+            .not()
+            .isEmpty()
+            .withMessage("Name is required")
+            .isString()
+            .withMessage("Name must be a valid string")
+            .isLength({ min: 2, max: 50 })
+            .withMessage("Name must be between 2 and 50 characters"),
+        (0, express_validator_1.check)("image")
+            .optional({ checkFalsy: true })
+            .isString()
+            .withMessage("Image must be a valid string"),
+        (0, express_validator_1.check)("categoryId")
+            .not()
+            .isEmpty()
+            .withMessage("Category ID is required")
+            .isNumeric()
+            .withMessage("Category ID must be a valid UUID"),
+    ];
+};
+exports.ServiceSubCategoryValidation = ServiceSubCategoryValidation;
+const CreateServiceAttributeValidation = () => {
+    return [
+        (0, express_validator_1.body)("attributes")
+            .isArray({ min: 1 })
+            .withMessage("Attributes must be a non-empty array"),
+        (0, express_validator_1.body)("attributes.*").custom((fieldObj) => {
+            if (typeof fieldObj !== "object" || fieldObj === null) {
+                throw new Error("Each attribute must be an object of name, input_type, is_required, value (if input_type is single_select/multi_select)");
+            }
+            const { name, input_type, value } = fieldObj;
+            // name
+            if (typeof name !== "string" || name.trim() === "") {
+                throw new Error("attribute.name must be a non-empty string");
+            }
+            if ((input_type === helpers_1.ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.SINGLE_SELECT ||
+                input_type === helpers_1.ALLOWED_SERVICE_ATTRIBUTE_INPUT_OBJ.MULTI_SELECT) &&
+                !value) {
+                throw new Error(`attribute.value is required for ${name}`);
+            }
+            return true;
+        }),
+    ];
+};
+exports.CreateServiceAttributeValidation = CreateServiceAttributeValidation;
+const AddServiceAttributeOptionsValidation = () => {
+    return [
+        (0, express_validator_1.param)("attributeId")
+            .not()
+            .isEmpty()
+            .withMessage("Attribute ID is required")
+            .isNumeric()
+            .withMessage("Attribute ID must be a valid number"),
+        (0, express_validator_1.body)("options")
+            .isArray({ min: 1 })
+            .withMessage("Options must be a non-empty array"),
+        (0, express_validator_1.body)("options.*").custom((option) => {
+            if (typeof option !== "string" || option.trim() === "") {
+                throw new Error("Each option must be a non-empty string");
+            }
+            return true;
+        }),
+    ];
+};
+exports.AddServiceAttributeOptionsValidation = AddServiceAttributeOptionsValidation;
+const AddServiceCategoryToAttributeValidation = () => {
+    return [
+        (0, express_validator_1.body)("attributeIds")
+            .isArray({ min: 1 })
+            .withMessage("Attribute IDs must be a non-empty array"),
+        (0, express_validator_1.param)("categoryId")
+            .not()
+            .isEmpty()
+            .withMessage("Category ID is required")
+            .isNumeric()
+            .withMessage("Category ID must be a valid number"),
+    ];
+};
+exports.AddServiceCategoryToAttributeValidation = AddServiceCategoryToAttributeValidation;
+const RemoveServiceCategoryFromAttributeValidation = () => {
+    return [
+        (0, express_validator_1.body)("attributeIds")
+            .isArray({ min: 1 })
+            .withMessage("Attribute IDs must be a non-empty array"),
+        (0, express_validator_1.param)("categoryId")
+            .not()
+            .isEmpty()
+            .withMessage("Category ID is required")
+            .isNumeric()
+            .withMessage("Category ID must be a valid UUID"),
+    ];
+};
+exports.RemoveServiceCategoryFromAttributeValidation = RemoveServiceCategoryFromAttributeValidation;
+const ServiceValidation = () => {
+    return [
+        (0, express_validator_1.check)("title")
+            .not()
+            .isEmpty()
+            .withMessage("Title is required")
+            .isString()
+            .withMessage("Title must be a valid string")
+            .isLength({ min: 5, max: 100 })
+            .withMessage("Title must be between 5 and 100 characters"),
+        (0, express_validator_1.check)("description")
+            .not()
+            .isEmpty()
+            .withMessage("Description is required")
+            .isString()
+            .withMessage("Description must be a valid string")
+            .isLength({ min: 10, max: 1000 })
+            .withMessage("Description must be between 10 and 1000 characters"),
+        (0, express_validator_1.check)("price")
+            .not()
+            .isEmpty()
+            .withMessage("Price is required")
+            .isDecimal({ decimal_digits: "0,2" })
+            .withMessage("Price must be a valid decimal number with up to two decimal places"),
+        (0, express_validator_1.check)("discount_price")
+            .optional({ checkFalsy: true })
+            .isDecimal({ decimal_digits: "0,2" })
+            .withMessage("Discount price must be a valid decimal number with up to two decimal places"),
+        (0, express_validator_1.check)("image_url")
+            .isString()
+            .withMessage("Image URL must be a valid string"),
+        (0, express_validator_1.check)("video_url")
+            .optional({ checkFalsy: true })
+            .isString()
+            .withMessage("Video URL must be a valid string"),
+        (0, express_validator_1.check)("additional_images")
+            .optional({ checkFalsy: true })
+            .isArray({ min: 1 })
+            .withMessage("Additional images must be an array of URLs.")
+            .custom((array) => {
+            // Ensure each item in the array is a valid URL
+            array.forEach((url) => {
+                if (typeof url !== "string" || !url.match(/^(https):\/\/[^ "]+$/)) {
+                    throw new Error("Each item in additional images must be a valid URL.");
+                }
+            });
+            return true;
+        }),
+        (0, express_validator_1.check)("location_city")
+            .not()
+            .isEmpty()
+            .withMessage("Location city is required")
+            .isString()
+            .withMessage("Location city must be a valid string"),
+        (0, express_validator_1.check)("location_state")
+            .not()
+            .isEmpty()
+            .withMessage("Location state is required")
+            .isString()
+            .withMessage("Location state must be a valid string"),
+        (0, express_validator_1.check)("location_country")
+            .not()
+            .isEmpty()
+            .withMessage("Location country is required")
+            .isString()
+            .withMessage("Location country must be a valid string"),
+        (0, express_validator_1.check)("work_experience_years")
+            .not()
+            .isEmpty()
+            .withMessage("Work experience years is required")
+            .isNumeric()
+            .withMessage("Work experience years must be a valid number"),
+        (0, express_validator_1.check)("service_category_id")
+            .not()
+            .isEmpty()
+            .withMessage("Category ID is required")
+            .isNumeric()
+            .withMessage("Category ID must be a valid number"),
+        (0, express_validator_1.check)("service_subcategory_id")
+            .not()
+            .isEmpty()
+            .withMessage("Sub-category ID is required")
+            .isNumeric()
+            .withMessage("Sub-category ID must be a valid number"),
+        (0, express_validator_1.check)("is_negotiable")
+            .isBoolean()
+            .withMessage("is_negotiable must be a boolean value"),
+        (0, express_validator_1.check)("attributes")
+            .optional({ checkFalsy: true })
+            .isArray({ min: 1 })
+            .withMessage("Attributes must be a non-empty array"),
+        (0, express_validator_1.check)("attributes.*").custom((attrObj) => {
+            if (typeof attrObj !== "object" || attrObj === null) {
+                throw new Error("Each attribute must be an object of id and value");
+            }
+            const { attributeId, value } = attrObj;
+            // id
+            if (!attributeId || typeof Number(attributeId) !== "number") {
+                throw new Error("attribute.id must be a non-empty string");
+            }
+            if (!value) {
+                throw new Error("attribute.value is required");
+            }
+            return true;
+        }),
+    ];
+};
+exports.ServiceValidation = ServiceValidation;
+const ValidateServiceBooking = () => {
+    return [
+        (0, express_validator_1.check)("vendorId")
+            .not()
+            .isEmpty()
+            .withMessage("Vendor ID is required")
+            .isUUID()
+            .withMessage("Vendor ID must be a valid UUID"),
+        (0, express_validator_1.check)("message")
+            .optional({ checkFalsy: true })
+            .isString()
+            .withMessage("Message must be a valid string")
+            .isLength({ max: 500 })
+            .withMessage("Message should not exceed 500 characters"),
+        (0, express_validator_1.check)("bookingDate")
+            .not()
+            .isEmpty()
+            .withMessage("Booking date is required")
+            .isISO8601()
+            .withMessage("Booking date must be a valid date in ISO 8601 format"),
+    ];
+};
+exports.ValidateServiceBooking = ValidateServiceBooking;
+const addAliexpressProductValidation = () => {
+    return [
+        (0, express_validator_1.check)("storeId").isUUID().withMessage("Store ID must be a valid UUID."),
+        (0, express_validator_1.check)("categoryId")
+            .isUUID()
+            .withMessage("Category ID must be a valid UUID."),
+        (0, express_validator_1.check)("productId")
+            .isString()
+            .withMessage("Product ID must be a valid string."),
+        (0, express_validator_1.check)("shippingCountry")
+            .isString()
+            .withMessage("Shipping country must be a valid string.")
+            .isIn(["US", "UK", "NG"])
+            .withMessage("Shipping country must be one of the supported countries: US, UK, NG."),
+        (0, express_validator_1.check)("currency")
+            .isString()
+            .withMessage("Currency must be a valid string.")
+            .isIn(["USD", "NGN"])
+            .withMessage("Currency must be either USD or NGN."),
+        (0, express_validator_1.check)("priceIncrementPercent")
+            .optional({ checkFalsy: true })
+            .isDecimal({ decimal_digits: "0,2" })
+            .custom((value) => {
+            if (Number(value) < 0) {
+                throw new Error("Price increment percent cannot be negative.");
+            }
+            if (Number(value) > 100) {
+                throw new Error("Price increment percent cannot be greater than 100.");
+            }
+            return true;
+        })
+            .withMessage("Price increment percent must be a valid decimal number with up to two decimal places."),
+    ];
+};
+exports.addAliexpressProductValidation = addAliexpressProductValidation;
 // Middleware to handle validation errors, sending only the first error
 const validate = (req, res, next) => {
     const errors = (0, express_validator_1.validationResult)(req);

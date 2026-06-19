@@ -7,14 +7,14 @@ class Cart extends sequelize_1.Model {
     static associate(models) {
         // Define associations here
         this.belongsTo(models.User, {
-            as: 'user',
-            foreignKey: 'userId',
-            onDelete: 'RESTRICT',
+            as: "user",
+            foreignKey: "userId",
+            onDelete: "RESTRICT",
         });
         this.belongsTo(models.Product, {
-            as: 'product',
-            foreignKey: 'productId',
-            onDelete: 'CASCADE',
+            as: "product",
+            foreignKey: "productId",
+            onDelete: "CASCADE",
         });
     }
 }
@@ -39,10 +39,22 @@ const initModel = (sequelize) => {
             type: sequelize_1.DataTypes.UUID,
             allowNull: false,
             references: {
-                model: 'products',
-                key: 'id',
+                model: "products", // Ensure this matches your AuctionProduct table name
+                key: "id",
             },
-            onDelete: 'CASCADE',
+            onDelete: "CASCADE",
+        },
+        productType: {
+            type: sequelize_1.DataTypes.ENUM("dropship", "in_stock"),
+            allowNull: false,
+        },
+        dropshipProductSkuId: {
+            type: sequelize_1.DataTypes.STRING,
+            allowNull: true,
+        },
+        dropshipProductSkuAttr: {
+            type: sequelize_1.DataTypes.STRING,
+            allowNull: true,
         },
         quantity: {
             type: sequelize_1.DataTypes.INTEGER,
@@ -51,10 +63,10 @@ const initModel = (sequelize) => {
         },
     }, {
         sequelize,
-        modelName: 'Cart',
+        modelName: "Cart",
         timestamps: true,
         paranoid: false,
-        tableName: 'carts',
+        tableName: "carts",
     });
 };
 exports.initModel = initModel;

@@ -31,6 +31,11 @@ const initBlockedProduct = (sequelize) => {
             type: sequelize_1.DataTypes.UUID,
             allowNull: false,
         },
+        reason: {
+            type: sequelize_1.DataTypes.STRING,
+            allowNull: true, // Reason is optional
+            comment: 'Reason for blocking the product',
+        },
     }, {
         sequelize,
         modelName: 'BlockedProduct',

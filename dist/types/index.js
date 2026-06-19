@@ -1,3 +1,15 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.PushNotificationTypes = void 0;
+exports.PushNotificationTypes = {
+    NEW_MESSAGE: "NEW_MESSAGE",
+    ORDER_CREATED: "ORDER_CREATED",
+    ORDER_CONFIRMATION: "ORDER_CONFIRMATION",
+    ORDER_SHIPPED: "ORDER_SHIPPED",
+    ORDER_STATUS_UPDATE: "ORDER_STATUS_UPDATE",
+    SERVICE_INQUIRY: "SERVICE_INQUIRY",
+    SERVICE_REVIEW: "SERVICE_REVIEW",
+    SERVICE_BOOKING_COMPLETED: "SERVICE_BOOKING_COMPLETED",
+    SERVICE_BOOKING_CANCELLED: "SERVICE_BOOKING_CANCELLED",
+};
 //# sourceMappingURL=index.js.map

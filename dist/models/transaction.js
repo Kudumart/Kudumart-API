@@ -29,12 +29,20 @@ const initModel = (sequelize) => {
             allowNull: false,
         },
         amount: {
-            type: sequelize_1.DataTypes.FLOAT,
+            type: sequelize_1.DataTypes.DECIMAL(20, 2),
             allowNull: false,
         },
-        transactionType: {
+        currency: {
             type: sequelize_1.DataTypes.STRING,
+            defaultValue: "NGN",
+        },
+        transactionType: {
+            type: sequelize_1.DataTypes.STRING, // e.g., 'subscription', 'payment', 'sale', 'withdrawal', 'refund'
             allowNull: false,
+        },
+        metadata: {
+            type: sequelize_1.DataTypes.JSON,
+            allowNull: true,
         },
         refId: {
             type: sequelize_1.DataTypes.STRING,

@@ -7,9 +7,9 @@ class BankInformation extends sequelize_1.Model {
     static associate(models) {
         // Define associations here
         this.belongsTo(models.User, {
-            as: 'user',
-            foreignKey: 'vendorId',
-            onDelete: 'RESTRICT',
+            as: "user",
+            foreignKey: "vendorId",
+            onDelete: "RESTRICT",
         });
     }
 }
@@ -27,14 +27,38 @@ const initModel = (sequelize) => {
         },
         bankInfo: {
             type: sequelize_1.DataTypes.TEXT,
-            allowNull: true
+            allowNull: true,
+        },
+        bankName: {
+            type: sequelize_1.DataTypes.STRING,
+            allowNull: true,
+        },
+        accountNumber: {
+            type: sequelize_1.DataTypes.STRING,
+            allowNull: true,
+        },
+        accountHolderName: {
+            type: sequelize_1.DataTypes.STRING,
+            allowNull: true,
+        },
+        swiftCode: {
+            type: sequelize_1.DataTypes.STRING,
+            allowNull: true,
+        },
+        routingNumber: {
+            type: sequelize_1.DataTypes.STRING,
+            allowNull: true,
+        },
+        bankAddress: {
+            type: sequelize_1.DataTypes.STRING,
+            allowNull: true,
         },
     }, {
         sequelize,
-        modelName: 'BankInformation',
+        modelName: "BankInformation",
         timestamps: true,
         paranoid: false,
-        tableName: 'bank_informations',
+        tableName: "bank_informations",
     });
 };
 exports.initModel = initModel;
