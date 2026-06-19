@@ -7464,9 +7464,6 @@ export const removeAttributeFromServiceCategory = async (
 		return;
 	}
 
-  try {
-    const serviceCategory = await ServiceCategories.findByPk(categoryId as string);
-
 	try {
 		const serviceCategory = await ServiceCategories.findByPk(Number(categoryId));
 
