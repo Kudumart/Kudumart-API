@@ -269,7 +269,7 @@ const checkVendorAuctionProductLimit = async (
 		// Error type should be handled more gracefully if you have custom error types
 		throw new Error(
 			error.message ||
-				"An error occurred while checking the auction product limit.",
+			"An error occurred while checking the auction product limit.",
 		);
 	}
 };
@@ -430,6 +430,14 @@ const verifyPayment = (
 	});
 };
 
+
+const verifyStripePayment = async (
+	paymentIntentId: string,
+): Promise<Stripe.PaymentIntent> => {
+	const stripe = await initStripe();
+	return await stripe.paymentIntents.retrieve(paymentIntentId);
+};
+
 // Utility function to shuffle an array
 const shuffleArray = <T>(array: T[]): T[] => {
 	for (let i = array.length - 1; i > 0; i--) {
@@ -493,24 +501,7 @@ const getJobsBySearch = async (searchTerm: string, number: number) => {
 };
 
 export const getStripeSecretKey = async (): Promise<string | null> => {
-	try {
-		const paymentGateway = await PaymentGateway.findOne({
-			where: {
-				isActive: true,
-				name: "stripe", // Assuming 'name' is the field storing the gateway name
-			},
-		});
-
-		if (!paymentGateway) {
-			logger.error("No active Stripe gateway found.");
-			return null;
-		}
-
-		return paymentGateway.secretKey; // Ensure your model has this field
-	} catch (error) {
-		logger.error("Error fetching Stripe secret key:", error);
-		return null;
-	}
+	return process.env.STRIPE_SECRET_KEY || null;
 };
 
 const initStripe = async () => {
@@ -564,6 +555,7 @@ export {
 	checkAdvertLimit,
 	initializePaystackPayment,
 	verifyPayment,
+	verifyStripePayment,
 	shuffleArray,
 	hasPurchasedProduct,
 	generateUniquePhoneNumber,
