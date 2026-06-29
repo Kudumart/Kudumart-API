@@ -16,7 +16,7 @@ import Notification from "../models/notification";
 import Transaction from "../models/transaction";
 import Admin from "../models/admin";
 import PaymentGateway from "../models/paymentgateway";
-import sequelizeService from "../services/sequelize.service";
+import sequelizeService from "./sequelize.service";
 import logger from "../middlewares/logger";
 import { verifyPayment, verifyStripePayment, splitPhoneNumber } from "../utils/helpers";
 import { DropShippingService } from "./dropShipping.service";

@@ -211,6 +211,13 @@ export const products = async (req: Request, res: Response): Promise<void> => {
 						? subCategoryWhereClause
 						: undefined,
 				attributes: ["id", "name", "categoryId"],
+				include: [
+					{
+						model: Category,
+						as: "category",
+						attributes: ["id", "name"],
+					},
+				],
 			},
 			{
 				model: Store,
@@ -377,7 +384,14 @@ export const getProductById = async (
 				{
 					model: SubCategory,
 					as: "sub_category",
-					attributes: ["id", "name"],
+					attributes: ["id", "name", "categoryId"],
+					include: [
+						{
+							model: Category,
+							as: "category",
+							attributes: ["id", "name"],
+						},
+					],
 				},
 				{
 					model: ReviewProduct,

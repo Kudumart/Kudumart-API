@@ -38,6 +38,7 @@ import SubscriptionPlan from "../models/subscriptionplan";
 import VendorSubscription from "../models/vendorsubscription";
 import SubCategory from "../models/subcategory";
 import Admin from "../models/admin";
+import Category from "../models/category";
 import SaveProduct from "../models/saveproduct";
 import ReviewProduct from "../models/reviewproduct";
 import crypto from "crypto";
@@ -1021,9 +1022,9 @@ export const addItemToCart = async (
 		req.body;
 
 	try {
-		// Find the product by productId and include vendor and currency details
+		// Find the product by productId and include vendor, currency, sub_category and category details
 		const product = await Product.findByPk(productId, {
-			attributes: ["vendorId", "name", "quantity", "type"], // Include quantity in the attributes
+			attributes: ["vendorId", "name", "quantity", "type", "categoryId"], // Include quantity and categoryId in the attributes
 			include: [
 				{
 					model: Store,
@@ -1033,6 +1034,17 @@ export const addItemToCart = async (
 							model: Currency,
 							as: "currency",
 							attributes: ["name", "symbol"],
+						},
+					],
+				},
+				{
+					model: SubCategory,
+					as: "sub_category",
+					include: [
+						{
+							model: Category,
+							as: "category",
+							attributes: ["id", "name"],
 						},
 					],
 				},
@@ -1055,6 +1067,29 @@ export const addItemToCart = async (
 			res
 				.status(404)
 				.json({ message: "Product not found or invalid currency data" });
+			return;
+		}
+
+		const subCat = (product as any)?.sub_category;
+		const category = subCat?.category;
+		const categoryId = category?.id || subCat?.categoryId || "";
+		const categoryName = category?.name?.toLowerCase() || "";
+		const targetIds = [
+			"de7035db-6833-4a11-a7d9-7fd5ae8c4370", // Real Estate
+			"cee73eb0-5a9f-4a34-8225-794cbfbf959f", // Vehicles
+			"3b77c173-30c8-4e2b-b78d-10713ba52b6f", // Automotives and Tools
+		];
+
+		if (
+			targetIds.includes(categoryId) ||
+			categoryName.includes("real estate") ||
+			categoryName.includes("vehicle") ||
+			categoryName.includes("automotive") ||
+			categoryName.includes("car")
+		) {
+			res.status(400).json({
+				message: "This category does not support adding to cart. Please make an offer instead.",
+			});
 			return;
 		}
 
