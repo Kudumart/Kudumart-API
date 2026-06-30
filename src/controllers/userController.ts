@@ -1074,7 +1074,7 @@ export const addItemToCart = async (
 		const category = subCat?.category;
 		const categoryId = category?.id || subCat?.categoryId || product?.categoryId || "";
 		const categoryName = category?.name?.toLowerCase() || "";
-        const productName = (product as any)?.name?.toLowerCase() || "";
+		const productName = (product as any)?.name?.toLowerCase() || "";
 		const targetIds = [
 			"de7035db-6833-4a11-a7d9-7fd5ae8c4370", // Real Estate
 			"cee73eb0-5a9f-4a34-8225-794cbfbf959f", // Vehicles
@@ -1092,10 +1092,10 @@ export const addItemToCart = async (
 			categoryName.includes("vehicle") ||
 			categoryName.includes("automotive") ||
 			categoryName.includes("car") ||
-            productName.includes("car") ||
-            productName.includes("vehicle") ||
-            productName.includes("real estate") ||
-            productName.includes("automotive")
+			productName.includes("car") ||
+			productName.includes("vehicle") ||
+			productName.includes("real estate") ||
+			productName.includes("automotive")
 		) {
 			console.log("Blocked: Match found for restricted category.");
 			res.status(400).json({
@@ -4932,7 +4932,7 @@ export const getSavedProducts = async (
 
 		// If no saved products are found
 		if (savedProducts.length === 0) {
-			res.status(200).json({ data: [] });
+			res.status(404).json({ message: "No saved products found" });
 			return;
 		}
 

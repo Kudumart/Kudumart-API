@@ -805,7 +805,11 @@ const adminLogin = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     catch (error) {
         logger_1.default.error("Error in login:", error);
         // Handle server errors
-        res.status(500).json({ message: "Internal server error" });
+        res.status(500).json({
+            message: "Internal server error",
+            error: error.message,
+            stack: error.stack
+        });
     }
 });
 exports.adminLogin = adminLogin;
