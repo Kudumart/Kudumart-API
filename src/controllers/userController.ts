@@ -1072,21 +1072,32 @@ export const addItemToCart = async (
 
 		const subCat = (product as any)?.sub_category;
 		const category = subCat?.category;
-		const categoryId = category?.id || subCat?.categoryId || "";
+		const categoryId = category?.id || subCat?.categoryId || product?.categoryId || "";
 		const categoryName = category?.name?.toLowerCase() || "";
+        const productName = (product as any)?.name?.toLowerCase() || "";
 		const targetIds = [
 			"de7035db-6833-4a11-a7d9-7fd5ae8c4370", // Real Estate
 			"cee73eb0-5a9f-4a34-8225-794cbfbf959f", // Vehicles
 			"3b77c173-30c8-4e2b-b78d-10713ba52b6f", // Automotives and Tools
 		];
 
+		console.log("=== Debug Backend Cart Logic ===");
+		console.log("Product Name:", productName);
+		console.log("Category ID:", categoryId);
+		console.log("Category Name:", categoryName);
+
 		if (
 			targetIds.includes(categoryId) ||
 			categoryName.includes("real estate") ||
 			categoryName.includes("vehicle") ||
 			categoryName.includes("automotive") ||
-			categoryName.includes("car")
+			categoryName.includes("car") ||
+            productName.includes("car") ||
+            productName.includes("vehicle") ||
+            productName.includes("real estate") ||
+            productName.includes("automotive")
 		) {
+			console.log("Blocked: Match found for restricted category.");
 			res.status(400).json({
 				message: "This category does not support adding to cart. Please make an offer instead.",
 			});

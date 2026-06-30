@@ -78,6 +78,7 @@ const subscriptionplan_1 = __importDefault(require("../models/subscriptionplan")
 const vendorsubscription_1 = __importDefault(require("../models/vendorsubscription"));
 const subcategory_1 = __importDefault(require("../models/subcategory"));
 const admin_1 = __importDefault(require("../models/admin"));
+const category_1 = __importDefault(require("../models/category"));
 const saveproduct_1 = __importDefault(require("../models/saveproduct"));
 const reviewproduct_1 = __importDefault(require("../models/reviewproduct"));
 const crypto_1 = __importDefault(require("crypto"));
@@ -897,7 +898,7 @@ const markAsReadHandler = (req, res) => __awaiter(void 0, void 0, void 0, functi
 exports.markAsReadHandler = markAsReadHandler;
 // Cart
 const addItemToCart = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _a, _b, _c;
     const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id; // Get the authenticated user's ID
     if (!userId) {
         res.status(400).json({ message: "User must be authenticated" });
@@ -905,9 +906,9 @@ const addItemToCart = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
     const { productId, quantity, dropshipProductSkuId, dropshipProductSkuAttr } = req.body;
     try {
-        // Find the product by productId and include vendor and currency details
+        // Find the product by productId and include vendor, currency, sub_category and category details
         const product = yield product_1.default.findByPk(productId, {
-            attributes: ["vendorId", "name", "quantity", "type"], // Include quantity in the attributes
+            attributes: ["vendorId", "name", "quantity", "type", "categoryId"], // Include quantity and categoryId in the attributes
             include: [
                 {
                     model: store_1.default,
@@ -917,6 +918,17 @@ const addItemToCart = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                             model: currency_1.default,
                             as: "currency",
                             attributes: ["name", "symbol"],
+                        },
+                    ],
+                },
+                {
+                    model: subcategory_1.default,
+                    as: "sub_category",
+                    include: [
+                        {
+                            model: category_1.default,
+                            as: "category",
+                            attributes: ["id", "name"],
                         },
                     ],
                 },
@@ -933,6 +945,35 @@ const addItemToCart = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             res
                 .status(404)
                 .json({ message: "Product not found or invalid currency data" });
+            return;
+        }
+        const subCat = product === null || product === void 0 ? void 0 : product.sub_category;
+        const category = subCat === null || subCat === void 0 ? void 0 : subCat.category;
+        const categoryId = (category === null || category === void 0 ? void 0 : category.id) || (subCat === null || subCat === void 0 ? void 0 : subCat.categoryId) || (product === null || product === void 0 ? void 0 : product.categoryId) || "";
+        const categoryName = ((_b = category === null || category === void 0 ? void 0 : category.name) === null || _b === void 0 ? void 0 : _b.toLowerCase()) || "";
+        const productName = ((_c = product === null || product === void 0 ? void 0 : product.name) === null || _c === void 0 ? void 0 : _c.toLowerCase()) || "";
+        const targetIds = [
+            "de7035db-6833-4a11-a7d9-7fd5ae8c4370", // Real Estate
+            "cee73eb0-5a9f-4a34-8225-794cbfbf959f", // Vehicles
+            "3b77c173-30c8-4e2b-b78d-10713ba52b6f", // Automotives and Tools
+        ];
+        console.log("=== Debug Backend Cart Logic ===");
+        console.log("Product Name:", productName);
+        console.log("Category ID:", categoryId);
+        console.log("Category Name:", categoryName);
+        if (targetIds.includes(categoryId) ||
+            categoryName.includes("real estate") ||
+            categoryName.includes("vehicle") ||
+            categoryName.includes("automotive") ||
+            categoryName.includes("car") ||
+            productName.includes("car") ||
+            productName.includes("vehicle") ||
+            productName.includes("real estate") ||
+            productName.includes("automotive")) {
+            console.log("Blocked: Match found for restricted category.");
+            res.status(400).json({
+                message: "This category does not support adding to cart. Please make an offer instead.",
+            });
             return;
         }
         const { vendorId, name, quantity: availableQuantity = 0 } = product; // Get available quantity

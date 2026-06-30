@@ -186,6 +186,13 @@ const products = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                     ? subCategoryWhereClause
                     : undefined,
                 attributes: ["id", "name", "categoryId"],
+                include: [
+                    {
+                        model: category_1.default,
+                        as: "category",
+                        attributes: ["id", "name"],
+                    },
+                ],
             },
             {
                 model: store_1.default,
@@ -317,7 +324,14 @@ const getProductById = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 {
                     model: subcategory_1.default,
                     as: "sub_category",
-                    attributes: ["id", "name"],
+                    attributes: ["id", "name", "categoryId"],
+                    include: [
+                        {
+                            model: category_1.default,
+                            as: "category",
+                            attributes: ["id", "name"],
+                        },
+                    ],
                 },
                 {
                     model: reviewproduct_1.default,

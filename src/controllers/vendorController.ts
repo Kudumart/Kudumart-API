@@ -675,6 +675,84 @@ export const viewProduct = async (
 	}
 };
 
+export const generateAIProduct = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const vendorId = (req as AuthenticatedRequest).user?.id;
+	const { imageBase64, mimeType } = req.body;
+
+	if (!imageBase64) {
+		res.status(400).json({ message: "Image data is required." });
+		return;
+	}
+
+	const prompt = `You are a product listing expert. Analyze this product image and extract all relevant details to create a complete product listing.
+
+Return ONLY a valid JSON object (no markdown, no explanation) with these exact fields:
+{
+  "name": "product name (clear, specific, 5-10 words)",
+  "description": "detailed product description (2-3 paragraphs, mention key features, uses, benefits)",
+  "specification": "technical specifications (materials, dimensions, colors, weight, etc.)",
+  "condition": "brand_new OR fairly_used OR refurbished",
+  "price": "suggested price in numbers only (e.g. 15000)",
+  "discount_price": "0",
+  "quantity": "1",
+  "warranty": "warranty information (e.g. 1 year manufacturer warranty)",
+  "return_policy": "return policy (e.g. 7 days return policy)",
+  "category_suggestion": "suggested product category (Electronics, Clothing, Furniture, Vehicles, Real Estate, etc.)",
+  "sku": "suggested SKU code (e.g. PRD-001)"
+}`;
+
+	try {
+		const response = await fetch("https://api.openai.com/v1/chat/completions", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+			},
+			body: JSON.stringify({
+				model: "gpt-4o",
+				messages: [
+					{
+						role: "user",
+						content: [
+							{
+								type: "image_url",
+								image_url: {
+									url: `data:${mimeType || "image/jpeg"};base64,${imageBase64}`,
+									detail: "high",
+								},
+							},
+							{ type: "text", text: prompt },
+						],
+					},
+				],
+				max_tokens: 1000,
+				temperature: 0.3,
+			}),
+		});
+
+		if (!response.ok) {
+			const err = await response.json();
+			throw new Error(err.error?.message || "OpenAI API error");
+		}
+
+		const result = await response.json();
+		const content = result.choices?.[0]?.message?.content;
+
+		// Parse JSON from response
+		const jsonMatch = content.match(/\{[\s\S]*\}/);
+		if (!jsonMatch) throw new Error("Could not parse AI response");
+		const parsed = JSON.parse(jsonMatch[0]);
+
+		res.status(200).json({ data: parsed });
+	} catch (error: any) {
+		logger.error("Error generating AI product:", error);
+		res.status(500).json({ message: error.message || "Failed to analyze image." });
+	}
+};
+
 export const moveToDraft = async (
 	req: Request,
 	res: Response,

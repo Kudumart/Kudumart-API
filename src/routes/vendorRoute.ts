@@ -93,6 +93,12 @@ vendorRoutes.get(
 	authorizeVendor,
 	vendorController.viewProduct,
 );
+vendorRoutes.post(
+	"/products/ai-generate",
+	authMiddleware,
+	authorizeVendor,
+	vendorController.generateAIProduct,
+);
 vendorRoutes.patch(
 	"/products/move-to-draft",
 	authMiddleware,
