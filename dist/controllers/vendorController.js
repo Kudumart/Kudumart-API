@@ -23,8 +23,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createService = exports.cancelSubscription = exports.getWithdrawalById = exports.updateWithdrawal = exports.getWithdrawals = exports.requestWithdrawal = exports.getVendorTransactions = exports.getVendorWalletStats = exports.deleteBankInformation = exports.getSingleBankInformation = exports.getBankInformation = exports.updateBankInformationV2 = exports.updateBankInformation = exports.addBankInformationV2 = exports.addBankInformation = exports.deleteAdvert = exports.viewAdvert = exports.getAdverts = exports.updateAdvert = exports.createAdvert = exports.activeProducts = exports.getOrderItemsInfo = exports.getVendorOrderItems = exports.getAllSubCategories = exports.getAllCurrencies = exports.verifyCAC = exports.subscribeDollar = exports.subscribe = exports.subscriptionPlans = exports.getAllBidsByAuctionProductId = exports.viewAuctionProduct = exports.fetchVendorAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.viewProduct = exports.fetchVendorProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.viewStore = exports.getStore = exports.getKYC = exports.submitOrUpdateKYC = void 0;
-exports.respondToVendorOffer = exports.getVendorOffers = exports.markServiceBookingAsCancelled = exports.markServiceBookingAsConfirmed = exports.getServiceBookings = exports.unpublishService = exports.publishService = exports.deleteService = exports.getVendorServices = exports.getService = exports.updateService = void 0;
+exports.cancelSubscription = exports.getWithdrawalById = exports.updateWithdrawal = exports.getWithdrawals = exports.requestWithdrawal = exports.getVendorTransactions = exports.getVendorWalletStats = exports.deleteBankInformation = exports.getSingleBankInformation = exports.getBankInformation = exports.updateBankInformationV2 = exports.updateBankInformation = exports.addBankInformationV2 = exports.addBankInformation = exports.deleteAdvert = exports.viewAdvert = exports.getAdverts = exports.updateAdvert = exports.createAdvert = exports.activeProducts = exports.getOrderItemsInfo = exports.getVendorOrderItems = exports.getAllSubCategories = exports.getAllCurrencies = exports.verifyCAC = exports.subscribeDollar = exports.subscribe = exports.subscriptionPlans = exports.getAllBidsByAuctionProductId = exports.viewAuctionProduct = exports.fetchVendorAuctionProducts = exports.cancelAuctionProduct = exports.deleteAuctionProduct = exports.updateAuctionProduct = exports.createAuctionProduct = exports.changeProductStatus = exports.moveToDraft = exports.generateAIProduct = exports.viewProduct = exports.fetchVendorProducts = exports.deleteProduct = exports.updateProduct = exports.createProduct = exports.deleteStore = exports.updateStore = exports.createStore = exports.viewStore = exports.getStore = exports.getKYC = exports.submitOrUpdateKYC = void 0;
+exports.respondToVendorOffer = exports.getVendorOffers = exports.markServiceBookingAsCancelled = exports.markServiceBookingAsConfirmed = exports.getServiceBookings = exports.unpublishService = exports.publishService = exports.deleteService = exports.getVendorServices = exports.getService = exports.updateService = exports.createService = void 0;
 // src/controllers/vendorController.ts
 const decimal_js_1 = __importDefault(require("decimal.js"));
 const user_1 = __importDefault(require("../models/user"));
@@ -588,6 +588,77 @@ const viewProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     }
 });
 exports.viewProduct = viewProduct;
+const generateAIProduct = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c, _d, _e;
+    const vendorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+    const { imageBase64, mimeType } = req.body;
+    if (!imageBase64) {
+        res.status(400).json({ message: "Image data is required." });
+        return;
+    }
+    const prompt = `You are a product listing expert. Analyze this product image and extract all relevant details to create a complete product listing.
+
+Return ONLY a valid JSON object (no markdown, no explanation) with these exact fields:
+{
+  "name": "product name (clear, specific, 5-10 words)",
+  "description": "detailed product description (2-3 paragraphs, mention key features, uses, benefits)",
+  "specification": "technical specifications (materials, dimensions, colors, weight, etc.)",
+  "condition": "brand_new OR fairly_used OR refurbished",
+  "price": "suggested price in numbers only (e.g. 15000)",
+  "discount_price": "0",
+  "quantity": "1",
+  "warranty": "warranty information (e.g. 1 year manufacturer warranty)",
+  "return_policy": "return policy (e.g. 7 days return policy)",
+  "category_suggestion": "suggested product category (Electronics, Clothing, Furniture, Vehicles, Real Estate, etc.)",
+  "sku": "suggested SKU code (e.g. PRD-001)"
+}`;
+    try {
+        const response = yield fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+            },
+            body: JSON.stringify({
+                model: "gpt-4o",
+                messages: [
+                    {
+                        role: "user",
+                        content: [
+                            {
+                                type: "image_url",
+                                image_url: {
+                                    url: `data:${mimeType || "image/jpeg"};base64,${imageBase64}`,
+                                    detail: "high",
+                                },
+                            },
+                            { type: "text", text: prompt },
+                        ],
+                    },
+                ],
+                max_tokens: 1000,
+                temperature: 0.3,
+            }),
+        });
+        if (!response.ok) {
+            const err = yield response.json();
+            throw new Error(((_b = err.error) === null || _b === void 0 ? void 0 : _b.message) || "OpenAI API error");
+        }
+        const result = yield response.json();
+        const content = (_e = (_d = (_c = result.choices) === null || _c === void 0 ? void 0 : _c[0]) === null || _d === void 0 ? void 0 : _d.message) === null || _e === void 0 ? void 0 : _e.content;
+        // Parse JSON from response
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (!jsonMatch)
+            throw new Error("Could not parse AI response");
+        const parsed = JSON.parse(jsonMatch[0]);
+        res.status(200).json({ data: parsed });
+    }
+    catch (error) {
+        logger_1.default.error("Error generating AI product:", error);
+        res.status(500).json({ message: error.message || "Failed to analyze image." });
+    }
+});
+exports.generateAIProduct = generateAIProduct;
 const moveToDraft = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const { productId } = req.query; // Get productId from request query

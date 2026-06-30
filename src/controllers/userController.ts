@@ -4932,7 +4932,7 @@ export const getSavedProducts = async (
 
 		// If no saved products are found
 		if (savedProducts.length === 0) {
-			res.status(404).json({ message: "No saved products found" });
+			res.status(200).json({ data: [] });
 			return;
 		}
 

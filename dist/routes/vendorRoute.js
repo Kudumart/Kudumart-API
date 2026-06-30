@@ -58,6 +58,7 @@ vendorRoutes.post("/products", authMiddleware_1.default, authorizeVendor_1.defau
 vendorRoutes.put("/products", authMiddleware_1.default, authorizeVendor_1.default, (0, validations_1.updateProductValidation)(), validations_1.validate, vendorController.updateProduct);
 vendorRoutes.delete("/products", authMiddleware_1.default, authorizeVendor_1.default, vendorController.deleteProduct);
 vendorRoutes.get("/product", authMiddleware_1.default, authorizeVendor_1.default, vendorController.viewProduct);
+vendorRoutes.post("/products/ai-generate", authMiddleware_1.default, authorizeVendor_1.default, vendorController.generateAIProduct);
 vendorRoutes.patch("/products/move-to-draft", authMiddleware_1.default, authorizeVendor_1.default, vendorController.moveToDraft);
 vendorRoutes.patch("/products/change-status", authMiddleware_1.default, authorizeVendor_1.default, vendorController.changeProductStatus);
 // Auction Product
