@@ -109,6 +109,7 @@ export const products = async (req: Request, res: Response): Promise<void> => {
 		country,
 		productId,
 		storeId,
+		vendorId,
 		minPrice,
 		maxPrice,
 		name, // Product name
@@ -146,6 +147,9 @@ export const products = async (req: Request, res: Response): Promise<void> => {
 		if (storeId) {
 			whereClause.storeId = storeId;
 		}
+		if (vendorId) {
+			whereClause.vendorId = vendorId;
+		}
 		if (minPrice) {
 			whereClause.price = { [Op.gte]: Number(minPrice) };
 		}
@@ -171,7 +175,15 @@ export const products = async (req: Request, res: Response): Promise<void> => {
 		}
 		// Exclude products from blocked vendors
 		if (blockedVendorIds.length > 0) {
-			whereClause.vendorId = { [Op.notIn]: blockedVendorIds };
+			if (vendorId) {
+				// A specific vendor was requested — only widen to "no results"
+				// if that vendor is blocked, otherwise keep the vendorId filter.
+				if (blockedVendorIds.includes(String(vendorId))) {
+					whereClause.vendorId = { [Op.in]: [] };
+				}
+			} else {
+				whereClause.vendorId = { [Op.notIn]: blockedVendorIds };
+			}
 		}
 
 		// Construct the where clause for subCategory with conditional categoryId and subCategoryName
