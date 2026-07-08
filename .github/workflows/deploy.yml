@@ -17,6 +17,6 @@ jobs:
           script: |
             cd /var/www/kudumart-api
             git pull
-            npm install --omit=dev
+            npm install
             npm run build
             pm2 reload index
