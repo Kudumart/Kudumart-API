@@ -2259,19 +2259,19 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 	}
 
 	try {
-		// Fetch active Paystack secret key from PaymentGateway model
+		// Fetch active Paystack secret key from PaymentGateway model or process.env
 		const paymentGateway = await PaymentGateway.findOne({
 			where: {
-				name: "Paystack",
+				name: { [Op.like]: "%paystack%" },
 				isActive: true,
 			},
 		});
 
-		if (!paymentGateway || !paymentGateway.secretKey) {
+		const PAYSTACK_SECRET_KEY = paymentGateway?.secretKey || process.env.PAYSTACK_SECRET_KEY;
+
+		if (!PAYSTACK_SECRET_KEY) {
 			throw new Error("Active Paystack gateway not configured");
 		}
-
-		const PAYSTACK_SECRET_KEY = paymentGateway.secretKey;
 
 		// Verify payment reference with Paystack
 		const verificationResponse = await verifyPayment(

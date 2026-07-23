@@ -1466,11 +1466,16 @@ export const subscribe = async (req: Request, res: Response): Promise<void> => {
 				);
 			} else {
 				const paymentGateway = await PaymentGateway.findOne({
-					where: { isActive: true, name: "paystack" },
+					where: {
+						isActive: true,
+						name: { [Op.like]: "%paystack%" },
+					},
 					transaction,
 				});
 
-				if (!paymentGateway) {
+				const secretKey = paymentGateway?.secretKey || process.env.PAYSTACK_SECRET_KEY;
+
+				if (!secretKey) {
 					await transaction.rollback();
 					res.status(400).json({ message: "No active payment gateway found." });
 					return false;
@@ -1486,9 +1491,9 @@ export const subscribe = async (req: Request, res: Response): Promise<void> => {
 
 				const isPaymentValid = await verifyPayment(
 					refId,
-					paymentGateway.secretKey,
+					secretKey,
 				);
-				if (!isPaymentValid) {
+				if (!isPaymentValid || (isPaymentValid.status && isPaymentValid.status !== "success")) {
 					await transaction.rollback();
 					res
 						.status(400)
