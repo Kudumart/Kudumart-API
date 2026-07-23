@@ -1459,7 +1459,7 @@ export const getActivePaymentGateways = async (
 			formattedGateways.push({
 				id: "paystack-default",
 				name: "Paystack",
-				publicKey: process.env.PAYSTACK_PUBLIC_KEY || "pk_test_7d064a27402042d09271bb7e492c56882cd6c7a9",
+				publicKey: process.env.PAYSTACK_PUBLIC_KEY || "",
 				isActive: true,
 			} as any);
 		}
