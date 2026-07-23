@@ -19,4 +19,4 @@ jobs:
             git pull
             npm install
             npm run build
-            pm2 reload index
+            pm2 reload all || pm2 restart all || pm2 start dist/index.js --name kudumart-api
