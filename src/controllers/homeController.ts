@@ -618,6 +618,18 @@ export const productAutocomplete = async (
 						},
 					],
 				},
+				{
+					model: SubCategory,
+					as: "sub_category",
+					attributes: ["id", "name"],
+					include: [
+						{
+							model: Category,
+							as: "category",
+							attributes: ["id", "name"],
+						},
+					],
+				},
 			],
 			order: [["views", "DESC"]],
 			limit: 30, // candidate pool; ranked and trimmed to 10 below

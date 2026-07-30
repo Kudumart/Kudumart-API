@@ -113,7 +113,16 @@ export const uploadFile = async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
-        const protocol = req.headers["x-forwarded-proto"] || req.protocol;
+        // The app is served over HTTPS in production, but Express sits behind
+        // a reverse proxy that isn't (reliably) forwarding X-Forwarded-Proto,
+        // so req.protocol reports the proxy's plain-HTTP connection to Node.
+        // That produced http:// upload URLs, which browsers flag as mixed
+        // content on the HTTPS site. Force https in production rather than
+        // trusting proxy headers that may not be set correctly.
+        const protocol =
+            process.env.NODE_ENV === "production"
+                ? "https"
+                : req.headers["x-forwarded-proto"] || req.protocol;
         const fileUrl = `${protocol}://${req.get("host")}/uploads/${filename}`;
 
         res.json({ message: "File uploaded successfully", data: fileUrl });
