@@ -635,20 +635,39 @@ export const productAutocomplete = async (
 			limit: 30, // candidate pool; ranked and trimmed to 10 below
 		});
 
-		// Rank exact/prefix/substring name matches above SKU/keyword-only
-		// matches, so the most relevant results surface first in the dropdown.
+		// Rank results by relevance, not just name-match quality. A pure
+		// name-match ranking put "Light Chops" (name starts with "light")
+		// above "Floor Lamp Led Lights" (name only contains "light"
+		// mid-string), even though the latter is obviously what someone
+		// searching "light" wants — it's in a Lighting sub-category, "Light
+		// Chops" is in Snacks and Candies. Category/sub-category relevance is
+		// now the primary signal; name-match quality only breaks ties within
+		// that, except an exact product-name match always wins outright.
 		const lowerQ = q.toLowerCase();
-		const rank = (name: string): number => {
-			const lowerName = (name || "").toLowerCase();
-			if (lowerName === lowerQ) return 0;
-			if (lowerName.startsWith(lowerQ)) return 1;
-			if (lowerName.includes(lowerQ)) return 2;
-			return 3;
+		const rank = (product: any): number => {
+			const lowerName = (product.name || "").toLowerCase();
+			const categoryName = (product.sub_category?.category?.name || "").toLowerCase();
+			const subCategoryName = (product.sub_category?.name || "").toLowerCase();
+			const categoryRelated =
+				categoryName.includes(lowerQ) || subCategoryName.includes(lowerQ);
+
+			// 0 = exact name, 1 = name starts with query, 2 = name contains
+			// query, 3 = no name match (matched via SKU/keywords only).
+			let nameQuality = 3;
+			if (lowerName === lowerQ) nameQuality = 0;
+			else if (lowerName.startsWith(lowerQ)) nameQuality = 1;
+			else if (lowerName.includes(lowerQ)) nameQuality = 2;
+
+			if (nameQuality === 0) return 0;
+			// Category-relevant matches (ranks 1-4) always outrank
+			// same-quality matches with an unrelated category (ranks 5-8),
+			// which are kept as the fallback text search rather than dropped.
+			return categoryRelated ? 1 + nameQuality : 5 + nameQuality;
 		};
 
 		const suggestions = products
 			.map((p: any) => p.toJSON())
-			.sort((a: any, b: any) => rank(a.name) - rank(b.name))
+			.sort((a: any, b: any) => rank(a) - rank(b) || b.views - a.views)
 			.slice(0, 10);
 
 		res.status(200).json({ data: suggestions });
