@@ -13,7 +13,11 @@ import { sendMail } from "../services/mail.service";
 import { emailTemplates } from "../utils/messages";
 import JwtService from "../services/jwt.service";
 import logger from "../middlewares/logger"; // Adjust the path to your logger.js
-import { capitalizeFirstLetter, hasPurchasedProduct } from "../utils/helpers";
+import {
+	capitalizeFirstLetter,
+	hasPurchasedProduct,
+	getProductPurchaseType,
+} from "../utils/helpers";
 import OTP from "../models/otp";
 import { AuthenticatedRequest, ProductData } from "../types/index";
 import UserNotificationSetting from "../models/usernotificationsetting";
@@ -1070,36 +1074,9 @@ export const addItemToCart = async (
 			return;
 		}
 
-		const subCat = (product as any)?.sub_category;
-		const category = subCat?.category;
-		const categoryId = category?.id || subCat?.categoryId || product?.categoryId || "";
-		const categoryName = category?.name?.toLowerCase() || "";
-		const productName = (product as any)?.name?.toLowerCase() || "";
-		const targetIds = [
-			"de7035db-6833-4a11-a7d9-7fd5ae8c4370", // Real Estate
-			"cee73eb0-5a9f-4a34-8225-794cbfbf959f", // Vehicles
-			"3b77c173-30c8-4e2b-b78d-10713ba52b6f", // Automotives and Tools
-		];
-
-		console.log("=== Debug Backend Cart Logic ===");
-		console.log("Product Name:", productName);
-		console.log("Category ID:", categoryId);
-		console.log("Category Name:", categoryName);
-
-		if (
-			targetIds.includes(categoryId) ||
-			categoryName.includes("real estate") ||
-			categoryName.includes("vehicle") ||
-			categoryName.includes("automotive") ||
-			categoryName.includes("car") ||
-			productName.includes("car") ||
-			productName.includes("vehicle") ||
-			productName.includes("real estate") ||
-			productName.includes("automotive")
-		) {
-			console.log("Blocked: Match found for restricted category.");
+		if (getProductPurchaseType(product as any) === "offer") {
 			res.status(400).json({
-				message: "This category does not support adding to cart. Please make an offer instead.",
+				message: "This item is not available for direct purchase. Please request an offer instead.",
 			});
 			return;
 		}
@@ -4925,6 +4902,13 @@ export const getSavedProducts = async (
 							model: SubCategory,
 							as: "sub_category",
 							attributes: ["id", "name", "categoryId"],
+							include: [
+								{
+									model: Category,
+									as: "category",
+									attributes: ["id", "name"],
+								},
+							],
 						},
 						{
 							model: Store,
@@ -4949,8 +4933,30 @@ export const getSavedProducts = async (
 			return;
 		}
 
+		// Attach `isVerified` and `purchaseType` to each product, matching the
+		// shape returned by the main /products listing endpoint, so listing
+		// cards can render the correct action (Add to Cart vs Request an Offer
+		// vs Contact Seller) without re-deriving it themselves.
+		const formattedSavedProducts = await Promise.all(
+			savedProducts.map(async (saved: any) => {
+				const savedJson = saved.toJSON();
+				const product = savedJson.product;
+
+				if (product?.vendor) {
+					const kyc = await KYC.findOne({ where: { vendorId: product.vendor.id } });
+					product.vendor.isVerified = kyc ? kyc.isVerified : false;
+				}
+
+				if (product) {
+					product.purchaseType = getProductPurchaseType(product);
+				}
+
+				return savedJson;
+			}),
+		);
+
 		// Send the saved products in the response
-		res.status(200).json({ data: savedProducts });
+		res.status(200).json({ data: formattedSavedProducts });
 	} catch (error: any) {
 		logger.error("Error fetching saved products:", error);
 		res

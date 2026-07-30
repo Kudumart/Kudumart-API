@@ -52,6 +52,48 @@ export const ALLOWED_SERVICE_ATTRIBUTE_DATA = Object.values(
 	ALLOWED_SERVICE_ATTRIBUTE_DATA_OBJ,
 ) as AllowedServiceAttributeDataType[];
 
+// Categories whose listings are high-value/negotiated items (real estate,
+// vehicles, heavy equipment) that customers should inquire about rather than
+// add straight to a cart. Single source of truth — used by both the cart
+// endpoint (to reject the request server-side) and the product read
+// endpoints (to tell clients which action to render), so the two can never
+// drift out of sync the way the old duplicated checks did.
+export const OFFER_ONLY_CATEGORY_IDS = [
+	"de7035db-6833-4a11-a7d9-7fd5ae8c4370", // Real Estate
+	"cee73eb0-5a9f-4a34-8225-794cbfbf959f", // Vehicles
+	"3b77c173-30c8-4e2b-b78d-10713ba52b6f", // Automotives and Tools
+];
+
+interface ProductForPurchaseTypeCheck {
+	categoryId?: string | null;
+	sub_category?: {
+		categoryId?: string | null;
+		category?: { id?: string; name?: string } | null;
+	} | null;
+}
+
+// "cart" = product can be added to cart / bought now.
+// "offer" = product should only be inquired about (Make an Offer / Contact Seller).
+// Deliberately keyed off category id/name only — matching on the product's own
+// name (e.g. a substring check for "car") is unreliable and produces false
+// positives (a "Toy Car" or "Cartier" watch would wrongly be blocked).
+export const getProductPurchaseType = (
+	product: ProductForPurchaseTypeCheck,
+): "cart" | "offer" => {
+	const category = product.sub_category?.category;
+	const categoryId =
+		category?.id || product.sub_category?.categoryId || product.categoryId || "";
+	const categoryName = category?.name?.toLowerCase() || "";
+
+	const isOfferOnly =
+		OFFER_ONLY_CATEGORY_IDS.includes(categoryId) ||
+		categoryName.includes("real estate") ||
+		categoryName.includes("vehicle") ||
+		categoryName.includes("automotive");
+
+	return isOfferOnly ? "offer" : "cart";
+};
+
 // Function to generate a 6-digit OTP
 const generateOTP = (): string => {
 	const otp: string = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP

@@ -19,7 +19,12 @@ import Category from "../models/category";
 import User from "../models/user";
 import Store from "../models/store";
 import KYC from "../models/kyc";
-import { shuffleArray, getJobsBySearch, initStripe } from "../utils/helpers";
+import {
+	shuffleArray,
+	getJobsBySearch,
+	initStripe,
+	getProductPurchaseType,
+} from "../utils/helpers";
 import AuctionProduct from "../models/auctionproduct";
 import Currency from "../models/currency";
 import Admin from "../models/admin";
@@ -45,12 +50,29 @@ import AttributeOptions from "../models/attributeOptions";
 import Services from "../models/services";
 import ServiceReviews from "../models/servicereview";
 
+// `activeOnly=true` restricts results to categories that have at least one
+// active product in one of their sub-categories. Storefront-facing screens
+// (homepage, header, category menu) pass this flag so customers never see an
+// empty category; vendor/admin forms that need every category to let sellers
+// list the first product into a new one omit it, so behavior there is unchanged.
 export const getAllCategories = async (
 	req: Request,
 	res: Response,
 ): Promise<void> => {
+	const { activeOnly } = req.query;
+
 	try {
-		const categories = await Category.findAll();
+		const whereClause: any = {};
+
+		if (activeOnly === "true") {
+			whereClause.id = {
+				[Op.in]: literal(
+					"(SELECT sc.categoryId FROM sub_categories sc INNER JOIN products p ON p.categoryId = sc.id WHERE p.status = 'active')",
+				),
+			};
+		}
+
+		const categories = await Category.findAll({ where: whereClause });
 
 		res.status(200).json({ data: categories });
 	} catch (error: any) {
@@ -65,11 +87,21 @@ export const getCategorySubCategories = async (
 	req: Request,
 	res: Response,
 ): Promise<void> => {
-	const { categoryId } = req.query;
+	const { categoryId, activeOnly } = req.query;
 
 	try {
+		const whereClause: any = { categoryId };
+
+		if (activeOnly === "true") {
+			whereClause.id = {
+				[Op.in]: literal(
+					"(SELECT p.categoryId FROM products p WHERE p.status = 'active')",
+				),
+			};
+		}
+
 		const subCategories = await SubCategory.findAll({
-			where: { categoryId },
+			where: whereClause,
 		});
 
 		res.status(200).json({ data: subCategories });
@@ -156,10 +188,22 @@ export const products = async (req: Request, res: Response): Promise<void> => {
 		if (maxPrice) {
 			whereClause.price = { ...whereClause.price, [Op.lte]: Number(maxPrice) };
 		}
-		if (name) {
-			const normalizedName = String(name).trim().replace(/\s+/g, " "); // Normalize spaces
+		// Search term used for both the where-clause matching below and the
+		// relevance ranking further down (kept in one place so the two never
+		// drift out of sync).
+		const normalizedName = name
+			? String(name).trim().replace(/\s+/g, " ")
+			: "";
+
+		if (normalizedName) {
+			const likeTerm = `%${normalizedName}%`;
+			// Match name, SKU, or keywords — matching only `name` meant a
+			// product findable by its SKU or keywords simply never showed up
+			// in results.
 			whereClause[Op.or] = [
-				{ name: { [Op.like]: `%${normalizedName}%` } }, // Use LIKE query for product name search
+				{ name: { [Op.like]: likeTerm } },
+				{ sku: { [Op.like]: likeTerm } },
+				{ keywords: { [Op.like]: likeTerm } },
 			];
 		}
 		if (condition) {
@@ -268,9 +312,22 @@ export const products = async (req: Request, res: Response): Promise<void> => {
 			whereClause["$store.currency.symbol$"] = symbol;
 		}
 
-		// Determine sorting order dynamically
-		const orderClause: Order =
-			popular === "true"
+		// Determine sorting order dynamically. When a search term is present,
+		// rank the closest name matches first (exact, then prefix, then
+		// substring) instead of the random order used for plain browsing —
+		// otherwise a barely-relevant substring match could outrank an exact
+		// match purely by chance.
+		const orderClause: Order = normalizedName
+			? [
+				[
+					literal(
+						"CASE WHEN name = :exactTerm THEN 0 WHEN name LIKE :prefixTerm THEN 1 WHEN name LIKE :containsTerm THEN 2 ELSE 3 END",
+					),
+					"ASC",
+				],
+				["views", "DESC"],
+			]
+			: popular === "true"
 				? [
 					["views", "DESC"],
 					[Sequelize.literal("RAND()"), "ASC"],
@@ -288,6 +345,13 @@ export const products = async (req: Request, res: Response): Promise<void> => {
 			limit: currentLimit, // Fetch based on the provided limit
 			offset: offset, // Dynamic offset based on page and limit
 			subQuery: false, // Ensures the currency filter is applied correctly
+			replacements: normalizedName
+				? {
+					exactTerm: normalizedName,
+					prefixTerm: `${normalizedName}%`,
+					containsTerm: `%${normalizedName}%`,
+				}
+				: undefined,
 		});
 
 		// Calculate the total number of pages
@@ -317,6 +381,7 @@ export const products = async (req: Request, res: Response): Promise<void> => {
 			return {
 				...product.toJSON(),
 				vendor: vendorData ?? null, // Ensure vendor is null if not present
+				purchaseType: getProductPurchaseType(product),
 			};
 		});
 
@@ -451,6 +516,7 @@ export const getProductById = async (
 		// Attach review data to the product
 		product.setDataValue("averageRating", parseFloat(averageRating));
 		product.setDataValue("totalReviews", totalReviews);
+		product.setDataValue("purchaseType", getProductPurchaseType(product as any));
 
 		// Build where clause for recommended products
 		const recommendedWhereClause: any = {
@@ -504,6 +570,185 @@ export const getProductById = async (
 		logger.error("Error fetching product:", error);
 		res.status(500).json({
 			message: error.message || "An error occurred while fetching the product.",
+		});
+	}
+};
+
+// Live search suggestions for the header search bar. Matches on name, SKU,
+// and keywords (the only free-text searchable fields the Product model has —
+// there is no `tags` or `brand` column in this schema). Kept as plain LIKE
+// matching rather than MySQL FULLTEXT: FULLTEXT's default minimum indexed
+// word length (3 chars) would silently drop short product names/SKUs from
+// the index, which conflicts with the 2-character minimum this endpoint is
+// required to support.
+export const productAutocomplete = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const q = String(req.query.q || "").trim();
+
+		if (q.length < 2) {
+			res.status(200).json({ data: [] });
+			return;
+		}
+
+		const likeTerm = `%${q}%`;
+
+		const products = await Product.findAll({
+			where: {
+				status: "active",
+				[Op.or]: [
+					{ name: { [Op.like]: likeTerm } },
+					{ sku: { [Op.like]: likeTerm } },
+					{ keywords: { [Op.like]: likeTerm } },
+				],
+			},
+			attributes: ["id", "name", "sku", "image_url", "price", "discount_price", "views"],
+			include: [
+				{
+					model: Store,
+					as: "store",
+					attributes: ["id"],
+					include: [
+						{
+							model: Currency,
+							as: "currency",
+							attributes: ["symbol"],
+						},
+					],
+				},
+			],
+			order: [["views", "DESC"]],
+			limit: 30, // candidate pool; ranked and trimmed to 10 below
+		});
+
+		// Rank exact/prefix/substring name matches above SKU/keyword-only
+		// matches, so the most relevant results surface first in the dropdown.
+		const lowerQ = q.toLowerCase();
+		const rank = (name: string): number => {
+			const lowerName = (name || "").toLowerCase();
+			if (lowerName === lowerQ) return 0;
+			if (lowerName.startsWith(lowerQ)) return 1;
+			if (lowerName.includes(lowerQ)) return 2;
+			return 3;
+		};
+
+		const suggestions = products
+			.map((p: any) => p.toJSON())
+			.sort((a: any, b: any) => rank(a.name) - rank(b.name))
+			.slice(0, 10);
+
+		res.status(200).json({ data: suggestions });
+	} catch (error: any) {
+		logger.error("Error fetching autocomplete suggestions:", error);
+		res.status(500).json({
+			message: error.message || "An error occurred while fetching suggestions.",
+		});
+	}
+};
+
+// Powers the search results page: instead of one flat product list, groups
+// results by every sub-category that matches the search — either because the
+// sub-category's own name matches, or because it contains at least one
+// active product matching by name/SKU/keywords. Once a sub-category
+// qualifies, all of its active products are returned (matching how a
+// customer expects "search Light" to surface the whole Lighting category,
+// not just the individual listings whose title happens to contain "light").
+export const searchProductsGrouped = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const q = String(req.query.q || "").trim();
+
+		if (!q) {
+			res.status(200).json({ data: [] });
+			return;
+		}
+
+		const likeTerm = `%${q}%`;
+
+		// Blocked vendor exclusion, consistent with the other public product endpoints.
+		let blockedVendorIds: string[] = [];
+		const userId = (req as AuthenticatedRequest).user?.id;
+		if (userId) {
+			const blockedVendors = await BlockedVendor.findAll({ where: { userId } });
+			blockedVendorIds = blockedVendors.map((bv: any) => bv.vendorId);
+		}
+
+		const matchingSubCategories = await SubCategory.findAll({
+			where: {
+				[Op.or]: [
+					{ name: { [Op.like]: likeTerm } },
+					{
+						id: {
+							[Op.in]: literal(
+								"(SELECT categoryId FROM products WHERE status = 'active' AND (name LIKE :likeTerm OR sku LIKE :likeTerm OR keywords LIKE :likeTerm))",
+							),
+						},
+					},
+				],
+			},
+			include: [{ model: Category, as: "category", attributes: ["id", "name"] }],
+			replacements: { likeTerm },
+		});
+
+		const groups = await Promise.all(
+			matchingSubCategories.map(async (subCat: any) => {
+				const productWhere: any = { categoryId: subCat.id, status: "active" };
+				if (blockedVendorIds.length > 0) {
+					productWhere.vendorId = { [Op.notIn]: blockedVendorIds };
+				}
+
+				const products = await Product.findAll({
+					where: productWhere,
+					include: [
+						{ model: User, as: "vendor" },
+						{ model: Admin, as: "admin", attributes: ["id", "name", "email"] },
+						{
+							model: Store,
+							as: "store",
+							attributes: ["id", "name"],
+							include: [{ model: Currency, as: "currency", attributes: ["symbol"] }],
+						},
+					],
+					limit: 12,
+					order: [["views", "DESC"]],
+				});
+
+				const formattedProducts = await Promise.all(
+					products.map(async (product: any) => {
+						const json = product.toJSON();
+						if (json.vendor) {
+							const kyc = await KYC.findOne({ where: { vendorId: json.vendor.id } });
+							json.vendor.isVerified = kyc ? kyc.isVerified : false;
+						}
+						json.purchaseType = getProductPurchaseType(json);
+						return json;
+					}),
+				);
+
+				return {
+					subCategory: {
+						id: subCat.id,
+						name: subCat.name,
+						category: subCat.category,
+					},
+					products: formattedProducts,
+				};
+			}),
+		);
+
+		// Drop sub-categories that matched by name but have no active products
+		// left to show (keeps the results page from rendering empty sections).
+		const nonEmptyGroups = groups.filter((g) => g.products.length > 0);
+
+		res.status(200).json({ data: nonEmptyGroups });
+	} catch (error: any) {
+		logger.error("Error fetching grouped search results:", error);
+		res.status(500).json({
+			message: error.message || "An error occurred while searching products.",
 		});
 	}
 };
@@ -696,6 +941,18 @@ export const getStoreProducts = async (
 						},
 					],
 				},
+				{
+					model: SubCategory,
+					as: "sub_category",
+					attributes: ["id", "name", "categoryId"],
+					include: [
+						{
+							model: Category,
+							as: "category",
+							attributes: ["id", "name"],
+						},
+					],
+				},
 			],
 			limit: Number(limit),
 			offset,
@@ -704,9 +961,28 @@ export const getStoreProducts = async (
 		// Shuffle products
 		const shuffledProducts = shuffleArray(products);
 
+		// Transform the response to include `isVerified` and `purchaseType`,
+		// matching the shape returned by the main /products listing endpoint.
+		const formattedProducts = await Promise.all(
+			shuffledProducts.map(async (product: any) => {
+				let vendorData = product.vendor ? product.vendor.toJSON() : null;
+
+				if (vendorData) {
+					const kyc = await KYC.findOne({ where: { vendorId: vendorData.id } });
+					vendorData.isVerified = kyc ? kyc.isVerified : false;
+				}
+
+				return {
+					...product.toJSON(),
+					vendor: vendorData ?? null,
+					purchaseType: getProductPurchaseType(product),
+				};
+			}),
+		);
+
 		res.status(200).json({
 			message: "Store products fetched successfully",
-			data: shuffledProducts,
+			data: formattedProducts,
 			pagination: {
 				total: products.length,
 				page: Number(page),
@@ -1030,6 +1306,13 @@ export const getAdverts = async (
 					model: SubCategory,
 					as: "sub_category",
 					attributes: ["id", "name"], // Include only necessary fields
+					include: [
+						{
+							model: Category,
+							as: "category",
+							attributes: ["id", "name"],
+						},
+					],
 				},
 				{
 					model: Product,
