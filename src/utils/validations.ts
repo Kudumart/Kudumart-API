@@ -978,6 +978,12 @@ export const createAdvertValidation = () => {
 			.optional({ checkFalsy: true })
 			.isBoolean()
 			.withMessage("show on home page must be a boolean value"),
+		check("link")
+			.exists({ checkFalsy: true })
+			.withMessage("Advert link is required.")
+			.bail()
+			.isURL({ require_protocol: true })
+			.withMessage("Advert link must be a valid URL."),
 	];
 };
 
@@ -1009,6 +1015,12 @@ export const updateAdvertValidation = () => {
 			.optional({ checkFalsy: true })
 			.isBoolean()
 			.withMessage("show on home page must be a boolean value"),
+		check("link")
+			.exists({ checkFalsy: true })
+			.withMessage("Advert link is required.")
+			.bail()
+			.isURL({ require_protocol: true })
+			.withMessage("Advert link must be a valid URL."),
 	];
 };
 

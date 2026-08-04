@@ -14,6 +14,7 @@ class Advert extends Model {
   public status?: "pending" | "approved" | "rejected";
   public adminNote?: string;
   public showOnHomepage?: boolean;
+  public expiresAt?: Date | null;
   public createdAt?: Date;
   public updatedAt?: Date;
 
@@ -102,6 +103,10 @@ const initModel = (sequelize: Sequelize) => {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: false, // Default to false (not on homepage)
+      },
+      expiresAt: {
+        type: DataTypes.DATE,
+        allowNull: true, // Null means the advert never expires
       },
     },
     {

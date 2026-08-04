@@ -346,20 +346,24 @@ const checkAdvertLimit = async (
 
 		const maxAds = subscriptionPlan.maxAds;
 
-		// Handle the case where maxAds is null
+		// A null limit means the plan places no cap on adverts (unlimited),
+		// not that zero adverts are allowed.
 		if (maxAds === null) {
-			return {
-				status: false,
-				message: "Your subscription plan does not define a limit for adverts.",
-			};
+			return { status: true, message: "Vendor can create more adverts." };
 		}
 
-		// Count the number of adverts already created by the vendor
-		const maxAdsCount = await Advert.count({
-			where: { userId: vendorId },
+		// Count only the vendor's currently active adverts (not rejected, and
+		// not expired) against the limit, not their lifetime total — otherwise
+		// old/expired/rejected adverts would permanently eat into the cap.
+		const activeAdsCount = await Advert.count({
+			where: {
+				userId: vendorId,
+				status: { [Op.ne]: "rejected" },
+				[Op.or]: [{ expiresAt: null }, { expiresAt: { [Op.gt]: new Date() } }],
+			},
 		});
 
-		if (maxAdsCount >= maxAds) {
+		if (activeAdsCount >= maxAds) {
 			return {
 				status: false,
 				message:

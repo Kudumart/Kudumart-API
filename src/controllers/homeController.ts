@@ -1295,18 +1295,25 @@ export const getAdverts = async (
 		const pageSize = parseInt(limit as string) || 10;
 		const offset = (pageNumber - 1) * pageSize;
 
-		// Base condition: Only approved adverts
-		const searchCondition: any = { status: "approved" };
+		// Base condition: only approved adverts that haven't expired
+		const searchCondition: any = {
+			status: "approved",
+			[Op.and]: [
+				{ [Op.or]: [{ expiresAt: null }, { expiresAt: { [Op.gt]: new Date() } }] },
+			],
+		};
 
 		// Apply search query if provided
 		if (search) {
-			searchCondition[Op.or] = [
-				{ title: { [Op.like]: `%${search}%` } }, // Search in advert title
-				{ categoryId: { [Op.like]: `%${search}%` } },
-				{ productId: { [Op.like]: `%${search}%` } },
-				{ "$sub_category.name$": { [Op.like]: `%${search}%` } }, // Search in category name
-				{ "$product.name$": { [Op.like]: `%${search}%` } }, // Search in product name
-			];
+			searchCondition[Op.and].push({
+				[Op.or]: [
+					{ title: { [Op.like]: `%${search}%` } }, // Search in advert title
+					{ categoryId: { [Op.like]: `%${search}%` } },
+					{ productId: { [Op.like]: `%${search}%` } },
+					{ "$sub_category.name$": { [Op.like]: `%${search}%` } }, // Search in category name
+					{ "$product.name$": { [Op.like]: `%${search}%` } }, // Search in product name
+				],
+			});
 		}
 
 		// Handle boolean filtering for showOnHomePage
@@ -2054,6 +2061,106 @@ export const getServiceReviews = async (
 		res.status(500).json({
 			message:
 				error.message || "An error occurred while fetching service reviews.",
+		});
+	}
+};
+
+// Escapes text for safe inclusion inside XML element content.
+const escapeXml = (value: string): string =>
+	value
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&apos;");
+
+// Google Merchant Center product feed (RSS 2.0 / Google Shopping spec:
+// https://support.google.com/merchants/answer/7052112). Public, unauthenticated
+// XML endpoint so it can be submitted to Merchant Center and re-fetched on a
+// schedule by Google's crawler.
+export const getGoogleMerchantFeed = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const frontendUrl = (process.env.FRONTEND_URL || "").replace(/\/$/, "");
+
+		const products = await Product.findAll({
+			where: { status: "active" },
+			attributes: [
+				"id",
+				"name",
+				"description",
+				"sku",
+				"condition",
+				"price",
+				"discount_price",
+				"image_url",
+				"quantity",
+			],
+			include: [
+				{
+					model: Store,
+					as: "store",
+					attributes: ["id"],
+					include: [{ model: Currency, as: "currency", attributes: ["code"] }],
+				},
+				{
+					model: SubCategory,
+					as: "sub_category",
+					attributes: ["name"],
+					include: [{ model: Category, as: "category", attributes: ["name"] }],
+				},
+			],
+		});
+
+		const items = products
+			.filter((product: any) => product.image_url)
+			.map((product: any) => {
+				const currencyCode = product.store?.currency?.code || "NGN";
+				const price = Number(product.discount_price) > 0
+					? product.discount_price
+					: product.price;
+				const availability = Number(product.quantity) > 0 ? "in stock" : "out of stock";
+				const condition = product.condition === "used" ? "used" : "new";
+				const productType = product.sub_category
+					? escapeXml(
+							`${product.sub_category.category?.name || ""} > ${product.sub_category.name}`,
+						)
+					: "";
+
+				return `  <item>
+    <g:id>${escapeXml(product.id)}</g:id>
+    <title>${escapeXml(product.name || "")}</title>
+    <description>${escapeXml(product.description || product.name || "")}</description>
+    <link>${escapeXml(`${frontendUrl}/product/${product.id}`)}</link>
+    <g:image_link>${escapeXml(product.image_url)}</g:image_link>
+    <g:availability>${availability}</g:availability>
+    <g:price>${Number(price || 0).toFixed(2)} ${currencyCode}</g:price>
+    <g:condition>${condition}</g:condition>
+    <g:identifier_exists>${product.sku ? "yes" : "no"}</g:identifier_exists>
+    ${product.sku ? `<g:mpn>${escapeXml(product.sku)}</g:mpn>` : ""}
+    ${productType ? `<g:product_type>${productType}</g:product_type>` : ""}
+  </item>`;
+			})
+			.join("\n");
+
+		const feed = `<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:g="http://base.google.com/ns/1.0" version="2.0">
+<channel>
+  <title>Kudumart Product Feed</title>
+  <link>${escapeXml(frontendUrl)}</link>
+  <description>Kudumart active product catalog for Google Merchant Center</description>
+${items}
+</channel>
+</rss>`;
+
+		res.set("Content-Type", "application/xml; charset=utf-8");
+		res.status(200).send(feed);
+	} catch (error: any) {
+		logger.error("Error generating Google Merchant feed:", error);
+		res.status(500).json({
+			message: error.message || "Failed to generate product feed.",
 		});
 	}
 };

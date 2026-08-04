@@ -1743,9 +1743,18 @@ export const prepareCheckoutNaira = async (
 ): Promise<void> => {
 	try {
 		const userId = (req as AuthenticatedRequest).user?.id; // Get authenticated user ID
+		// Optional "Buy It Now" support: when the client only wants to check
+		// out a specific cart item (or items) rather than the whole cart, it
+		// sends the cart item id(s) here and everything else is ignored.
+		const { cartItemIds } = req.body as { cartItemIds?: string[] };
 
 		const userCart = await Cart.findAll({
-			where: { userId },
+			where: {
+				userId,
+				...(cartItemIds && cartItemIds.length > 0
+					? { id: cartItemIds }
+					: {}),
+			},
 			include: [
 				{
 					model: Product,
@@ -1985,9 +1994,14 @@ export const prepareCheckoutDollar = async (
 	res: Response,
 ): Promise<void> => {
 	const userId = (req as AuthenticatedRequest).user?.id; // Get authenticated user ID
+	// Optional "Buy It Now" support: check out only the given cart item(s).
+	const { cartItemIds } = req.body as { cartItemIds?: string[] };
 
 	const userCart = await Cart.findAll({
-		where: { userId },
+		where: {
+			userId,
+			...(cartItemIds && cartItemIds.length > 0 ? { id: cartItemIds } : {}),
+		},
 		include: [
 			{
 				model: Product,
@@ -2222,7 +2236,12 @@ export const prepareCheckoutDollar = async (
 
 export const checkout = async (req: Request, res: Response): Promise<void> => {
 	const userId = (req as AuthenticatedRequest).user?.id; // Get authenticated user ID
-	const { refId, shippingAddress, shippingAddressZipCode } = req.body;
+	const { refId, shippingAddress, shippingAddressZipCode, cartItemIds } = req.body as {
+		refId: string;
+		shippingAddress: string;
+		shippingAddressZipCode?: string;
+		cartItemIds?: string[];
+	};
 
 	if (!userId) {
 		res.status(400).json({ message: "User must be authenticated" });
@@ -2276,9 +2295,14 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 
 		const paymentData = verificationResponse;
 
-		// Fetch cart items
+		// Fetch cart items (or just the requested "Buy It Now" item(s))
 		const cartItems = await Cart.findAll({
-			where: { userId },
+			where: {
+				userId,
+				...(cartItemIds && cartItemIds.length > 0
+					? { id: cartItemIds }
+					: {}),
+			},
 			include: [
 				{
 					model: Product,
@@ -2937,7 +2961,12 @@ export const checkoutDollar = async (
 	res: Response,
 ): Promise<void> => {
 	const userId = (req as AuthenticatedRequest).user?.id;
-	const { refId, shippingAddress, shippingAddressZipCode } = req.body;
+	const { refId, shippingAddress, shippingAddressZipCode, cartItemIds } = req.body as {
+		refId: string;
+		shippingAddress: string;
+		shippingAddressZipCode?: string;
+		cartItemIds?: string[];
+	};
 
 	if (!userId) {
 		res.status(400).json({ message: "User must be authenticated" });
@@ -2967,9 +2996,14 @@ export const checkoutDollar = async (
 			return;
 		}
 
-		// Fetch cart items
+		// Fetch cart items (or just the requested "Buy It Now" item(s))
 		const cartItems = await Cart.findAll({
-			where: { userId },
+			where: {
+				userId,
+				...(cartItemIds && cartItemIds.length > 0
+					? { id: cartItemIds }
+					: {}),
+			},
 			include: [
 				{
 					model: Product,

@@ -130,6 +130,7 @@ authRoutes.get(
 	homeController.getAuctionProductById,
 ); // Fetch a single product by ID
 
+authRoutes.get("/feed/google-merchant.xml", homeController.getGoogleMerchantFeed); // Google Merchant Center product feed
 authRoutes.get("/adverts", homeController.getAdverts);
 authRoutes.get("/advert", homeController.viewAdvert);
 

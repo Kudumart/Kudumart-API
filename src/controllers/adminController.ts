@@ -4641,6 +4641,23 @@ export const approveOrRejectAdvert = async (
 			advert.adminNote = adminNote;
 		}
 
+		if (status === "approved") {
+			// Set an expiry based on the vendor's subscription plan's
+			// adsDurationDays. No active subscription, plan, or a duration of
+			// 0/null all mean the advert never expires on its own.
+			const activeSubscription = await VendorSubscription.findOne({
+				where: { vendorId: advert.userId, isActive: true },
+			});
+			const subscriptionPlan = activeSubscription
+				? await SubscriptionPlan.findByPk(activeSubscription.subscriptionPlanId)
+				: null;
+			const adsDurationDays = subscriptionPlan?.adsDurationDays;
+
+			advert.expiresAt = adsDurationDays
+				? new Date(Date.now() + adsDurationDays * 24 * 60 * 60 * 1000)
+				: null;
+		}
+
 		// Save the changes
 		await advert.save();
 
