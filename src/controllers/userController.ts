@@ -5096,14 +5096,14 @@ export const getProductReviews = async (
 	const userId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID
 
 	try {
-		const whereClause: any = { userId }; // Default filter by user ID
-
-		if (productId) {
-			whereClause.productId = productId; // Add product filter if provided
-		}
+		// A specific product's reviews are public (any product page/order/vendor
+		// view showing them wants every reviewer, not just the requester's own).
+		// Only fall back to "reviews I've written" when no productId is given.
+		const whereClause: any = productId ? { productId } : { userId };
 
 		const reviews = await ReviewProduct.findAll({
 			where: whereClause,
+			order: [["createdAt", "DESC"]],
 			include: [
 				{
 					model: User,
