@@ -2517,6 +2517,71 @@ export const getVendorWalletStats = async (
 	}
 };
 
+export const getDashboardStats = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const vendorId = (req as AuthenticatedRequest).user?.id as string;
+
+	try {
+		const orderItems = await OrderItem.findAll({
+			where: { vendorId, status: { [Op.ne]: "cancelled" } },
+			attributes: ["id", "orderId", "price", "quantity", "createdAt"],
+		});
+
+		const totalSales = orderItems.reduce(
+			(sum, item) => sum + Number(item.price) * Number(item.quantity),
+			0,
+		);
+		const totalOrders = new Set(orderItems.map((item) => item.orderId)).size;
+
+		const [totalProducts, activeProducts, draftProducts, inactiveProducts] =
+			await Promise.all([
+				Product.count({ where: { vendorId } }),
+				Product.count({ where: { vendorId, status: "active" } }),
+				Product.count({ where: { vendorId, status: "draft" } }),
+				Product.count({ where: { vendorId, status: "inactive" } }),
+			]);
+
+		// Sales total per month for the trailing 12 months, oldest first.
+		const now = new Date();
+		const monthlySales: { month: string; total: number }[] = [];
+		for (let i = 11; i >= 0; i--) {
+			const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+			const total = orderItems
+				.filter((item) => {
+					const created = new Date(item.createdAt as Date);
+					return (
+						created.getFullYear() === monthDate.getFullYear() &&
+						created.getMonth() === monthDate.getMonth()
+					);
+				})
+				.reduce((sum, item) => sum + Number(item.price) * Number(item.quantity), 0);
+			monthlySales.push({
+				month: monthDate.toLocaleString("en-US", { month: "short" }),
+				total,
+			});
+		}
+
+		res.status(200).json({
+			data: {
+				totalSales,
+				totalOrders,
+				totalProducts,
+				productStatusBreakdown: {
+					active: activeProducts,
+					draft: draftProducts,
+					inactive: inactiveProducts,
+				},
+				monthlySales,
+			},
+		});
+	} catch (error) {
+		logger.error("Error fetching vendor dashboard stats:", error);
+		res.status(500).json({ message: "Failed to fetch dashboard stats." });
+	}
+};
+
 export const getVendorTransactions = async (
 	req: Request,
 	res: Response,

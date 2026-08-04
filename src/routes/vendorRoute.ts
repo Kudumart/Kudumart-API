@@ -294,6 +294,11 @@ vendorRoutes.get(
 	vendorController.getVendorWalletStats,
 );
 vendorRoutes.get(
+	"/dashboard/stats",
+	authMiddleware,
+	vendorController.getDashboardStats,
+);
+vendorRoutes.get(
 	"/wallet/transactions",
 	authMiddleware,
 	vendorController.getVendorTransactions,
