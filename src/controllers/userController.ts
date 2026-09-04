@@ -3735,26 +3735,14 @@ export const showInterest = async (
 		const auctionProduct = await AuctionProduct.findOne({
 			where: {
 				id: auctionProductId,
-				auctionStatus: "upcoming", // Ensure auction status is "upcoming"
+				auctionStatus: { [Op.in]: ["upcoming", "ongoing"] },
 			},
 		});
 
 		if (!auctionProduct) {
 			res
 				.status(404)
-				.json({ message: "Auction product not found or is not upcoming." });
-			return;
-		}
-
-		// Validate auction date is not the start date
-		if (
-			auctionProduct.startDate &&
-			new Date(auctionProduct.startDate).toDateString() ===
-			new Date().toDateString()
-		) {
-			res.status(400).json({
-				message: "You cannot show interest on the day the auction starts.",
-			});
+				.json({ message: "Auction product not found or auction has ended." });
 			return;
 		}
 
