@@ -50,6 +50,21 @@ import AttributeOptions from "../models/attributeOptions";
 import Services from "../models/services";
 import ServiceReviews from "../models/servicereview";
 
+export const getCountrySearchTerms = (countryInput?: any): string[] => {
+	if (!countryInput) return [];
+	const raw = countryInput.toString().trim().toLowerCase();
+	if (raw === "nga" || raw === "ng" || raw === "nigeria") {
+		return ["nigeria", "nga", "ng"];
+	}
+	if (raw === "usa" || raw === "us" || raw === "united states") {
+		return ["united states", "usa", "us"];
+	}
+	if (raw === "uk" || raw === "gb" || raw === "united kingdom") {
+		return ["united kingdom", "uk", "gb"];
+	}
+	return [raw];
+};
+
 // `activeOnly=true` restricts results to categories that have at least one
 // active product in one of their sub-categories. Storefront-facing screens
 // (homepage, header, category menu) pass this flag so customers never see an
@@ -278,24 +293,24 @@ export const products = async (req: Request, res: Response): Promise<void> => {
 			{
 				model: Store,
 				as: "store",
-				where: countryFilter
-					? where(
+				where: (() => {
+					const terms = getCountrySearchTerms(country);
+					if (terms.length === 0) return undefined;
+					const storeCountryCol = fn(
+						"LOWER",
 						fn(
-							"LOWER",
+							"JSON_UNQUOTE",
 							fn(
-								"JSON_UNQUOTE",
-								fn(
-									"JSON_EXTRACT",
-									col("store.location"),
-									literal("'$.country'"),
-								),
+								"JSON_EXTRACT",
+								col("store.location"),
+								literal("'$.country'"),
 							),
 						),
-						{
-							[Op.like]: `%${countryFilter}%`,
-						},
-					)
-					: undefined,
+					);
+					return {
+						[Op.or]: terms.map((term) => where(storeCountryCol, { [Op.like]: `%${term}%` })),
+					};
+				})(),
 
 				include: [
 					{
@@ -1133,24 +1148,24 @@ export const getAuctionProducts = async (
 							attributes: ["symbol"],
 						},
 					],
-					where: country
-						? where(
+					where: (() => {
+						const terms = getCountrySearchTerms(country);
+						if (terms.length === 0) return undefined;
+						const storeCountryCol = fn(
+							"LOWER",
 							fn(
-								"LOWER",
+								"JSON_UNQUOTE",
 								fn(
-									"JSON_UNQUOTE",
-									fn(
-										"JSON_EXTRACT",
-										col("store.location"),
-										literal("'$.country'"),
-									),
+									"JSON_EXTRACT",
+									col("store.location"),
+									literal("'$.country'"),
 								),
 							),
-							{
-								[Op.like]: `%${country.toString().toLowerCase()}%`,
-							},
-						)
-						: undefined,
+						);
+						return {
+							[Op.or]: terms.map((term) => where(storeCountryCol, { [Op.like]: `%${term}%` })),
+						};
+					})(),
 				},
 				{
 					model: SubCategory,
