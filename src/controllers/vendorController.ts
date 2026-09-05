@@ -1000,16 +1000,18 @@ export const updateAuctionProduct = async (
 			return;
 		}
 
-		// Check if the auction product is "upcoming" and has no bids
-		if (auctionProduct.auctionStatus !== "upcoming") {
+		// Check if the auction product is ended
+		if (auctionProduct.auctionStatus === "ended") {
 			res.status(400).json({
-				message: "Auction product status must be 'upcoming' to update.",
+				message: "Ended auction products cannot be updated.",
 			});
 			return;
 		}
 
 		// Check if there are any bids placed for the auction product
-		const bidExists = await Bid.findOne({ where: { auctionProductId } });
+		const bidExists = await Bid.findOne({
+			where: { auctionProductId: auctionProduct.id },
+		});
 		if (bidExists) {
 			res.status(400).json({
 				message: "Auction product already has bids and cannot be updated.",
@@ -1096,11 +1098,11 @@ export const deleteAuctionProduct = async (
 			return;
 		}
 
-		// Check if the auctionStatus is 'upcoming' and no bids exist
-		if (auctionProduct.auctionStatus !== "upcoming") {
+		// Check if the auctionStatus is ended
+		if (auctionProduct.auctionStatus === "ended") {
 			res
 				.status(400)
-				.json({ message: "Only upcoming auction products can be deleted." });
+				.json({ message: "Ended auction products cannot be deleted." });
 			return;
 		}
 
