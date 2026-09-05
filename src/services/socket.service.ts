@@ -85,22 +85,19 @@ export const configureSocket = (io: Server) => {
         });        
         
         // Let users join an auction room
-        socket.on("joinAuction", (auctionProductId) => {
-            socket.join(auctionProductId);
-            console.log(`User ${socket.id} joined auction ${auctionProductId}`);
+        socket.on("joinAuction", (auctionProductId: string) => {
+            if (auctionProductId) {
+                socket.join(auctionProductId);
+                console.log(`User ${socket.id} joined auction ${auctionProductId}`);
+            }
         });
 
-        // Listen for events from the client
-        socket.on("newBid", (data) => {
-            console.log("Received new bid:", data);
-            // Emit this new bid to all connected clients
-            io.emit("newBid", data);
-        });
-
-        // Optionally, listen for other events like auction status updates, etc.
-        socket.on("auctionEnded", (data) => {
-            console.log("Auction ended:", data);
-            // Update the UI to display the winner or end the auction
+        // Let users leave an auction room
+        socket.on("leaveAuction", (auctionProductId: string) => {
+            if (auctionProductId) {
+                socket.leave(auctionProductId);
+                console.log(`User ${socket.id} left auction ${auctionProductId}`);
+            }
         });
 
         // Handle disconnection

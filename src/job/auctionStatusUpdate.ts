@@ -14,58 +14,78 @@ const auctionStatusUpdate = () => {
 		logger.info("Running auction status update...");
 
 		try {
-			// Move 'upcoming' auctions to 'ongoing' when startDate is reached
-			await AuctionProduct.update(
-				{ auctionStatus: "ongoing" },
-				{
-					where: {
-						auctionStatus: "upcoming",
-						startDate: { [Op.lte]: new Date(new Date().toISOString()) }, // startDate <= now
-					},
-				},
-			);
+			const now = new Date();
 
-			// Find auctions that have ended
+			// 1. Move 'upcoming' auctions to 'ongoing' when startDate is reached
+			const auctionsToStart = await AuctionProduct.findAll({
+				where: {
+					auctionStatus: "upcoming",
+					startDate: { [Op.lte]: now },
+					endDate: { [Op.gt]: now },
+				},
+			});
+
+			for (const auction of auctionsToStart) {
+				await auction.update({ auctionStatus: "ongoing" });
+				io.to(auction.id).emit("auctionStarted", {
+					auctionProductId: auction.id,
+					auctionStatus: "ongoing",
+				});
+				logger.info(`Auction ${auction.id} transitioned from upcoming to ongoing.`);
+			}
+
+			// 2. Find auctions that have reached end date (whether ongoing or upcoming)
 			const endedAuctions = await AuctionProduct.findAll({
 				where: {
-					auctionStatus: "ongoing",
-					endDate: { [Op.lte]: new Date() }, // endDate <= now
+					auctionStatus: { [Op.in]: ["upcoming", "ongoing"] },
+					endDate: { [Op.lte]: now },
 				},
 			});
 
 			for (const auction of endedAuctions) {
-				// Find the highest bid
+				// Find highest valid bid directly from database by amount (not relying on boolean flags)
 				const highestBid = await Bid.findOne({
-					where: { auctionProductId: auction.id, isWinningBid: true },
-					order: [["bidAmount", "DESC"]], // Get highest bid
+					where: { auctionProductId: auction.id },
+					order: [["bidAmount", "DESC"]],
 				});
 
 				const winnerId = highestBid ? highestBid.bidderId : null;
-				const winningBid = highestBid ? highestBid.bidAmount : 0;
+				const winningBid = highestBid ? Number(highestBid.bidAmount) : 0;
+
+				// Ensure winning bid flag is synchronized
+				if (highestBid) {
+					await Bid.update(
+						{ isWinningBid: false },
+						{ where: { auctionProductId: auction.id } },
+					);
+					highestBid.isWinningBid = true;
+					await highestBid.save();
+				}
 
 				// Update auction status to 'ended'
-				await AuctionProduct.update(
-					{ auctionStatus: "ended" },
-					{ where: { id: auction.id } },
-				);
+				await auction.update({ auctionStatus: "ended" });
 
-				// If there's a winner, send an email notification
+				// Always emit auctionEnded event to all clients in the auction room
 				if (winnerId) {
 					const winner = await User.findByPk(winnerId);
-					if (winner) {
-						// Emit auctionEnded event to all clients
-						io.to(auction.id).emit("auctionEnded", {
-							auctionProductId: auction.id,
-							winner,
-							winningBid,
-						});
+					io.to(auction.id).emit("auctionEnded", {
+						auctionProductId: auction.id,
+						winner: winner ? {
+							id: winner.id,
+							firstName: winner.firstName,
+							lastName: winner.lastName,
+							email: winner.email,
+						} : null,
+						winningBid,
+					});
 
-						logger.info(
-							`Auction ${auction.id} ended. Winner: ${winnerId}, Amount: ${winningBid}`,
-						);
+					logger.info(
+						`Auction ${auction.id} ended. Winner: ${winnerId}, Amount: ${winningBid}`,
+					);
 
-						// Send mail
-						let message = emailTemplates.auctionProductConfirmationNotification(
+					// Send congratulations email
+					if (winner && winner.email) {
+						const message = emailTemplates.auctionProductConfirmationNotification(
 							winner,
 							auction,
 							winningBid,
@@ -77,17 +97,23 @@ const auctionStatusUpdate = () => {
 								message,
 							);
 						} catch (emailError) {
-							logger.error("Error sending email:", emailError); // Log error for internal use
+							logger.error("Error sending auction winner email:", emailError);
 						}
-
-						logger.info(`Email sent to winner: ${winner.email}`);
 					}
+				} else {
+					// Zero-bid auction end broadcast
+					io.to(auction.id).emit("auctionEnded", {
+						auctionProductId: auction.id,
+						winner: null,
+						winningBid: 0,
+					});
+					logger.info(`Auction ${auction.id} ended with no bids.`);
 				}
 			}
 
 			logger.info("Auction status updated successfully.");
 		} catch (error) {
-			logger.info("Error updating auction status:", error);
+			logger.error("Error updating auction status:", error);
 		}
 	});
 };

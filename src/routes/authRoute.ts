@@ -15,8 +15,8 @@ import {
 	paginationQueryParamsValidation,
 	ServiceIdValidation,
 	validateUUIDParam,
-} from "../utils/validations"; // Import the service
-import authMiddleware from "../middlewares/authMiddleware";
+} from "../utils/validations";
+import authMiddleware, { optionalAuthMiddleware } from "../middlewares/authMiddleware";
 import adminAuthMiddleware from "../middlewares/adminAuthMiddleware";
 
 const authRoutes = Router();
@@ -126,9 +126,9 @@ authRoutes.get("/store/products", homeController.getStoreProducts); // Fetch a s
 authRoutes.get("/auction/products", homeController.getAuctionProducts);
 authRoutes.get(
 	"/auction/product",
-	authMiddleware,
+	optionalAuthMiddleware,
 	homeController.getAuctionProductById,
-); // Fetch a single product by ID
+); // Fetch a single product by ID (public, optional auth for interest check)
 
 authRoutes.get("/feed/google-merchant.xml", homeController.getGoogleMerchantFeed); // Google Merchant Center product feed
 authRoutes.get("/adverts", homeController.getAdverts);

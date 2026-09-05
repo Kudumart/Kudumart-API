@@ -1260,12 +1260,14 @@ export const getAuctionProductById = async (
 		}
 
 		// Check if the user has shown interest in this auction product
-		const interest = await ShowInterest.findOne({
-			where: {
-				userId,
-				auctionProductId: product.id,
-			},
-		});
+		const interest = userId
+			? await ShowInterest.findOne({
+				where: {
+					userId,
+					auctionProductId: product.id,
+				},
+			})
+			: null;
 
 		// Attach interest field dynamically
 		const productWithInterest = {

@@ -1,7 +1,7 @@
 // src/routes/userRoute.ts
 import { Router } from "express";
 import * as userController from "../controllers/userController";
-import authMiddleware from "../middlewares/authMiddleware";
+import authMiddleware, { optionalAuthMiddleware } from "../middlewares/authMiddleware";
 import {
 	updatePasswordValidationRules,
 	updateProfileEmailValidationRules,
@@ -193,7 +193,7 @@ userRoutes.post(
 );
 userRoutes.get(
 	"/auction/product/bidders",
-	authMiddleware,
+	optionalAuthMiddleware,
 	userController.actionProductBidders,
 );
 

@@ -3746,6 +3746,24 @@ export const showInterest = async (
 			return;
 		}
 
+		// Prevent vendor from showing interest in their own auction
+		if (auctionProduct.vendorId === userId) {
+			res.status(400).json({
+				message: "Vendors cannot register interest in their own auctions.",
+			});
+			return;
+		}
+
+		// Enforce participation fee if configured
+		const requiredFee = Number(auctionProduct.participantsInterestFee || 0);
+		const numericAmountPaid = Number(amountPaid || 0);
+		if (requiredFee > 0 && numericAmountPaid < requiredFee) {
+			res.status(400).json({
+				message: `A participation fee of ${requiredFee} is required to register interest for this auction.`,
+			});
+			return;
+		}
+
 		// Check if user has already shown interest
 		const existingInterest = await ShowInterest.findOne({
 			where: { userId, auctionProductId },
@@ -3762,7 +3780,7 @@ export const showInterest = async (
 		const newInterest = await ShowInterest.create({
 			userId,
 			auctionProductId,
-			amountPaid,
+			amountPaid: numericAmountPaid,
 			status: "confirmed",
 		});
 
@@ -3887,182 +3905,197 @@ export const getAllAuctionProductsInterest = async (
 };
 
 export const placeBid = async (req: Request, res: Response): Promise<void> => {
+	const transaction = await sequelizeService.connection!.transaction();
 	try {
 		const { auctionProductId, bidAmount } = req.body;
-		const bidderId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID from middleware
+		const user = (req as AuthenticatedRequest).user;
+		const bidderId = user?.id;
 
-		// Check if the user has an interest in the auction product
+		const numericBidAmount = Number(bidAmount);
+		if (isNaN(numericBidAmount) || numericBidAmount <= 0) {
+			await transaction.rollback();
+			res.status(400).json({ message: "Invalid bid amount." });
+			return;
+		}
+
+		// 1. Verify user has confirmed interest
 		const existingInterest = await ShowInterest.findOne({
 			where: {
 				userId: bidderId,
 				auctionProductId,
 				status: "confirmed",
 			},
+			transaction,
 		});
 
 		if (!existingInterest) {
+			await transaction.rollback();
 			res.status(403).json({
 				message: "You must show interest in this auction before placing a bid.",
 			});
 			return;
 		}
 
-		// Fetch the auction product
+		// 2. Fetch auction product with row lock (FOR UPDATE)
+		const now = new Date();
 		const auctionProduct = await AuctionProduct.findOne({
 			where: {
 				id: auctionProductId,
 				auctionStatus: "ongoing",
-				startDate: { [Op.lte]: new Date() },
-				endDate: { [Op.gte]: new Date() },
+				startDate: { [Op.lte]: now },
+				endDate: { [Op.gt]: now },
 			},
-			include: [
-				{
-					model: Bid,
-					as: "bids",
-					include: [
-						{
-							model: User,
-							as: "user",
-						},
-					],
-				},
-			],
-			order: [[{ model: Bid, as: "bids" }, "bidAmount", "DESC"]], // Ordering the bids by amount descending
+			lock: transaction.LOCK.UPDATE,
+			transaction,
 		});
 
 		if (!auctionProduct) {
+			await transaction.rollback();
 			res.status(404).json({
-				message: "Auction product not found or auction is not ongoing.",
+				message: "Auction product not found, not ongoing, or auction has ended.",
 			});
 			return;
 		}
 
-		// Get the current highest bid
-		const highestBid = auctionProduct?.bids?.[0];
+		// 3. Prevent vendor from bidding on own product
+		if (auctionProduct.vendorId === bidderId) {
+			await transaction.rollback();
+			res.status(400).json({
+				message: "You cannot bid on your own auction product.",
+			});
+			return;
+		}
 
-		// Determine minimum acceptable bid
+		// 4. Check maxBidsPerUser if configured
+		const maxBids = Number(auctionProduct.maxBidsPerUser || 0);
+		let existingBid = await Bid.findOne({
+			where: { auctionProductId, bidderId },
+			transaction,
+		});
+
+		if (maxBids > 0 && existingBid && Number(existingBid.bidCount || 0) >= maxBids) {
+			await transaction.rollback();
+			res.status(400).json({
+				message: `You have reached the maximum allowed bids (${maxBids}) for this auction.`,
+			});
+			return;
+		}
+
+		// 5. Query current highest bid inside transaction
+		const highestBid = await Bid.findOne({
+			where: { auctionProductId },
+			order: [["bidAmount", "DESC"]],
+			transaction,
+		});
+
 		const highestBidAmount = highestBid ? Number(highestBid.bidAmount) : 0;
-		const bidIncrement = auctionProduct.bidIncrement
-			? Number(auctionProduct.bidIncrement)
-			: 0;
-		const startingPrice = auctionProduct.price
-			? Number(auctionProduct.price)
-			: 0;
+		const bidIncrement = Number(auctionProduct.bidIncrement || 0);
+		const startingPrice = Number(auctionProduct.price || 0);
 
-		// Determine minimum acceptable bid
 		const minAcceptableBid = highestBid
 			? highestBidAmount + bidIncrement
 			: startingPrice;
 
-		if (isNaN(minAcceptableBid)) {
-			logger.error("Invalid minimum acceptable bid calculation.");
-			res
-				.status(500)
-				.json({ message: "Invalid minimum acceptable bid calculation." });
-			return;
-		}
-
-		if (bidAmount < minAcceptableBid) {
+		if (numericBidAmount < minAcceptableBid) {
+			await transaction.rollback();
 			res.status(400).json({
 				message: `Bid amount must be at least ${minAcceptableBid.toFixed(2)}.`,
 			});
 			return;
 		}
 
-		// Notify all previous bidders (except the current highest bidder)
-		if (auctionProduct.bids && auctionProduct.bids.length > 0) {
-			const previousBidders = auctionProduct.bids.filter(
-				(bid) => bid.bidderId !== bidderId && bid.user, // Exclude current bidder and ensure user exists
-			);
-
-			for (const previousBid of previousBidders) {
-				if (previousBid.user) {
-					// Ensure user is not undefined
-					try {
-						// Generate outbid notification message
-						const message = emailTemplates.outBidNotification(
-							previousBid,
-							auctionProduct,
-						);
-
-						// Send notification email
-						await sendMail(
-							previousBid.user.email,
-							`${process.env.APP_NAME} - Outbid Notification`,
-							message,
-						);
-					} catch (emailError) {
-						logger.error(
-							`Error sending email to ${previousBid.user.email}:`,
-							emailError,
-						);
-					}
-				}
-			}
-		}
-
-		// Find an existing bid by the current bidder
-		const existingBid = await Bid.findOne({
-			where: { auctionProductId, bidderId },
-		});
-
-		if (existingBid) {
-			// Update the existing bid amount and increment bidCount
-			existingBid.bidAmount = bidAmount;
-			existingBid.isWinningBid = true;
-			existingBid.bidCount = Number(existingBid.bidCount || 0) + 1; // Increment bid count
-			await existingBid.save();
-
-			// Update previous highest bid status
-			if (highestBid && highestBid.bidderId !== bidderId) {
-				highestBid.isWinningBid = false;
-				await highestBid.save();
-			}
-
-			// Real-time bid update via WebSocket
-			io.to(auctionProductId).emit("newBid", {
-				auctionProductId,
-				bidAmount: existingBid.bidAmount,
-				bidderId: existingBid.bidderId,
-			});
-
-			res.status(200).json({
-				message: "Bid updated successfully.",
-				data: existingBid,
+		// Prevent bidding equal to or lower than user's own current bid
+		if (existingBid && numericBidAmount <= Number(existingBid.bidAmount)) {
+			await transaction.rollback();
+			res.status(400).json({
+				message: "Your new bid must be higher than your current bid.",
 			});
 			return;
 		}
 
-		// Create the new bid
-		const newBid = await Bid.create({
-			auctionProductId,
-			bidderId,
-			bidAmount,
-			bidCount: 1, // Initialize bid count for new bids
-		});
+		// 6. Demote all previous winning bids
+		await Bid.update(
+			{ isWinningBid: false },
+			{
+				where: { auctionProductId },
+				transaction,
+			},
+		);
 
-		// Update previous highest bid status
-		if (highestBid) {
-			highestBid.isWinningBid = false;
-			await highestBid.save();
+		let savedBid: Bid;
+		if (existingBid) {
+			existingBid.bidAmount = numericBidAmount;
+			existingBid.isWinningBid = true;
+			existingBid.bidCount = Number(existingBid.bidCount || 0) + 1;
+			await existingBid.save({ transaction });
+			savedBid = existingBid;
+		} else {
+			savedBid = await Bid.create(
+				{
+					auctionProductId,
+					bidderId,
+					bidAmount: numericBidAmount,
+					bidCount: 1,
+					isWinningBid: true,
+				},
+				{ transaction },
+			);
 		}
 
-		// Mark new bid as the winning bid
-		newBid.isWinningBid = true;
-		await newBid.save();
+		// Commit transaction
+		await transaction.commit();
 
-		// Real-time bid update via WebSocket
+		// 7. Emit WebSocket event to auction room AFTER commit
+		const bidderName = user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : "Bidder";
 		io.to(auctionProductId).emit("newBid", {
 			auctionProductId,
-			bidAmount: newBid.bidAmount,
-			bidderId: newBid.bidderId,
+			bidAmount: savedBid.bidAmount,
+			bidderId: savedBid.bidderId,
+			bidderName: bidderName || "Bidder",
+			bidCount: savedBid.bidCount,
 		});
+
+		// 8. Asynchronous outbid notifications (outside transaction, non-blocking)
+		try {
+			const previousBids = await Bid.findAll({
+				where: {
+					auctionProductId,
+					bidderId: { [Op.ne]: bidderId },
+				},
+				include: [{ model: User, as: "user" }],
+			});
+
+			for (const prevBid of previousBids) {
+				if (prevBid.user && prevBid.user.email) {
+					try {
+						const message = emailTemplates.outBidNotification(
+							prevBid,
+							auctionProduct,
+						);
+						await sendMail(
+							prevBid.user.email,
+							`${process.env.APP_NAME} - Outbid Notification`,
+							message,
+						);
+					} catch (emailErr) {
+						logger.error(`Error sending outbid email to ${prevBid.user.email}:`, emailErr);
+					}
+				}
+			}
+		} catch (notifyErr) {
+			logger.error("Error processing outbid notifications:", notifyErr);
+		}
 
 		res.status(200).json({
 			message: "Bid placed successfully.",
-			data: newBid,
+			data: savedBid,
 		});
 	} catch (error: any) {
+		if (transaction) {
+			try {
+				await transaction.rollback();
+			} catch (_) {}
+		}
 		logger.error("Error placing bid:", error);
 		res.status(500).json({
 			message: "An error occurred while placing your bid.",

@@ -60,4 +60,31 @@ const authMiddleware = async (
   }
 };
 
+export const optionalAuthMiddleware = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const token = JwtService.jwtGetToken(req);
+    if (!token || JwtService.jwtIsTokenBlacklisted(token)) {
+      return next();
+    }
+    const decoded = JwtService.jwtVerify(token) as DecodedToken;
+    if (decoded && decoded.id) {
+      (req as AuthenticatedRequest).userId = decoded.id;
+      const user = await User.findOne({
+        where: { id: decoded.id },
+      });
+      if (user) {
+        (req as AuthenticatedRequest).user = user;
+      }
+    }
+    return next();
+  } catch (_error) {
+    // For optional auth, errors mean the user remains an unauthenticated guest
+    return next();
+  }
+};
+
 export default authMiddleware;
