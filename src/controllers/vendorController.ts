@@ -19,6 +19,8 @@ import {
 } from "../utils/helpers";
 import AuctionProduct from "../models/auctionproduct";
 import Bid from "../models/bid";
+import ShowInterest from "../models/showinterest";
+import AuctionReminders from "../models/reminder";
 import https from "https";
 import SubscriptionPlan from "../models/subscriptionplan";
 import VendorSubscription from "../models/vendorsubscription";
@@ -1000,25 +1002,6 @@ export const updateAuctionProduct = async (
 			return;
 		}
 
-		// Check if the auction product is ended
-		if (auctionProduct.auctionStatus === "ended") {
-			res.status(400).json({
-				message: "Ended auction products cannot be updated.",
-			});
-			return;
-		}
-
-		// Check if there are any bids placed for the auction product
-		const bidExists = await Bid.findOne({
-			where: { auctionProductId: auctionProduct.id },
-		});
-		if (bidExists) {
-			res.status(400).json({
-				message: "Auction product already has bids and cannot be updated.",
-			});
-			return;
-		}
-
 		// Check if vendorId matches the auction product's vendorId
 		if (auctionProduct.vendorId !== vendorId) {
 			res
@@ -1060,6 +1043,22 @@ export const updateAuctionProduct = async (
 		auctionProduct.additionalImages =
 			additionalImages || auctionProduct.additionalImages;
 
+		// Dynamically update auctionStatus based on dates, or accept explicitly passed status
+		if (req.body.auctionStatus) {
+			auctionProduct.auctionStatus = req.body.auctionStatus;
+		} else {
+			const now = new Date();
+			const effectiveStartDate = new Date(auctionProduct.startDate);
+			const effectiveEndDate = new Date(auctionProduct.endDate);
+			if (now >= effectiveEndDate) {
+				auctionProduct.auctionStatus = "ended";
+			} else if (now >= effectiveStartDate) {
+				auctionProduct.auctionStatus = "ongoing";
+			} else {
+				auctionProduct.auctionStatus = "upcoming";
+			}
+		}
+
 		// Save the updated auction product
 		await auctionProduct.save();
 
@@ -1098,40 +1097,25 @@ export const deleteAuctionProduct = async (
 			return;
 		}
 
-		// Check if the auctionStatus is ended
-		if (auctionProduct.auctionStatus === "ended") {
-			res
-				.status(400)
-				.json({ message: "Ended auction products cannot be deleted." });
-			return;
+		// Clean up any dependent records first to avoid foreign key issues
+		try {
+			await Bid.destroy({ where: { auctionProductId: auctionProduct.id } });
+		} catch (e) {
+			logger.warn("Could not delete bids for auction product:", e);
 		}
-
-		const bidCount = await Bid.count({
-			where: { auctionProductId },
-		});
-
-		if (bidCount > 0) {
-			res.status(400).json({
-				message: "Auction product already has bids, cannot be deleted.",
+		try {
+			await ShowInterest.destroy({
+				where: { auctionProductId: auctionProduct.id },
 			});
-			return;
+		} catch (e) {
+			logger.warn("Could not delete showInterest for auction product:", e);
 		}
-
-		const relatedTables: { name: string; model: typeof Bid; field: string }[] =
-			[{ name: "bids", model: Bid, field: "auctionProductId" }];
-
-		// Check each related table
-		for (const table of relatedTables) {
-			const count = await (table.model as typeof Bid).count({
-				where: { [table.field]: auctionProduct.id },
+		try {
+			await AuctionReminders.destroy({
+				where: { auctionProductId: auctionProduct.id },
 			});
-
-			if (count > 0) {
-				res.status(400).json({
-					message: `Cannot delete auction product because related records exist in ${table.name}`,
-				});
-				return;
-			}
+		} catch (e) {
+			logger.warn("Could not delete reminders for auction product:", e);
 		}
 
 		// Delete the auction product
@@ -1176,11 +1160,11 @@ export const cancelAuctionProduct = async (
 			return;
 		}
 
-		// Check if the auctionStatus is 'upcoming' and no bids exist
-		if (auctionProduct.auctionStatus !== "upcoming") {
+		// Check if the auctionProduct is already cancelled
+		if (auctionProduct.auctionStatus === "cancelled") {
 			res
 				.status(400)
-				.json({ message: "Only upcoming auction products can be cancelled." });
+				.json({ message: "Auction product is already cancelled." });
 			return;
 		}
 
