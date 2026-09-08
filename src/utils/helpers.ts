@@ -547,7 +547,48 @@ const getJobsBySearch = async (searchTerm: string, number: number) => {
 };
 
 export const getStripeSecretKey = async (): Promise<string | null> => {
+	try {
+		const stripeGateway = await PaymentGateway.findOne({
+			where: {
+				[Op.or]: [
+					{ name: "Stripe" },
+					{ name: "stripe" },
+					{ name: { [Op.like]: "%stripe%" } },
+				],
+				isActive: true,
+			},
+		});
+		if (stripeGateway && stripeGateway.secretKey) {
+			return stripeGateway.secretKey;
+		}
+	} catch (e: any) {
+		logger.warn("Could not retrieve Stripe secret key from DB:", e.message);
+	}
 	return process.env.STRIPE_SECRET_KEY || null;
+};
+
+export const getStripePublicKey = async (): Promise<string> => {
+	try {
+		const stripeGateway = await PaymentGateway.findOne({
+			where: {
+				[Op.or]: [
+					{ name: "Stripe" },
+					{ name: "stripe" },
+					{ name: { [Op.like]: "%stripe%" } },
+				],
+				isActive: true,
+			},
+		});
+		if (stripeGateway && stripeGateway.publicKey) {
+			return stripeGateway.publicKey;
+		}
+	} catch (e: any) {
+		logger.warn("Could not retrieve Stripe public key from DB:", e.message);
+	}
+	return (
+		process.env.STRIPE_PUBLIC_KEY ||
+		"pk_live_51QpXKW05R753b5a5lrZFiFkSIgZ5tN1GDe54P63gV68Or7CP1OWg30YdwG3r8cySsVq908EZ87L1VOEgarHEDkIU008RDAGzRL"
+	);
 };
 
 const initStripe = async () => {

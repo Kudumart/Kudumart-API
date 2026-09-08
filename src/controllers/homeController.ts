@@ -23,6 +23,7 @@ import {
 	shuffleArray,
 	getJobsBySearch,
 	initStripe,
+	getStripePublicKey,
 	getProductPurchaseType,
 } from "../utils/helpers";
 import AuctionProduct from "../models/auctionproduct";
@@ -1686,13 +1687,18 @@ export const createPaymentIntent = async (
 		}
 
 		const stripe = await initStripe(); // Await the function to get the Stripe instance
+		const publicKey = await getStripePublicKey();
 
 		const paymentIntent = await stripe.paymentIntents.create({
-			amount: amount * 100, // Convert amount to cents
-			currency: currency || "usd",
+			amount: Math.round(Number(amount) * 100), // Convert amount to cents
+			currency: (currency || "usd").toLowerCase(),
 		});
 
-		res.status(200).json({ data: paymentIntent.client_secret });
+		res.status(200).json({
+			data: paymentIntent.client_secret,
+			clientSecret: paymentIntent.client_secret,
+			publicKey,
+		});
 	} catch (error) {
 		logger.error("Stripe Error:", error);
 		res.status(500).json({ error: (error as Error).message });
