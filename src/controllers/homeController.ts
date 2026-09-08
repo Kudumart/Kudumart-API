@@ -54,14 +54,14 @@ import ServiceReviews from "../models/servicereview";
 export const getCountrySearchTerms = (countryInput?: any): string[] => {
 	if (!countryInput) return [];
 	const raw = countryInput.toString().trim().toLowerCase();
-	if (raw === "nga" || raw === "ng" || raw === "nigeria") {
-		return ["nigeria", "nga", "ng"];
+	if (raw === "nga" || raw === "ng" || raw === "nigeria" || raw === "ngn") {
+		return ["nigeria", "nga", "ng", "ngn"];
 	}
-	if (raw === "usa" || raw === "us" || raw === "united states") {
-		return ["united states", "usa", "us"];
+	if (raw === "usa" || raw === "us" || raw === "united states" || raw === "usd") {
+		return ["united states", "usa", "us", "usd"];
 	}
-	if (raw === "uk" || raw === "gb" || raw === "united kingdom") {
-		return ["united kingdom", "uk", "gb"];
+	if (raw === "uk" || raw === "gb" || raw === "united kingdom" || raw === "gbp") {
+		return ["united kingdom", "uk", "gb", "gbp"];
 	}
 	return [raw];
 };
@@ -1059,7 +1059,7 @@ export const getAuctionProducts = async (
 		condition, // Product condition filter
 		auctionStatus, // 'upcoming' or 'ongoing'
 		startDate, // Filter by today's date
-		limit = 10, // Default to 10 results if not specified
+		limit = 100, // Default to 100 results so all published auction products are returned
 		offset = 0, // Default to 0 offset (start from the beginning)
 	} = req.query;
 
@@ -1176,7 +1176,18 @@ export const getAuctionProducts = async (
 			],
 			limit: Number(limit),
 			offset: Number(offset),
-			order: [["startDate", "ASC"]], // Sort by start date (ascending)
+			order: [
+				[
+					literal(`CASE 
+						WHEN auctionStatus = 'ongoing' THEN 1 
+						WHEN auctionStatus = 'upcoming' THEN 2 
+						ELSE 3 
+					END`),
+					"ASC",
+				],
+				["createdAt", "DESC"],
+				["startDate", "DESC"],
+			],
 		});
 
 		// ✅ **Transform the response to include `isVerified`**
