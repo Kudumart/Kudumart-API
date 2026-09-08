@@ -1,6 +1,7 @@
 // src/controllers/userController.ts
 import { Request, Response } from "express";
-import { Op, Sequelize, ForeignKeyConstraintError } from "sequelize";
+import { Op, Sequelize, ForeignKeyConstraintError, fn, col, literal, where } from "sequelize";
+import { getCountrySearchTerms } from "./homeController";
 import { v4 as uuidv4 } from "uuid";
 import { sendMail } from "../services/mail.service";
 import { emailTemplates } from "../utils/messages";
@@ -2097,10 +2098,34 @@ export const getGeneralStores = async (
 		// Get pagination parameters
 		const page = parseInt(req.query.page as string, 10) || 1; // Default to page 1 if not provided
 		const limit = parseInt(req.query.limit as string, 10) || 10; // Default to 10 items per page
+		const { country, name } = req.query;
 		const offset = (page - 1) * limit; // Calculate offset
+
+		const whereClause: any = {};
+		if (name) {
+			whereClause.name = { [Op.like]: `%${name}%` };
+		}
+		if (country) {
+			const terms = getCountrySearchTerms(country);
+			if (terms.length > 0) {
+				const storeCountryCol = fn(
+					"LOWER",
+					fn(
+						"JSON_UNQUOTE",
+						fn(
+							"JSON_EXTRACT",
+							col("Store.location"),
+							literal("'$.country'"),
+						),
+					),
+				);
+				whereClause[Op.or] = terms.map((term) => where(storeCountryCol, { [Op.like]: `%${term}%` }));
+			}
+		}
 
 		// Fetch stores with pagination and associated data
 		const { rows: stores, count: totalStores } = await Store.findAndCountAll({
+			where: whereClause,
 			include: [
 				{
 					model: User,
@@ -2560,7 +2585,7 @@ export const getGeneralAuctionProducts = async (
 	req: Request,
 	res: Response,
 ): Promise<void> => {
-	const { name, sku, status, condition, categoryName, page, limit } = req.query;
+	const { name, sku, status, condition, categoryName, country, page, limit } = req.query;
 
 	try {
 		// Get pagination parameters
@@ -2583,11 +2608,6 @@ export const getGeneralAuctionProducts = async (
 						attributes: ["id", "name", "email"],
 					},
 					{
-						model: Admin,
-						as: "admin",
-						attributes: ["id", "name", "email"],
-					},
-					{
 						model: SubCategory,
 						as: "sub_category",
 						where: categoryName ? { name: categoryName } : undefined,
@@ -2595,12 +2615,30 @@ export const getGeneralAuctionProducts = async (
 					{
 						model: Store,
 						as: "store",
-						attributes: ["name"],
+						attributes: ["id", "name", "location"],
+						where: (() => {
+							const terms = getCountrySearchTerms(country);
+							if (terms.length === 0) return undefined;
+							const storeCountryCol = fn(
+								"LOWER",
+								fn(
+									"JSON_UNQUOTE",
+									fn(
+										"JSON_EXTRACT",
+										col("store.location"),
+										literal("'$.country'"),
+									),
+								),
+							);
+							return {
+								[Op.or]: terms.map((term) => where(storeCountryCol, { [Op.like]: `%${term}%` })),
+							};
+						})(),
 						include: [
 							{
 								model: Currency,
 								as: "currency",
-								attributes: ["symbol"],
+								attributes: ["id", "name", "symbol"],
 							},
 						],
 					},
@@ -2615,7 +2653,10 @@ export const getGeneralAuctionProducts = async (
 				}),
 				offset, // Apply offset for pagination
 				limit: limitNumber, // Apply limit for pagination
-				order: [["createdAt", "DESC"]], // Order by creation date (newest first)
+				order: [
+					[literal(`CASE WHEN auctionStatus = 'ongoing' THEN 1 WHEN auctionStatus = 'upcoming' THEN 2 ELSE 3 END`), "ASC"],
+					["createdAt", "DESC"],
+				], // Ongoing & upcoming first, newest first
 			});
 
 		// Check if auction products were found
@@ -2723,40 +2764,25 @@ export const deleteGeneralAuctionProduct = async (
 			return;
 		}
 
-		// Check if the auctionStatus is 'upcoming' and no bids exist
-		if (auctionProduct.auctionStatus !== "upcoming") {
-			res
-				.status(400)
-				.json({ message: "Only upcoming auction products can be deleted." });
-			return;
+		// SuperAdmin deletion: clean up related records safely first
+		try {
+			await Bid.destroy({ where: { auctionProductId: auctionProduct.id } });
+		} catch (e) {
+			logger.warn("Could not delete bids for auction product:", e);
 		}
-
-		const bidCount = await Bid.count({
-			where: { auctionProductId },
-		});
-
-		if (bidCount > 0) {
-			res.status(400).json({
-				message: "Auction product already has bids, cannot be deleted.",
+		try {
+			await ShowInterest.destroy({
+				where: { auctionProductId: auctionProduct.id },
 			});
-			return;
+		} catch (e) {
+			logger.warn("Could not delete showInterest for auction product:", e);
 		}
-
-		const relatedTables: { name: string; model: typeof Bid; field: string }[] =
-			[{ name: "bids", model: Bid, field: "auctionProductId" }];
-
-		// Check each related table
-		for (const table of relatedTables) {
-			const count = await (table.model as typeof Bid).count({
-				where: { [table.field]: auctionProduct.id },
+		try {
+			await AuctionReminders.destroy({
+				where: { auctionProductId: auctionProduct.id },
 			});
-
-			if (count > 0) {
-				res.status(400).json({
-					message: `Cannot delete auction product because related records exist in ${table.name}`,
-				});
-				return;
-			}
+		} catch (e) {
+			logger.warn("Could not delete reminders for auction product:", e);
 		}
 
 		// Delete the auction product
@@ -2764,19 +2790,78 @@ export const deleteGeneralAuctionProduct = async (
 
 		res.status(200).json({ message: "Auction product deleted successfully." });
 	} catch (error: any) {
-		if (error instanceof ForeignKeyConstraintError) {
-			res.status(400).json({
-				message:
-					"Cannot delete store because it has associated products. Delete or reassign products before deleting this store.",
-			});
-		} else {
-			logger.error(error);
-			res.status(500).json({
-				message:
-					error.message ||
-					"An error occurred while deleting the auction product.",
-			});
+		logger.error("Error deleting general auction product:", error);
+		res.status(500).json({
+			message:
+				error.message ||
+				"An error occurred while deleting the auction product.",
+		});
+	}
+};
+
+export const changeAuctionProductStatus = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const { auctionProductId, status } = req.query as {
+		auctionProductId: string;
+		status: string;
+	};
+
+	try {
+		const auctionProduct = await AuctionProduct.findOne({
+			where: {
+				[Op.or]: [{ id: auctionProductId }, { sku: auctionProductId }],
+			},
+		});
+
+		if (!auctionProduct) {
+			res.status(404).json({ message: "Auction product not found." });
+			return;
 		}
+
+		const validStatuses = ["upcoming", "ongoing", "cancelled", "ended"];
+		let targetStatus = status;
+
+		if (!targetStatus) {
+			// Toggle between cancelled and active
+			if (auctionProduct.auctionStatus === "cancelled") {
+				const now = new Date();
+				const sDate = new Date(auctionProduct.startDate);
+				const eDate = new Date(auctionProduct.endDate);
+				if (now >= eDate) {
+					targetStatus = "ended";
+				} else if (now >= sDate) {
+					targetStatus = "ongoing";
+				} else {
+					targetStatus = "upcoming";
+				}
+			} else {
+				targetStatus = "cancelled";
+			}
+		}
+
+		if (!validStatuses.includes(targetStatus)) {
+			res.status(400).json({
+				message: `Invalid status. Must be one of: ${validStatuses.join(", ")}`,
+			});
+			return;
+		}
+
+		auctionProduct.auctionStatus = targetStatus as any;
+		await auctionProduct.save();
+
+		res.status(200).json({
+			message: `Auction product status updated to ${targetStatus} successfully.`,
+			auctionProduct,
+		});
+	} catch (error: any) {
+		logger.error("Error changing auction product status:", error);
+		res.status(500).json({
+			message:
+				error.message ||
+				"An error occurred while changing auction product status.",
+		});
 	}
 };
 
@@ -3775,7 +3860,6 @@ export const updateAuctionProduct = async (
 		const auctionProduct = await AuctionProduct.findOne({
 			where: {
 				[Op.or]: [{ id: auctionProductId }, { sku: auctionProductId }],
-				vendorId: adminId,
 			},
 		});
 		if (!auctionProduct) {
@@ -3783,53 +3867,37 @@ export const updateAuctionProduct = async (
 			return;
 		}
 
-		// Check if vendorId matches the auction product's vendorId
-		if (auctionProduct.vendorId !== adminId) {
-			res
-				.status(403)
-				.json({ message: "You can only update your own auction products." });
-			return;
+		if (storeId) {
+			const storeExists = await Store.findByPk(storeId);
+			if (!storeExists) {
+				res.status(404).json({ message: "Store not found." });
+				return;
+			}
+			auctionProduct.storeId = storeId;
 		}
 
-		// Check if vendor, store, and category exist
-		const vendorExists = await Admin.findByPk(adminId);
-		const storeExists = await Store.findByPk(storeId);
-		const categoryExists = await SubCategory.findByPk(categoryId);
-
-		if (!vendorExists) {
-			res.status(404).json({ message: "Admin not found." });
-			return;
-		}
-
-		if (!storeExists) {
-			res.status(404).json({ message: "Store not found." });
-			return;
-		}
-
-		if (!categoryExists) {
-			res.status(404).json({ message: "Category not found." });
-			return;
+		if (categoryId) {
+			const categoryExists = await SubCategory.findByPk(categoryId);
+			if (!categoryExists) {
+				res.status(404).json({ message: "Category not found." });
+				return;
+			}
+			auctionProduct.categoryId = categoryId;
 		}
 
 		// Update the auction product
-		auctionProduct.storeId = storeId || auctionProduct.storeId;
-		auctionProduct.categoryId = categoryId || auctionProduct.categoryId;
-		auctionProduct.name = name || auctionProduct.name;
-		auctionProduct.condition = condition || auctionProduct.condition;
-		auctionProduct.description = description || auctionProduct.description;
-		auctionProduct.specification =
-			specification || auctionProduct.specification;
-		auctionProduct.price = price || auctionProduct.price;
-		auctionProduct.bidIncrement = bidIncrement || auctionProduct.bidIncrement;
-		auctionProduct.maxBidsPerUser =
-			maxBidsPerUser || auctionProduct.maxBidsPerUser;
-		auctionProduct.participantsInterestFee =
-			participantsInterestFee || auctionProduct.participantsInterestFee;
-		auctionProduct.startDate = startDate || auctionProduct.startDate;
-		auctionProduct.endDate = endDate || auctionProduct.endDate;
-		auctionProduct.image = image || auctionProduct.image;
-		auctionProduct.additionalImages =
-			additionalImages || auctionProduct.additionalImages;
+		if (name !== undefined) auctionProduct.name = name;
+		if (condition !== undefined) auctionProduct.condition = condition;
+		if (description !== undefined) auctionProduct.description = description;
+		if (specification !== undefined) auctionProduct.specification = specification;
+		if (price !== undefined) auctionProduct.price = price;
+		if (bidIncrement !== undefined) auctionProduct.bidIncrement = bidIncrement;
+		if (maxBidsPerUser !== undefined) auctionProduct.maxBidsPerUser = maxBidsPerUser;
+		if (participantsInterestFee !== undefined) auctionProduct.participantsInterestFee = participantsInterestFee;
+		if (startDate !== undefined) auctionProduct.startDate = startDate;
+		if (endDate !== undefined) auctionProduct.endDate = endDate;
+		if (image !== undefined) auctionProduct.image = image;
+		if (additionalImages !== undefined) auctionProduct.additionalImages = additionalImages;
 
 		// Dynamically update auctionStatus based on dates, or accept explicitly passed status
 		if (req.body.auctionStatus) {
@@ -3869,14 +3937,12 @@ export const deleteAuctionProduct = async (
 	res: Response,
 ): Promise<void> => {
 	const { auctionProductId } = req.query;
-	const adminId = req.admin?.id;
 
 	try {
 		// Find the auction product by ID
 		const auctionProduct = await AuctionProduct.findOne({
 			where: {
 				[Op.or]: [{ id: auctionProductId }, { sku: auctionProductId }],
-				vendorId: adminId,
 			},
 		});
 
@@ -3932,14 +3998,12 @@ export const cancelAuctionProduct = async (
 	res: Response,
 ): Promise<void> => {
 	const { auctionProductId } = req.query;
-	const adminId = req.admin?.id;
 
 	try {
 		// Find the auction product by ID
 		const auctionProduct = await AuctionProduct.findOne({
 			where: {
 				[Op.or]: [{ id: auctionProductId }, { sku: auctionProductId }],
-				vendorId: adminId,
 			},
 		});
 
@@ -3953,14 +4017,6 @@ export const cancelAuctionProduct = async (
 			res
 				.status(400)
 				.json({ message: "Auction product is already cancelled." });
-			return;
-		}
-
-		// Check if vendorId matches the auction product's vendorId
-		if (auctionProduct.vendorId !== adminId) {
-			res
-				.status(403)
-				.json({ message: "You can only cancel your own auction products." });
 			return;
 		}
 

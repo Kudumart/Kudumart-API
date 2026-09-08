@@ -549,6 +549,12 @@ adminRoutes.delete(
 	checkPermission(PERMISSIONS.MANAGE_PRODUCTS),
 	adminController.deleteGeneralAuctionProduct,
 );
+adminRoutes.put(
+	"/general/auction/product/status",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_PRODUCTS),
+	adminController.changeAuctionProductStatus,
+);
 adminRoutes.get(
 	"/general/auction/product/bidders",
 	adminAuthMiddleware,

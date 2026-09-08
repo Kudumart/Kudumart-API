@@ -867,6 +867,20 @@ export const getProductPriceHistory = async (
 	}
 };
 
+// Controller to get all currencies publicly
+export const getAllCurrencies = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const currencies = await Currency.findAll();
+		res.status(200).json({ data: currencies });
+	} catch (error: any) {
+		logger.error("Error fetching currencies:", error);
+		res.status(500).json({ message: "Failed to fetch currencies" });
+	}
+};
+
 // Controller to get all stores with optional filters and pagination
 export const getAllStores = async (
 	req: Request,
@@ -877,17 +891,35 @@ export const getAllStores = async (
 		const {
 			name = "", // Default to an empty string for name filter
 			city = "", // Default to an empty string for city filter
+			country = "", // Country filter
 			page = 1, // Default to page 1
 			limit = 10, // Default to 10 items per page
 		} = req.query;
 
 		// Define search filters dynamically
-		const filters: { [key: string]: any } = {};
+		const filters: any = {};
 		if (name) {
 			filters.name = { [Op.like]: `%${name}%` }; // Case-insensitive partial match for name
 		}
 		if (city) {
 			filters["location.city"] = { [Op.like]: `%${city}%` }; // Case-insensitive partial match for city
+		}
+		if (country) {
+			const terms = getCountrySearchTerms(country);
+			if (terms.length > 0) {
+				const storeCountryCol = fn(
+					"LOWER",
+					fn(
+						"JSON_UNQUOTE",
+						fn(
+							"JSON_EXTRACT",
+							col("Store.location"),
+							literal("'$.country'"),
+						),
+					),
+				);
+				filters[Op.or] = terms.map((term) => where(storeCountryCol, { [Op.like]: `%${term}%` }));
+			}
 		}
 
 		// Calculate pagination settings
@@ -900,7 +932,7 @@ export const getAllStores = async (
 				{
 					model: Currency,
 					as: "currency",
-					attributes: ["symbol"],
+					attributes: ["id", "name", "symbol"],
 				},
 			],
 			limit: Number(limit),

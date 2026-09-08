@@ -121,6 +121,7 @@ authRoutes.get("/products/autocomplete", homeController.productAutocomplete); //
 authRoutes.get("/products/search-grouped", homeController.searchProductsGrouped); // Search results grouped by matching category
 authRoutes.get("/product", homeController.getProductById); // Fetch a single product by ID
 authRoutes.get("/product/price-history", homeController.getProductPriceHistory); // Fetch market price comparison by product name
+authRoutes.get("/currencies", homeController.getAllCurrencies);
 authRoutes.get("/stores", homeController.getAllStores);
 authRoutes.get("/store/products", homeController.getStoreProducts); // Fetch a single product by ID
 authRoutes.get("/auction/products", homeController.getAuctionProducts);
