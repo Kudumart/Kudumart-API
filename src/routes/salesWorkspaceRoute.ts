@@ -1,0 +1,20 @@
+import { Router } from "express";
+import authMiddleware from "../middlewares/authMiddleware";
+import salesAgentAuthMiddleware from "../middlewares/salesAgentAuthMiddleware";
+import * as controller from "../controllers/salesWorkspaceController";
+import { validate } from "../utils/validations";
+import { changeCrmLeadStageValidation, createCrmActivityValidation, createOwnCrmLeadValidation, crmLeadIdValidation } from "../utils/crmValidations";
+
+const routes = Router();
+routes.use(authMiddleware, salesAgentAuthMiddleware);
+routes.get("/me", controller.me);
+routes.get("/leads", controller.leads);
+routes.post("/leads", createOwnCrmLeadValidation(), validate, controller.createLead);
+routes.get("/leads/:leadId", crmLeadIdValidation(), validate, controller.leadDetails);
+routes.patch("/leads/:leadId/stage", changeCrmLeadStageValidation(), validate, controller.updateLeadStage);
+routes.post("/leads/:leadId/activities", createCrmActivityValidation(), validate, controller.addLeadActivity);
+routes.get("/codes", controller.codes);
+routes.get("/referrals", controller.referrals);
+routes.get("/earnings", controller.earnings);
+routes.get("/payouts", controller.payouts);
+export default routes;

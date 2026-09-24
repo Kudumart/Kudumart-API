@@ -65,6 +65,10 @@ export const PERMISSIONS = {
 	// KYC
 	VIEW_KYC: "view-kyc",
 	MANAGE_KYC: "manage-kyc",
+
+	// Referrals
+	VIEW_REFERRALS: "view-referrals",
+	MANAGE_REFERRALS: "manage-referrals",
 } as const;
 
 /**
@@ -139,4 +143,10 @@ export const PERMISSION_DESCRIPTIONS: Record<string, string> = {
 	// KYC
 	"view-kyc": "Can view vendor KYC submissions",
 	"manage-kyc": "Can approve or reject vendor KYC submissions",
+
+	// Referrals
+	"view-referrals":
+		"Can view referral programmes, agents, referrals, and reports",
+	"manage-referrals":
+		"Can configure and manage referral programmes and operations",
 };

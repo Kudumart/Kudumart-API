@@ -18,8 +18,28 @@ import {
 } from "../utils/validations"; // Import the service
 import authMiddleware from "../middlewares/authMiddleware";
 import adminAuthMiddleware from "../middlewares/adminAuthMiddleware";
+import { validateReferralCode } from "../controllers/referralCodeController";
+import { recordReferralVisit } from "../controllers/referralTrackingController";
+import {
+	publicReferralCodeValidation,
+	recordReferralVisitValidation,
+} from "../utils/referralCodeValidations";
 
 const authRoutes = Router();
+
+// Public referral-code validation (does not consume the code).
+authRoutes.get(
+	"/referrals/codes/:code/validate",
+	publicReferralCodeValidation(),
+	validate,
+	validateReferralCode,
+);
+authRoutes.post(
+	"/referrals/visits",
+	recordReferralVisitValidation(),
+	validate,
+	recordReferralVisit,
+);
 
 // Auth routes
 authRoutes.get("/", authController.index);

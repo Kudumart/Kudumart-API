@@ -19,6 +19,17 @@ export const registrationValidationRules = () => {
 			.withMessage("Platform must be a string")
 			.isIn(["mobile", "web"])
 			.withMessage('Platform must be either "mobile" or "web"'),
+		check("referralCode")
+			.optional()
+			.trim()
+			.isLength({ max: 80 })
+			.matches(/^[A-Za-z0-9_-]+$/)
+			.withMessage("Invalid referral code"),
+		check("referralVisitorToken")
+			.optional()
+			.isLength({ min: 64, max: 64 })
+			.isHexadecimal()
+			.withMessage("Invalid referral visitor token"),
 		check("phoneNumber")
 			.isMobilePhone("any")
 			.withMessage("Invalid phone number")

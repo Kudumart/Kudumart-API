@@ -72,6 +72,7 @@ class User extends Model {
 			foreignKey: "vendorId",
 			onDelete: "RESTRICT",
 		});
+		this.hasMany(models.CrmLead, { as: "crmLeads", foreignKey: "referredUserId" });
 	}
 
 	// Add method to fetch KYC record

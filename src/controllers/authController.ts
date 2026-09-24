@@ -26,6 +26,11 @@ import passport from "passport";
 import { sendPushNotificationToTopic } from "../firebase/pushNotification";
 import { DropShippingService } from "../services/dropShipping.service";
 import DropShippingCred from "../models/dropshippngCreds";
+import {
+	createUserWithReferralAttribution,
+	recordReferralMilestone,
+	ReferralAttributionError,
+} from "../services/referralAttribution.service";
 
 export const index = async (_: Request, res: Response) => {
 	res.status(200).json({
@@ -36,12 +41,33 @@ export const index = async (_: Request, res: Response) => {
 
 const dropShippingService = new DropShippingService();
 
+const recordReferralMilestoneSafely = async (
+	userId: string,
+	eventType: string,
+	status?: "VERIFIED" | "QUALIFIED" | "CONVERTED",
+) => {
+	try {
+		await recordReferralMilestone(userId, eventType, status);
+	} catch (error) {
+		// Referral reporting must never undo a completed account action.
+		logger.error(`Error recording referral milestone ${eventType}:`, error);
+	}
+};
+
 export const vendorRegister = async (
 	req: Request,
 	res: Response,
 ): Promise<void> => {
-	const { email, password, firstName, lastName, phoneNumber, platform } =
-		req.body;
+	const {
+		email,
+		password,
+		firstName,
+		lastName,
+		phoneNumber,
+		platform,
+		referralCode,
+		referralVisitorToken,
+	} = req.body;
 
 	try {
 		// Validate input
@@ -76,14 +102,18 @@ export const vendorRegister = async (
 		}
 
 		// Create the new user
-		const newUser = await User.create({
-			email,
-			password,
-			firstName: capitalizeFirstLetter(firstName),
-			lastName: capitalizeFirstLetter(lastName),
-			phoneNumber,
-			accountType: "Vendor",
-		});
+		const newUser = await createUserWithReferralAttribution(
+			{
+				email,
+				password,
+				firstName: capitalizeFirstLetter(firstName),
+				lastName: capitalizeFirstLetter(lastName),
+				phoneNumber,
+				accountType: "Vendor",
+			},
+			referralCode,
+			referralVisitorToken,
+		);
 		if (!newUser) {
 			throw new Error("Failed to create new user");
 		}
@@ -167,6 +197,10 @@ export const vendorRegister = async (
 		});
 	} catch (error: any) {
 		logger.error("Error during registration:", error);
+		if (error instanceof ReferralAttributionError) {
+			res.status(422).json({ message: error.message });
+			return;
+		}
 		if (error.message) {
 			res.status(400).json({ message: error.message });
 		} else {
@@ -179,8 +213,16 @@ export const customerRegister = async (
 	req: Request,
 	res: Response,
 ): Promise<void> => {
-	const { email, password, firstName, lastName, phoneNumber, platform } =
-		req.body;
+	const {
+		email,
+		password,
+		firstName,
+		lastName,
+		phoneNumber,
+		platform,
+		referralCode,
+		referralVisitorToken,
+	} = req.body;
 
 	try {
 		// Validate input
@@ -204,14 +246,18 @@ export const customerRegister = async (
 		}
 
 		// Create the new user
-		const newUser = await User.create({
-			email,
-			password,
-			firstName: capitalizeFirstLetter(firstName),
-			lastName: capitalizeFirstLetter(lastName),
-			phoneNumber,
-			accountType: "Customer",
-		});
+		const newUser = await createUserWithReferralAttribution(
+			{
+				email,
+				password,
+				firstName: capitalizeFirstLetter(firstName),
+				lastName: capitalizeFirstLetter(lastName),
+				phoneNumber,
+				accountType: "Customer",
+			},
+			referralCode,
+			referralVisitorToken,
+		);
 
 		// Step 2: Create default notification settings for the user
 		await UserNotificationSetting.create({
@@ -292,6 +338,10 @@ export const customerRegister = async (
 		});
 	} catch (error) {
 		logger.error("Error during registration:", error);
+		if (error instanceof ReferralAttributionError) {
+			res.status(422).json({ message: error.message });
+			return;
+		}
 		res.status(500).json({ message: "Server error" });
 	}
 };
@@ -329,6 +379,11 @@ export const verifyEmail = async (
 			// Update the user's email verification status
 			user.email_verified_at = new Date(); // Assuming this field exists in the User model
 			await user.save();
+			await recordReferralMilestoneSafely(
+				user.id,
+				"EMAIL_VERIFIED",
+				"VERIFIED",
+			);
 
 			// Optionally delete the OTP record after successful verification
 			await OTP.destroy({ where: { userId: user.id } });
@@ -403,6 +458,11 @@ export const verifyEmailWithToken = async (
 			// Update the user's email verification status
 			user.email_verified_at = new Date(); // Assuming this field exists in the User model
 			await user.save();
+			await recordReferralMilestoneSafely(
+				user.id,
+				"EMAIL_VERIFIED",
+				"VERIFIED",
+			);
 
 			// Optionally delete the OTP record after successful verification
 			await OTP.destroy({ where: { userId: user.id } });
@@ -869,6 +929,8 @@ export const handleGoogleAuth = async (
 			accountType,
 			fcmToken,
 			providerId,
+			referralCode,
+			referralVisitorToken,
 		} = req.body;
 
 		if (!firstName || !lastName || !email || !accountType || !providerId) {
@@ -886,17 +948,26 @@ export const handleGoogleAuth = async (
 
 		if (!user) {
 			// Create a new user
-			user = await User.create({
-				email,
-				firstName,
-				lastName,
-				fcmToken: fcmToken || "",
-				accountType,
-				password: await generateUniquePhoneNumber(), // Generate unique phone number
-				phoneNumber: await generateUniquePhoneNumber(), // Generate unique phone number
-				googleId: providerId, // Storing provider ID as Google ID
-				email_verified_at: new Date(),
-			});
+			user = await createUserWithReferralAttribution(
+				{
+					email,
+					firstName,
+					lastName,
+					fcmToken: fcmToken || "",
+					accountType,
+					password: await generateUniquePhoneNumber(),
+					phoneNumber: await generateUniquePhoneNumber(),
+					googleId: providerId,
+					email_verified_at: new Date(),
+				},
+				referralCode,
+				referralVisitorToken,
+			);
+			await recordReferralMilestoneSafely(
+				user.id,
+				"EMAIL_VERIFIED",
+				"VERIFIED",
+			);
 		} else {
 			await User.update(
 				{
@@ -916,6 +987,10 @@ export const handleGoogleAuth = async (
 		// Call socialAuthCallback after successful authentication
 		await socialAuthCallback(req, res);
 	} catch (error) {
+		if (error instanceof ReferralAttributionError) {
+			res.status(422).json({ message: error.message });
+			return;
+		}
 		res
 			.status(500)
 			.json({ message: "An error occurred during authentication.", error });

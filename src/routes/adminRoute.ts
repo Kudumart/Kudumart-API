@@ -2,6 +2,14 @@
 import { Router } from "express";
 import * as adminController from "../controllers/adminController";
 import * as homeController from "../controllers/homeController";
+import * as referralProgramController from "../controllers/referralProgramController";
+import * as salesAgentController from "../controllers/salesAgentController";
+import * as referralCodeController from "../controllers/referralCodeController";
+import * as referralController from "../controllers/referralController";
+import * as commissionController from "../controllers/commissionController";
+import * as commissionPayoutController from "../controllers/commissionPayoutController";
+import * as crmController from "../controllers/crmController";
+import * as referralAnalyticsController from "../controllers/referralAnalyticsController";
 import adminAuthMiddleware from "../middlewares/adminAuthMiddleware";
 import {
 	adminUpdateProfileValidationRules,
@@ -40,8 +48,261 @@ import {
 	getAdminNotifications,
 	markAdminNotificationAsRead,
 } from "../controllers/adminController";
+import {
+	createReferralProgramValidation,
+	listReferralProgramsValidation,
+	referralProgramIdValidation,
+	transitionReferralProgramValidation,
+	updateReferralProgramValidation,
+} from "../utils/referralProgramValidations";
+import {
+	createSalesAgentValidation,
+	listSalesAgentsValidation,
+	salesAgentIdValidation,
+	transitionSalesAgentValidation,
+	updateSalesAgentValidation,
+	linkSalesAgentAccountValidation,
+	unlinkSalesAgentAccountValidation,
+} from "../utils/salesAgentValidations";
+import {
+	createReferralCodeValidation,
+	listReferralCodesValidation,
+	referralCodeIdValidation,
+	transitionReferralCodeValidation,
+	updateReferralCodeValidation,
+} from "../utils/referralCodeValidations";
+import {
+	listReferralsValidation,
+	referralIdValidation,
+} from "../utils/referralValidations";
+import { listCommissionEarningsValidation, reverseCommissionEarningValidation } from "../utils/commissionValidations";
+import { commissionPayoutIdValidation, createCommissionPayoutValidation, listCommissionPayoutsValidation, markCommissionPayoutPaidValidation } from "../utils/commissionPayoutValidations";
+import { changeCrmLeadStageValidation, createCrmActivityValidation, createCrmLeadValidation, crmLeadIdValidation, listCrmLeadsValidation, updateCrmLeadValidation } from "../utils/crmValidations";
 
 const adminRoutes = Router();
+
+adminRoutes.get("/referral-analytics", adminAuthMiddleware, checkPermission(PERMISSIONS.VIEW_REFERRALS), referralAnalyticsController.getReferralAnalytics);
+
+adminRoutes.get("/crm/leads", adminAuthMiddleware, checkPermission(PERMISSIONS.VIEW_REFERRALS), listCrmLeadsValidation(), validate, crmController.listLeads);
+adminRoutes.get("/crm/leads/:leadId", adminAuthMiddleware, checkPermission(PERMISSIONS.VIEW_REFERRALS), crmLeadIdValidation(), validate, crmController.getLead);
+adminRoutes.post("/crm/leads", adminAuthMiddleware, checkPermission(PERMISSIONS.MANAGE_REFERRALS), createCrmLeadValidation(), validate, crmController.createLead);
+adminRoutes.put("/crm/leads/:leadId", adminAuthMiddleware, checkPermission(PERMISSIONS.MANAGE_REFERRALS), crmLeadIdValidation(), updateCrmLeadValidation(), validate, crmController.updateLead);
+adminRoutes.patch("/crm/leads/:leadId/stage", adminAuthMiddleware, checkPermission(PERMISSIONS.MANAGE_REFERRALS), changeCrmLeadStageValidation(), validate, crmController.changeStage);
+adminRoutes.post("/crm/leads/:leadId/activities", adminAuthMiddleware, checkPermission(PERMISSIONS.MANAGE_REFERRALS), createCrmActivityValidation(), validate, crmController.addActivity);
+
+adminRoutes.get(
+	"/commission-earnings",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_REFERRALS),
+	listCommissionEarningsValidation(),
+	validate,
+	commissionController.listCommissionEarnings,
+);
+adminRoutes.post(
+	"/commission-earnings/:earningId/reverse",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_REFERRALS),
+	reverseCommissionEarningValidation(),
+	validate,
+	commissionController.reverseEarning,
+);
+adminRoutes.get(
+	"/commission-payouts",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_REFERRALS),
+	listCommissionPayoutsValidation(),
+	validate,
+	commissionPayoutController.listPayouts,
+);
+adminRoutes.post(
+	"/commission-payouts",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_REFERRALS),
+	createCommissionPayoutValidation(),
+	validate,
+	commissionPayoutController.createPayout,
+);
+adminRoutes.post(
+	"/commission-payouts/:payoutId/approve",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_REFERRALS),
+	commissionPayoutIdValidation(),
+	validate,
+	commissionPayoutController.approvePayout,
+);
+adminRoutes.post(
+	"/commission-payouts/:payoutId/paid",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_REFERRALS),
+	markCommissionPayoutPaidValidation(),
+	validate,
+	commissionPayoutController.markPayoutPaid,
+);
+adminRoutes.post(
+	"/commission-payouts/:payoutId/cancel",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_REFERRALS),
+	commissionPayoutIdValidation(),
+	validate,
+	commissionPayoutController.cancelPayout,
+);
+
+// Referral programmes
+adminRoutes.get(
+	"/referral-programs",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_REFERRALS),
+	listReferralProgramsValidation(),
+	validate,
+	referralProgramController.listReferralPrograms,
+);
+adminRoutes.get(
+	"/referral-programs/:programId",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_REFERRALS),
+	referralProgramIdValidation(),
+	validate,
+	referralProgramController.getReferralProgram,
+);
+adminRoutes.post(
+	"/referral-programs",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_REFERRALS),
+	createReferralProgramValidation(),
+	validate,
+	referralProgramController.createReferralProgram,
+);
+adminRoutes.put(
+	"/referral-programs/:programId",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_REFERRALS),
+	referralProgramIdValidation(),
+	updateReferralProgramValidation(),
+	validate,
+	referralProgramController.updateReferralProgram,
+);
+adminRoutes.post(
+	"/referral-programs/:programId/publish",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_REFERRALS),
+	referralProgramIdValidation(),
+	validate,
+	referralProgramController.publishReferralProgram,
+);
+adminRoutes.patch(
+	"/referral-programs/:programId/status",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_REFERRALS),
+	transitionReferralProgramValidation(),
+	validate,
+	referralProgramController.transitionReferralProgram,
+);
+
+// Sales agents
+adminRoutes.get(
+	"/sales-agents",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_REFERRALS),
+	listSalesAgentsValidation(),
+	validate,
+	salesAgentController.listSalesAgents,
+);
+adminRoutes.get(
+	"/sales-agents/:agentId",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_REFERRALS),
+	salesAgentIdValidation(),
+	validate,
+	salesAgentController.getSalesAgent,
+);
+adminRoutes.post(
+	"/sales-agents",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_REFERRALS),
+	createSalesAgentValidation(),
+	validate,
+	salesAgentController.createSalesAgent,
+);
+adminRoutes.put(
+	"/sales-agents/:agentId",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_REFERRALS),
+	salesAgentIdValidation(),
+	updateSalesAgentValidation(),
+	validate,
+	salesAgentController.updateSalesAgent,
+);
+adminRoutes.patch(
+	"/sales-agents/:agentId/status",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_REFERRALS),
+	transitionSalesAgentValidation(),
+	validate,
+	salesAgentController.transitionSalesAgent,
+);
+adminRoutes.post("/sales-agents/:agentId/link-account", adminAuthMiddleware, checkPermission(PERMISSIONS.MANAGE_REFERRALS), linkSalesAgentAccountValidation(), validate, salesAgentController.linkSalesAgentAccount);
+adminRoutes.post("/sales-agents/:agentId/unlink-account", adminAuthMiddleware, checkPermission(PERMISSIONS.MANAGE_REFERRALS), unlinkSalesAgentAccountValidation(), validate, salesAgentController.unlinkSalesAgentAccount);
+
+// Referral codes
+adminRoutes.get(
+	"/referral-codes",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_REFERRALS),
+	listReferralCodesValidation(),
+	validate,
+	referralCodeController.listReferralCodes,
+);
+adminRoutes.get(
+	"/referral-codes/:codeId",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_REFERRALS),
+	referralCodeIdValidation(),
+	validate,
+	referralCodeController.getReferralCode,
+);
+adminRoutes.post(
+	"/referral-codes",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_REFERRALS),
+	createReferralCodeValidation(),
+	validate,
+	referralCodeController.createReferralCode,
+);
+adminRoutes.put(
+	"/referral-codes/:codeId",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_REFERRALS),
+	referralCodeIdValidation(),
+	updateReferralCodeValidation(),
+	validate,
+	referralCodeController.updateReferralCode,
+);
+adminRoutes.patch(
+	"/referral-codes/:codeId/status",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_REFERRALS),
+	transitionReferralCodeValidation(),
+	validate,
+	referralCodeController.transitionReferralCode,
+);
+
+// Attributed referrals
+adminRoutes.get(
+	"/referrals",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_REFERRALS),
+	listReferralsValidation(),
+	validate,
+	referralController.listReferrals,
+);
+adminRoutes.get(
+	"/referrals/:referralId",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.VIEW_REFERRALS),
+	referralIdValidation(),
+	validate,
+	referralController.getReferral,
+);
 
 // User routes
 adminRoutes.get("/logout", adminAuthMiddleware, adminController.logout);

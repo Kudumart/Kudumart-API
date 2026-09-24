@@ -63,6 +63,8 @@ import {
 	AddressChild,
 	DropShippingService,
 } from "../services/dropShipping.service";
+import { recordDeliveredOrderReferralMetrics } from "../services/referralQualification.service";
+import { reverseCommissionEarningsForSource } from "../services/commissionEngine.service";
 import DropshipProducts from "../models/dropshipProducts";
 import * as uuid from "uuid";
 import { BadRequestError } from "../utils/ApiError";
@@ -4666,6 +4668,18 @@ export const updateOrderStatus = async (
 			}
 		}
 		await order.save({ transaction });
+		if (status === "delivered") {
+			await recordDeliveredOrderReferralMetrics({
+				buyerId: mainOrder.userId,
+				vendorId,
+				orderId: mainOrder.id,
+				orderItemId: order.id,
+				orderTotal: Number(mainOrder.totalAmount),
+				lineTotal: Number(order.price) * Number(order.quantity),
+				currency: currencySymbol === "$" ? "USD" : "NGN",
+				transaction,
+			});
+		}
 
 		// Check if vendorId exists in the User or Admin table
 		const vendor = await User.findByPk(vendorId, { transaction });
@@ -4794,6 +4808,10 @@ export const updateOrderStatus = async (
 
 		// Commit transaction
 		await transaction.commit();
+		if (status === "cancelled") {
+			await reverseCommissionEarningsForSource("ORDER_ITEM", order.id, "Order item cancelled");
+			await reverseCommissionEarningsForSource("ORDER", mainOrder.id, "Order cancelled");
+		}
 
 		// Send mail (outside of transaction)
 		const message = emailTemplates.orderStatusUpdateNotification(

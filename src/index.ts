@@ -14,6 +14,7 @@ import auctionStatusUpdate from "./job/auctionStatusUpdate"; // Import the cron 
 import { auctionReminderJob } from "./job/auctionReminder";
 import runDropshipCron from "./job/updateDropshippedProducts";
 import runDropshippingCredsRefreshCron from "./job/refreshAliexpressTokenCron";
+import runCommissionLifecycleCron from "./job/commissionLifecycleCron";
 
 dotenv.config();
 
@@ -66,6 +67,7 @@ auctionStatusUpdate();
 auctionReminderJob();
 runDropshipCron();
 runDropshippingCredsRefreshCron();
+runCommissionLifecycleCron();
 
 server.timeout = 300000;
 

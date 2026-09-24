@@ -61,6 +61,8 @@ import AttributeOptions from "../models/attributeOptions";
 import ServiceCategoryToAttributeMap from "../models/serviceCategoryToAttributeMap";
 import Services from "../models/services";
 import { AE_Currency } from "ae_sdk";
+import { recordDeliveredOrderReferralMetrics, recordReferralMetric } from "../services/referralQualification.service";
+import { reverseCommissionEarningsForSource } from "../services/commissionEngine.service";
 import { title } from "process";
 import DropshipProducts from "../models/dropshipProducts";
 import { on } from "events";
@@ -1490,6 +1492,14 @@ export const approveOrRejectKYC = async (
 
 		// Save the updated record
 		await kycRecord.save();
+		if (isVerified) {
+			await recordReferralMetric(
+				user.id,
+				"VENDOR_APPROVED",
+				1,
+				kycRecord.id,
+			);
+		}
 
 		// Prepare email notification
 		const isApproved = isVerified;
@@ -5063,6 +5073,18 @@ export const updateOrderStatus = async (
 			}
 		}
 		await order.save({ transaction });
+		if (status === "delivered") {
+			await recordDeliveredOrderReferralMetrics({
+				buyerId: mainOrder.userId,
+				vendorId,
+				orderId: mainOrder.id,
+				orderItemId: order.id,
+				orderTotal: Number(mainOrder.totalAmount),
+				lineTotal: Number(order.price) * Number(order.quantity),
+				currency: currencySymbol === "$" ? "USD" : "NGN",
+				transaction,
+			});
+		}
 
 		// Check if vendorId exists in the User or Admin table
 		const vendor = await User.findByPk(vendorId, { transaction });
@@ -5145,6 +5167,10 @@ export const updateOrderStatus = async (
 
 		// Commit transaction
 		await transaction.commit();
+		if (status === "cancelled") {
+			await reverseCommissionEarningsForSource("ORDER_ITEM", order.id, "Order item cancelled");
+			await reverseCommissionEarningsForSource("ORDER", mainOrder.id, "Order cancelled");
+		}
 
 		// Send mail (outside of transaction)
 		const message = emailTemplates.orderStatusUpdateNotification(
