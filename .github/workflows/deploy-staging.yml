@@ -1,0 +1,23 @@
+name: Deploy staging to VPS
+
+on:
+  push:
+    branches: [staging]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy staging via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_PRIVATE_KEY }}
+          script: |
+            cd /var/www/kudumart-api-staging
+            git pull --ff-only origin staging
+            npm ci
+            npm run build
+            pm2 reload kudumart-api-staging --update-env || pm2 restart kudumart-api-staging --update-env || pm2 start dist/index.js --name kudumart-api-staging
+            pm2 save

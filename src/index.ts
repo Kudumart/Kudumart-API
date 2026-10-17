@@ -20,13 +20,19 @@ dotenv.config();
 // Initialize the Express app
 const app = createExpressApp();
 
+const configuredOrigins = (process.env.CORS_ORIGINS || "")
+	.split(",")
+	.map((origin) => origin.trim())
+	.filter(Boolean);
+
 // Create the HTTP server
 const server = http.createServer(app);
 
 // Attach Socket.IO to the HTTP server
 const io = new Server(server, {
 	cors: {
-		origin: "*", // Change to specific origins in production
+		origin: configuredOrigins.length > 0 ? configuredOrigins : true,
+		credentials: true,
 	},
 });
 
