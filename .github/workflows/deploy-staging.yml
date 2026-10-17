@@ -18,6 +18,7 @@ jobs:
             cd /var/www/kudumart-api-staging
             git pull --ff-only origin staging
             npm ci
+            npm run migrate
             npm run build
             pm2 reload kudumart-api-staging --update-env || pm2 restart kudumart-api-staging --update-env || pm2 start dist/index.js --name kudumart-api-staging
             pm2 save
