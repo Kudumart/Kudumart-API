@@ -74,7 +74,14 @@ export const submitOrUpdateKYC = async (
 
 		if (existingKYC) {
 			// Update the existing KYC record
-			await existingKYC.update(kycData);
+			// A resubmission must return to the admin review queue. Never allow
+			// client supplied verification fields to approve a KYC record.
+			const { isVerified: _ignoredVerification, adminNote: _ignoredNote, ...safeKycData } = kycData;
+			await existingKYC.update({
+				...safeKycData,
+				isVerified: false,
+				adminNote: null,
+			});
 			// Admin notification removed to prevent crashes
 			res
 				.status(200)
@@ -82,10 +89,12 @@ export const submitOrUpdateKYC = async (
 			return;
 		} else {
 			// Create a new KYC record
+			const { isVerified: _ignoredVerification, adminNote: _ignoredNote, ...safeKycData } = kycData;
 			const newKYC = await KYC.create({
 				vendorId,
-				...kycData,
-				isVerified: true,
+				...safeKycData,
+				isVerified: false,
+				adminNote: null,
 			});
 			// Admin notification removed to prevent crashes
 			res
