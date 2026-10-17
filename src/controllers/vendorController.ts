@@ -2468,7 +2468,13 @@ export const getVendorWalletStats = async (
 
 	try {
 		const vendor = await User.findByPk(vendorId, {
-			attributes: ['wallet', 'pendingWallet', 'dollarWallet', 'pendingDollarWallet']
+			attributes: [
+				'id',
+				'wallet',
+				'pendingWallet',
+				'dollarWallet',
+				'pendingDollarWallet',
+			],
 		});
 
 		if (!vendor) {
@@ -2506,12 +2512,9 @@ export const getVendorWalletStats = async (
 		};
 
 		res.status(200).json({ data: stats });
-	} catch (error: any) {
+	} catch (error) {
 		logger.error("Error fetching wallet stats:", error);
-		res.status(500).json({
-			message: "Internal server error",
-			...(process.env.NODE_ENV === "staging" && { detail: error.message }),
-		});
+		res.status(500).json({ message: "Internal server error" });
 	}
 };
 
@@ -2604,12 +2607,9 @@ export const getVendorTransactions = async (
 				limit: Number(limit)
 			}
 		});
-	} catch (error: any) {
+	} catch (error) {
 		logger.error("Error fetching transactions:", error);
-		res.status(500).json({
-			message: "Internal server error",
-			...(process.env.NODE_ENV === "staging" && { detail: error.message }),
-		});
+		res.status(500).json({ message: "Internal server error" });
 	}
 };
 
