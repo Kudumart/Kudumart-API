@@ -60,12 +60,17 @@ sequelizeService
 // Create and start the HTTP server
 const port = process.env.PORT || 3001; // Get the port from the environment variables
 
-// Start the cron job
-runSubscriptionCron();
-auctionStatusUpdate();
-auctionReminderJob();
-runDropshipCron();
-runDropshippingCredsRefreshCron();
+// Staging uses a copied database and must not run production schedules.
+const cronJobsEnabled = process.env.ENABLE_CRON_JOBS !== "false";
+if (cronJobsEnabled) {
+	runSubscriptionCron();
+	auctionStatusUpdate();
+	auctionReminderJob();
+	runDropshipCron();
+	runDropshippingCredsRefreshCron();
+} else {
+	console.log("Scheduled jobs are disabled for this environment");
+}
 
 server.timeout = 300000;
 

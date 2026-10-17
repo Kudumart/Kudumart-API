@@ -6,6 +6,7 @@ import {
 	generateOTP,
 	initializePaystackPayment,
 	initStripe,
+	getStripePublicKey,
 	splitPhoneNumber,
 	verifyPayment,
 } from "../utils/helpers";
@@ -2214,6 +2215,7 @@ export const prepareCheckoutDollar = async (
 		res.status(200).json({
 			id: paymentIntent.id,
 			clientSecret: paymentIntent.client_secret,
+			publicKey: await getStripePublicKey(),
 			totalAmount: totalAmount.toNumber(),
 			paymentBreakdown: {
 				currency: "USD",
