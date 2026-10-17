@@ -4610,6 +4610,14 @@ export const updateOrderStatus = async (
 			return;
 		}
 
+		if (String(vendorId) !== String(userId)) {
+			await transaction.rollback();
+			res.status(403).json({
+				message: "You can only update the status of your own order items.",
+			});
+			return;
+		}
+
 		if (!currencySymbol) {
 			await transaction.rollback();
 			res.status(400).json({ message: "Currency not found in product data." });
