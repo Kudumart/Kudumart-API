@@ -242,6 +242,8 @@ vendorRoutes.get("/advert", authMiddleware, vendorController.viewAdvert); // Vie
 vendorRoutes.delete("/adverts", authMiddleware, vendorController.deleteAdvert); // Delete an advert
 
 // Bank Information
+vendorRoutes.get("/banks", authMiddleware, vendorController.getSupportedBanks);
+vendorRoutes.get("/bank/resolve", authMiddleware, vendorController.resolveBankAccount);
 vendorRoutes.post(
 	"/bank/informations",
 	authMiddleware,

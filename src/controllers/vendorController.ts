@@ -54,6 +54,29 @@ import ServiceBookings from "../models/servicebookings";
 import ProductOffer from "../models/productoffer";
 import { sendPushNotificationSingle } from "../firebase/pushNotification";
 import { PushNotificationTypes } from "../types/index";
+import axios from "axios";
+
+const getPaystackSecretKey = async (): Promise<string> => {
+	const paymentGateway = await PaymentGateway.findOne({
+		where: { isActive: true, name: { [Op.like]: "%paystack%" } },
+	});
+	const secretKey = paymentGateway?.secretKey || process.env.PAYSTACK_SECRET_KEY;
+	if (!secretKey) throw new Error("No active payment gateway found.");
+	return secretKey;
+};
+
+const paystackGet = async (path: string) => {
+	const secretKey = await getPaystackSecretKey();
+	const response = await axios.get(`https://api.paystack.co${path}`, {
+		headers: { Authorization: `Bearer ${secretKey}` },
+		timeout: 15000,
+	});
+	if (!response.data?.status) throw new Error(response.data?.message || "Bank verification failed.");
+	return response.data.data;
+};
+
+const resolveNigerianBankAccount = async (accountNumber: string, bankCode: string) =>
+	paystackGet(`/bank/resolve?account_number=${encodeURIComponent(accountNumber)}&bank_code=${encodeURIComponent(bankCode)}`);
 
 export const submitOrUpdateKYC = async (
 	req: Request,
@@ -2240,18 +2263,18 @@ export const addBankInformationV2 = async (
 ): Promise<void> => {
 	const {
 		bankName,
+		bankCode,
 		accountNumber,
-		accountHolderName,
 		swiftCode,
 		routingNumber,
 		bankAddress,
-	} = req.body; // bankInfo contains bankName, accountNumber, accountName
+	} = req.body;
 
 	const vendorId = (req as AuthenticatedRequest).user?.id as string; // Authenticated user ID from middleware
 
 	try {
 		// Ensure required fields are provided
-		if (!bankName || !accountNumber || !accountHolderName) {
+		if (!bankName || !bankCode || !/^\d{10}$/.test(String(accountNumber))) {
 			res.status(400).json({ message: "All bank details are required" });
 			return;
 		}
@@ -2272,10 +2295,24 @@ export const addBankInformationV2 = async (
 			return;
 		}
 
-		// Create bank information entry
+		const existingBank = await BankInformation.findOne({ where: { vendorId, accountNumber } });
+		if (existingBank) {
+			res.status(400).json({ message: "This payout account has already been added." });
+			return;
+		}
+
+		const resolvedAccount = await resolveNigerianBankAccount(String(accountNumber), String(bankCode));
+		const accountHolderName = resolvedAccount?.account_name;
+		if (!accountHolderName || resolvedAccount?.account_number !== String(accountNumber)) {
+			res.status(400).json({ message: "The bank account could not be verified." });
+			return;
+		}
+
+		// Always save the name returned by the bank verification provider.
 		const bankData = await BankInformation.create({
 			vendorId,
 			bankName,
+			bankCode,
 			accountNumber,
 			accountHolderName,
 			...(swiftCode && { swiftCode }),
@@ -2288,7 +2325,41 @@ export const addBankInformationV2 = async (
 			.json({ message: "Bank information added successfully", data: bankData });
 	} catch (error: any) {
 		logger.error("Error adding bank information:", error);
-		res.status(500).json({ message: "Server error" });
+		const status = error?.response?.status === 400 ? 400 : 500;
+		res.status(status).json({ message: error?.response?.data?.message || error.message || "Server error" });
+	}
+};
+
+export const getSupportedBanks = async (_req: Request, res: Response): Promise<void> => {
+	try {
+		const banks = await paystackGet("/bank?country=nigeria&currency=NGN&perPage=100");
+		res.status(200).json({
+			message: "Banks fetched successfully",
+			data: banks.map((bank: any) => ({ name: bank.name, code: bank.code, slug: bank.slug })),
+		});
+	} catch (error: any) {
+		logger.error("Error fetching supported banks:", error);
+		res.status(500).json({ message: "Bank list is temporarily unavailable." });
+	}
+};
+
+export const resolveBankAccount = async (req: Request, res: Response): Promise<void> => {
+	const accountNumber = String(req.query.accountNumber || "");
+	const bankCode = String(req.query.bankCode || "");
+	if (!/^\d{10}$/.test(accountNumber) || !bankCode) {
+		res.status(400).json({ message: "Choose a bank and enter a valid 10 digit account number." });
+		return;
+	}
+	try {
+		const account = await resolveNigerianBankAccount(accountNumber, bankCode);
+		res.status(200).json({
+			message: "Account verified successfully",
+			data: { accountName: account.account_name, accountNumber: account.account_number, bankCode },
+		});
+	} catch (error: any) {
+		logger.error("Error resolving bank account:", error);
+		const status = error?.response?.status === 400 ? 400 : 502;
+		res.status(status).json({ message: error?.response?.data?.message || "We could not verify this account. Check the details and try again." });
 	}
 };
 
