@@ -2506,9 +2506,12 @@ export const getVendorWalletStats = async (
 		};
 
 		res.status(200).json({ data: stats });
-	} catch (error) {
+	} catch (error: any) {
 		logger.error("Error fetching wallet stats:", error);
-		res.status(500).json({ message: "Internal server error" });
+		res.status(500).json({
+			message: "Internal server error",
+			...(process.env.NODE_ENV === "staging" && { detail: error.message }),
+		});
 	}
 };
 
@@ -2601,9 +2604,12 @@ export const getVendorTransactions = async (
 				limit: Number(limit)
 			}
 		});
-	} catch (error) {
+	} catch (error: any) {
 		logger.error("Error fetching transactions:", error);
-		res.status(500).json({ message: "Internal server error" });
+		res.status(500).json({
+			message: "Internal server error",
+			...(process.env.NODE_ENV === "staging" && { detail: error.message }),
+		});
 	}
 };
 
