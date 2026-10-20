@@ -1424,13 +1424,14 @@ export const getActivePaymentGateways = async (
 
 		const formattedGateways = gateways.map((gw) => {
 			const gwObj = gw.toJSON();
+			let publicKey = gwObj.publicKey;
 			if (gwObj.name.toLowerCase().includes("paystack")) {
-				gwObj.publicKey = process.env.PAYSTACK_PUBLIC_KEY || gwObj.publicKey;
+				publicKey = process.env.PAYSTACK_PUBLIC_KEY || publicKey;
 			}
 			if (gwObj.name.toLowerCase().includes("stripe")) {
-				gwObj.publicKey = process.env.STRIPE_PUBLIC_KEY || gwObj.publicKey;
+				publicKey = process.env.STRIPE_PUBLIC_KEY || publicKey;
 			}
-			return gwObj;
+			return { id: gwObj.id, name: gwObj.name, publicKey, isActive: gwObj.isActive };
 		});
 
 		if (!formattedGateways.length) {

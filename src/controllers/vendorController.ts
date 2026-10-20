@@ -1511,11 +1511,27 @@ export const subscribe = async (req: Request, res: Response): Promise<void> => {
 					refId,
 					secretKey,
 				);
-				if (!isPaymentValid || (isPaymentValid.status && isPaymentValid.status !== "success")) {
+				const expectedAmount = Math.round(Number(amount) * 100);
+				const referenceAlreadyUsed = await Transaction.findOne({
+					where: { refId },
+					transaction,
+				});
+				if (referenceAlreadyUsed) {
+					await transaction.rollback();
+					res.status(409).json({ message: "This payment reference has already been used." });
+					return false;
+				}
+				if (
+					!isPaymentValid ||
+					isPaymentValid.status !== "success" ||
+					Number(isPaymentValid.amount) !== expectedAmount ||
+					String(isPaymentValid.currency || "").toUpperCase() !== "NGN" ||
+					String(isPaymentValid.customer?.email || "").toLowerCase() !== String((await User.findByPk(vendorId, { transaction }))?.email || "").toLowerCase()
+				) {
 					await transaction.rollback();
 					res
 						.status(400)
-						.json({ message: "Invalid or unverified payment reference." });
+						.json({ message: "Payment amount, currency, or customer does not match this subscription." });
 					return false;
 				}
 			}
