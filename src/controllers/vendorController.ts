@@ -88,14 +88,34 @@ export const submitOrUpdateKYC = async (
 		// Check if a KYC record already exists for this user
 		const existingKYC = await KYC.findOne({ where: { vendorId } });
 
-		if (existingKYC?.isVerified) {
-			res.status(400).json({
-				message: "KYC is already verified and cannot be modified again.",
-			});
-			return;
-		}
-
 		if (existingKYC) {
+			if (existingKYC.isVerified) {
+				// Keep approved identity data and verification state protected while
+				// allowing vendors to maintain their business and contact details.
+				const {
+					businessName,
+					contactEmail,
+					contactPhoneNumber,
+					businessDescription,
+					businessLink,
+					businessAddress,
+				} = kycData;
+				const safeBusinessData = {
+					businessName,
+					contactEmail,
+					contactPhoneNumber,
+					businessDescription,
+					businessLink,
+					businessAddress,
+				};
+				await existingKYC.update(safeBusinessData);
+				res.status(200).json({
+					message: "KYC business information updated successfully",
+					data: existingKYC,
+				});
+				return;
+			}
+
 			// Update the existing KYC record
 			// A resubmission must return to the admin review queue. Never allow
 			// client supplied verification fields to approve a KYC record.
