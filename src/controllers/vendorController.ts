@@ -2510,10 +2510,15 @@ export const deleteBankInformation = async (
 	res: Response,
 ): Promise<void> => {
 	const bankId = req.query.bankId; // bankId is required
+	const vendorId = (req as AuthenticatedRequest).user?.id;
 
 	try {
+		if (!vendorId) {
+			res.status(401).json({ message: "Unauthorized" });
+			return;
+		}
 		// Find the bank record
-		const bankData = await BankInformation.findOne({ where: { id: bankId } });
+		const bankData = await BankInformation.findOne({ where: { id: bankId, vendorId } });
 		if (!bankData) {
 			res.status(404).json({ message: "Bank information not found" });
 			return;
