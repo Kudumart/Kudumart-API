@@ -4214,7 +4214,7 @@ export const markServiceBookingAsCancelled = async (
 			return;
 		}
 
-		booking.status = "cancelled";
+		booking.status = "canceled";
 		await booking.save();
 
 		// Notify User
