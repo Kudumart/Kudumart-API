@@ -109,8 +109,13 @@ export const submitOrUpdateKYC = async (
 			return;
 		}
 
-		const normalizedContactPhone = kycData.contactPhoneNumber
-			? `+${String(kycData.contactPhoneNumber).replace(/\D/g, "")}`
+		const phoneDigits = String(kycData.contactPhoneNumber || "").replace(/\D/g, "");
+		const normalizedContactPhone = phoneDigits
+			? phoneDigits.startsWith("234")
+				? `+${phoneDigits}`
+				: phoneDigits.startsWith("0")
+					? `+234${phoneDigits.slice(1)}`
+					: `+234${phoneDigits}`
 			: "";
 
 		if (normalizedContactPhone) {
