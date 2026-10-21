@@ -1,4 +1,5 @@
-import { Server, Socket } from "socket.io";
+type SocketServer = any;
+type ConnectedSocket = any;
 import { saveMessage } from "../controllers/userController";
 import Conversation from "../models/conversation";
 import { Op } from "sequelize";
@@ -6,8 +7,8 @@ import { Op } from "sequelize";
 // Active user connections
 const activeConnections: Map<string, string> = new Map(); // <UserId, SocketId>
 
-export const configureSocket = (io: Server) => {
-    io.on("connection", (socket: Socket) => {
+export const configureSocket = (io: SocketServer) => {
+    io.on("connection", (socket: ConnectedSocket) => {
         console.log("New connection:", socket.id);
 
         // Register user
@@ -16,7 +17,7 @@ export const configureSocket = (io: Server) => {
             console.log(`User ${userId} connected with Socket ID ${socket.id}`);
         });
 
-        socket.on("joinConversation", async (data) => {
+        socket.on("joinConversation", async (data: any) => {
             const { userId, receiverId, productId } = data;
         
             // Find or create conversation
@@ -43,7 +44,7 @@ export const configureSocket = (io: Server) => {
         });
         
         // Handle message sending
-        socket.on("sendMessage", async (data) => {
+        socket.on("sendMessage", async (data: any) => {
             const { productId, userId, receiverId, content, fileUrl } = data;
         
             // Find or create conversation

@@ -2,7 +2,8 @@ import "./sentry/instrument";
 
 import dotenv from "dotenv";
 import http from "http";
-import { Server } from "socket.io";
+// Use CommonJS here so production installations with older Node/npm can resolve Socket.IO.
+const { Server } = require("socket.io");
 import createExpressApp from "./services/express.service";
 import sequelizeService from "./services/sequelize.service"; // Adjusted to match your service structure
 import apiRouter from "./routes/authRoute"; // Import your routes here

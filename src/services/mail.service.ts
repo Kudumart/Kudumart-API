@@ -1,10 +1,10 @@
 import dotenv from 'dotenv';
-import nodemailer, { Transporter } from 'nodemailer';
+import nodemailer from 'nodemailer';
 import { SentMessageInfo } from 'nodemailer';
 
 dotenv.config();
 
-const transporter: Transporter = nodemailer.createTransport({
+const transporter = nodemailer.createTransport({
   host: process.env.MAIL_HOST,
   port: parseInt(process.env.MAIL_PORT as string, 10),
   secure: process.env.MAIL_ENCRYPTION?.toLowerCase() === 'ssl', // true for SSL/TLS
@@ -12,7 +12,7 @@ const transporter: Transporter = nodemailer.createTransport({
     user: process.env.MAIL_USERNAME,
     pass: process.env.MAIL_PASSWORD,
   },
-});
+} as any);
 
 transporter.verify()
   .then(() => console.log("Connected to email server"))
