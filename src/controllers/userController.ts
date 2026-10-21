@@ -1536,6 +1536,98 @@ async function getTotalAliexpressDeliveryFee(
 	}
 }
 
+const normalizeDeliveryArea = (value: unknown) =>
+	String(value ?? "")
+		.trim()
+		.toLowerCase()
+		.replace(/\s+/g, " ");
+
+/**
+ * Store delivery options are configured per destination city. Charge each
+ * marketplace store once, even when the cart contains multiple items from it.
+ */
+async function getTotalMarketplaceDeliveryFee(
+	cartItems: Cart[],
+	user: User,
+): Promise<number> {
+	const marketplaceProductIds = Array.from(
+		new Set(
+			cartItems
+				.filter((item) => item.productType !== "dropship")
+				.map((item) => item.productId)
+				.filter(Boolean),
+		),
+	);
+
+	if (marketplaceProductIds.length === 0) return 0;
+
+	const products = await Product.findAll({
+		where: { id: { [Op.in]: marketplaceProductIds } },
+		attributes: ["id", "storeId"],
+		include: [
+			{
+				model: Store,
+				as: "store",
+				attributes: ["id", "name", "deliveryOptions"],
+				required: true,
+			},
+		],
+	});
+
+	const destination = normalizeDeliveryArea(user.location?.city);
+	const stores = new Map<string, Store>();
+	for (const product of products) {
+		if (product.store) stores.set(product.store.id, product.store);
+	}
+
+	let total = new Decimal(0);
+	for (const store of stores.values()) {
+		const options = Array.isArray(store.deliveryOptions)
+			? store.deliveryOptions
+			: [];
+		const option = options.find((candidate) => {
+			const area = normalizeDeliveryArea(candidate?.city);
+			return area === destination || ["all", "nationwide", "anywhere"].includes(area);
+		});
+
+		if (!option) {
+			throw new BadRequestError(
+				`${store.name} does not have a delivery rate for ${user.location?.city}. Choose pickup or contact the seller.`,
+			);
+		}
+
+		const price = Number(option.price);
+		if (!Number.isFinite(price) || price < 0) {
+			throw new Error(`Invalid delivery rate configured for ${store.name}`);
+		}
+		total = total.plus(price);
+	}
+
+	return total.toNearest(0.01).toNumber();
+}
+
+async function getTotalDeliveryFee(
+	cartItems: Cart[],
+	shipToCountryCode: string,
+	user: User,
+	deliveryMethod: "delivery" | "pickup" = "delivery",
+): Promise<number> {
+	if (deliveryMethod === "pickup") return 0;
+
+	const dropshipItems = cartItems.filter(
+		(item) => item.productType === "dropship",
+	);
+	const [dropshipFee, marketplaceFee] = await Promise.all([
+		getTotalAliexpressDeliveryFee(dropshipItems, shipToCountryCode, user),
+		getTotalMarketplaceDeliveryFee(cartItems, user),
+	]);
+
+	return new Decimal(dropshipFee)
+		.plus(marketplaceFee)
+		.toNearest(0.01)
+		.toNumber();
+}
+
 export const getAliexpressAddressOptions = async (
 	req: Request,
 	res: Response,
@@ -1713,26 +1805,22 @@ export const calculateAliexpressDeliveryFee = async (
 			return;
 		}
 
-		const dropShippedProducts = cartItems.filter(
-			(item) => item.productType === "dropship",
-		);
-
-		const deliveryFee = await getTotalAliexpressDeliveryFee(
-			dropShippedProducts,
+		const deliveryFee = await getTotalDeliveryFee(
+			cartItems,
 			shipToCountryCode,
 			user,
 		);
 
 		res.status(200).json({
-			message: "Aliexpress delivery fee calculated successfully",
+			message: "Delivery fee calculated successfully",
 			data: {
 				totalDeliveryFee: deliveryFee,
 			},
 		});
 	} catch (error: any) {
-		logger.error("Error calculating Aliexpress delivery fee:", error);
-		res.status(500).json({
-			message: "An error occurred while calculating Aliexpress delivery fee",
+		logger.error("Error calculating delivery fee:", error);
+		res.status(error?.statusCode || 500).json({
+			message: error?.message || "An error occurred while calculating delivery fee",
 		});
 	}
 };
@@ -1746,7 +1834,10 @@ export const prepareCheckoutNaira = async (
 		// Optional "Buy It Now" support: when the client only wants to check
 		// out a specific cart item (or items) rather than the whole cart, it
 		// sends the cart item id(s) here and everything else is ignored.
-		const { cartItemIds } = req.body as { cartItemIds?: string[] };
+		const { cartItemIds, deliveryMethod = "delivery" } = req.body as {
+			cartItemIds?: string[];
+			deliveryMethod?: "delivery" | "pickup";
+		};
 
 		const userCart = await Cart.findAll({
 			where: {
@@ -1817,18 +1908,12 @@ export const prepareCheckoutNaira = async (
 			return;
 		}
 
-		const dropshipItems = userCart.filter(
-			(item) => item.productType === "dropship",
+		const deliveryFee = await getTotalDeliveryFee(
+			userCart,
+			"NG",
+			user,
+			deliveryMethod,
 		);
-
-		let deliveryFee = 0;
-		if (dropshipItems.length > 0) {
-			deliveryFee = await getTotalAliexpressDeliveryFee(
-				dropshipItems,
-				"NG",
-				user,
-			);
-		}
 
 		// Get Admin's product charges
 		const productCharges = await ProductCharge.findAll({
@@ -2236,11 +2321,12 @@ export const prepareCheckoutDollar = async (
 
 export const checkout = async (req: Request, res: Response): Promise<void> => {
 	const userId = (req as AuthenticatedRequest).user?.id; // Get authenticated user ID
-	const { refId, shippingAddress, shippingAddressZipCode, cartItemIds } = req.body as {
+	const { refId, shippingAddress, shippingAddressZipCode, cartItemIds, deliveryMethod = "delivery" } = req.body as {
 		refId: string;
 		shippingAddress: string;
 		shippingAddressZipCode?: string;
 		cartItemIds?: string[];
+		deliveryMethod?: "delivery" | "pickup";
 	};
 
 	if (!userId) {
@@ -2427,22 +2513,18 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 			vendorsDropshipOrders = placeDropshipOrders;
 		}
 
-		// Calculate total Aliexpress delivery fee for dropshipped products
-		let totalAliexpressDeliveryFee = 0;
-		if (dropShippedProducts.length > 0) {
-			totalAliexpressDeliveryFee = await getTotalAliexpressDeliveryFee(
-				dropShippedProducts,
-				user.location?.country?.toLowerCase() === "nigeria"
-					? "NG"
-					: user.location?.country?.toLowerCase() === "united states" ||
-						user.location?.country?.toLowerCase() === "usa" ||
-						user.location?.country?.toLowerCase() ===
-						"united states of america"
-						? "US"
-						: "UK",
-				user,
-			);
-		}
+		const totalAliexpressDeliveryFee = await getTotalDeliveryFee(
+			cartItems,
+			user.location?.country?.toLowerCase() === "nigeria"
+				? "NG"
+				: user.location?.country?.toLowerCase() === "united states" ||
+					user.location?.country?.toLowerCase() === "usa" ||
+					user.location?.country?.toLowerCase() === "united states of america"
+					? "US"
+					: "UK",
+			user,
+			deliveryMethod,
+		);
 
 		// Calculate total price and validate inventory
 		let totalAmount = 0;
