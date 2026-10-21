@@ -5178,11 +5178,28 @@ export const addReview = async (req: Request, res: Response): Promise<void> => {
 	}
 
 	try {
-		// Check if user has purchased the product
-		const purchased = await hasPurchasedProduct(orderId, productId);
-		if (!purchased) {
+		// The delivered item must belong to an order owned by this customer.
+		const deliveredItem = await OrderItem.findOne({
+			where: {
+				orderId,
+				status: "delivered",
+				[Op.and]: Sequelize.literal(
+					`JSON_UNQUOTE(JSON_EXTRACT(product, '$.id')) = ${sequelizeService.connection!.escape(productId)}`,
+				),
+			},
+			include: [
+				{
+					model: Order,
+					as: "order",
+					where: { userId },
+					required: true,
+					attributes: ["id"],
+				},
+			],
+		});
+		if (!deliveredItem) {
 			res.status(403).json({
-				message: "You can only review products that has been delivered.",
+				message: "You can only review your own delivered products.",
 			});
 			return;
 		}
