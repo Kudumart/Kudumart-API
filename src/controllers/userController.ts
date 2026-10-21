@@ -734,7 +734,10 @@ export const getAllConversationMessages = async (
 
 		// Fetch the conversation with related messages, users, and product
 		const conversation = await Conversation.findOne({
-			where: { id: conversationId },
+			where: {
+				id: conversationId,
+				[Op.or]: [{ senderId: userId }, { receiverId: userId }],
+			},
 			include: [
 				{
 					model: Message,
@@ -941,7 +944,15 @@ export const deleteMessageHandler = async (
 
 	try {
 		// Find the message by its ID
-		const message = await Message.findByPk(messageId);
+		const message = await Message.findOne({
+			where: { id: messageId },
+			include: [{
+				model: Conversation,
+				as: "conversation",
+				where: { [Op.or]: [{ senderId: userId }, { receiverId: userId }] },
+				required: true,
+			}],
+		});
 
 		// Check if the message exists
 		if (!message) {
@@ -983,7 +994,15 @@ export const markAsReadHandler = async (
 
 	try {
 		// Find the message by its ID
-		const message = await Message.findByPk(messageId);
+		const message = await Message.findOne({
+			where: { id: messageId },
+			include: [{
+				model: Conversation,
+				as: "conversation",
+				where: { [Op.or]: [{ senderId: userId }, { receiverId: userId }] },
+				required: true,
+			}],
+		});
 
 		// Check if the message exists
 		if (!message) {
@@ -4502,6 +4521,12 @@ export const getAllOrderItems = async (
 	res: Response,
 ): Promise<void> => {
 	const { orderId, vendorId, page = 1, limit = 10 } = req.query;
+	const userId = (req as AuthenticatedRequest).user?.id;
+
+	if (!userId) {
+		res.status(401).json({ message: "User must be authenticated" });
+		return;
+	}
 
 	// Convert `page` and `limit` to numbers and ensure they are valid
 	const pageNumber = parseInt(page as string, 10);
@@ -4524,6 +4549,21 @@ export const getAllOrderItems = async (
 			limit: limitNumber,
 			offset,
 			order: [["createdAt", "DESC"]],
+			include: [
+				{
+					model: Order,
+					as: "order",
+					where: { userId },
+					required: true,
+					attributes: [
+						"id",
+						"trackingNumber",
+						"shippingAddress",
+						"totalAmount",
+						"createdAt",
+					],
+				},
+			],
 		});
 
 		if (!orderItems || orderItems.length === 0) {
@@ -4555,6 +4595,12 @@ export const viewOrderItem = async (
 	res: Response,
 ): Promise<void> => {
 	const { orderItemId } = req.query;
+	const userId = (req as AuthenticatedRequest).user?.id;
+
+	if (!userId) {
+		res.status(401).json({ message: "User must be authenticated" });
+		return;
+	}
 
 	try {
 		// Query for a single order item and required associations
@@ -4564,6 +4610,8 @@ export const viewOrderItem = async (
 				{
 					model: Order,
 					as: "order",
+					where: { userId },
+					required: true,
 					include: [
 						{
 							model: User,
@@ -4661,6 +4709,35 @@ export const updateOrderStatus = async (
 		if (!buyer) {
 			await transaction.rollback();
 			res.status(404).json({ message: "Buyer not found." });
+			return;
+		}
+
+		const isBuyer = mainOrder.userId === userId;
+		const isSeller = order.vendorId === userId;
+		if (!isBuyer && !isSeller) {
+			await transaction.rollback();
+			res.status(403).json({ message: "You cannot update this order item." });
+			return;
+		}
+
+		const buyerTransitions: Record<string, string[]> = {
+			pending: ["cancelled"],
+			shipped: ["delivered"],
+		};
+		const sellerTransitions: Record<string, string[]> = {
+			pending: ["processing", "cancelled"],
+			processing: ["shipped", "cancelled"],
+			shipped: ["delivered"],
+		};
+		const allowedNextStatuses = isBuyer
+			? buyerTransitions[order.status] || []
+			: sellerTransitions[order.status] || [];
+
+		if (!allowedNextStatuses.includes(status)) {
+			await transaction.rollback();
+			res.status(400).json({
+				message: `The order cannot move from ${order.status} to ${status}.`,
+			});
 			return;
 		}
 
@@ -5120,11 +5197,28 @@ export const addReview = async (req: Request, res: Response): Promise<void> => {
 	}
 
 	try {
-		// Check if user has purchased the product
-		const purchased = await hasPurchasedProduct(orderId, productId);
-		if (!purchased) {
+		// The delivered item must belong to an order owned by this customer.
+		const deliveredItem = await OrderItem.findOne({
+			where: {
+				orderId,
+				status: "delivered",
+				[Op.and]: Sequelize.literal(
+					`JSON_UNQUOTE(JSON_EXTRACT(product, '$.id')) = ${sequelizeService.connection!.escape(productId)}`,
+				),
+			},
+			include: [
+				{
+					model: Order,
+					as: "order",
+					where: { userId },
+					required: true,
+					attributes: ["id"],
+				},
+			],
+		});
+		if (!deliveredItem) {
 			res.status(403).json({
-				message: "You can only review products that has been delivered.",
+				message: "You can only review your own delivered products.",
 			});
 			return;
 		}
