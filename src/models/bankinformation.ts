@@ -7,6 +7,7 @@ class BankInformation extends Model {
 	public vendorId!: string;
 	public bankInfo!: string;
 	public bankName!: string;
+	public bankCode!: string;
 	public accountNumber!: string;
 	public accountHolderName!: string;
 	public swiftCode!: string;
@@ -46,6 +47,10 @@ const initModel = (sequelize: Sequelize) => {
 				allowNull: true,
 			},
 			bankName: {
+				type: DataTypes.STRING,
+				allowNull: true,
+			},
+			bankCode: {
 				type: DataTypes.STRING,
 				allowNull: true,
 			},

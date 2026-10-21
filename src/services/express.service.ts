@@ -18,12 +18,27 @@ import { IsApiError } from "../utils/ApiError";
 
 dotenv.config();
 
+const configuredOrigins = (process.env.CORS_ORIGINS || "")
+	.split(",")
+	.map((origin) => origin.trim())
+	.filter(Boolean);
+
+const corsOrigin: cors.CorsOptions["origin"] = (origin, callback) => {
+	// Requests without an Origin header include health checks and server-to-server calls.
+	if (!origin || configuredOrigins.length === 0 || configuredOrigins.includes(origin)) {
+		callback(null, true);
+		return;
+	}
+
+	callback(new Error("Origin is not allowed by CORS"));
+};
+
 const createExpressApp = () => {
 	const app = express();
 
 	app.use(
 		cors({
-			origin: "*",
+			origin: corsOrigin,
 			methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
 			credentials: true,
 		}),

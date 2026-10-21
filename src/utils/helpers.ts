@@ -585,10 +585,11 @@ export const getStripePublicKey = async (): Promise<string> => {
 	} catch (e: any) {
 		logger.warn("Could not retrieve Stripe public key from DB:", e.message);
 	}
-	return (
-		process.env.STRIPE_PUBLIC_KEY ||
-		"pk_live_51QpXKW05R753b5a5lrZFiFkSIgZ5tN1GDe54P63gV68Or7CP1OWg30YdwG3r8cySsVq908EZ87L1VOEgarHEDkIU008RDAGzRL"
-	);
+	const publicKey = process.env.STRIPE_PUBLIC_KEY;
+	if (!publicKey) {
+		throw new Error("Stripe public key not found.");
+	}
+	return publicKey;
 };
 
 const initStripe = async () => {

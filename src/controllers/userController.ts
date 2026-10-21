@@ -6,6 +6,7 @@ import {
 	generateOTP,
 	initializePaystackPayment,
 	initStripe,
+	getStripePublicKey,
 	splitPhoneNumber,
 	verifyPayment,
 } from "../utils/helpers";
@@ -1442,13 +1443,14 @@ export const getActivePaymentGateways = async (
 
 		const formattedGateways = gateways.map((gw) => {
 			const gwObj = gw.toJSON();
+			let publicKey = gwObj.publicKey;
 			if (gwObj.name.toLowerCase().includes("paystack")) {
-				gwObj.publicKey = process.env.PAYSTACK_PUBLIC_KEY || gwObj.publicKey;
+				publicKey = process.env.PAYSTACK_PUBLIC_KEY || publicKey;
 			}
 			if (gwObj.name.toLowerCase().includes("stripe")) {
-				gwObj.publicKey = process.env.STRIPE_PUBLIC_KEY || gwObj.publicKey;
+				publicKey = process.env.STRIPE_PUBLIC_KEY || publicKey;
 			}
-			return gwObj;
+			return { id: gwObj.id, name: gwObj.name, publicKey, isActive: gwObj.isActive };
 		});
 
 		if (!formattedGateways.length) {
@@ -2318,6 +2320,7 @@ export const prepareCheckoutDollar = async (
 		res.status(200).json({
 			id: paymentIntent.id,
 			clientSecret: paymentIntent.client_secret,
+			publicKey: await getStripePublicKey(),
 			totalAmount: totalAmount.toNumber(),
 			paymentBreakdown: {
 				currency: "USD",
@@ -4767,6 +4770,14 @@ export const updateOrderStatus = async (
 			return;
 		}
 
+		if (String(vendorId) !== String(userId)) {
+			await transaction.rollback();
+			res.status(403).json({
+				message: "You can only update the status of your own order items.",
+			});
+			return;
+		}
+
 		if (!currencySymbol) {
 			await transaction.rollback();
 			res.status(400).json({ message: "Currency not found in product data." });
@@ -5737,9 +5748,8 @@ export const bookService = async (
 		const serviceId = req.params.serviceId;
 		const { message, vendorId, bookingDate } = req.body; // Get serviceId and message from request body
 
-		if (!serviceId || !message) {
-			// Check if serviceId and message are provided
-			res.status(400).json({ message: "serviceId and message are required." });
+		if (!serviceId) {
+			res.status(400).json({ message: "serviceId is required." });
 			return;
 		}
 		if (!userId) {
@@ -5768,12 +5778,25 @@ export const bookService = async (
 			res.status(404).json({ message: "Service not found." });
 			return;
 		}
+		if (String(service.provider?.id) === String(userId)) {
+			res.status(400).json({ message: "You cannot book your own service." });
+			return;
+		}
+		const requestedDate = new Date(bookingDate);
+		if (!bookingDate || Number.isNaN(requestedDate.getTime()) || requestedDate <= new Date()) {
+			res.status(400).json({ message: "bookingDate must be a future date." });
+			return;
+		}
+		if (String(service.provider?.id) !== String(vendorId)) {
+			res.status(400).json({ message: "The selected provider does not own this service." });
+			return;
+		}
 
 		// Create the booking
 		await ServiceBookings.create({
 			userId,
 			serviceId,
-			vendorId,
+			vendorId: service.provider.id,
 			message,
 			bookingDate,
 		});
@@ -6095,7 +6118,7 @@ export const cancelServiceBooking = async (
 		}
 
 		// Update the booking status to cancelled
-		booking.status = "cancelled";
+		booking.status = "canceled";
 		await booking.save();
 
 		// Notify the service provider about the cancelled booking

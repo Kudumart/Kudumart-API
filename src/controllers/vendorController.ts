@@ -54,16 +54,73 @@ import ServiceBookings from "../models/servicebookings";
 import ProductOffer from "../models/productoffer";
 import { sendPushNotificationSingle } from "../firebase/pushNotification";
 import { PushNotificationTypes } from "../types/index";
+import axios from "axios";
+
+const getPaystackSecretKey = async (): Promise<string> => {
+	const paymentGateway = await PaymentGateway.findOne({
+		where: { isActive: true, name: { [Op.like]: "%paystack%" } },
+	});
+	const secretKey = paymentGateway?.secretKey || process.env.PAYSTACK_SECRET_KEY;
+	if (!secretKey) throw new Error("No active payment gateway found.");
+	return secretKey;
+};
+
+const paystackGet = async (path: string) => {
+	const secretKey = await getPaystackSecretKey();
+	const response = await axios.get(`https://api.paystack.co${path}`, {
+		headers: { Authorization: `Bearer ${secretKey}` },
+		timeout: 15000,
+	});
+	if (!response.data?.status) throw new Error(response.data?.message || "Bank verification failed.");
+	return response.data.data;
+};
+
+const resolveNigerianBankAccount = async (accountNumber: string, bankCode: string) =>
+	paystackGet(`/bank/resolve?account_number=${encodeURIComponent(accountNumber)}&bank_code=${encodeURIComponent(bankCode)}`);
 
 export const submitOrUpdateKYC = async (
 	req: Request,
 	res: Response,
 ): Promise<void> => {
 	const vendorId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID from middleware
-	const kycData = req.body;
+	const kycData = { ...req.body };
+	const transaction = await sequelize.transaction();
 	try {
+		if (!vendorId) {
+			await transaction.rollback();
+			res.status(401).json({ message: "Unauthorized" });
+			return;
+		}
+
+		const normalizedContactPhone = kycData.contactPhoneNumber
+			? `+${String(kycData.contactPhoneNumber).replace(/\D/g, "")}`
+			: "";
+
+		if (normalizedContactPhone) {
+			const phoneOwner = await User.findOne({
+				where: {
+					phoneNumber: normalizedContactPhone,
+					id: { [Op.ne]: vendorId },
+				},
+				transaction,
+			});
+
+			if (phoneOwner) {
+				await transaction.rollback();
+				res.status(400).json({
+					message: "Phone number is already in use by another account",
+				});
+				return;
+			}
+
+			kycData.contactPhoneNumber = normalizedContactPhone;
+		}
+
 		// Check if a KYC record already exists for this user
-		const existingKYC = await KYC.findOne({ where: { vendorId } });
+		const existingKYC = await KYC.findOne({
+			where: { vendorId },
+			transaction,
+		});
 
 		if (existingKYC) {
 			if (existingKYC.isVerified) {
@@ -85,35 +142,91 @@ export const submitOrUpdateKYC = async (
 					businessLink,
 					businessAddress,
 				};
-				await existingKYC.update(safeBusinessData);
+				await existingKYC.update(safeBusinessData, { transaction });
+				if (normalizedContactPhone) {
+					await User.update(
+						{ phoneNumber: normalizedContactPhone },
+						{ where: { id: vendorId }, transaction },
+					);
+				}
+				await transaction.commit();
 				res.status(200).json({
 					message: "KYC business information updated successfully",
-					data: existingKYC,
+					data: {
+						...existingKYC.toJSON(),
+						phoneNumber: normalizedContactPhone,
+					},
 				});
 				return;
 			}
 
 			// Update the existing KYC record
-			await existingKYC.update(kycData);
+			// A resubmission must return to the admin review queue. Never allow
+			// client supplied verification fields to approve a KYC record.
+			const { isVerified: _ignoredVerification, adminNote: _ignoredNote, ...safeKycData } = kycData;
+			await existingKYC.update(
+				{
+					...safeKycData,
+					isVerified: false,
+					adminNote: null,
+				},
+				{ transaction },
+			);
+			if (normalizedContactPhone) {
+				await User.update(
+					{ phoneNumber: normalizedContactPhone },
+					{ where: { id: vendorId }, transaction },
+				);
+			}
+			await transaction.commit();
 			// Admin notification removed to prevent crashes
 			res
 				.status(200)
-				.json({ message: "KYC updated successfully", data: existingKYC });
+				.json({
+					message: "KYC updated successfully",
+					data: {
+						...existingKYC.toJSON(),
+						phoneNumber: normalizedContactPhone,
+					},
+				});
 			return;
 		} else {
 			// Create a new KYC record
-			const newKYC = await KYC.create({
-				vendorId,
-				...kycData,
-				isVerified: true,
-			});
+			const { isVerified: _ignoredVerification, adminNote: _ignoredNote, ...safeKycData } = kycData;
+			const newKYC = await KYC.create(
+				{
+					vendorId,
+					...safeKycData,
+					isVerified: false,
+					adminNote: null,
+				},
+				{ transaction },
+			);
+			if (normalizedContactPhone) {
+				await User.update(
+					{ phoneNumber: normalizedContactPhone },
+					{ where: { id: vendorId }, transaction },
+				);
+			}
+			await transaction.commit();
 			// Admin notification removed to prevent crashes
 			res
 				.status(200)
-				.json({ message: "KYC created successfully", data: newKYC });
+				.json({
+					message: "KYC created successfully",
+					data: {
+						...newKYC.toJSON(),
+						phoneNumber: normalizedContactPhone,
+					},
+				});
 			return;
 		}
 	} catch (error) {
+		try {
+			await transaction.rollback();
+		} catch {
+			// The transaction may already be committed when response serialization fails.
+		}
 		logger.error(error);
 		res.status(500).json({ message: "An error occurred while processing KYC" });
 	}
@@ -1499,11 +1612,27 @@ export const subscribe = async (req: Request, res: Response): Promise<void> => {
 					refId,
 					secretKey,
 				);
-				if (!isPaymentValid || (isPaymentValid.status && isPaymentValid.status !== "success")) {
+				const expectedAmount = Math.round(Number(amount) * 100);
+				const referenceAlreadyUsed = await Transaction.findOne({
+					where: { refId },
+					transaction,
+				});
+				if (referenceAlreadyUsed) {
+					await transaction.rollback();
+					res.status(409).json({ message: "This payment reference has already been used." });
+					return false;
+				}
+				if (
+					!isPaymentValid ||
+					isPaymentValid.status !== "success" ||
+					Number(isPaymentValid.amount) !== expectedAmount ||
+					String(isPaymentValid.currency || "").toUpperCase() !== "NGN" ||
+					String(isPaymentValid.customer?.email || "").toLowerCase() !== String((await User.findByPk(vendorId, { transaction }))?.email || "").toLowerCase()
+				) {
 					await transaction.rollback();
 					res
 						.status(400)
-						.json({ message: "Invalid or unverified payment reference." });
+						.json({ message: "Payment amount, currency, or customer does not match this subscription." });
 					return false;
 				}
 			}
@@ -2251,18 +2380,18 @@ export const addBankInformationV2 = async (
 ): Promise<void> => {
 	const {
 		bankName,
+		bankCode,
 		accountNumber,
-		accountHolderName,
 		swiftCode,
 		routingNumber,
 		bankAddress,
-	} = req.body; // bankInfo contains bankName, accountNumber, accountName
+	} = req.body;
 
 	const vendorId = (req as AuthenticatedRequest).user?.id as string; // Authenticated user ID from middleware
 
 	try {
 		// Ensure required fields are provided
-		if (!bankName || !accountNumber || !accountHolderName) {
+		if (!bankName || !bankCode || !/^\d{10}$/.test(String(accountNumber))) {
 			res.status(400).json({ message: "All bank details are required" });
 			return;
 		}
@@ -2283,10 +2412,24 @@ export const addBankInformationV2 = async (
 			return;
 		}
 
-		// Create bank information entry
+		const existingBank = await BankInformation.findOne({ where: { vendorId, accountNumber } });
+		if (existingBank) {
+			res.status(400).json({ message: "This payout account has already been added." });
+			return;
+		}
+
+		const resolvedAccount = await resolveNigerianBankAccount(String(accountNumber), String(bankCode));
+		const accountHolderName = resolvedAccount?.account_name;
+		if (!accountHolderName || resolvedAccount?.account_number !== String(accountNumber)) {
+			res.status(400).json({ message: "The bank account could not be verified." });
+			return;
+		}
+
+		// Always save the name returned by the bank verification provider.
 		const bankData = await BankInformation.create({
 			vendorId,
 			bankName,
+			bankCode,
 			accountNumber,
 			accountHolderName,
 			...(swiftCode && { swiftCode }),
@@ -2299,7 +2442,41 @@ export const addBankInformationV2 = async (
 			.json({ message: "Bank information added successfully", data: bankData });
 	} catch (error: any) {
 		logger.error("Error adding bank information:", error);
-		res.status(500).json({ message: "Server error" });
+		const status = error?.response?.status === 400 ? 400 : 500;
+		res.status(status).json({ message: error?.response?.data?.message || error.message || "Server error" });
+	}
+};
+
+export const getSupportedBanks = async (_req: Request, res: Response): Promise<void> => {
+	try {
+		const banks = await paystackGet("/bank?country=nigeria&currency=NGN&perPage=100");
+		res.status(200).json({
+			message: "Banks fetched successfully",
+			data: banks.map((bank: any) => ({ name: bank.name, code: bank.code, slug: bank.slug })),
+		});
+	} catch (error: any) {
+		logger.error("Error fetching supported banks:", error);
+		res.status(500).json({ message: "Bank list is temporarily unavailable." });
+	}
+};
+
+export const resolveBankAccount = async (req: Request, res: Response): Promise<void> => {
+	const accountNumber = String(req.query.accountNumber || "");
+	const bankCode = String(req.query.bankCode || "");
+	if (!/^\d{10}$/.test(accountNumber) || !bankCode) {
+		res.status(400).json({ message: "Choose a bank and enter a valid 10 digit account number." });
+		return;
+	}
+	try {
+		const account = await resolveNigerianBankAccount(accountNumber, bankCode);
+		res.status(200).json({
+			message: "Account verified successfully",
+			data: { accountName: account.account_name, accountNumber: account.account_number, bankCode },
+		});
+	} catch (error: any) {
+		logger.error("Error resolving bank account:", error);
+		const status = error?.response?.status === 400 ? 400 : 502;
+		res.status(status).json({ message: error?.response?.data?.message || "We could not verify this account. Check the details and try again." });
 	}
 };
 
@@ -2450,10 +2627,15 @@ export const deleteBankInformation = async (
 	res: Response,
 ): Promise<void> => {
 	const bankId = req.query.bankId; // bankId is required
+	const vendorId = (req as AuthenticatedRequest).user?.id;
 
 	try {
+		if (!vendorId) {
+			res.status(401).json({ message: "Unauthorized" });
+			return;
+		}
 		// Find the bank record
-		const bankData = await BankInformation.findOne({ where: { id: bankId } });
+		const bankData = await BankInformation.findOne({ where: { id: bankId, vendorId } });
 		if (!bankData) {
 			res.status(404).json({ message: "Bank information not found" });
 			return;
@@ -2479,7 +2661,13 @@ export const getVendorWalletStats = async (
 
 	try {
 		const vendor = await User.findByPk(vendorId, {
-			attributes: ['wallet', 'pendingWallet', 'dollarWallet', 'pendingDollarWallet']
+			attributes: [
+				'id',
+				'wallet',
+				'pendingWallet',
+				'dollarWallet',
+				'pendingDollarWallet',
+			],
 		});
 
 		if (!vendor) {
@@ -3106,7 +3294,7 @@ export const createService = async (
 					service_subcategory_id,
 					description,
 					price,
-					discount_price,
+					discount_price: discount_price || null,
 					title,
 					image_url,
 					video_url,
@@ -3472,7 +3660,7 @@ export const updateService = async (
 					service_subcategory_id,
 					description,
 					price,
-					discount_price,
+					discount_price: discount_price || null,
 					title,
 					image_url,
 					video_url,
@@ -4148,7 +4336,7 @@ export const markServiceBookingAsCancelled = async (
 			return;
 		}
 
-		booking.status = "cancelled";
+		booking.status = "canceled";
 		await booking.save();
 
 		// Notify User

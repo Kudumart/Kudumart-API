@@ -20,13 +20,19 @@ dotenv.config();
 // Initialize the Express app
 const app = createExpressApp();
 
+const configuredOrigins = (process.env.CORS_ORIGINS || "")
+	.split(",")
+	.map((origin) => origin.trim())
+	.filter(Boolean);
+
 // Create the HTTP server
 const server = http.createServer(app);
 
 // Attach Socket.IO to the HTTP server
 const io = new Server(server, {
 	cors: {
-		origin: "*", // Change to specific origins in production
+		origin: configuredOrigins.length > 0 ? configuredOrigins : true,
+		credentials: true,
 	},
 });
 
@@ -60,12 +66,17 @@ sequelizeService
 // Create and start the HTTP server
 const port = process.env.PORT || 3001; // Get the port from the environment variables
 
-// Start the cron job
-runSubscriptionCron();
-auctionStatusUpdate();
-auctionReminderJob();
-runDropshipCron();
-runDropshippingCredsRefreshCron();
+// Staging uses a copied database and must not run production schedules.
+const cronJobsEnabled = process.env.ENABLE_CRON_JOBS !== "false";
+if (cronJobsEnabled) {
+	runSubscriptionCron();
+	auctionStatusUpdate();
+	auctionReminderJob();
+	runDropshipCron();
+	runDropshippingCredsRefreshCron();
+} else {
+	console.log("Scheduled jobs are disabled for this environment");
+}
 
 server.timeout = 300000;
 
