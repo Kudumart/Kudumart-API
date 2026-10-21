@@ -4502,6 +4502,12 @@ export const getAllOrderItems = async (
 	res: Response,
 ): Promise<void> => {
 	const { orderId, vendorId, page = 1, limit = 10 } = req.query;
+	const userId = (req as AuthenticatedRequest).user?.id;
+
+	if (!userId) {
+		res.status(401).json({ message: "User must be authenticated" });
+		return;
+	}
 
 	// Convert `page` and `limit` to numbers and ensure they are valid
 	const pageNumber = parseInt(page as string, 10);
@@ -4524,6 +4530,21 @@ export const getAllOrderItems = async (
 			limit: limitNumber,
 			offset,
 			order: [["createdAt", "DESC"]],
+			include: [
+				{
+					model: Order,
+					as: "order",
+					where: { userId },
+					required: true,
+					attributes: [
+						"id",
+						"trackingNumber",
+						"shippingAddress",
+						"totalAmount",
+						"createdAt",
+					],
+				},
+			],
 		});
 
 		if (!orderItems || orderItems.length === 0) {
@@ -4555,6 +4576,12 @@ export const viewOrderItem = async (
 	res: Response,
 ): Promise<void> => {
 	const { orderItemId } = req.query;
+	const userId = (req as AuthenticatedRequest).user?.id;
+
+	if (!userId) {
+		res.status(401).json({ message: "User must be authenticated" });
+		return;
+	}
 
 	try {
 		// Query for a single order item and required associations
@@ -4564,6 +4591,8 @@ export const viewOrderItem = async (
 				{
 					model: Order,
 					as: "order",
+					where: { userId },
+					required: true,
 					include: [
 						{
 							model: User,
@@ -4661,6 +4690,35 @@ export const updateOrderStatus = async (
 		if (!buyer) {
 			await transaction.rollback();
 			res.status(404).json({ message: "Buyer not found." });
+			return;
+		}
+
+		const isBuyer = mainOrder.userId === userId;
+		const isSeller = order.vendorId === userId;
+		if (!isBuyer && !isSeller) {
+			await transaction.rollback();
+			res.status(403).json({ message: "You cannot update this order item." });
+			return;
+		}
+
+		const buyerTransitions: Record<string, string[]> = {
+			pending: ["cancelled"],
+			shipped: ["delivered"],
+		};
+		const sellerTransitions: Record<string, string[]> = {
+			pending: ["processing", "cancelled"],
+			processing: ["shipped", "cancelled"],
+			shipped: ["delivered"],
+		};
+		const allowedNextStatuses = isBuyer
+			? buyerTransitions[order.status] || []
+			: sellerTransitions[order.status] || [];
+
+		if (!allowedNextStatuses.includes(status)) {
+			await transaction.rollback();
+			res.status(400).json({
+				message: `The order cannot move from ${order.status} to ${status}.`,
+			});
 			return;
 		}
 
