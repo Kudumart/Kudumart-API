@@ -22,6 +22,7 @@ import Category from "../models/category";
 import SubCategory from "../models/subcategory";
 import User from "../models/user";
 import KYC from "../models/kyc";
+import KycReviewEvent from "../models/kycReviewEvent";
 import PaymentGateway from "../models/paymentgateway";
 import Currency from "../models/currency";
 import Product from "../models/product";
@@ -1458,7 +1459,7 @@ export const approveOrRejectKYC = async (
 	req: Request,
 	res: Response,
 ): Promise<void> => {
-	const { kycId, isVerified, note } = req.body; // Approve flag and note from request body
+	const { kycId, isVerified, note, fieldReviews } = req.body;
 
 	try {
 		// Find the KYC record by ID
@@ -1485,21 +1486,87 @@ export const approveOrRejectKYC = async (
 			return;
 		}
 
-		// Approve or reject with a note
-		kycRecord.isVerified = isVerified;
-		kycRecord.adminNote = isVerified
-			? "Approved by admin"
-			: note || "Rejected without a note";
+		const allowedFields = [
+			"businessName", "contactEmail", "contactPhoneNumber", "businessDescription",
+			"businessLink", "businessAddress", "businessRegistrationNumber",
+			"idVerification.name", "idVerification.number", "idVerification.expiryDate",
+		];
+		let reviewStatus: "pending" | "changes_requested" | "approved";
+		let normalizedReviews: Record<string, { status: string; reason?: string }> = {};
+
+		if (fieldReviews && typeof fieldReviews === "object") {
+			for (const field of allowedFields) {
+				const decision = fieldReviews[field];
+				if (!decision) continue;
+				if (!["pending", "approved", "rejected"].includes(decision.status)) {
+					res.status(400).json({ message: `Invalid review status for ${field}` });
+					return;
+				}
+				if (decision.status === "rejected" && !String(decision.reason || "").trim()) {
+					res.status(400).json({ message: `A rejection reason is required for ${field}` });
+					return;
+				}
+				normalizedReviews[field] = {
+					status: decision.status,
+					...(decision.reason && { reason: String(decision.reason).trim() }),
+				};
+			}
+			const decisions = Object.values(normalizedReviews);
+			const hasRejected = decisions.some((item) => item.status === "rejected");
+			const valueFor = (field: string) => field.split(".").reduce((value: any, part) => value?.[part], kycRecord as any);
+			const requiredFields = ["businessName", "contactEmail", "contactPhoneNumber", "businessDescription", "businessAddress", "idVerification.name", "idVerification.number"];
+			const requiredFieldsComplete = requiredFields.every((field) => valueFor(field) && normalizedReviews[field]?.status === "approved");
+			const submittedFields = allowedFields.filter((field) => valueFor(field));
+			const allSubmittedApproved = submittedFields.every((field) => normalizedReviews[field]?.status === "approved");
+			reviewStatus = hasRejected ? "changes_requested" : requiredFieldsComplete && allSubmittedApproved ? "approved" : "pending";
+			kycRecord.fieldReviews = normalizedReviews as any;
+			kycRecord.isVerified = reviewStatus === "approved";
+			kycRecord.reviewStatus = reviewStatus;
+			const rejected = Object.entries(normalizedReviews).filter(([, item]) => item.status === "rejected");
+			kycRecord.adminNote = rejected.length
+				? rejected.map(([field, item]) => `${field}: ${item.reason}`).join("\n")
+				: reviewStatus === "approved" ? "Approved by admin" : "Review pending";
+		} else {
+			kycRecord.isVerified = isVerified;
+			kycRecord.reviewStatus = isVerified ? "approved" : "changes_requested";
+			kycRecord.adminNote = isVerified ? "Approved by admin" : note || "Changes requested";
+			reviewStatus = kycRecord.reviewStatus;
+		}
 
 		// Save the updated record
 		await kycRecord.save();
+		if (Object.keys(normalizedReviews).length) {
+			await KycReviewEvent.bulkCreate(Object.entries(normalizedReviews).map(([fieldName, decision]) => ({
+				kycId: kycRecord.id,
+				reviewerId: (req as any).user?.id || (req as any).admin?.id || null,
+				fieldName,
+				status: decision.status,
+				reason: decision.reason || null,
+			})));
+		}
+
+		const rejectedFields = Object.entries((kycRecord.fieldReviews || {}) as Record<string, any>)
+			.filter(([, decision]) => decision.status === "rejected")
+			.map(([field, decision]) => `${field}: ${decision.reason}`);
+		const notificationMessage = reviewStatus === "approved"
+			? "Your KYC has been approved. Your verified vendor features are now available."
+			: reviewStatus === "changes_requested"
+				? `Changes are required for your KYC: ${rejectedFields.join("; ")}`
+				: "Your KYC review has been saved and is still in progress.";
+		await Notification.create({
+			userId: user.id,
+			title: reviewStatus === "approved" ? "KYC approved" : reviewStatus === "changes_requested" ? "KYC changes requested" : "KYC review in progress",
+			message: notificationMessage.slice(0, 250),
+			type: "kyc_review",
+			isRead: false,
+		});
 
 		// Prepare email notification
-		const isApproved = isVerified;
+		const isApproved = reviewStatus === "approved";
 		const message = emailTemplates.kycStatusUpdate(
 			user,
-			isApproved,
-			kycRecord.adminNote,
+			reviewStatus,
+			rejectedFields,
 		);
 
 		// Send email notification
@@ -1516,9 +1583,8 @@ export const approveOrRejectKYC = async (
 
 		// Send response
 		res.status(200).json({
-			message: isApproved
-				? "KYC approved successfully"
-				: "KYC rejected with note",
+			message: isApproved ? "KYC approved successfully" : reviewStatus === "changes_requested" ? "KYC corrections requested" : "KYC review saved",
+			data: kycRecord,
 		});
 	} catch (error: any) {
 		logger.error("Error approving/rejecting KYC:", error);

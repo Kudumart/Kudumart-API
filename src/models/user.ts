@@ -175,11 +175,16 @@ const initModel = (sequelize: Sequelize) => {
 			});
 
 			if (kyc) {
-				const isApproved = kyc.isVerified === true;
+				const storedStatus = (kyc as any).reviewStatus;
+				const isApproved = storedStatus === "approved" || kyc.isVerified === true;
 				userInstance.setDataValue("isVerified", isApproved);
 				userInstance.setDataValue(
 					"kycStatus",
-					isApproved ? "approved" : kyc.adminNote ? "rejected" : "pending",
+					isApproved
+						? "approved"
+						: storedStatus === "changes_requested"
+							? "rejected"
+							: "pending",
 				);
 			} else {
 				userInstance.setDataValue("isVerified", false);

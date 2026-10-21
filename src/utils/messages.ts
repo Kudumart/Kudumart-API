@@ -2061,8 +2061,8 @@ export const emailTemplates = {
 
 	kycStatusUpdate: (
 		user: User,
-		isApproved: boolean,
-		adminNote?: string,
+		reviewStatus: "pending" | "changes_requested" | "approved",
+		rejectedFields: string[] = [],
 	): string => {
 		const logoUrl: string | undefined = process.env.LOGO_URL;
 
@@ -2254,17 +2254,8 @@ export const emailTemplates = {
                                 <h2>KYC Status Update</h2>
                                 <p>Hi ${user.firstName} ${user.lastName},</p>
                                 <p>Your KYC submission has been reviewed.</p>
-                                <p>Status: <strong>${
-																	isApproved ? "Approved" : "Rejected"
-																}</strong></p>
-                                ${
-																	!isApproved
-																		? `<p>Note: ${
-																				adminNote ||
-																				"No additional notes provided."
-																			}</p>`
-																		: ""
-																}
+                                <p>Status: <strong>${reviewStatus === "approved" ? "Approved" : reviewStatus === "changes_requested" ? "Changes requested" : "Under review"}</strong></p>
+                                ${rejectedFields.length ? `<p>Please correct the following details:</p><ul>${rejectedFields.map((item) => `<li>${item}</li>`).join("")}</ul><p><a class="btn-primary" href="${process.env.FRONTEND_URL || process.env.APP_URL || "https://kudumart.com"}/profile/updated-kyc">Review KYC details</a></p>` : ""}
                                 <p>Thank you for your cooperation!</p>
                                 <p>If you have any questions, feel free to reach out to our support team.</p>
                                 <p>Best regards,<br> The ${process.env.APP_NAME} Support Team.</p>

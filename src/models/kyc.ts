@@ -19,6 +19,8 @@ class KYC extends Model {
   public certificateOfIncorporation!: string;
   public adminNote!: string;
   public isVerified!: boolean; // Change to boolean type
+  public reviewStatus!: 'pending' | 'changes_requested' | 'approved';
+  public fieldReviews!: Record<string, { status: 'pending' | 'approved' | 'rejected'; reason?: string }>;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
   public user?: User;
@@ -94,6 +96,20 @@ const initModel = (sequelize: Sequelize) => {
       isVerified: {
         type: DataTypes.BOOLEAN,
         defaultValue: false, // Default is not verified
+      },
+      reviewStatus: {
+        type: DataTypes.ENUM('pending', 'changes_requested', 'approved'),
+        allowNull: false,
+        defaultValue: 'pending',
+      },
+      fieldReviews: {
+        type: DataTypes.JSON,
+        allowNull: false,
+        defaultValue: {},
+        get() {
+          const value = this.getDataValue('fieldReviews');
+          return typeof value === 'string' ? JSON.parse(value) : (value || {});
+        },
       },
     },
     {

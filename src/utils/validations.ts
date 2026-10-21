@@ -405,8 +405,10 @@ export const kycValidationRules = () => {
 export const validateKYCNotification = () => {
 	return [
 		check("isVerified")
+			.optional()
 			.isBoolean()
 			.withMessage("Approval status is required and must be a boolean"),
+		check("fieldReviews").optional().isObject().withMessage("Field reviews must be an object"),
 
 		check("adminNote")
 			.optional({ checkFalsy: true })
