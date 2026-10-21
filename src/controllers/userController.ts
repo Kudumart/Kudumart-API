@@ -734,7 +734,10 @@ export const getAllConversationMessages = async (
 
 		// Fetch the conversation with related messages, users, and product
 		const conversation = await Conversation.findOne({
-			where: { id: conversationId },
+			where: {
+				id: conversationId,
+				[Op.or]: [{ senderId: userId }, { receiverId: userId }],
+			},
 			include: [
 				{
 					model: Message,
@@ -941,7 +944,15 @@ export const deleteMessageHandler = async (
 
 	try {
 		// Find the message by its ID
-		const message = await Message.findByPk(messageId);
+		const message = await Message.findOne({
+			where: { id: messageId },
+			include: [{
+				model: Conversation,
+				as: "conversation",
+				where: { [Op.or]: [{ senderId: userId }, { receiverId: userId }] },
+				required: true,
+			}],
+		});
 
 		// Check if the message exists
 		if (!message) {
@@ -983,7 +994,15 @@ export const markAsReadHandler = async (
 
 	try {
 		// Find the message by its ID
-		const message = await Message.findByPk(messageId);
+		const message = await Message.findOne({
+			where: { id: messageId },
+			include: [{
+				model: Conversation,
+				as: "conversation",
+				where: { [Op.or]: [{ senderId: userId }, { receiverId: userId }] },
+				required: true,
+			}],
+		});
 
 		// Check if the message exists
 		if (!message) {
