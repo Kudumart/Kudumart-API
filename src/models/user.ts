@@ -21,6 +21,7 @@ class User extends Model {
 	public email_verified_at?: Date;
 	public password!: string;
 	public phoneNumber!: string;
+	public kycStatus!: "not_submitted" | "pending" | "rejected" | "approved";
 	public dateOfBirth?: string;
 	public location?: Location; // This will be serialized as JSON
 	public photo?: string;
@@ -138,6 +139,12 @@ const initModel = (sequelize: Sequelize) => {
 					return this.getDataValue("isVerified") === true;
 				},
 			},
+			kycStatus: {
+				type: DataTypes.VIRTUAL,
+				get() {
+					return this.getDataValue("kycStatus") || "not_submitted";
+				},
+			},
 		},
 		{
 			sequelize,
@@ -168,9 +175,20 @@ const initModel = (sequelize: Sequelize) => {
 			});
 
 			if (kyc) {
-				userInstance.setDataValue("isVerified", kyc.isVerified); // Set it correctly based on KYC data
+				const storedStatus = (kyc as any).reviewStatus;
+				const isApproved = storedStatus === "approved" || kyc.isVerified === true;
+				userInstance.setDataValue("isVerified", isApproved);
+				userInstance.setDataValue(
+					"kycStatus",
+					isApproved
+						? "approved"
+						: storedStatus === "changes_requested"
+							? "rejected"
+							: "pending",
+				);
 			} else {
-				userInstance.setDataValue("isVerified", false); // Set as false if no KYC record exists
+				userInstance.setDataValue("isVerified", false);
+				userInstance.setDataValue("kycStatus", "not_submitted");
 			}
 		};
 

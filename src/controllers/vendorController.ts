@@ -55,6 +55,23 @@ import ProductOffer from "../models/productoffer";
 import { sendPushNotificationSingle } from "../firebase/pushNotification";
 import { PushNotificationTypes } from "../types/index";
 import axios from "axios";
+import { sendMail } from "../services/mail.service";
+
+const notifyKycSubmission = async (userId: string) => {
+	try {
+		const user = await User.findByPk(userId);
+		if (!user) return;
+		const message = "Your KYC details were received and are awaiting review. We will notify you when the review is complete or if a correction is needed.";
+		await Notification.create({ userId, title: "KYC submitted", message, type: "kyc_review", isRead: false });
+		await sendMail(
+			user.email,
+			`${process.env.APP_NAME} - KYC submitted for review`,
+			`<p>Hi ${user.firstName || "there"},</p><p>${message}</p><p>You do not need to submit the form again while the review is pending.</p>`,
+		);
+	} catch (error) {
+		logger.error("Unable to send KYC submission notification:", error);
+	}
+};
 
 const getPaystackSecretKey = async (): Promise<string> => {
 	const paymentGateway = await PaymentGateway.findOne({
@@ -169,6 +186,13 @@ export const submitOrUpdateKYC = async (
 					...safeKycData,
 					isVerified: false,
 					adminNote: null,
+					reviewStatus: "pending",
+					fieldReviews: Object.fromEntries(
+						Object.entries(existingKYC.fieldReviews || {}).map(([field, review]: [string, any]) => [
+							field,
+							review?.status === "rejected" ? { status: "pending" } : review,
+						]),
+					),
 				},
 				{ transaction },
 			);
@@ -179,6 +203,7 @@ export const submitOrUpdateKYC = async (
 				);
 			}
 			await transaction.commit();
+			await notifyKycSubmission(vendorId);
 			// Admin notification removed to prevent crashes
 			res
 				.status(200)
@@ -199,6 +224,8 @@ export const submitOrUpdateKYC = async (
 					...safeKycData,
 					isVerified: false,
 					adminNote: null,
+					reviewStatus: "pending",
+					fieldReviews: {},
 				},
 				{ transaction },
 			);
@@ -209,6 +236,7 @@ export const submitOrUpdateKYC = async (
 				);
 			}
 			await transaction.commit();
+			await notifyKycSubmission(vendorId);
 			// Admin notification removed to prevent crashes
 			res
 				.status(200)
