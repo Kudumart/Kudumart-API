@@ -83,10 +83,44 @@ export const submitOrUpdateKYC = async (
 	res: Response,
 ): Promise<void> => {
 	const vendorId = (req as AuthenticatedRequest).user?.id; // Authenticated user ID from middleware
-	const kycData = req.body;
+	const kycData = { ...req.body };
+	const transaction = await sequelize.transaction();
 	try {
+		if (!vendorId) {
+			await transaction.rollback();
+			res.status(401).json({ message: "Unauthorized" });
+			return;
+		}
+
+		const normalizedContactPhone = kycData.contactPhoneNumber
+			? `+${String(kycData.contactPhoneNumber).replace(/\D/g, "")}`
+			: "";
+
+		if (normalizedContactPhone) {
+			const phoneOwner = await User.findOne({
+				where: {
+					phoneNumber: normalizedContactPhone,
+					id: { [Op.ne]: vendorId },
+				},
+				transaction,
+			});
+
+			if (phoneOwner) {
+				await transaction.rollback();
+				res.status(400).json({
+					message: "Phone number is already in use by another account",
+				});
+				return;
+			}
+
+			kycData.contactPhoneNumber = normalizedContactPhone;
+		}
+
 		// Check if a KYC record already exists for this user
-		const existingKYC = await KYC.findOne({ where: { vendorId } });
+		const existingKYC = await KYC.findOne({
+			where: { vendorId },
+			transaction,
+		});
 
 		if (existingKYC) {
 			if (existingKYC.isVerified) {
@@ -108,10 +142,20 @@ export const submitOrUpdateKYC = async (
 					businessLink,
 					businessAddress,
 				};
-				await existingKYC.update(safeBusinessData);
+				await existingKYC.update(safeBusinessData, { transaction });
+				if (normalizedContactPhone) {
+					await User.update(
+						{ phoneNumber: normalizedContactPhone },
+						{ where: { id: vendorId }, transaction },
+					);
+				}
+				await transaction.commit();
 				res.status(200).json({
 					message: "KYC business information updated successfully",
-					data: existingKYC,
+					data: {
+						...existingKYC.toJSON(),
+						phoneNumber: normalizedContactPhone,
+					},
 				});
 				return;
 			}
@@ -120,32 +164,69 @@ export const submitOrUpdateKYC = async (
 			// A resubmission must return to the admin review queue. Never allow
 			// client supplied verification fields to approve a KYC record.
 			const { isVerified: _ignoredVerification, adminNote: _ignoredNote, ...safeKycData } = kycData;
-			await existingKYC.update({
-				...safeKycData,
-				isVerified: false,
-				adminNote: null,
-			});
+			await existingKYC.update(
+				{
+					...safeKycData,
+					isVerified: false,
+					adminNote: null,
+				},
+				{ transaction },
+			);
+			if (normalizedContactPhone) {
+				await User.update(
+					{ phoneNumber: normalizedContactPhone },
+					{ where: { id: vendorId }, transaction },
+				);
+			}
+			await transaction.commit();
 			// Admin notification removed to prevent crashes
 			res
 				.status(200)
-				.json({ message: "KYC updated successfully", data: existingKYC });
+				.json({
+					message: "KYC updated successfully",
+					data: {
+						...existingKYC.toJSON(),
+						phoneNumber: normalizedContactPhone,
+					},
+				});
 			return;
 		} else {
 			// Create a new KYC record
 			const { isVerified: _ignoredVerification, adminNote: _ignoredNote, ...safeKycData } = kycData;
-			const newKYC = await KYC.create({
-				vendorId,
-				...safeKycData,
-				isVerified: false,
-				adminNote: null,
-			});
+			const newKYC = await KYC.create(
+				{
+					vendorId,
+					...safeKycData,
+					isVerified: false,
+					adminNote: null,
+				},
+				{ transaction },
+			);
+			if (normalizedContactPhone) {
+				await User.update(
+					{ phoneNumber: normalizedContactPhone },
+					{ where: { id: vendorId }, transaction },
+				);
+			}
+			await transaction.commit();
 			// Admin notification removed to prevent crashes
 			res
 				.status(200)
-				.json({ message: "KYC created successfully", data: newKYC });
+				.json({
+					message: "KYC created successfully",
+					data: {
+						...newKYC.toJSON(),
+						phoneNumber: normalizedContactPhone,
+					},
+				});
 			return;
 		}
 	} catch (error) {
+		try {
+			await transaction.rollback();
+		} catch {
+			// The transaction may already be committed when response serialization fails.
+		}
 		logger.error(error);
 		res.status(500).json({ message: "An error occurred while processing KYC" });
 	}
