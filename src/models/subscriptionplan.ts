@@ -14,6 +14,7 @@ class SubscriptionPlan extends Model {
 	public maxAds!: number | null;
 	public adsDurationDays!: number;
 	public currencyId!: string;
+	public isFeeWaived!: boolean;
 	public createdAt!: Date;
 	public updatedAt!: Date;
 
@@ -25,6 +26,10 @@ class SubscriptionPlan extends Model {
 		this.belongsTo(models.Currency, {
 			as: "currency",
 			foreignKey: "currencyId",
+		});
+		this.hasMany(models.VendorSubscriptionOffer, {
+			as: "vendorOffers",
+			foreignKey: "subscriptionPlanId",
 		});
 	}
 }
@@ -85,6 +90,11 @@ const initModel = (sequelize: Sequelize) => {
 			currencyId: {
 				type: DataTypes.UUID,
 				allowNull: true,
+			},
+			isFeeWaived: {
+				type: DataTypes.BOOLEAN,
+				allowNull: false,
+				defaultValue: false,
 			},
 		},
 		{

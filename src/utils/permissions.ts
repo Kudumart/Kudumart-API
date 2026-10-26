@@ -26,6 +26,7 @@ export const PERMISSIONS = {
 	VIEW_CUSTOMERS: "view-customers",
 	MANAGE_CUSTOMERS: "manage-customers",
 	VIEW_VENDORS: "view-vendors",
+	MANAGE_VENDOR_SUBSCRIPTIONS: "manage-vendor-subscriptions",
 
 	// Products
 	VIEW_PRODUCTS: "view-products",
@@ -100,6 +101,7 @@ export const PERMISSION_DESCRIPTIONS: Record<string, string> = {
 	"view-customers": "Can view all customer accounts",
 	"manage-customers": "Can edit, suspend, or manage customer accounts",
 	"view-vendors": "Can view all vendor accounts",
+	"manage-vendor-subscriptions": "Can create or revoke vendor-specific subscription offers and fee waivers",
 
 	// Products
 	"view-products": "Can view all products on the platform",

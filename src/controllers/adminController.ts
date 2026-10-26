@@ -35,6 +35,7 @@ import Bid from "../models/bid";
 import ShowInterest from "../models/showinterest";
 import AuctionReminders from "../models/reminder";
 import VendorSubscription from "../models/vendorsubscription";
+import VendorSubscriptionOffer from "../models/vendorsubscriptionoffer";
 import sequelizeService from "../services/sequelize.service";
 import Transaction from "../models/transaction";
 import Advert from "../models/advert";
@@ -3212,6 +3213,154 @@ export const getAllSubscribers = async (
 		// Handle any unexpected errors
 		logger.error("Error retrieving subscribers:", error);
 		res.status(500).json({ message: "Failed to retrieve subscribers" });
+	}
+};
+
+export const getVendorSubscriptionOffers = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const vendorId = String(req.params.vendorId);
+		const vendor = await User.findByPk(vendorId, {
+			attributes: ["id", "firstName", "lastName", "email"],
+		});
+		if (!vendor) {
+			res.status(404).json({ message: "Vendor not found" });
+			return;
+		}
+		const offers = await VendorSubscriptionOffer.findAll({
+			where: { vendorId },
+			include: [{ model: SubscriptionPlan, as: "subscriptionPlan", include: [{ model: Currency, as: "currency" }] }],
+			order: [["createdAt", "DESC"]],
+		});
+		res.status(200).json({ data: { vendor, offers } });
+	} catch (error) {
+		logger.error("Error retrieving vendor subscription offers:", error);
+		res.status(500).json({ message: "Failed to retrieve subscription offers" });
+	}
+};
+
+export const saveVendorSubscriptionOffer = async (
+	req: AuthenticatedRequest,
+	res: Response,
+): Promise<void> => {
+	const dbTransaction = await sequelizeService.connection!.transaction();
+	try {
+		const vendorId = String(req.params.vendorId);
+		const { subscriptionPlanId, specialPrice, reason, expiresAt } = req.body;
+		const numericPrice = Number(specialPrice);
+
+		if (!subscriptionPlanId || specialPrice === undefined || !String(reason || "").trim()) {
+			await dbTransaction.rollback();
+			res.status(400).json({ message: "Plan, special price, and campaign reason are required" });
+			return;
+		}
+		const [vendor, plan] = await Promise.all([
+			User.findByPk(vendorId, { transaction: dbTransaction }),
+			SubscriptionPlan.findByPk(subscriptionPlanId, { transaction: dbTransaction }),
+		]);
+		if (!vendor || vendor.accountType !== "Vendor") {
+			await dbTransaction.rollback();
+			res.status(404).json({ message: "Vendor not found" });
+			return;
+		}
+		if (!plan) {
+			await dbTransaction.rollback();
+			res.status(404).json({ message: "Subscription plan not found" });
+			return;
+		}
+		if (!Number.isFinite(numericPrice) || numericPrice < 0 || numericPrice > Number(plan.price)) {
+			await dbTransaction.rollback();
+			res.status(400).json({ message: `Special price must be between 0 and ${plan.price}` });
+			return;
+		}
+		const parsedExpiry = expiresAt ? new Date(expiresAt) : null;
+		if (parsedExpiry && (Number.isNaN(parsedExpiry.getTime()) || parsedExpiry <= new Date())) {
+			await dbTransaction.rollback();
+			res.status(400).json({ message: "Expiry must be a future date" });
+			return;
+		}
+
+		await VendorSubscriptionOffer.update(
+			{ isActive: false },
+			{ where: { vendorId, subscriptionPlanId, isActive: true, redeemedAt: null }, transaction: dbTransaction },
+		);
+		const offer = await VendorSubscriptionOffer.create(
+			{
+				vendorId,
+				subscriptionPlanId,
+				specialPrice: numericPrice,
+				reason: String(reason).trim(),
+				expiresAt: parsedExpiry,
+				isActive: true,
+				createdBy: req.admin?.id || null,
+			},
+			{ transaction: dbTransaction },
+		);
+		await Notification.create(
+			{
+				userId: vendorId,
+				title: numericPrice === 0 ? "Subscription fee waived" : "Special subscription offer",
+				message: numericPrice === 0
+					? `Your fee for the ${plan.name} plan has been waived. Claim it from Subscriptions${parsedExpiry ? " before the offer expires" : ""}.`
+					: `You have a special ${plan.name} subscription price of ${numericPrice}. Claim it from Subscriptions${parsedExpiry ? " before the offer expires" : ""}.`,
+				type: "subscription",
+				isRead: false,
+			},
+			{ transaction: dbTransaction },
+		);
+		await dbTransaction.commit();
+		res.status(201).json({ message: numericPrice === 0 ? "Subscription fee waived for this vendor" : "Special subscription price saved", data: offer });
+	} catch (error) {
+		await dbTransaction.rollback();
+		logger.error("Error saving vendor subscription offer:", error);
+		res.status(500).json({ message: "Failed to save subscription offer" });
+	}
+};
+
+export const revokeVendorSubscriptionOffer = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const offer = await VendorSubscriptionOffer.findOne({ where: { id: req.params.offerId, redeemedAt: null } });
+		if (!offer) {
+			res.status(404).json({ message: "Unused subscription offer not found" });
+			return;
+		}
+		await offer.update({ isActive: false });
+		res.status(200).json({ message: "Subscription offer revoked" });
+	} catch (error) {
+		logger.error("Error revoking vendor subscription offer:", error);
+		res.status(500).json({ message: "Failed to revoke subscription offer" });
+	}
+};
+
+export const setGlobalSubscriptionFeeWaiver = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const planId = String(req.params.planId);
+		const { waived } = req.body;
+		if (typeof waived !== "boolean") {
+			res.status(400).json({ message: "waived must be true or false" });
+			return;
+		}
+		const plan = await SubscriptionPlan.findByPk(planId);
+		if (!plan) {
+			res.status(404).json({ message: "Subscription plan not found" });
+			return;
+		}
+		await plan.update({ isFeeWaived: waived });
+		res.status(200).json({
+			message: waived ? `Fees waived for the ${plan.name} plan` : `Normal fees restored for the ${plan.name} plan`,
+			data: plan,
+		});
+	} catch (error) {
+		logger.error("Error updating global subscription fee waiver:", error);
+		res.status(500).json({ message: "Failed to update plan fee waiver" });
 	}
 };
 

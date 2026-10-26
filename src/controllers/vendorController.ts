@@ -24,6 +24,7 @@ import AuctionReminders from "../models/reminder";
 import https from "https";
 import SubscriptionPlan from "../models/subscriptionplan";
 import VendorSubscription from "../models/vendorsubscription";
+import VendorSubscriptionOffer from "../models/vendorsubscriptionoffer";
 import Notification from "../models/notification";
 import Transaction from "../models/transaction";
 import PaymentGateway from "../models/paymentgateway";
@@ -1541,15 +1542,43 @@ export const subscriptionPlans = async (
 			},
 		});
 
-		// Mark active plan in the list
-		if (activeSubscription) {
-			subscriptionPlans.forEach((plan) => {
-				plan.setDataValue(
-					"isActiveForVendor",
-					plan.id === activeSubscription.subscriptionPlanId,
-				);
-			});
-		}
+		const offers = await VendorSubscriptionOffer.findAll({
+			where: {
+				vendorId,
+				isActive: true,
+				redeemedAt: null,
+				[Op.or]: [{ expiresAt: null }, { expiresAt: { [Op.gt]: new Date() } }],
+			},
+		});
+		const offersByPlan = new Map(offers.map((offer) => [offer.subscriptionPlanId, offer]));
+
+		subscriptionPlans.forEach((plan) => {
+			const offer = offersByPlan.get(plan.id);
+			const originalPrice = Number(plan.price);
+			plan.setDataValue("isActiveForVendor", plan.id === activeSubscription?.subscriptionPlanId);
+			plan.setDataValue("originalPrice", originalPrice.toFixed(2));
+			if (plan.isFeeWaived) {
+				plan.setDataValue("price", "0.00");
+				plan.setDataValue("hasMarketingOffer", true);
+				plan.setDataValue("marketingOffer", {
+					reason: "Subscription fee waived by KuduMart",
+					expiresAt: null,
+					isWaived: true,
+					isGlobal: true,
+				});
+			} else if (offer) {
+				plan.setDataValue("price", Number(offer.specialPrice).toFixed(2));
+				plan.setDataValue("hasMarketingOffer", true);
+				plan.setDataValue("marketingOffer", {
+					id: offer.id,
+					reason: offer.reason,
+					expiresAt: offer.expiresAt,
+					isWaived: Number(offer.specialPrice) === 0,
+				});
+			} else {
+				plan.setDataValue("hasMarketingOffer", false);
+			}
+		});
 
 		res.status(200).json({ data: subscriptionPlans });
 	} catch (error: any) {
@@ -1598,9 +1627,25 @@ export const subscribe = async (req: Request, res: Response): Promise<void> => {
 			return;
 		}
 
+		const marketingOffer = await VendorSubscriptionOffer.findOne({
+			where: {
+				vendorId,
+				subscriptionPlanId,
+				isActive: true,
+				redeemedAt: null,
+				[Op.or]: [{ expiresAt: null }, { expiresAt: { [Op.gt]: new Date() } }],
+			},
+			transaction,
+			lock: true,
+			order: [["createdAt", "DESC"]],
+		});
+		const effectivePrice = subscriptionPlan.isFeeWaived ? 0 : marketingOffer ? Number(marketingOffer.specialPrice) : Number(subscriptionPlan.price);
+
 		// Step 3: Function to Handle Payment (Wallet or External)
 		const handleTransaction = async (amount: number) => {
-			if (isWallet) {
+			if (amount <= 0) {
+				// A zero-price marketing waiver is activated without a payment gateway.
+			} else if (isWallet) {
 				const vendor = await User.findByPk(vendorId, {
 					transaction,
 					lock: true,
@@ -1676,7 +1721,7 @@ export const subscribe = async (req: Request, res: Response): Promise<void> => {
 					amount,
 					transactionType: "subscription",
 					status: "success",
-					refId: isWallet ? null : refId,
+					refId: isWallet || amount <= 0 ? null : refId,
 				},
 				{ transaction },
 			);
@@ -1685,7 +1730,7 @@ export const subscribe = async (req: Request, res: Response): Promise<void> => {
 		};
 
 		// Step 4: Process Payment
-		const transactionSuccess = await handleTransaction(subscriptionPlan.price);
+		const transactionSuccess = await handleTransaction(effectivePrice);
 		if (!transactionSuccess) return;
 
 		endDate.setMonth(startDate.getMonth() + subscriptionPlan.duration);
@@ -1706,6 +1751,9 @@ export const subscribe = async (req: Request, res: Response): Promise<void> => {
 			},
 			{ transaction },
 		);
+		if (marketingOffer && !subscriptionPlan.isFeeWaived) {
+			await marketingOffer.update({ redeemedAt: new Date(), isActive: false }, { transaction });
+		}
 
 		// Step 7: Send Notification
 		await Notification.create(
@@ -1724,6 +1772,9 @@ export const subscribe = async (req: Request, res: Response): Promise<void> => {
 		res.status(200).json({
 			message: "Switched to new subscription plan successfully",
 			subscription: newSubscription,
+			amountPaid: effectivePrice,
+			marketingOfferApplied: Boolean(marketingOffer && !subscriptionPlan.isFeeWaived),
+			globalFeeWaiverApplied: subscriptionPlan.isFeeWaived,
 		});
 	} catch (error) {
 		await transaction.rollback(); // Rollback changes on error
@@ -1771,9 +1822,25 @@ export const subscribeDollar = async (
 			return;
 		}
 
+		const marketingOffer = await VendorSubscriptionOffer.findOne({
+			where: {
+				vendorId,
+				subscriptionPlanId,
+				isActive: true,
+				redeemedAt: null,
+				[Op.or]: [{ expiresAt: null }, { expiresAt: { [Op.gt]: new Date() } }],
+			},
+			transaction,
+			lock: true,
+			order: [["createdAt", "DESC"]],
+		});
+		const effectivePrice = subscriptionPlan.isFeeWaived ? 0 : marketingOffer ? Number(marketingOffer.specialPrice) : Number(subscriptionPlan.price);
+
 		// Step 3: Function to Handle Payment (Wallet or External)
 		const handleTransaction = async (amount: number) => {
-			if (isWallet) {
+			if (amount <= 0) {
+				// A zero-price marketing waiver is activated without a payment gateway.
+			} else if (isWallet) {
 				const vendor = await User.findByPk(vendorId, {
 					transaction,
 					lock: true,
@@ -1820,7 +1887,7 @@ export const subscribeDollar = async (
 					amount,
 					transactionType: "subscription",
 					status: "success",
-					refId: isWallet ? null : refId,
+					refId: isWallet || amount <= 0 ? null : refId,
 				},
 				{ transaction },
 			);
@@ -1829,7 +1896,7 @@ export const subscribeDollar = async (
 		};
 
 		// Step 4: Process Payment
-		const transactionSuccess = await handleTransaction(subscriptionPlan.price);
+		const transactionSuccess = await handleTransaction(effectivePrice);
 		if (!transactionSuccess) return;
 
 		endDate.setMonth(startDate.getMonth() + subscriptionPlan.duration);
@@ -1850,6 +1917,9 @@ export const subscribeDollar = async (
 			},
 			{ transaction },
 		);
+		if (marketingOffer && !subscriptionPlan.isFeeWaived) {
+			await marketingOffer.update({ redeemedAt: new Date(), isActive: false }, { transaction });
+		}
 
 		// Step 7: Send Notification
 		await Notification.create(
@@ -1868,6 +1938,9 @@ export const subscribeDollar = async (
 		res.status(200).json({
 			message: "Switched to new subscription plan successfully",
 			subscription: newSubscription,
+			amountPaid: effectivePrice,
+			marketingOfferApplied: Boolean(marketingOffer && !subscriptionPlan.isFeeWaived),
+			globalFeeWaiverApplied: subscriptionPlan.isFeeWaived,
 		});
 	} catch (error) {
 		await transaction.rollback(); // Rollback changes on error
