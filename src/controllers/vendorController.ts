@@ -610,7 +610,7 @@ export const createProduct = async (
 
 		// Check if vendorId, storeId, and categoryId exist
 		const vendorExists = await User.findByPk(vendorId);
-		const storeExists = await Store.findOne({ where: { id: storeId, vendorId } });
+		const storeExists = await Store.findByPk(storeId);
 		const categoryExists = await SubCategory.findByPk(categoryId);
 
 		if (!vendorExists) {
@@ -639,15 +639,6 @@ export const createProduct = async (
 		}
 
 		// Create the product
-		const normalizedDiscountPrice =
-			otherData.discount_price === "" || otherData.discount_price == null
-				? null
-				: Number(otherData.discount_price);
-		const normalizedQuantity =
-			otherData.quantity === "" || otherData.quantity == null
-				? 0
-				: Number(otherData.quantity);
-
 		const product = await Product.create({
 			vendorId,
 			storeId,
@@ -655,8 +646,6 @@ export const createProduct = async (
 			name,
 			sku, // Use the generated SKU
 			...otherData,
-			discount_price: normalizedDiscountPrice,
-			quantity: normalizedQuantity,
 		});
 
 		res

@@ -540,10 +540,6 @@ export const addProductValidation = () => {
 			.withMessage(
 				"Discount price must be a valid decimal number with up to two decimal places if provided.",
 			),
-		check("quantity")
-			.optional({ nullable: true })
-			.isInt({ min: 0 })
-			.withMessage("Quantity must be a whole number of zero or greater."),
 		check("image_url")
 			.optional({ checkFalsy: true })
 			.isString()
