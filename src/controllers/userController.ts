@@ -4810,7 +4810,7 @@ export const updateOrderStatus = async (
 			return;
 		}
 
-		if (String(vendorId) !== String(userId)) {
+		if (!isBuyer && String(vendorId) !== String(userId)) {
 			await transaction.rollback();
 			res.status(403).json({
 				message: "You can only update the status of your own order items.",
