@@ -1048,7 +1048,7 @@ export const addItemToCart = async (
 	try {
 		// Find the product by productId and include vendor, currency, sub_category and category details
 		const product = await Product.findByPk(productId, {
-			attributes: ["vendorId", "name", "quantity", "type", "categoryId"], // Include quantity and categoryId in the attributes
+			attributes: ["vendorId", "name", "quantity", "type", "categoryId", "variants"],
 			include: [
 				{
 					model: Store,
@@ -1101,8 +1101,21 @@ export const addItemToCart = async (
 			return;
 		}
 
-		const { vendorId, name, quantity: availableQuantity = 0 } = product; // Get available quantity
+		const { vendorId, name } = product;
 		const productCurrency = product.store.currency;
+		const requestedQuantity = Number(quantity || 1);
+		let availableQuantity = Number(product.quantity ?? 0);
+
+		if (product.type === "dropship") {
+			const variant = product.variants?.find(
+				(value) => String(value.sku_id) === String(dropshipProductSkuId),
+			);
+			if (!variant) {
+				res.status(400).json({ message: "The selected product option is no longer available." });
+				return;
+			}
+			availableQuantity = Number(variant.sku_available_stock ?? 0);
+		}
 
 		// Ensure product currency is either $, #, or ₦
 		const allowedCurrencies = ["$", "#", "₦"];
@@ -1135,7 +1148,7 @@ export const addItemToCart = async (
 		}
 
 		// Ensure the requested quantity doesn't exceed available quantity
-		if (quantity > availableQuantity) {
+		if (requestedQuantity > availableQuantity) {
 			res.status(400).json({
 				message: `Sorry, only ${availableQuantity} of this product is available. Please reduce the quantity.`,
 			});
@@ -1197,12 +1210,18 @@ export const addItemToCart = async (
 
 		// Check if the product is already in the user's cart
 		const existingCartItem = await Cart.findOne({
-			where: { userId, productId },
+			where: {
+				userId,
+				productId,
+				...(product.type === "dropship" && {
+					dropshipProductSkuId: String(dropshipProductSkuId),
+				}),
+			},
 		});
 
 		if (existingCartItem) {
 			// If the item is already in the cart, check if the new quantity exceeds the available quantity
-			const totalQuantity = existingCartItem.quantity + quantity;
+			const totalQuantity = existingCartItem.quantity + requestedQuantity;
 
 			if (totalQuantity > availableQuantity) {
 				res.status(400).json({
@@ -1231,7 +1250,7 @@ export const addItemToCart = async (
 			await Cart.create({
 				userId,
 				productId,
-				quantity,
+				quantity: requestedQuantity,
 				productType: product.type,
 				...(dropshipProductSkuAttr && { dropshipProductSkuAttr }),
 				...(dropshipProductSkuId && {
@@ -1253,11 +1272,16 @@ export const updateCartItem = async (
 	req: Request,
 	res: Response,
 ): Promise<void> => {
+	const userId = (req as AuthenticatedRequest).user?.id;
+	if (!userId) {
+		res.status(400).json({ message: "User must be authenticated" });
+		return;
+	}
 	const { cartId, quantity } = req.body;
 
 	try {
-		// Find the cart item by cartId
-		const cartItem = await Cart.findByPk(cartId, {
+		const cartItem = await Cart.findOne({
+			where: { id: cartId, userId },
 			include: [
 				{
 					model: Product, // Assuming you have a 'Product' model associated with 'Cart'
@@ -1279,13 +1303,23 @@ export const updateCartItem = async (
 			],
 		});
 
-		if (!cartItem || !cartItem.product || !cartItem.product.quantity) {
+		if (!cartItem || !cartItem.product) {
 			res.status(404).json({ message: "Cart item or product not found." });
 			return;
 		}
 
-		const { productId, product } = cartItem;
-		const availableQuantity = product.quantity ?? 0; // Use 0 if quantity is undefined
+		const { product } = cartItem;
+		let availableQuantity = Number(product.quantity ?? 0);
+		if (cartItem.productType === "dropship" || product.type === "dropship") {
+			const variant = product.variants?.find(
+				(value) => String(value.sku_id) === String(cartItem.dropshipProductSkuId),
+			);
+			if (!variant) {
+				res.status(400).json({ message: "The selected product option is no longer available." });
+				return;
+			}
+			availableQuantity = Number(variant.sku_available_stock ?? 0);
+		}
 
 		// Ensure the requested quantity doesn't exceed available quantity
 		if (quantity > availableQuantity) {
@@ -2040,6 +2074,9 @@ export const prepareCheckoutNaira = async (
 			totalAmount = totalAmount
 				.plus(productPrice.plus(chargeAmount).mul(cartItem.quantity))
 				.toNearest(0.01);
+			totalChargeAmount = totalChargeAmount
+				.plus(chargeAmount.mul(cartItem.quantity))
+				.toNearest(0.01);
 
 			// totalAmount += product.price * cartItem.quantity;
 		}
@@ -2302,7 +2339,9 @@ export const prepareCheckoutDollar = async (
 				.plus(productPrice.plus(chargeAmount).mul(cartItem.quantity))
 				.toNearest(0.01);
 
-			totalChargeAmount = totalChargeAmount.plus(chargeAmount).toNearest(0.01);
+			totalChargeAmount = totalChargeAmount
+				.plus(chargeAmount.mul(cartItem.quantity))
+				.toNearest(0.01);
 
 			// totalAmount += product.price * cartItem.quantity;
 		}
@@ -2327,6 +2366,7 @@ export const prepareCheckoutDollar = async (
 				chargeAmount: totalChargeAmount.toNearest(0.01).toNumber(),
 				subtotal: totalAmount
 					.minus(totalChargeAmount)
+					.minus(new Decimal(deliveryFee))
 					.toNearest(0.01)
 					.toNumber(),
 				deliveryFee: deliveryFee,
