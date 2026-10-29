@@ -3904,12 +3904,70 @@ export const checkoutDollar = async (
 };
 
 // Bid
+export const initializeAuctionInterestPayment = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const { auctionProductId } = req.body;
+		const userId = (req as AuthenticatedRequest).user?.id;
+		if (!uuid.validate(String(auctionProductId || ""))) {
+			res.status(400).json({ message: "A valid auction product ID is required." });
+			return;
+		}
+		const [user, auctionProduct] = await Promise.all([
+			User.findByPk(userId),
+			AuctionProduct.findOne({
+				where: { id: auctionProductId, auctionStatus: { [Op.in]: ["upcoming", "ongoing"] } },
+				include: [{ model: Store, as: "store", include: [{ model: Currency, as: "currency", attributes: ["name", "symbol"] }] }],
+			}),
+		]);
+
+		if (!user || !auctionProduct) {
+			res.status(404).json({ message: "User or active auction not found." });
+			return;
+		}
+		if (auctionProduct.vendorId === userId) {
+			res.status(400).json({ message: "You cannot join your own auction." });
+			return;
+		}
+		if (await ShowInterest.findOne({ where: { userId, auctionProductId } })) {
+			res.status(409).json({ message: "You have already joined this auction." });
+			return;
+		}
+
+		const fee = Number(auctionProduct.participantsInterestFee || 0);
+		if (fee <= 0) {
+			res.status(400).json({ message: "This auction does not require a participation payment." });
+			return;
+		}
+		const currency = (auctionProduct as any).store?.currency;
+		if (currency?.name?.toLowerCase() !== "naira" && !["#", "₦"].includes(currency?.symbol)) {
+			res.status(400).json({ message: "Secure auction participation payment is currently available only for NGN auctions." });
+			return;
+		}
+
+		const gateway = await PaymentGateway.findOne({ where: { name: { [Op.like]: "%paystack%" }, isActive: true } });
+		const secretKey = gateway?.secretKey || process.env.PAYSTACK_SECRET_KEY;
+		if (!secretKey) {
+			res.status(503).json({ message: "Secure payment is temporarily unavailable." });
+			return;
+		}
+		const refId = `psk_auction_${uuid.v4()}_${Date.now()}`;
+		const paystackDetails = await initializePaystackPayment(refId, fee, user.email, secretKey);
+		res.status(200).json({ message: "Payment initialized.", data: { refId, amount: fee, paystackDetails } });
+	} catch (error: any) {
+		logger.error("Error initializing auction participation payment:", error);
+		res.status(500).json({ message: "Could not initialize secure payment." });
+	}
+};
+
 export const showInterest = async (
 	req: Request,
 	res: Response,
 ): Promise<void> => {
 	try {
-		const { auctionProductId, amountPaid } = req.body;
+		const { auctionProductId, amountPaid, refId } = req.body;
 		const userId = (req as AuthenticatedRequest).user?.id; // Get the authenticated user's ID
 
 		// Fetch the auction product
@@ -3918,6 +3976,7 @@ export const showInterest = async (
 				id: auctionProductId,
 				auctionStatus: { [Op.in]: ["upcoming", "ongoing"] },
 			},
+			include: [{ model: Store, as: "store", include: [{ model: Currency, as: "currency", attributes: ["name", "symbol"] }] }],
 		});
 
 		if (!auctionProduct) {
@@ -3937,33 +3996,61 @@ export const showInterest = async (
 
 		// Enforce participation fee if configured
 		const requiredFee = Number(auctionProduct.participantsInterestFee || 0);
-		const numericAmountPaid = Number(amountPaid || 0);
-		if (requiredFee > 0 && numericAmountPaid < requiredFee) {
-			res.status(400).json({
-				message: `A participation fee of ${requiredFee} is required to register interest for this auction.`,
-			});
+		let numericAmountPaid = 0;
+		let verifiedPayment: any = null;
+		if (requiredFee > 0) {
+			if (!refId) {
+				res.status(400).json({ message: "A verified payment reference is required for this auction." });
+				return;
+			}
+			const gateway = await PaymentGateway.findOne({ where: { name: { [Op.like]: "%paystack%" }, isActive: true } });
+			const secretKey = gateway?.secretKey || process.env.PAYSTACK_SECRET_KEY;
+			if (!secretKey) {
+				res.status(503).json({ message: "Secure payment is temporarily unavailable." });
+				return;
+			}
+			if (await Transaction.findOne({ where: { refId } })) {
+				res.status(409).json({ message: "This payment reference has already been used." });
+				return;
+			}
+			verifiedPayment = await verifyPayment(refId, secretKey);
+			numericAmountPaid = Number(verifiedPayment.amount || 0) / 100;
+			if (verifiedPayment.status !== "success" || String(verifiedPayment.currency || "").toUpperCase() !== "NGN" || !new Decimal(numericAmountPaid).equals(requiredFee)) {
+				res.status(400).json({ message: "The verified payment does not match this auction's participation fee." });
+				return;
+			}
+		} else if (Number(amountPaid || 0) !== 0) {
+			res.status(400).json({ message: "This auction has free participation." });
 			return;
 		}
 
-		// Check if user has already shown interest
-		const existingInterest = await ShowInterest.findOne({
-			where: { userId, auctionProductId },
-		});
-
-		if (existingInterest) {
-			res
-				.status(400)
-				.json({ message: "You have already shown interest in this auction." });
-			return;
+		const registrationTransaction = await sequelizeService.connection!.transaction();
+		let newInterest: ShowInterest;
+		try {
+			await auctionProduct.reload({ transaction: registrationTransaction, lock: registrationTransaction.LOCK.UPDATE });
+			const existingInterest = await ShowInterest.findOne({ where: { userId, auctionProductId }, transaction: registrationTransaction });
+			if (existingInterest) {
+				await registrationTransaction.rollback();
+				res.status(409).json({ message: "You have already joined this auction." });
+				return;
+			}
+			newInterest = await ShowInterest.create({ userId, auctionProductId, amountPaid: numericAmountPaid, status: "confirmed" }, { transaction: registrationTransaction });
+			if (verifiedPayment) {
+				await Transaction.create({
+					userId,
+					amount: numericAmountPaid,
+					currency: "NGN",
+					transactionType: "auction_participation",
+					refId,
+					status: "completed",
+					metadata: { auctionProductId, channel: verifiedPayment.channel },
+				}, { transaction: registrationTransaction });
+			}
+			await registrationTransaction.commit();
+		} catch (registrationError) {
+			await registrationTransaction.rollback();
+			throw registrationError;
 		}
-
-		// Create a new interest record
-		const newInterest = await ShowInterest.create({
-			userId,
-			auctionProductId,
-			amountPaid: numericAmountPaid,
-			status: "confirmed",
-		});
 
 		// Fetch the user based on userId
 		const user = await User.findOne({ where: { id: userId } });
@@ -3980,7 +4067,7 @@ export const showInterest = async (
 		if (user.email) {
 			const message = emailTemplates.interestNotification(
 				user,
-				amountPaid,
+				numericAmountPaid,
 				auctionProduct,
 			);
 			try {

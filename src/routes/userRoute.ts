@@ -173,6 +173,11 @@ userRoutes.patch(
 
 // Bid
 userRoutes.post(
+	"/auction/interest/initialize-payment",
+	authMiddleware,
+	userController.initializeAuctionInterestPayment,
+);
+userRoutes.post(
 	"/auction/interest",
 	authMiddleware,
 	validateShowInterest(),

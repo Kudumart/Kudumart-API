@@ -946,6 +946,11 @@ export const validateShowInterest = () => {
 		check("amountPaid")
 			.isNumeric()
 			.withMessage("Amount paid is required and must be a numeric value"),
+
+		check("refId")
+			.optional({ checkFalsy: true })
+			.isString()
+			.withMessage("Payment reference must be a string"),
 	];
 };
 
