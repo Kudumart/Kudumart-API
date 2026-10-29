@@ -705,7 +705,7 @@ export const getConversations = async (
 					],
 				],
 			},
-			order: [["createdAt", "DESC"]],
+			order: [["updatedAt", "DESC"]],
 		});
 
 		res.status(200).json({
@@ -888,12 +888,30 @@ export const sendMessageHandler = async (
 			return;
 		}
 
+		const sender = await User.findByPk(userId, {
+			attributes: ["id", "firstName", "lastName"],
+		});
+		const senderName = [sender?.firstName, sender?.lastName]
+			.filter(Boolean)
+			.join(" ") || "A KuduMart user";
+		try {
+			await Notification.create({
+				userId: receiverId,
+				title: "New Message",
+				message: `${senderName} sent you a message about "${product.name}".`,
+				type: "NEW_MESSAGE",
+				isRead: false,
+			});
+		} catch (notificationError) {
+			logger.error("Error creating message notification:", notificationError);
+		}
+
 		if (receiver?.fcmToken) {
 			// Send push notification to the receiver
 			const notificationMessage = {
 				notification: {
 					title: "New Message",
-					body: `You have a new message from ${user.firstName} ${user.lastName} for product ${product.name}`,
+					body: `You have a new message from ${senderName} for product ${product.name}`,
 				},
 				data: {
 					conversationId: conversation.id,
@@ -933,6 +951,10 @@ export const saveMessage = async (
 			content,
 			fileUrl,
 		});
+		await Conversation.update(
+			{ updatedAt: new Date() },
+			{ where: { id: conversationId }, silent: true },
+		);
 
 		// Return the created message
 		return message;
