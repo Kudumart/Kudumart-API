@@ -804,6 +804,12 @@ export const sendMessageHandler = async (
 	}
 
 	const { productId, receiverId, content, fileUrl } = req.body;
+	const cleanContent = typeof content === "string" ? content.trim() : "";
+
+	if (!cleanContent && !fileUrl) {
+		res.status(400).json({ message: "Message content cannot be empty" });
+		return;
+	}
 
 	// Prevent user from sending a message to themselves
 	if (userId === receiverId) {
@@ -851,6 +857,15 @@ export const sendMessageHandler = async (
 			},
 		});
 
+		// A new product conversation must be addressed to that product's vendor.
+		// Existing participants can continue replying to each other.
+		if (!conversation && String(product.vendorId) !== String(receiverId)) {
+			res.status(403).json({
+				message: "New product conversations can only be started with the seller.",
+			});
+			return;
+		}
+
 		// If no conversation exists, create a new one
 		if (!conversation) {
 			conversation = await Conversation.create({
@@ -864,7 +879,7 @@ export const sendMessageHandler = async (
 		const message = await saveMessage(
 			conversation.id,
 			userId,
-			content,
+			cleanContent,
 			fileUrl,
 		);
 
@@ -5192,9 +5207,9 @@ export const getSavedProducts = async (
 			],
 		});
 
-		// If no saved products are found
+		// An empty collection is a successful result, not a missing resource.
 		if (savedProducts.length === 0) {
-			res.status(404).json({ message: "No saved products found" });
+			res.status(200).json({ data: [] });
 			return;
 		}
 
