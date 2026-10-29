@@ -4517,6 +4517,27 @@ export const userMarkNotificationAsRead = async (
 	}
 };
 
+export const userMarkAllNotificationsAsRead = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const userId = (req as AuthenticatedRequest).user?.id;
+	if (!userId) {
+		res.status(401).json({ message: "User must be authenticated" });
+		return;
+	}
+	try {
+		const [updated] = await Notification.update(
+			{ isRead: true },
+			{ where: { userId, isRead: false } },
+		);
+		res.status(200).json({ message: "All notifications marked as read", data: { updated } });
+	} catch (error) {
+		logger.error("Error marking all notifications as read:", error);
+		res.status(500).json({ message: "Failed to mark notifications as read" });
+	}
+};
+
 export const getAllOrders = async (
 	req: Request,
 	res: Response,
@@ -6296,6 +6317,13 @@ export const submitOffer = async (
 			type: "OFFER_SUBMITTED",
 			isRead: false,
 		});
+		await Notification.create({
+			userId: product.vendorId,
+			title: "New Product Offer",
+			message: `A buyer submitted an offer of ${offeredPrice} on "${product.name}".`,
+			type: "NEW_OFFER",
+			isRead: false,
+		});
 
 		const { createAdminNotification } = await import("../services/notification.service");
 		await createAdminNotification(
@@ -6376,7 +6404,7 @@ export const respondToCounterOffer = async (
 	try {
 		const offer = await ProductOffer.findOne({
 			where: { id: offerId as string, buyerId },
-			include: [{ model: Product, as: "product", attributes: ["id", "name"] }],
+			include: [{ model: Product, as: "product", attributes: ["id", "name", "vendorId"] }],
 		});
 
 		if (!offer) {
@@ -6392,6 +6420,13 @@ export const respondToCounterOffer = async (
 		await offer.update({ status });
 
 		const product = (offer as any).product;
+		await Notification.create({
+			userId: product.vendorId,
+			title: status === "accepted" ? "Counter Offer Accepted" : "Counter Offer Declined",
+			message: `The buyer has ${status} your counter offer on "${product.name}".`,
+			type: "OFFER_BUYER_RESPONSE",
+			isRead: false,
+		});
 		const { createAdminNotification } = await import("../services/notification.service");
 		await createAdminNotification(
 			"OFFER_BUYER_RESPONSE",

@@ -210,6 +210,11 @@ userRoutes.patch(
 	authMiddleware,
 	userController.userMarkNotificationAsRead,
 );
+userRoutes.patch(
+	"/mark/notifications/as/read",
+	authMiddleware,
+	userController.userMarkAllNotificationsAsRead,
+);
 
 // Order, OrderItem and Payment
 userRoutes.get("/orders", authMiddleware, userController.getAllOrders);
