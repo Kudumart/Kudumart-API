@@ -118,6 +118,7 @@ export const vendorRegister = async (
 					userId: newUser.id,
 					otpCode: otpCode,
 					expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+					purpose: "email_verification",
 				});
 
 				message = emailTemplates.verifyEmail(newUser, otp.otpCode);
@@ -133,6 +134,7 @@ export const vendorRegister = async (
 					userId: newUser.id,
 					otpToken: hashedOtpToken,
 					otpTokenExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
+					purpose: "email_verification",
 				});
 
 				message = emailTemplates.verifyEmailWithLink(newUser, otpToken);
@@ -230,6 +232,7 @@ export const customerRegister = async (
 					userId: newUser.id,
 					otpCode: otpCode,
 					expiresAt: new Date(Date.now() + 60 * 60 * 1000), // OTP expires in 1 hour
+					purpose: "email_verification",
 				});
 
 				// Send mail
@@ -246,6 +249,7 @@ export const customerRegister = async (
 					userId: newUser.id,
 					otpToken: hashedOtpToken,
 					otpTokenExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
+					purpose: "email_verification",
 				});
 
 				message = emailTemplates.verifyEmailWithLink(newUser, otpToken);
@@ -313,7 +317,7 @@ export const verifyEmail = async (
 		if (!user.email_verified_at) {
 			// Check for the OTP
 			const otpRecord = await OTP.findOne({
-				where: { userId: user.id, otpCode },
+				where: { userId: user.id, otpCode, purpose: "email_verification" },
 			});
 			if (!otpRecord) {
 				res.status(400).json({ message: "Invalid OTP code." });
@@ -384,7 +388,7 @@ export const verifyEmailWithToken = async (
 
 			// Check for the OTP token
 			const otpRecord = await OTP.findOne({
-				where: { userId: user.id, otpToken: hashedOtpToken },
+				where: { userId: user.id, otpToken: hashedOtpToken, purpose: "email_verification" },
 			});
 			if (!otpRecord) {
 				res.status(400).json({ message: "Invalid OTP token." });
@@ -471,6 +475,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 					userId: user.id,
 					otpCode,
 					expiresAt: new Date(Date.now() + 60 * 60 * 1000), // OTP expires in 1 hour
+					purpose: "email_verification",
+					pendingValue: null,
 				});
 
 				// Prepare and send the verification email
@@ -486,6 +492,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 					userId: user.id,
 					otpToken: hashedOtpToken,
 					otpTokenExpiresAt: new Date(Date.now() + 60 * 60 * 1000), // OTP token expires in 1 hour
+					purpose: "email_verification",
+					pendingValue: null,
 				});
 
 				// Prepare and send the verification email
@@ -577,6 +585,8 @@ export const resendVerificationEmail = async (
 					userId: user.id,
 					otpCode: otpCode,
 					expiresAt: new Date(Date.now() + 60 * 60 * 1000), // OTP expires in 1 hour
+					purpose: "email_verification",
+					pendingValue: null,
 				});
 
 				// Prepare and send the verification email
@@ -593,6 +603,8 @@ export const resendVerificationEmail = async (
 					userId: user.id,
 					otpToken: hashedOtpToken,
 					otpTokenExpiresAt: new Date(Date.now() + 60 * 60 * 1000), // OTP token expires in 1 hour
+					purpose: "email_verification",
+					pendingValue: null,
 				});
 
 				// Prepare and send the verification email
@@ -641,6 +653,8 @@ export const forgetPassword = async (
 			userId: user.id,
 			otpCode: otpCode,
 			expiresAt: new Date(Date.now() + 60 * 60 * 1000), // OTP expires in 1 hour
+			purpose: "password_reset",
+			pendingValue: null,
 		});
 
 		// Send OTP to user's email
@@ -672,6 +686,7 @@ export const codeCheck = async (req: Request, res: Response): Promise<void> => {
 		const otpRecord = await OTP.findOne({
 			where: {
 				otpCode,
+				purpose: "password_reset",
 			},
 			include: {
 				model: User, // Assuming OTP is linked to User model
@@ -709,7 +724,7 @@ export const resetPassword = async (
 	try {
 		// Find OTP and check if it's valid
 		const otpRecord = await OTP.findOne({
-			where: { otpCode },
+			where: { otpCode, purpose: "password_reset" },
 			include: {
 				model: User,
 				as: "user",

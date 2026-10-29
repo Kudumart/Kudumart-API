@@ -280,6 +280,8 @@ export const updateProfileEmail = async (
 			userId: userId,
 			otpCode: otpCode,
 			expiresAt: new Date(Date.now() + 60 * 60 * 1000), // OTP expires in 1 hour
+			purpose: "email_change",
+			pendingValue: newEmail.trim().toLowerCase(),
 		});
 
 		// Send mail
@@ -335,7 +337,12 @@ export const confirmEmailUpdate = async (
 
 		// Check for the OTP
 		const otpRecord = await OTP.findOne({
-			where: { userId: user.id, otpCode },
+			where: {
+				userId: user.id,
+				otpCode,
+				purpose: "email_change",
+				pendingValue: newEmail.trim().toLowerCase(),
+			},
 		});
 		if (!otpRecord) {
 			res.status(400).json({ message: "Invalid OTP code." });

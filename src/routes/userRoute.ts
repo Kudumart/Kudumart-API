@@ -7,7 +7,6 @@ import {
 	updateProfileEmailValidationRules,
 	confirmProfileEmailValidationRules,
 	updateProfilePhoneNumberValidationRules,
-	confirmProfilePhoneNumberValidationRules,
 	validateSendMessage,
 	validatePlaceBid,
 	validateAddItemToCart,
@@ -49,13 +48,6 @@ userRoutes.put(
 	updateProfilePhoneNumberValidationRules(),
 	validate,
 	userController.updateProfilePhoneNumber,
-);
-userRoutes.put(
-	"/profile/confirm/phone/number",
-	authMiddleware,
-	confirmProfilePhoneNumberValidationRules(),
-	validate,
-	userController.confirmPhoneNumberUpdate,
 );
 userRoutes.put(
 	"/profile/update/password",
