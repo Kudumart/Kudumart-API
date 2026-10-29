@@ -483,7 +483,7 @@ export const updateStore = async (
 	} = req.body;
 
 	try {
-		const store = await Store.findOne({ where: { id: storeId } });
+		const store = await Store.findOne({ where: { id: storeId, vendorId } });
 
 		if (!store) {
 			res.status(404).json({ message: "Store not found" });
@@ -536,9 +536,10 @@ export const deleteStore = async (
 	res: Response,
 ): Promise<void> => {
 	const storeId = req.query.storeId as String;
+	const vendorId = (req as AuthenticatedRequest).user?.id;
 
 	try {
-		const store = await Store.findOne({ where: { id: storeId } });
+		const store = await Store.findOne({ where: { id: storeId, vendorId } });
 
 		if (!store) {
 			res.status(404).json({ message: "Store not found" });
@@ -615,7 +616,7 @@ export const createProduct = async (
 
 		// Check if vendorId, storeId, and categoryId exist
 		const vendorExists = await User.findByPk(vendorId);
-		const storeExists = await Store.findByPk(storeId);
+		const storeExists = await Store.findOne({ where: { id: storeId, vendorId } });
 		const categoryExists = await SubCategory.findByPk(categoryId);
 
 		if (!vendorExists) {
@@ -624,7 +625,7 @@ export const createProduct = async (
 		}
 
 		if (!storeExists) {
-			res.status(404).json({ message: "Store not found." });
+			res.status(404).json({ message: "Store not found in your seller account." });
 			return;
 		}
 
@@ -688,6 +689,21 @@ export const updateProduct = async (
 		if (!product) {
 			res.status(404).json({ message: "Product not found." });
 			return;
+		}
+
+		if (updateData.storeId) {
+			const ownedStore = await Store.findOne({ where: { id: updateData.storeId, vendorId } });
+			if (!ownedStore) {
+				res.status(404).json({ message: "Store not found in your seller account." });
+				return;
+			}
+		}
+		if (updateData.categoryId) {
+			const category = await SubCategory.findByPk(updateData.categoryId);
+			if (!category) {
+				res.status(404).json({ message: "Category not found." });
+				return;
+			}
 		}
 
 		await product.update(updateData);
@@ -960,7 +976,7 @@ export const moveToDraft = async (
 		await product.save();
 
 		// Remove the product from all carts
-		await Cart.destroy({ where: { productId } });
+		await Cart.destroy({ where: { productId: product.id } });
 
 		// Respond with the updated product
 		res.status(200).json({
