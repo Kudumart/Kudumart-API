@@ -5910,10 +5910,26 @@ export const getUserServiceBookings = async (
 			],
 			order: [["createdAt", "DESC"]],
 		});
+		const reviewedServices = bookings.length
+			? await ServiceReviews.findAll({
+					where: {
+						userId,
+						serviceId: { [Op.in]: bookings.map((booking) => booking.serviceId) },
+					},
+					attributes: ["serviceId"],
+				})
+			: [];
+		const reviewedServiceIds = new Set(
+			reviewedServices.map((review) => review.serviceId),
+		);
+		const bookingData = bookings.map((booking) => ({
+			...booking.toJSON(),
+			hasReviewed: reviewedServiceIds.has(booking.serviceId),
+		}));
 
 		res
 			.status(200)
-			.json({ message: "Bookings retrieved successfully.", data: bookings });
+			.json({ message: "Bookings retrieved successfully.", data: bookingData });
 	} catch (error) {
 		res.status(500).json({ message: "Server error." }); // Handle server error
 	}
@@ -6072,6 +6088,12 @@ export const markServiceBookingComplete = async (
 			res.status(400).json({ message: "Booking is already completed." });
 			return;
 		}
+		if (booking.status !== "confirmed") {
+			res.status(400).json({
+				message: "Only confirmed bookings can be marked as completed.",
+			});
+			return;
+		}
 
 		// Update the booking status to completed
 		booking.status = "completed";
@@ -6152,8 +6174,12 @@ export const cancelServiceBooking = async (
 			return;
 		}
 
-		if (booking.status === "cancelled") {
+		if (booking.status === "canceled") {
 			res.status(400).json({ message: "Booking is already cancelled." });
+			return;
+		}
+		if (!["pending", "confirmed"].includes(booking.status)) {
+			res.status(400).json({ message: "This booking can no longer be cancelled." });
 			return;
 		}
 
@@ -6215,9 +6241,28 @@ export const submitOffer = async (
 	}
 
 	try {
-		const product = await Product.findByPk(productId as string);
+		const product = await Product.findOne({
+			where: { id: productId as string, status: "active" },
+			include: [
+				{
+					model: SubCategory,
+					as: "sub_category",
+					include: [{ model: Category, as: "category" }],
+				},
+			],
+		});
 		if (!product) {
 			res.status(404).json({ message: "Product not found." });
+			return;
+		}
+		if (String(product.vendorId) === String(buyerId)) {
+			res.status(400).json({ message: "You cannot make an offer on your own product." });
+			return;
+		}
+		if (getProductPurchaseType(product) !== "offer") {
+			res.status(400).json({
+				message: "This product is available for direct purchase and does not accept offers.",
+			});
 			return;
 		}
 
@@ -6272,6 +6317,20 @@ export const getMyOffers = async (
 					model: Product,
 					as: "product",
 					attributes: ["id", "name", "price", "image_url"],
+					include: [
+						{
+							model: Store,
+							as: "store",
+							attributes: ["id", "name"],
+							include: [
+								{
+									model: Currency,
+									as: "currency",
+									attributes: ["name", "symbol"],
+								},
+							],
+						},
+					],
 				},
 			],
 			order: [["createdAt", "DESC"]],
@@ -6342,7 +6401,26 @@ export const initiateOfferPayment = async (
 	try {
 		const offer = await ProductOffer.findOne({
 			where: { id: offerId as string, buyerId },
-			include: [{ model: Product, as: "product", attributes: ["id", "name"] }],
+			include: [
+				{
+					model: Product,
+					as: "product",
+					attributes: ["id", "name"],
+					include: [
+						{
+							model: Store,
+							as: "store",
+							include: [
+								{
+									model: Currency,
+									as: "currency",
+									attributes: ["name", "symbol"],
+								},
+							],
+						},
+					],
+				},
+			],
 		});
 
 		if (!offer) {
@@ -6352,6 +6430,16 @@ export const initiateOfferPayment = async (
 
 		if (offer.status !== "accepted") {
 			res.status(400).json({ message: "Payment can only be initiated for accepted offers." });
+			return;
+		}
+		const offerCurrency = (offer as any).product?.store?.currency;
+		if (
+			offerCurrency?.name?.toLowerCase() !== "naira" &&
+			!["#", "₦"].includes(offerCurrency?.symbol)
+		) {
+			res.status(400).json({
+				message: "Secure offer payment is currently available only for NGN products.",
+			});
 			return;
 		}
 
@@ -6409,7 +6497,25 @@ export const checkoutOffer = async (
 	try {
 		const offer = await ProductOffer.findOne({
 			where: { id: offerId as string, buyerId },
-			include: [{ model: Product, as: "product" }],
+			include: [
+				{
+					model: Product,
+					as: "product",
+					include: [
+						{
+							model: Store,
+							as: "store",
+							include: [
+								{
+									model: Currency,
+									as: "currency",
+									attributes: ["name", "symbol"],
+								},
+							],
+						},
+					],
+				},
+			],
 			transaction,
 		});
 
@@ -6457,6 +6563,34 @@ export const checkoutOffer = async (
 		}
 
 		const effectivePrice = offer.counterPrice !== null ? Number(offer.counterPrice) : Number(offer.offeredPrice);
+		const offerCurrency = (offer as any).product?.store?.currency;
+		if (
+			offerCurrency?.name?.toLowerCase() !== "naira" &&
+			!["#", "₦"].includes(offerCurrency?.symbol)
+		) {
+			await transaction.rollback();
+			res.status(400).json({
+				message: "Secure offer checkout is currently available only for NGN products.",
+			});
+			return;
+		}
+		const paidAmount = new Decimal(verificationResponse.amount || 0).div(100);
+		if (
+			String(verificationResponse.currency || "").toUpperCase() !== "NGN" ||
+			!paidAmount.equals(effectivePrice)
+		) {
+			await transaction.rollback();
+			res.status(400).json({
+				message: "The verified payment does not match this offer.",
+			});
+			return;
+		}
+		const usedPayment = await Payment.findOne({ where: { refId }, transaction });
+		if (usedPayment) {
+			await transaction.rollback();
+			res.status(409).json({ message: "This payment reference has already been used." });
+			return;
+		}
 
 		const user = await User.findByPk(buyerId, { transaction });
 
