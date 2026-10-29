@@ -18,7 +18,7 @@ const authorizeCustomer = async (req: Request, res: Response, next: NextFunction
 
   // Check if the account type is 'Customer'
   if (user.accountType !== 'Customer') {
-    res.status(403).json({ message: 'Access forbidden: Customer only.' });
+    res.status(403).json({ message: 'Purchasing is available through customer accounts. Seller accounts can browse the marketplace and message vendors.' });
     return;
   }
 
