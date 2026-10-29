@@ -187,18 +187,23 @@ export const submitOrUpdateKYC = async (
 			// A resubmission must return to the admin review queue. Never allow
 			// client supplied verification fields to approve a KYC record.
 			const { isVerified: _ignoredVerification, adminNote: _ignoredNote, ...safeKycData } = kycData;
+			const valueAt = (source: any, field: string) =>
+				field.split(".").reduce((value: any, part: string) => value?.[part], source);
+			const comparable = (value: any) => value == null ? "" : JSON.stringify(value);
+			const submittedSnapshot = { ...existingKYC.toJSON(), ...safeKycData };
+			const nextFieldReviews = Object.fromEntries(
+				Object.entries(existingKYC.fieldReviews || {}).map(([field, review]: [string, any]) => {
+					const changed = comparable(valueAt(existingKYC.toJSON(), field)) !== comparable(valueAt(submittedSnapshot, field));
+					return [field, review?.status === "rejected" || changed ? { status: "pending" } : review];
+				}),
+			);
 			await existingKYC.update(
 				{
 					...safeKycData,
 					isVerified: false,
 					adminNote: null,
 					reviewStatus: "pending",
-					fieldReviews: Object.fromEntries(
-						Object.entries(existingKYC.fieldReviews || {}).map(([field, review]: [string, any]) => [
-							field,
-							review?.status === "rejected" ? { status: "pending" } : review,
-						]),
-					),
+					fieldReviews: nextFieldReviews,
 				},
 				{ transaction },
 			);
