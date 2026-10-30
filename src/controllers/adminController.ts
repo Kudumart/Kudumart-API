@@ -2139,6 +2139,18 @@ export const viewUser = async (req: Request, res: Response): Promise<void> => {
 					model: KYC,
 					as: "kyc",
 				},
+				{
+					model: VendorSubscription,
+					as: "subscriptions",
+					required: false,
+					include: [{ model: SubscriptionPlan, as: "subscriptionPlans", required: false }],
+				},
+				{
+					model: Store,
+					as: "stores",
+					required: false,
+					attributes: ["id", "name", "createdAt"],
+				},
 			],
 			attributes: { exclude: ["password"] }, // Exclude sensitive fields like password
 		});
