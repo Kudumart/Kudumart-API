@@ -2999,21 +2999,16 @@ export const getAllGeneralOrders = async (
 				}),
 			},
 			attributes: {
-				include: [
-					[
-						Sequelize.fn("COUNT", Sequelize.col("orderItems.id")),
-						"orderItemsCount", // Alias for the count of order items
-					],
-				],
+				include: [[Sequelize.literal(`(SELECT COUNT(*) FROM order_items WHERE order_items.orderId = Order.id)`), "orderItemsCount"]],
 			},
 			include: [
 				{
-					model: OrderItem,
-					as: "orderItems",
-					attributes: [], // Do not include actual order items
+					model: User,
+					as: "user",
+					attributes: ["id", "firstName", "lastName", "email", "phoneNumber"],
 				},
+				{ model: Payment, as: "payment", required: false },
 			],
-			group: ["Order.id"], // Group by order to ensure correct counting
 			order: [["createdAt", "DESC"]], // Order by createdAt
 		});
 
@@ -5220,7 +5215,7 @@ export const updateOrderStatus = async (
 	req: AuthenticatedRequest,
 	res: Response,
 ): Promise<void> => {
-	const { status, orderItemId } = req.body;
+	const { status, orderItemId, deliveryCode: suppliedDeliveryCode } = req.body;
 
 	const adminId = req.admin?.id;
 
@@ -5273,6 +5268,16 @@ export const updateOrderStatus = async (
 			await transaction.rollback();
 			res.status(404).json({ message: "Buyer not found." });
 			return;
+		}
+
+		if (status === "delivered") {
+			const expected = String(mainOrder.deliveryCode || "").trim().toUpperCase();
+			const supplied = String(suppliedDeliveryCode || "").trim().toUpperCase();
+			if (!expected || supplied !== expected) {
+				await transaction.rollback();
+				res.status(400).json({ message: "The delivery confirmation code is incorrect." });
+				return;
+			}
 		}
 
 		// If the order is already delivered or cancelled, stop further processing
@@ -5401,16 +5406,19 @@ export const updateOrderStatus = async (
 			{ transaction },
 		);
 
-		// Send a notification to the vendor/admin (who owns the product)
-		await Notification.create(
-			{
-				userId: adminId,
-				title: "Order Status Updated",
-				message: `The status of the product '${productData?.name}' purchased from you has been updated to '${status}'.`,
-				type: "order_status_update",
-			},
-			{ transaction },
-		);
+		// Notify the vendor who owns the product. Admin-owned catalogue items do
+		// not have a user notification recipient.
+		if (vendor) {
+			await Notification.create(
+				{
+					userId: vendor.id,
+					title: "Order Status Updated",
+					message: `The status of the product '${productData?.name}' purchased from you has been updated to '${status}'.`,
+					type: "order_status_update",
+				},
+				{ transaction },
+			);
+		}
 
 		// Commit transaction
 		await transaction.commit();
