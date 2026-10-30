@@ -209,11 +209,13 @@ vendorRoutes.get(
 vendorRoutes.get(
 	"/order/items",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.getVendorOrderItems,
 );
 vendorRoutes.get(
 	"/order/item/details",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.getOrderItemsInfo,
 );
 

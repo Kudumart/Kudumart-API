@@ -4985,7 +4985,10 @@ export const updateOrderStatus = async (
 					.json({ message: "Delivery code is required to mark as delivered." });
 				return;
 			}
-			if (!mainOrder.deliveryCode || deliveryCode !== mainOrder.deliveryCode) {
+			if (
+				!mainOrder.deliveryCode ||
+				deliveryCode.trim().toUpperCase() !== mainOrder.deliveryCode.toUpperCase()
+			) {
 				await transaction.rollback();
 				res.status(400).json({ message: "Invalid delivery code." });
 				return;
@@ -5065,7 +5068,7 @@ export const updateOrderStatus = async (
 			(status === "delivered" && currencySymbol === "#" && vendor) ||
 			(status === "delivered" && currencySymbol === "₦" && vendor)
 		) {
-			const price = Number(order.price);
+			const price = Number(order.price) * Number(order.quantity);
 
 			vendor.wallet = Number(vendor.wallet) + price;
 
@@ -5088,7 +5091,7 @@ export const updateOrderStatus = async (
 
 		// If the order is delivered and the currency is USD, add funds to the vendor's wallet
 		if (status === "delivered" && currencySymbol === "$" && vendor) {
-			const price = Number(order.price);
+			const price = Number(order.price) * Number(order.quantity);
 
 			vendor.dollarWallet = Number(vendor.dollarWallet) + price;
 

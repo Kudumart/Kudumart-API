@@ -2124,13 +2124,6 @@ export const getVendorOrderItems = async (
 			order: [["createdAt", "DESC"]], // Sort by most recent
 		});
 
-		if (!orderItems || orderItems.length === 0) {
-			res
-				.status(404)
-				.json({ message: "No order items found for this vendor." });
-			return;
-		}
-
 		res.status(200).json({
 			message: "Order items retrieved successfully",
 			data: orderItems,
@@ -2147,9 +2140,16 @@ export const getOrderItemsInfo = async (
 	res: Response,
 ): Promise<void> => {
 	const orderId = req.query.orderId as string;
+	const vendorId = (req as AuthenticatedRequest).user?.id as string;
+
+	if (!orderId || !vendorId) {
+		res.status(400).json({ message: "Order ID and vendor account are required." });
+		return;
+	}
 
 	try {
-		// Fetch Order related to the vendor
+		// Return only the authenticated vendor's items. This prevents a seller
+		// from discovering another seller's portion of a multi-vendor order.
 		const order = await Order.findOne({
 			where: { id: orderId },
 			include: [
@@ -2158,9 +2158,19 @@ export const getOrderItemsInfo = async (
 					as: "user",
 					attributes: ["id", "firstName", "lastName", "email", "phoneNumber"], // Include user details
 				},
+				{
+					model: OrderItem,
+					as: "orderItems",
+					where: { vendorId },
+					required: true,
+				},
 			],
-			order: [["createdAt", "DESC"]], // Sort by most recent
 		});
+
+		if (!order) {
+			res.status(404).json({ message: "Order not found in your seller account." });
+			return;
+		}
 
 		res.status(200).json({
 			message: "Order details retrieved successfully",
