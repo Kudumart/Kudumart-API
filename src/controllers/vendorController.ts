@@ -4517,6 +4517,20 @@ export const getVendorOffers = async (
 					attributes: ["id", "name", "price", "image_url"],
 					where: { vendorId },
 					required: true,
+					include: [
+						{
+							model: Store,
+							as: "store",
+							attributes: ["id", "name"],
+							include: [
+								{
+									model: Currency,
+									as: "currency",
+									attributes: ["name", "symbol"],
+								},
+							],
+						},
+					],
 				},
 				{
 					model: User,

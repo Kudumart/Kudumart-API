@@ -6633,6 +6633,16 @@ export const initiateOfferPayment = async (
 
 		const paystack = await initializePaystackPayment(refId, effectivePrice, user.email, paymentGateway.secretKey);
 
+		await Transaction.create({
+			userId: buyerId,
+			amount: effectivePrice,
+			currency: "NGN",
+			transactionType: "offer_payment",
+			refId,
+			status: "pending",
+			metadata: { offerId: offer.id },
+		});
+
 		res.status(200).json({
 			message: "Payment initialized.",
 			data: { refId, effectivePrice, paystackDetails: paystack },
@@ -6686,6 +6696,7 @@ export const checkoutOffer = async (
 				},
 			],
 			transaction,
+			lock: transaction.LOCK.UPDATE,
 		});
 
 		if (!offer) {
@@ -6697,6 +6708,28 @@ export const checkoutOffer = async (
 		if (offer.status !== "accepted") {
 			await transaction.rollback();
 			res.status(400).json({ message: "Checkout is only allowed for accepted offers." });
+			return;
+		}
+
+		const paymentIntent = await Transaction.findOne({
+			where: {
+				userId: buyerId,
+				refId,
+				transactionType: "offer_payment",
+				status: "pending",
+			},
+			transaction,
+			lock: transaction.LOCK.UPDATE,
+		});
+		const paymentMetadata =
+			typeof paymentIntent?.metadata === "string"
+				? JSON.parse(paymentIntent.metadata)
+				: paymentIntent?.metadata;
+		if (!paymentIntent || String(paymentMetadata?.offerId) !== String(offer.id)) {
+			await transaction.rollback();
+			res.status(400).json({
+				message: "This payment reference was not created for the selected offer.",
+			});
 			return;
 		}
 
@@ -6797,6 +6830,8 @@ export const checkoutOffer = async (
 			},
 			{ transaction },
 		);
+
+		await paymentIntent.update({ status: "completed" }, { transaction });
 
 		await offer.update({ status: "completed" } as any, { transaction });
 
