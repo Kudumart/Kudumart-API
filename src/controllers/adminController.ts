@@ -6359,7 +6359,15 @@ export const updateWithdrawalStatus = async (
 	const transaction = await sequelizeService.connection!.transaction();
 
 	try {
-		const { id, status, paymentReceipt, note } = req.body; // Ensure 'note' is provided for rejection
+		const { id, status, paymentReceipt, note } = req.body;
+
+		if (!id || !["approved", "rejected"].includes(status)) {
+			await transaction.rollback();
+			res.status(400).json({
+				message: "A withdrawal ID and a valid status (approved or rejected) are required",
+			});
+			return;
+		}
 
 		// Find withdrawal request
 		const withdrawal = await Withdrawal.findByPk(id, { transaction });
@@ -6377,18 +6385,24 @@ export const updateWithdrawalStatus = async (
 			return;
 		}
 
-		// If already approved, return a message with no further action
-		if (withdrawal.status === "approved") {
-			await transaction.commit();
-			res.status(200).json({
-				message:
-					"Withdrawal has already been approved. No further action is required.",
+		// A finalised withdrawal must never be processed twice. In particular,
+		// rejecting the same request again would otherwise refund the wallet twice.
+		if (withdrawal.status !== "pending") {
+			await transaction.rollback();
+			res.status(409).json({
+				message: `Withdrawal has already been ${withdrawal.status}. No further action is allowed.`,
 			});
 			return;
 		}
 
+		if (status === "approved" && !String(paymentReceipt || "").trim()) {
+			await transaction.rollback();
+			res.status(400).json({ message: "Payment receipt is required for approval" });
+			return;
+		}
+
 		// If status is "rejected", ensure a note is provided
-		if (status === "rejected" && !note) {
+		if (status === "rejected" && !String(note || "").trim()) {
 			await transaction.rollback();
 			res.status(400).json({ message: "Rejection note is required" });
 			return;
