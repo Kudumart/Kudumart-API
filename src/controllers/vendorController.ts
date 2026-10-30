@@ -1057,6 +1057,15 @@ export const createAuctionProduct = async (
 	} = req.body;
 
 	try {
+		const startsAt = new Date(startDate);
+		const endsAt = new Date(endDate);
+		if (startsAt <= new Date() || endsAt <= startsAt) {
+			res.status(400).json({
+				message: "Auction must start in the future and end after it starts.",
+			});
+			return;
+		}
+
 		// Use the utility function to check the product limit
 		const { status, message } = await checkVendorAuctionProductLimit(vendorId);
 
@@ -1067,7 +1076,7 @@ export const createAuctionProduct = async (
 
 		// Check if vendorId, storeId, and categoryId exist
 		const vendorExists = await User.findByPk(vendorId);
-		const storeExists = await Store.findByPk(storeId);
+		const storeExists = await Store.findOne({ where: { id: storeId, vendorId } });
 		const categoryExists = await SubCategory.findByPk(categoryId);
 
 		if (!vendorExists) {
@@ -1189,6 +1198,21 @@ export const updateAuctionProduct = async (
 			res.status(404).json({ message: "Auction product not found." });
 			return;
 		}
+		if (auctionProduct.auctionStatus !== "upcoming") {
+			res.status(409).json({
+				message: "Only upcoming auctions can be edited.",
+			});
+			return;
+		}
+
+		const startsAt = new Date(startDate);
+		const endsAt = new Date(endDate);
+		if (startsAt <= new Date() || endsAt <= startsAt) {
+			res.status(400).json({
+				message: "Auction must start in the future and end after it starts.",
+			});
+			return;
+		}
 
 		// Check if vendorId matches the auction product's vendorId
 		if (auctionProduct.vendorId !== vendorId) {
@@ -1200,7 +1224,7 @@ export const updateAuctionProduct = async (
 
 		// Check if vendor, store, and category exist
 		const vendorExists = await User.findByPk(vendorId);
-		const storeExists = await Store.findByPk(storeId);
+		const storeExists = await Store.findOne({ where: { id: storeId, vendorId } });
 		const categoryExists = await SubCategory.findByPk(categoryId);
 
 		if (!vendorExists || !storeExists || !categoryExists) {
@@ -1231,21 +1255,7 @@ export const updateAuctionProduct = async (
 		auctionProduct.additionalImages =
 			additionalImages || auctionProduct.additionalImages;
 
-		// Dynamically update auctionStatus based on dates, or accept explicitly passed status
-		if (req.body.auctionStatus) {
-			auctionProduct.auctionStatus = req.body.auctionStatus;
-		} else {
-			const now = new Date();
-			const effectiveStartDate = new Date(auctionProduct.startDate);
-			const effectiveEndDate = new Date(auctionProduct.endDate);
-			if (now >= effectiveEndDate) {
-				auctionProduct.auctionStatus = "ended";
-			} else if (now >= effectiveStartDate) {
-				auctionProduct.auctionStatus = "ongoing";
-			} else {
-				auctionProduct.auctionStatus = "upcoming";
-			}
-		}
+		auctionProduct.auctionStatus = "upcoming";
 
 		// Save the updated auction product
 		await auctionProduct.save();
@@ -1282,6 +1292,12 @@ export const deleteAuctionProduct = async (
 
 		if (!auctionProduct) {
 			res.status(404).json({ message: "Auction product not found." });
+			return;
+		}
+		if (!["ended", "cancelled"].includes(auctionProduct.auctionStatus)) {
+			res.status(409).json({
+				message: "Only ended or cancelled auctions can be deleted.",
+			});
 			return;
 		}
 
@@ -1355,6 +1371,12 @@ export const cancelAuctionProduct = async (
 				.json({ message: "Auction product is already cancelled." });
 			return;
 		}
+		if (!["upcoming", "ongoing"].includes(auctionProduct.auctionStatus)) {
+			res.status(409).json({
+				message: "Only upcoming or ongoing auctions can be cancelled.",
+			});
+			return;
+		}
 
 		// Check if vendorId matches the auction product's vendorId
 		if (auctionProduct.vendorId !== vendorId) {
@@ -1393,6 +1415,10 @@ export const fetchVendorAuctionProducts = async (
 		const auctionProducts = await AuctionProduct.findAll({
 			where: {
 				vendorId,
+				...(name && { name: { [Op.like]: `%${name}%` } }),
+				...(sku && { sku }),
+				...(status && { auctionStatus: status }),
+				...(condition && { condition }),
 			},
 			include: [
 				{
@@ -1413,14 +1439,6 @@ export const fetchVendorAuctionProducts = async (
 					],
 				},
 			],
-			...((name || sku || status || condition) && {
-				where: {
-					...(name && { name: { [Op.like]: `%${name}%` } }),
-					...(sku && { sku }),
-					...(status && { status }),
-					...(condition && { condition }),
-				},
-			}),
 		});
 
 		if (auctionProducts.length === 0) {
@@ -1495,9 +1513,19 @@ export const getAllBidsByAuctionProductId = async (
 ): Promise<void> => {
 	try {
 		const { auctionProductId } = req.query; // Get auctionProductId from request params
+		const vendorId = (req as AuthenticatedRequest).user?.id as string;
 
 		if (!auctionProductId) {
 			res.status(400).json({ message: "Auction Product ID is required." });
+			return;
+		}
+
+		const auctionProduct = await AuctionProduct.findOne({
+			where: { id: auctionProductId, vendorId },
+			attributes: ["id"],
+		});
+		if (!auctionProduct) {
+			res.status(404).json({ message: "Auction product not found." });
 			return;
 		}
 
@@ -1508,6 +1536,7 @@ export const getAllBidsByAuctionProductId = async (
 				{
 					model: User,
 					as: "user",
+					attributes: ["id", "firstName", "lastName", "email"],
 				},
 			],
 			order: [["createdAt", "DESC"]], // Order bids from newest to oldest
