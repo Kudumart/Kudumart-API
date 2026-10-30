@@ -996,6 +996,13 @@ export const createAdvertValidation = () => {
 
 export const updateAdvertValidation = () => {
 	return [
+		check("advertId")
+			.isUUID()
+			.withMessage("Advert ID must be a valid UUID."),
+		check("categoryId")
+			.optional({ checkFalsy: true })
+			.isUUID()
+			.withMessage("Category ID must be a valid UUID."),
 		check("title")
 			.optional({ checkFalsy: true })
 			.isString()

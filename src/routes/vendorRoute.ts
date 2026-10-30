@@ -223,25 +223,28 @@ vendorRoutes.get(
 vendorRoutes.get(
 	"/active/products",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.activeProducts,
 ); // Create a new advert
 vendorRoutes.post(
 	"/adverts",
+	authMiddleware,
+	authorizeVendor,
 	createAdvertValidation(),
 	validate,
-	authMiddleware,
 	vendorController.createAdvert,
 ); // Create a new advert
 vendorRoutes.put(
 	"/adverts",
+	authMiddleware,
+	authorizeVendor,
 	updateAdvertValidation(),
 	validate,
-	authMiddleware,
 	vendorController.updateAdvert,
 ); // Update an existing advert
-vendorRoutes.get("/adverts", authMiddleware, vendorController.getAdverts); // Get adverts
-vendorRoutes.get("/advert", authMiddleware, vendorController.viewAdvert); // View a specific advert
-vendorRoutes.delete("/adverts", authMiddleware, vendorController.deleteAdvert); // Delete an advert
+vendorRoutes.get("/adverts", authMiddleware, authorizeVendor, vendorController.getAdverts); // Get adverts
+vendorRoutes.get("/advert", authMiddleware, authorizeVendor, vendorController.viewAdvert); // View a specific advert
+vendorRoutes.delete("/adverts", authMiddleware, authorizeVendor, vendorController.deleteAdvert); // Delete an advert
 
 // Bank Information
 vendorRoutes.get("/banks", authMiddleware, authorizeVendor, vendorController.getSupportedBanks);

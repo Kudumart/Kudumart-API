@@ -2193,12 +2193,11 @@ export const activeProducts = async (
 
 	try {
 		const products = await Product.findAll({
-			where: { vendorId, status: "active" },
-			...(name && {
-				where: {
-					...(name && { name: { [Op.like]: `%${name}%` } }),
-				},
-			}),
+			where: {
+				vendorId,
+				status: "active",
+				...(name && { name: { [Op.like]: `%${name}%` } }),
+			},
 		});
 
 		res.status(200).json({
@@ -2243,7 +2242,9 @@ export const createAdvert = async (
 		}
 
 		if (productId) {
-			const productExists = await Product.findByPk(productId);
+			const productExists = await Product.findOne({
+				where: { id: productId, vendorId },
+			});
 
 			if (!productExists) {
 				res.status(404).json({ message: "Product not found." });
@@ -2276,6 +2277,7 @@ export const updateAdvert = async (
 	req: Request,
 	res: Response,
 ): Promise<void> => {
+	const vendorId = (req as AuthenticatedRequest).user?.id as string;
 	const {
 		advertId,
 		categoryId,
@@ -2289,15 +2291,18 @@ export const updateAdvert = async (
 
 	try {
 		// Check if categoryId and productId exist
-		const categoryExists = await SubCategory.findByPk(categoryId);
-
-		if (!categoryExists) {
-			res.status(404).json({ message: "Category not found." });
-			return;
+		if (categoryId) {
+			const categoryExists = await SubCategory.findByPk(categoryId);
+			if (!categoryExists) {
+				res.status(404).json({ message: "Category not found." });
+				return;
+			}
 		}
 
 		if (productId) {
-			const productExists = await Product.findByPk(productId);
+			const productExists = await Product.findOne({
+				where: { id: productId, vendorId },
+			});
 
 			if (!productExists) {
 				res.status(404).json({ message: "Product not found." });
@@ -2305,20 +2310,24 @@ export const updateAdvert = async (
 			}
 		}
 
-		const advert = await Advert.findByPk(advertId);
+		const advert = await Advert.findOne({
+			where: { id: advertId, userId: vendorId },
+		});
 
 		if (!advert) {
 			res.status(404).json({ message: "Advert not found" });
 			return;
 		}
 
-		advert.categoryId = categoryId || advert.categoryId;
-		advert.productId = productId || advert.productId;
-		advert.title = title || advert.title;
-		advert.description = description || advert.description;
-		advert.media_url = media_url || advert.media_url;
-		advert.showOnHomepage = showOnHomepage || advert.showOnHomepage;
-		advert.link = link || advert.link;
+		if (categoryId !== undefined) advert.categoryId = categoryId;
+		if (productId !== undefined) (advert as any).productId = productId || null;
+		if (title !== undefined) advert.title = title;
+		if (description !== undefined) advert.description = description;
+		if (media_url !== undefined) advert.media_url = media_url;
+		if (showOnHomepage !== undefined) advert.showOnHomepage = showOnHomepage;
+		if (link !== undefined) advert.link = link;
+		advert.status = "pending";
+		(advert as any).adminNote = null;
 
 		await advert.save();
 
@@ -2367,20 +2376,6 @@ export const getAdverts = async (
 			order: [["createdAt", "DESC"]], // Order by latest adverts
 		});
 
-		// Handle case where no adverts are found
-		if (!adverts || adverts.length === 0) {
-			res.status(404).json({
-				message: "No adverts found",
-				data: [],
-				pagination: {
-					total: 0,
-					page: pageNumber,
-					pages: 0,
-				},
-			});
-			return;
-		}
-
 		// Calculate total pages
 		const totalPages = Math.ceil(count / limitNumber);
 
@@ -2406,9 +2401,11 @@ export const viewAdvert = async (
 	res: Response,
 ): Promise<void> => {
 	const advertId = req.query.advertId as string;
+	const vendorId = (req as AuthenticatedRequest).user?.id as string;
 
 	try {
-		const advert = await Advert.findByPk(advertId, {
+		const advert = await Advert.findOne({
+			where: { id: advertId, userId: vendorId },
 			include: [
 				{ model: Product, as: "product" },
 				{ model: SubCategory, as: "sub_category" },
@@ -2435,9 +2432,12 @@ export const deleteAdvert = async (
 	res: Response,
 ): Promise<void> => {
 	const advertId = req.query.advertId as string;
+	const vendorId = (req as AuthenticatedRequest).user?.id as string;
 
 	try {
-		const advert = await Advert.findByPk(advertId);
+		const advert = await Advert.findOne({
+			where: { id: advertId, userId: vendorId },
+		});
 
 		if (!advert) {
 			res.status(404).json({ message: "Advert not found" });
