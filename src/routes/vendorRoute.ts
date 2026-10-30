@@ -244,45 +244,52 @@ vendorRoutes.get("/advert", authMiddleware, vendorController.viewAdvert); // Vie
 vendorRoutes.delete("/adverts", authMiddleware, vendorController.deleteAdvert); // Delete an advert
 
 // Bank Information
-vendorRoutes.get("/banks", authMiddleware, vendorController.getSupportedBanks);
-vendorRoutes.get("/bank/resolve", authMiddleware, vendorController.resolveBankAccount);
+vendorRoutes.get("/banks", authMiddleware, authorizeVendor, vendorController.getSupportedBanks);
+vendorRoutes.get("/bank/resolve", authMiddleware, authorizeVendor, vendorController.resolveBankAccount);
 vendorRoutes.post(
 	"/bank/informations",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.addBankInformation,
 );
 
 vendorRoutes.post(
 	"/bank/informations/v2",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.addBankInformationV2,
 );
 
 vendorRoutes.put(
 	"/bank/informations",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.updateBankInformation,
 );
 
 vendorRoutes.put(
 	"/bank/informations/v2",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.updateBankInformationV2,
 );
 
 vendorRoutes.get(
 	"/bank/informations",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.getBankInformation,
 );
 vendorRoutes.get(
 	"/bank/information",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.getSingleBankInformation,
 );
 vendorRoutes.delete(
 	"/bank/information",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.deleteBankInformation,
 );
 
@@ -290,36 +297,43 @@ vendorRoutes.delete(
 vendorRoutes.post(
 	"/withdrawal",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.requestWithdrawal,
 );
 vendorRoutes.get(
 	"/wallet/stats",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.getVendorWalletStats,
 );
 vendorRoutes.get(
 	"/dashboard/stats",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.getDashboardStats,
 );
 vendorRoutes.get(
 	"/wallet/transactions",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.getVendorTransactions,
 );
 vendorRoutes.put(
 	"/withdrawal",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.updateWithdrawal,
 );
 vendorRoutes.get(
 	"/withdrawals",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.getWithdrawals,
 );
 vendorRoutes.get(
 	"/withdrawal",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.getWithdrawalById,
 );
 

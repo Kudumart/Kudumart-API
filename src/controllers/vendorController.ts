@@ -2736,10 +2736,11 @@ export const getSingleBankInformation = async (
 	res: Response,
 ): Promise<void> => {
 	const bankId = req.query.bankId; // bankId is required
+	const vendorId = (req as AuthenticatedRequest).user?.id;
 
 	try {
 		// Fetch bank details
-		const bankInfo = await BankInformation.findOne({ where: { id: bankId } });
+		const bankInfo = await BankInformation.findOne({ where: { id: bankId, vendorId } });
 
 		if (!bankInfo) {
 			res.status(404).json({ message: "Bank information not found" });
@@ -2952,7 +2953,10 @@ export const requestWithdrawal = async (
 	const transaction = await sequelizeService.connection!.transaction();
 
 	try {
-		const vendor = await User.findByPk(vendorId, { transaction });
+		const vendor = await User.findByPk(vendorId, {
+			transaction,
+			lock: transaction.LOCK.UPDATE,
+		});
 
 		if (
 			!vendor ||
@@ -2966,7 +2970,19 @@ export const requestWithdrawal = async (
 			return;
 		}
 
-		const { bankInformationId, amount, currency } = req.body;
+		const { bankInformationId } = req.body;
+		const currency = String(req.body.currency || "").toUpperCase();
+		const amount = Number(req.body.amount);
+		if (!Number.isFinite(amount) || amount <= 0) {
+			await transaction.rollback();
+			res.status(400).json({ message: "Withdrawal amount must be greater than zero." });
+			return;
+		}
+		if (!["NGN", "USD"].includes(currency)) {
+			await transaction.rollback();
+			res.status(400).json({ message: "Withdrawal currency must be NGN or USD." });
+			return;
+		}
 
 		const bankInformation = await BankInformation.findOne({
 			where: { id: bankInformationId, vendorId },
@@ -3223,9 +3239,10 @@ export const getWithdrawalById = async (
 ): Promise<void> => {
 	try {
 		const id = req.query.id as string;
+		const vendorId = (req as AuthenticatedRequest).user?.id;
 
 		// Find withdrawal with associated BankInformation and Vendor details
-		const withdrawal = await Withdrawal.findByPk(id);
+		const withdrawal = await Withdrawal.findOne({ where: { id, vendorId } });
 
 		if (!withdrawal) {
 			res.status(404).json({ message: "Withdrawal not found" });
