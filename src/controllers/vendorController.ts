@@ -4102,15 +4102,16 @@ export const getService = async (
 	res: Response,
 ): Promise<void> => {
 	const serviceId = req.params.serviceId as string;
+	const vendorId = (req as AuthenticatedRequest).user?.id as string;
 
-	if (!serviceId) {
-		res.status(400).json({ message: "Service ID is required." });
+	if (!serviceId || !vendorId) {
+		res.status(400).json({ message: "Service ID and vendor account are required." });
 		return;
 	}
 
 	try {
 		const services = await Services.findAll({
-			where: { id: serviceId },
+			where: { id: serviceId, vendorId },
 			include: [
 				{
 					model: ServiceCategories,
@@ -4353,7 +4354,7 @@ export const getServiceBookings = async (
 					{
 						model: User,
 						as: "user",
-						attributes: ["id", "firstName", "lastName", "email", "photo"],
+						attributes: ["id", "firstName", "lastName", "email", "phoneNumber", "photo"],
 					},
 				],
 				order: [["createdAt", "DESC"]],
