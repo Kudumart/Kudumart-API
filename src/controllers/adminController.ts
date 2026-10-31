@@ -2590,6 +2590,7 @@ export const unpublishProduct = async (
 
 		// Update product status to inactive
 		product.status = "inactive";
+		product.isTrending = false;
 		await product.save();
 
 		// Remove the product from all carts
@@ -2656,6 +2657,37 @@ export const publishProduct = async (
 		res.status(200).json({ message: "Product published successfully" });
 	} catch (error: any) {
 		logger.error("Error publishing product:", error);
+		res.status(500).json({ message: "Server error" });
+	}
+};
+
+export const updateProductTrending = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const { productId, isTrending } = req.body;
+		if (!productId || typeof isTrending !== "boolean") {
+			res.status(400).json({ message: "Product ID and trending status are required" });
+			return;
+		}
+		const product = await Product.findByPk(productId);
+		if (!product) {
+			res.status(404).json({ message: "Product not found" });
+			return;
+		}
+		if (isTrending && product.status !== "active") {
+			res.status(400).json({ message: "Only published products can be marked as trending" });
+			return;
+		}
+		product.isTrending = isTrending;
+		await product.save();
+		res.status(200).json({
+			message: isTrending ? "Product added to trending" : "Product removed from trending",
+			data: product,
+		});
+	} catch (error) {
+		logger.error("Error updating product trending status:", error);
 		res.status(500).json({ message: "Server error" });
 	}
 };

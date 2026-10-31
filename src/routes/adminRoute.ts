@@ -531,6 +531,12 @@ adminRoutes.put(
 	checkPermission(PERMISSIONS.MANAGE_PRODUCTS),
 	adminController.publishProduct,
 );
+adminRoutes.patch(
+	"/general/product/trending",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_PRODUCTS),
+	adminController.updateProductTrending,
+);
 adminRoutes.get(
 	"/general/auction/products",
 	adminAuthMiddleware,
