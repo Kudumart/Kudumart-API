@@ -35,6 +35,7 @@ import Bid from "../models/bid";
 import ShowInterest from "../models/showinterest";
 import AuctionReminders from "../models/reminder";
 import VendorSubscription from "../models/vendorsubscription";
+import VendorSubscriptionOffer from "../models/vendorsubscriptionoffer";
 import sequelizeService from "../services/sequelize.service";
 import Transaction from "../models/transaction";
 import Advert from "../models/advert";
@@ -2138,6 +2139,18 @@ export const viewUser = async (req: Request, res: Response): Promise<void> => {
 					model: KYC,
 					as: "kyc",
 				},
+				{
+					model: VendorSubscription,
+					as: "subscriptions",
+					required: false,
+					include: [{ model: SubscriptionPlan, as: "subscriptionPlans", required: false }],
+				},
+				{
+					model: Store,
+					as: "stores",
+					required: false,
+					attributes: ["id", "name", "createdAt"],
+				},
 			],
 			attributes: { exclude: ["password"] }, // Exclude sensitive fields like password
 		});
@@ -2577,6 +2590,7 @@ export const unpublishProduct = async (
 
 		// Update product status to inactive
 		product.status = "inactive";
+		product.isTrending = false;
 		await product.save();
 
 		// Remove the product from all carts
@@ -2643,6 +2657,37 @@ export const publishProduct = async (
 		res.status(200).json({ message: "Product published successfully" });
 	} catch (error: any) {
 		logger.error("Error publishing product:", error);
+		res.status(500).json({ message: "Server error" });
+	}
+};
+
+export const updateProductTrending = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const { productId, isTrending } = req.body;
+		if (!productId || typeof isTrending !== "boolean") {
+			res.status(400).json({ message: "Product ID and trending status are required" });
+			return;
+		}
+		const product = await Product.findByPk(productId);
+		if (!product) {
+			res.status(404).json({ message: "Product not found" });
+			return;
+		}
+		if (isTrending && product.status !== "active") {
+			res.status(400).json({ message: "Only published products can be marked as trending" });
+			return;
+		}
+		product.isTrending = isTrending;
+		await product.save();
+		res.status(200).json({
+			message: isTrending ? "Product added to trending" : "Product removed from trending",
+			data: product,
+		});
+	} catch (error) {
+		logger.error("Error updating product trending status:", error);
 		res.status(500).json({ message: "Server error" });
 	}
 };
@@ -2986,21 +3031,16 @@ export const getAllGeneralOrders = async (
 				}),
 			},
 			attributes: {
-				include: [
-					[
-						Sequelize.fn("COUNT", Sequelize.col("orderItems.id")),
-						"orderItemsCount", // Alias for the count of order items
-					],
-				],
+				include: [[Sequelize.literal(`(SELECT COUNT(*) FROM order_items WHERE order_items.orderId = Order.id)`), "orderItemsCount"]],
 			},
 			include: [
 				{
-					model: OrderItem,
-					as: "orderItems",
-					attributes: [], // Do not include actual order items
+					model: User,
+					as: "user",
+					attributes: ["id", "firstName", "lastName", "email", "phoneNumber"],
 				},
+				{ model: Payment, as: "payment", required: false },
 			],
-			group: ["Order.id"], // Group by order to ensure correct counting
 			order: [["createdAt", "DESC"]], // Order by createdAt
 		});
 
@@ -3212,6 +3252,154 @@ export const getAllSubscribers = async (
 		// Handle any unexpected errors
 		logger.error("Error retrieving subscribers:", error);
 		res.status(500).json({ message: "Failed to retrieve subscribers" });
+	}
+};
+
+export const getVendorSubscriptionOffers = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const vendorId = String(req.params.vendorId);
+		const vendor = await User.findByPk(vendorId, {
+			attributes: ["id", "firstName", "lastName", "email"],
+		});
+		if (!vendor) {
+			res.status(404).json({ message: "Vendor not found" });
+			return;
+		}
+		const offers = await VendorSubscriptionOffer.findAll({
+			where: { vendorId },
+			include: [{ model: SubscriptionPlan, as: "subscriptionPlan", include: [{ model: Currency, as: "currency" }] }],
+			order: [["createdAt", "DESC"]],
+		});
+		res.status(200).json({ data: { vendor, offers } });
+	} catch (error) {
+		logger.error("Error retrieving vendor subscription offers:", error);
+		res.status(500).json({ message: "Failed to retrieve subscription offers" });
+	}
+};
+
+export const saveVendorSubscriptionOffer = async (
+	req: AuthenticatedRequest,
+	res: Response,
+): Promise<void> => {
+	const dbTransaction = await sequelizeService.connection!.transaction();
+	try {
+		const vendorId = String(req.params.vendorId);
+		const { subscriptionPlanId, specialPrice, reason, expiresAt } = req.body;
+		const numericPrice = Number(specialPrice);
+
+		if (!subscriptionPlanId || specialPrice === undefined || !String(reason || "").trim()) {
+			await dbTransaction.rollback();
+			res.status(400).json({ message: "Plan, special price, and campaign reason are required" });
+			return;
+		}
+		const [vendor, plan] = await Promise.all([
+			User.findByPk(vendorId, { transaction: dbTransaction }),
+			SubscriptionPlan.findByPk(subscriptionPlanId, { transaction: dbTransaction }),
+		]);
+		if (!vendor || vendor.accountType !== "Vendor") {
+			await dbTransaction.rollback();
+			res.status(404).json({ message: "Vendor not found" });
+			return;
+		}
+		if (!plan) {
+			await dbTransaction.rollback();
+			res.status(404).json({ message: "Subscription plan not found" });
+			return;
+		}
+		if (!Number.isFinite(numericPrice) || numericPrice < 0 || numericPrice > Number(plan.price)) {
+			await dbTransaction.rollback();
+			res.status(400).json({ message: `Special price must be between 0 and ${plan.price}` });
+			return;
+		}
+		const parsedExpiry = expiresAt ? new Date(expiresAt) : null;
+		if (parsedExpiry && (Number.isNaN(parsedExpiry.getTime()) || parsedExpiry <= new Date())) {
+			await dbTransaction.rollback();
+			res.status(400).json({ message: "Expiry must be a future date" });
+			return;
+		}
+
+		await VendorSubscriptionOffer.update(
+			{ isActive: false },
+			{ where: { vendorId, subscriptionPlanId, isActive: true, redeemedAt: null }, transaction: dbTransaction },
+		);
+		const offer = await VendorSubscriptionOffer.create(
+			{
+				vendorId,
+				subscriptionPlanId,
+				specialPrice: numericPrice,
+				reason: String(reason).trim(),
+				expiresAt: parsedExpiry,
+				isActive: true,
+				createdBy: req.admin?.id || null,
+			},
+			{ transaction: dbTransaction },
+		);
+		await Notification.create(
+			{
+				userId: vendorId,
+				title: numericPrice === 0 ? "Subscription fee waived" : "Special subscription offer",
+				message: numericPrice === 0
+					? `Your fee for the ${plan.name} plan has been waived. Claim it from Subscriptions${parsedExpiry ? " before the offer expires" : ""}.`
+					: `You have a special ${plan.name} subscription price of ${numericPrice}. Claim it from Subscriptions${parsedExpiry ? " before the offer expires" : ""}.`,
+				type: "subscription",
+				isRead: false,
+			},
+			{ transaction: dbTransaction },
+		);
+		await dbTransaction.commit();
+		res.status(201).json({ message: numericPrice === 0 ? "Subscription fee waived for this vendor" : "Special subscription price saved", data: offer });
+	} catch (error) {
+		await dbTransaction.rollback();
+		logger.error("Error saving vendor subscription offer:", error);
+		res.status(500).json({ message: "Failed to save subscription offer" });
+	}
+};
+
+export const revokeVendorSubscriptionOffer = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const offer = await VendorSubscriptionOffer.findOne({ where: { id: req.params.offerId, redeemedAt: null } });
+		if (!offer) {
+			res.status(404).json({ message: "Unused subscription offer not found" });
+			return;
+		}
+		await offer.update({ isActive: false });
+		res.status(200).json({ message: "Subscription offer revoked" });
+	} catch (error) {
+		logger.error("Error revoking vendor subscription offer:", error);
+		res.status(500).json({ message: "Failed to revoke subscription offer" });
+	}
+};
+
+export const setGlobalSubscriptionFeeWaiver = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const planId = String(req.params.planId);
+		const { waived } = req.body;
+		if (typeof waived !== "boolean") {
+			res.status(400).json({ message: "waived must be true or false" });
+			return;
+		}
+		const plan = await SubscriptionPlan.findByPk(planId);
+		if (!plan) {
+			res.status(404).json({ message: "Subscription plan not found" });
+			return;
+		}
+		await plan.update({ isFeeWaived: waived });
+		res.status(200).json({
+			message: waived ? `Fees waived for the ${plan.name} plan` : `Normal fees restored for the ${plan.name} plan`,
+			data: plan,
+		});
+	} catch (error) {
+		logger.error("Error updating global subscription fee waiver:", error);
+		res.status(500).json({ message: "Failed to update plan fee waiver" });
 	}
 };
 
@@ -5059,7 +5247,7 @@ export const updateOrderStatus = async (
 	req: AuthenticatedRequest,
 	res: Response,
 ): Promise<void> => {
-	const { status, orderItemId } = req.body;
+	const { status, orderItemId, deliveryCode: suppliedDeliveryCode } = req.body;
 
 	const adminId = req.admin?.id;
 
@@ -5112,6 +5300,16 @@ export const updateOrderStatus = async (
 			await transaction.rollback();
 			res.status(404).json({ message: "Buyer not found." });
 			return;
+		}
+
+		if (status === "delivered") {
+			const expected = String(mainOrder.deliveryCode || "").trim().toUpperCase();
+			const supplied = String(suppliedDeliveryCode || "").trim().toUpperCase();
+			if (!expected || supplied !== expected) {
+				await transaction.rollback();
+				res.status(400).json({ message: "The delivery confirmation code is incorrect." });
+				return;
+			}
 		}
 
 		// If the order is already delivered or cancelled, stop further processing
@@ -5240,16 +5438,19 @@ export const updateOrderStatus = async (
 			{ transaction },
 		);
 
-		// Send a notification to the vendor/admin (who owns the product)
-		await Notification.create(
-			{
-				userId: adminId,
-				title: "Order Status Updated",
-				message: `The status of the product '${productData?.name}' purchased from you has been updated to '${status}'.`,
-				type: "order_status_update",
-			},
-			{ transaction },
-		);
+		// Notify the vendor who owns the product. Admin-owned catalogue items do
+		// not have a user notification recipient.
+		if (vendor) {
+			await Notification.create(
+				{
+					userId: vendor.id,
+					title: "Order Status Updated",
+					message: `The status of the product '${productData?.name}' purchased from you has been updated to '${status}'.`,
+					type: "order_status_update",
+				},
+				{ transaction },
+			);
+		}
 
 		// Commit transaction
 		await transaction.commit();
@@ -6190,7 +6391,15 @@ export const updateWithdrawalStatus = async (
 	const transaction = await sequelizeService.connection!.transaction();
 
 	try {
-		const { id, status, paymentReceipt, note } = req.body; // Ensure 'note' is provided for rejection
+		const { id, status, paymentReceipt, note } = req.body;
+
+		if (!id || !["approved", "rejected"].includes(status)) {
+			await transaction.rollback();
+			res.status(400).json({
+				message: "A withdrawal ID and a valid status (approved or rejected) are required",
+			});
+			return;
+		}
 
 		// Find withdrawal request
 		const withdrawal = await Withdrawal.findByPk(id, { transaction });
@@ -6208,18 +6417,24 @@ export const updateWithdrawalStatus = async (
 			return;
 		}
 
-		// If already approved, return a message with no further action
-		if (withdrawal.status === "approved") {
-			await transaction.commit();
-			res.status(200).json({
-				message:
-					"Withdrawal has already been approved. No further action is required.",
+		// A finalised withdrawal must never be processed twice. In particular,
+		// rejecting the same request again would otherwise refund the wallet twice.
+		if (withdrawal.status !== "pending") {
+			await transaction.rollback();
+			res.status(409).json({
+				message: `Withdrawal has already been ${withdrawal.status}. No further action is allowed.`,
 			});
 			return;
 		}
 
+		if (status === "approved" && !String(paymentReceipt || "").trim()) {
+			await transaction.rollback();
+			res.status(400).json({ message: "Payment receipt is required for approval" });
+			return;
+		}
+
 		// If status is "rejected", ensure a note is provided
-		if (status === "rejected" && !note) {
+		if (status === "rejected" && !String(note || "").trim()) {
 			await transaction.rollback();
 			res.status(400).json({ message: "Rejection note is required" });
 			return;

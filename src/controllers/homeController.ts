@@ -187,6 +187,9 @@ export const products = async (req: Request, res: Response): Promise<void> => {
 
 		// Define the base where clause with the active status
 		const whereClause: any = { status: "active" };
+		if (popular === "true") {
+			whereClause.isTrending = true;
+		}
 
 		// Additional filters based on query parameters
 		if (productId) {
@@ -344,10 +347,7 @@ export const products = async (req: Request, res: Response): Promise<void> => {
 				["views", "DESC"],
 			]
 			: popular === "true"
-				? [
-					["views", "DESC"],
-					[Sequelize.literal("RAND()"), "ASC"],
-				] // Sort by views first, then randomize
+				? [["updatedAt", "DESC"]]
 				: [[Sequelize.literal("RAND()"), "ASC"]]; // Default random sorting
 
 		// Calculate the offset based on page and limit
@@ -417,6 +417,52 @@ export const products = async (req: Request, res: Response): Promise<void> => {
 		res.status(500).json({
 			message: error.message || "An error occurred while fetching products.",
 		});
+	}
+};
+
+const escapeShareHtml = (value: unknown): string => String(value ?? "")
+	.replace(/&/g, "&amp;")
+	.replace(/</g, "&lt;")
+	.replace(/>/g, "&gt;")
+	.replace(/"/g, "&quot;")
+	.replace(/'/g, "&#39;");
+
+// Returns crawler-readable HTML so WhatsApp, Facebook, X and LinkedIn can
+// render product details before the JavaScript storefront has loaded.
+export const productSharePreview = async (req: Request, res: Response): Promise<void> => {
+	try {
+		const product = await Product.findOne({
+			where: { id: req.params.productId, status: "active" },
+		});
+		if (!product) {
+			res.status(404).send("Product not found");
+			return;
+		}
+
+		const storefront = (process.env.FRONTEND_URL || "https://kudumart.com").replace(/\/$/, "");
+		const productUrl = `${storefront}/product/${encodeURIComponent(product.id)}`;
+		const additionalImages = Array.isArray(product.additional_images) ? product.additional_images : [];
+		const rawImage = product.image_url || additionalImages[0] || "";
+		const image = String(rawImage).startsWith("//") ? `https:${rawImage}` : rawImage;
+		const description = String(product.meta_description || product.description || `Buy ${product.name} on Kudumart`)
+			.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 200);
+		const title = `${product.name} — Kudumart`;
+
+		res.setHeader("Content-Type", "text/html; charset=utf-8");
+		res.setHeader("Cache-Control", "public, max-age=300, s-maxage=300");
+		res.status(200).send(`<!doctype html><html lang="en"><head>
+			<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+			<title>${escapeShareHtml(title)}</title><meta name="description" content="${escapeShareHtml(description)}">
+			<meta property="og:type" content="product"><meta property="og:site_name" content="Kudumart">
+			<meta property="og:title" content="${escapeShareHtml(title)}"><meta property="og:description" content="${escapeShareHtml(description)}">
+			<meta property="og:url" content="${escapeShareHtml(productUrl)}">${image ? `<meta property="og:image" content="${escapeShareHtml(image)}"><meta property="og:image:secure_url" content="${escapeShareHtml(image)}">` : ""}
+			<meta property="product:price:amount" content="${escapeShareHtml(product.price)}"><meta property="product:price:currency" content="NGN">
+			<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escapeShareHtml(title)}"><meta name="twitter:description" content="${escapeShareHtml(description)}">${image ? `<meta name="twitter:image" content="${escapeShareHtml(image)}">` : ""}
+			<link rel="canonical" href="${escapeShareHtml(productUrl)}"><meta http-equiv="refresh" content="0;url=${escapeShareHtml(productUrl)}">
+		</head><body><p>Opening <a href="${escapeShareHtml(productUrl)}">${escapeShareHtml(product.name)}</a> on Kudumart…</p><script>window.location.replace(${JSON.stringify(productUrl)})</script></body></html>`);
+	} catch (error) {
+		logger.error("Error creating product share preview:", error);
+		res.status(500).send("Unable to open this product right now");
 	}
 };
 

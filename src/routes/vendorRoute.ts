@@ -209,11 +209,13 @@ vendorRoutes.get(
 vendorRoutes.get(
 	"/order/items",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.getVendorOrderItems,
 );
 vendorRoutes.get(
 	"/order/item/details",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.getOrderItemsInfo,
 );
 
@@ -221,66 +223,76 @@ vendorRoutes.get(
 vendorRoutes.get(
 	"/active/products",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.activeProducts,
 ); // Create a new advert
 vendorRoutes.post(
 	"/adverts",
+	authMiddleware,
+	authorizeVendor,
 	createAdvertValidation(),
 	validate,
-	authMiddleware,
 	vendorController.createAdvert,
 ); // Create a new advert
 vendorRoutes.put(
 	"/adverts",
+	authMiddleware,
+	authorizeVendor,
 	updateAdvertValidation(),
 	validate,
-	authMiddleware,
 	vendorController.updateAdvert,
 ); // Update an existing advert
-vendorRoutes.get("/adverts", authMiddleware, vendorController.getAdverts); // Get adverts
-vendorRoutes.get("/advert", authMiddleware, vendorController.viewAdvert); // View a specific advert
-vendorRoutes.delete("/adverts", authMiddleware, vendorController.deleteAdvert); // Delete an advert
+vendorRoutes.get("/adverts", authMiddleware, authorizeVendor, vendorController.getAdverts); // Get adverts
+vendorRoutes.get("/advert", authMiddleware, authorizeVendor, vendorController.viewAdvert); // View a specific advert
+vendorRoutes.delete("/adverts", authMiddleware, authorizeVendor, vendorController.deleteAdvert); // Delete an advert
 
 // Bank Information
-vendorRoutes.get("/banks", authMiddleware, vendorController.getSupportedBanks);
-vendorRoutes.get("/bank/resolve", authMiddleware, vendorController.resolveBankAccount);
+vendorRoutes.get("/banks", authMiddleware, authorizeVendor, vendorController.getSupportedBanks);
+vendorRoutes.get("/bank/resolve", authMiddleware, authorizeVendor, vendorController.resolveBankAccount);
 vendorRoutes.post(
 	"/bank/informations",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.addBankInformation,
 );
 
 vendorRoutes.post(
 	"/bank/informations/v2",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.addBankInformationV2,
 );
 
 vendorRoutes.put(
 	"/bank/informations",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.updateBankInformation,
 );
 
 vendorRoutes.put(
 	"/bank/informations/v2",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.updateBankInformationV2,
 );
 
 vendorRoutes.get(
 	"/bank/informations",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.getBankInformation,
 );
 vendorRoutes.get(
 	"/bank/information",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.getSingleBankInformation,
 );
 vendorRoutes.delete(
 	"/bank/information",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.deleteBankInformation,
 );
 
@@ -288,36 +300,43 @@ vendorRoutes.delete(
 vendorRoutes.post(
 	"/withdrawal",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.requestWithdrawal,
 );
 vendorRoutes.get(
 	"/wallet/stats",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.getVendorWalletStats,
 );
 vendorRoutes.get(
 	"/dashboard/stats",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.getDashboardStats,
 );
 vendorRoutes.get(
 	"/wallet/transactions",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.getVendorTransactions,
 );
 vendorRoutes.put(
 	"/withdrawal",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.updateWithdrawal,
 );
 vendorRoutes.get(
 	"/withdrawals",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.getWithdrawals,
 );
 vendorRoutes.get(
 	"/withdrawal",
 	authMiddleware,
+	authorizeVendor,
 	vendorController.getWithdrawalById,
 );
 

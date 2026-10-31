@@ -8,6 +8,8 @@ class OTP extends Model {
 	public expiresAt?: Date;
 	public otpToken!: string;
 	public otpTokenExpiresAt?: Date;
+	public purpose?: string;
+	public pendingValue?: string;
 	public updatedAt?: Date;
 	public deletedAt?: Date | null;
 	public user?: User;
@@ -59,6 +61,14 @@ const initModel = (sequelize: Sequelize) => {
 						}
 					},
 				},
+			},
+			purpose: {
+				allowNull: true,
+				type: DataTypes.STRING,
+			},
+			pendingValue: {
+				allowNull: true,
+				type: DataTypes.STRING,
 			},
 			expiresAt: {
 				allowNull: true,

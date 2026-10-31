@@ -280,6 +280,8 @@ export const updateProfileEmail = async (
 			userId: userId,
 			otpCode: otpCode,
 			expiresAt: new Date(Date.now() + 60 * 60 * 1000), // OTP expires in 1 hour
+			purpose: "email_change",
+			pendingValue: newEmail.trim().toLowerCase(),
 		});
 
 		// Send mail
@@ -335,7 +337,12 @@ export const confirmEmailUpdate = async (
 
 		// Check for the OTP
 		const otpRecord = await OTP.findOne({
-			where: { userId: user.id, otpCode },
+			where: {
+				userId: user.id,
+				otpCode,
+				purpose: "email_change",
+				pendingValue: newEmail.trim().toLowerCase(),
+			},
 		});
 		if (!otpRecord) {
 			res.status(400).json({ message: "Invalid OTP code." });
@@ -705,7 +712,7 @@ export const getConversations = async (
 					],
 				],
 			},
-			order: [["createdAt", "DESC"]],
+			order: [["updatedAt", "DESC"]],
 		});
 
 		res.status(200).json({
@@ -804,6 +811,12 @@ export const sendMessageHandler = async (
 	}
 
 	const { productId, receiverId, content, fileUrl } = req.body;
+	const cleanContent = typeof content === "string" ? content.trim() : "";
+
+	if (!cleanContent && !fileUrl) {
+		res.status(400).json({ message: "Message content cannot be empty" });
+		return;
+	}
 
 	// Prevent user from sending a message to themselves
 	if (userId === receiverId) {
@@ -851,6 +864,15 @@ export const sendMessageHandler = async (
 			},
 		});
 
+		// A new product conversation must be addressed to that product's vendor.
+		// Existing participants can continue replying to each other.
+		if (!conversation && String(product.vendorId) !== String(receiverId)) {
+			res.status(403).json({
+				message: "New product conversations can only be started with the seller.",
+			});
+			return;
+		}
+
 		// If no conversation exists, create a new one
 		if (!conversation) {
 			conversation = await Conversation.create({
@@ -864,7 +886,7 @@ export const sendMessageHandler = async (
 		const message = await saveMessage(
 			conversation.id,
 			userId,
-			content,
+			cleanContent,
 			fileUrl,
 		);
 
@@ -873,12 +895,30 @@ export const sendMessageHandler = async (
 			return;
 		}
 
+		const sender = await User.findByPk(userId, {
+			attributes: ["id", "firstName", "lastName"],
+		});
+		const senderName = [sender?.firstName, sender?.lastName]
+			.filter(Boolean)
+			.join(" ") || "A KuduMart user";
+		try {
+			await Notification.create({
+				userId: receiverId,
+				title: "New Message",
+				message: `${senderName} sent you a message about "${product.name}".`,
+				type: "NEW_MESSAGE",
+				isRead: false,
+			});
+		} catch (notificationError) {
+			logger.error("Error creating message notification:", notificationError);
+		}
+
 		if (receiver?.fcmToken) {
 			// Send push notification to the receiver
 			const notificationMessage = {
 				notification: {
 					title: "New Message",
-					body: `You have a new message from ${user.firstName} ${user.lastName} for product ${product.name}`,
+					body: `You have a new message from ${senderName} for product ${product.name}`,
 				},
 				data: {
 					conversationId: conversation.id,
@@ -918,6 +958,10 @@ export const saveMessage = async (
 			content,
 			fileUrl,
 		});
+		await Conversation.update(
+			{ updatedAt: new Date() },
+			{ where: { id: conversationId }, silent: true },
+		);
 
 		// Return the created message
 		return message;
@@ -1048,7 +1092,7 @@ export const addItemToCart = async (
 	try {
 		// Find the product by productId and include vendor, currency, sub_category and category details
 		const product = await Product.findByPk(productId, {
-			attributes: ["vendorId", "name", "quantity", "type", "categoryId"], // Include quantity and categoryId in the attributes
+			attributes: ["vendorId", "name", "quantity", "type", "categoryId", "variants"],
 			include: [
 				{
 					model: Store,
@@ -1101,8 +1145,21 @@ export const addItemToCart = async (
 			return;
 		}
 
-		const { vendorId, name, quantity: availableQuantity = 0 } = product; // Get available quantity
+		const { vendorId, name } = product;
 		const productCurrency = product.store.currency;
+		const requestedQuantity = Number(quantity || 1);
+		let availableQuantity = Number(product.quantity ?? 0);
+
+		if (product.type === "dropship") {
+			const variant = product.variants?.find(
+				(value) => String(value.sku_id) === String(dropshipProductSkuId),
+			);
+			if (!variant) {
+				res.status(400).json({ message: "The selected product option is no longer available." });
+				return;
+			}
+			availableQuantity = Number(variant.sku_available_stock ?? 0);
+		}
 
 		// Ensure product currency is either $, #, or ₦
 		const allowedCurrencies = ["$", "#", "₦"];
@@ -1135,7 +1192,7 @@ export const addItemToCart = async (
 		}
 
 		// Ensure the requested quantity doesn't exceed available quantity
-		if (quantity > availableQuantity) {
+		if (requestedQuantity > availableQuantity) {
 			res.status(400).json({
 				message: `Sorry, only ${availableQuantity} of this product is available. Please reduce the quantity.`,
 			});
@@ -1197,12 +1254,18 @@ export const addItemToCart = async (
 
 		// Check if the product is already in the user's cart
 		const existingCartItem = await Cart.findOne({
-			where: { userId, productId },
+			where: {
+				userId,
+				productId,
+				...(product.type === "dropship" && {
+					dropshipProductSkuId: String(dropshipProductSkuId),
+				}),
+			},
 		});
 
 		if (existingCartItem) {
 			// If the item is already in the cart, check if the new quantity exceeds the available quantity
-			const totalQuantity = existingCartItem.quantity + quantity;
+			const totalQuantity = existingCartItem.quantity + requestedQuantity;
 
 			if (totalQuantity > availableQuantity) {
 				res.status(400).json({
@@ -1231,7 +1294,7 @@ export const addItemToCart = async (
 			await Cart.create({
 				userId,
 				productId,
-				quantity,
+				quantity: requestedQuantity,
 				productType: product.type,
 				...(dropshipProductSkuAttr && { dropshipProductSkuAttr }),
 				...(dropshipProductSkuId && {
@@ -1253,11 +1316,16 @@ export const updateCartItem = async (
 	req: Request,
 	res: Response,
 ): Promise<void> => {
+	const userId = (req as AuthenticatedRequest).user?.id;
+	if (!userId) {
+		res.status(400).json({ message: "User must be authenticated" });
+		return;
+	}
 	const { cartId, quantity } = req.body;
 
 	try {
-		// Find the cart item by cartId
-		const cartItem = await Cart.findByPk(cartId, {
+		const cartItem = await Cart.findOne({
+			where: { id: cartId, userId },
 			include: [
 				{
 					model: Product, // Assuming you have a 'Product' model associated with 'Cart'
@@ -1279,13 +1347,23 @@ export const updateCartItem = async (
 			],
 		});
 
-		if (!cartItem || !cartItem.product || !cartItem.product.quantity) {
+		if (!cartItem || !cartItem.product) {
 			res.status(404).json({ message: "Cart item or product not found." });
 			return;
 		}
 
-		const { productId, product } = cartItem;
-		const availableQuantity = product.quantity ?? 0; // Use 0 if quantity is undefined
+		const { product } = cartItem;
+		let availableQuantity = Number(product.quantity ?? 0);
+		if (cartItem.productType === "dropship" || product.type === "dropship") {
+			const variant = product.variants?.find(
+				(value) => String(value.sku_id) === String(cartItem.dropshipProductSkuId),
+			);
+			if (!variant) {
+				res.status(400).json({ message: "The selected product option is no longer available." });
+				return;
+			}
+			availableQuantity = Number(variant.sku_available_stock ?? 0);
+		}
 
 		// Ensure the requested quantity doesn't exceed available quantity
 		if (quantity > availableQuantity) {
@@ -2040,6 +2118,9 @@ export const prepareCheckoutNaira = async (
 			totalAmount = totalAmount
 				.plus(productPrice.plus(chargeAmount).mul(cartItem.quantity))
 				.toNearest(0.01);
+			totalChargeAmount = totalChargeAmount
+				.plus(chargeAmount.mul(cartItem.quantity))
+				.toNearest(0.01);
 
 			// totalAmount += product.price * cartItem.quantity;
 		}
@@ -2302,7 +2383,9 @@ export const prepareCheckoutDollar = async (
 				.plus(productPrice.plus(chargeAmount).mul(cartItem.quantity))
 				.toNearest(0.01);
 
-			totalChargeAmount = totalChargeAmount.plus(chargeAmount).toNearest(0.01);
+			totalChargeAmount = totalChargeAmount
+				.plus(chargeAmount.mul(cartItem.quantity))
+				.toNearest(0.01);
 
 			// totalAmount += product.price * cartItem.quantity;
 		}
@@ -2327,6 +2410,7 @@ export const prepareCheckoutDollar = async (
 				chargeAmount: totalChargeAmount.toNearest(0.01).toNumber(),
 				subtotal: totalAmount
 					.minus(totalChargeAmount)
+					.minus(new Decimal(deliveryFee))
 					.toNearest(0.01)
 					.toNumber(),
 				deliveryFee: deliveryFee,
@@ -3827,12 +3911,70 @@ export const checkoutDollar = async (
 };
 
 // Bid
+export const initializeAuctionInterestPayment = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const { auctionProductId } = req.body;
+		const userId = (req as AuthenticatedRequest).user?.id;
+		if (!uuid.validate(String(auctionProductId || ""))) {
+			res.status(400).json({ message: "A valid auction product ID is required." });
+			return;
+		}
+		const [user, auctionProduct] = await Promise.all([
+			User.findByPk(userId),
+			AuctionProduct.findOne({
+				where: { id: auctionProductId, auctionStatus: { [Op.in]: ["upcoming", "ongoing"] } },
+				include: [{ model: Store, as: "store", include: [{ model: Currency, as: "currency", attributes: ["name", "symbol"] }] }],
+			}),
+		]);
+
+		if (!user || !auctionProduct) {
+			res.status(404).json({ message: "User or active auction not found." });
+			return;
+		}
+		if (auctionProduct.vendorId === userId) {
+			res.status(400).json({ message: "You cannot join your own auction." });
+			return;
+		}
+		if (await ShowInterest.findOne({ where: { userId, auctionProductId } })) {
+			res.status(409).json({ message: "You have already joined this auction." });
+			return;
+		}
+
+		const fee = Number(auctionProduct.participantsInterestFee || 0);
+		if (fee <= 0) {
+			res.status(400).json({ message: "This auction does not require a participation payment." });
+			return;
+		}
+		const currency = (auctionProduct as any).store?.currency;
+		if (currency?.name?.toLowerCase() !== "naira" && !["#", "₦"].includes(currency?.symbol)) {
+			res.status(400).json({ message: "Secure auction participation payment is currently available only for NGN auctions." });
+			return;
+		}
+
+		const gateway = await PaymentGateway.findOne({ where: { name: { [Op.like]: "%paystack%" }, isActive: true } });
+		const secretKey = gateway?.secretKey || process.env.PAYSTACK_SECRET_KEY;
+		if (!secretKey) {
+			res.status(503).json({ message: "Secure payment is temporarily unavailable." });
+			return;
+		}
+		const refId = `psk_auction_${uuid.v4()}_${Date.now()}`;
+		const paystackDetails = await initializePaystackPayment(refId, fee, user.email, secretKey);
+		res.status(200).json({ message: "Payment initialized.", data: { refId, amount: fee, paystackDetails } });
+	} catch (error: any) {
+		logger.error("Error initializing auction participation payment:", error);
+		res.status(500).json({ message: "Could not initialize secure payment." });
+	}
+};
+
 export const showInterest = async (
 	req: Request,
 	res: Response,
 ): Promise<void> => {
 	try {
-		const { auctionProductId, amountPaid } = req.body;
+		const { auctionProductId, amountPaid, refId } = req.body;
 		const userId = (req as AuthenticatedRequest).user?.id; // Get the authenticated user's ID
 
 		// Fetch the auction product
@@ -3841,6 +3983,7 @@ export const showInterest = async (
 				id: auctionProductId,
 				auctionStatus: { [Op.in]: ["upcoming", "ongoing"] },
 			},
+			include: [{ model: Store, as: "store", include: [{ model: Currency, as: "currency", attributes: ["name", "symbol"] }] }],
 		});
 
 		if (!auctionProduct) {
@@ -3860,33 +4003,61 @@ export const showInterest = async (
 
 		// Enforce participation fee if configured
 		const requiredFee = Number(auctionProduct.participantsInterestFee || 0);
-		const numericAmountPaid = Number(amountPaid || 0);
-		if (requiredFee > 0 && numericAmountPaid < requiredFee) {
-			res.status(400).json({
-				message: `A participation fee of ${requiredFee} is required to register interest for this auction.`,
-			});
+		let numericAmountPaid = 0;
+		let verifiedPayment: any = null;
+		if (requiredFee > 0) {
+			if (!refId) {
+				res.status(400).json({ message: "A verified payment reference is required for this auction." });
+				return;
+			}
+			const gateway = await PaymentGateway.findOne({ where: { name: { [Op.like]: "%paystack%" }, isActive: true } });
+			const secretKey = gateway?.secretKey || process.env.PAYSTACK_SECRET_KEY;
+			if (!secretKey) {
+				res.status(503).json({ message: "Secure payment is temporarily unavailable." });
+				return;
+			}
+			if (await Transaction.findOne({ where: { refId } })) {
+				res.status(409).json({ message: "This payment reference has already been used." });
+				return;
+			}
+			verifiedPayment = await verifyPayment(refId, secretKey);
+			numericAmountPaid = Number(verifiedPayment.amount || 0) / 100;
+			if (verifiedPayment.status !== "success" || String(verifiedPayment.currency || "").toUpperCase() !== "NGN" || !new Decimal(numericAmountPaid).equals(requiredFee)) {
+				res.status(400).json({ message: "The verified payment does not match this auction's participation fee." });
+				return;
+			}
+		} else if (Number(amountPaid || 0) !== 0) {
+			res.status(400).json({ message: "This auction has free participation." });
 			return;
 		}
 
-		// Check if user has already shown interest
-		const existingInterest = await ShowInterest.findOne({
-			where: { userId, auctionProductId },
-		});
-
-		if (existingInterest) {
-			res
-				.status(400)
-				.json({ message: "You have already shown interest in this auction." });
-			return;
+		const registrationTransaction = await sequelizeService.connection!.transaction();
+		let newInterest: ShowInterest;
+		try {
+			await auctionProduct.reload({ transaction: registrationTransaction, lock: registrationTransaction.LOCK.UPDATE });
+			const existingInterest = await ShowInterest.findOne({ where: { userId, auctionProductId }, transaction: registrationTransaction });
+			if (existingInterest) {
+				await registrationTransaction.rollback();
+				res.status(409).json({ message: "You have already joined this auction." });
+				return;
+			}
+			newInterest = await ShowInterest.create({ userId, auctionProductId, amountPaid: numericAmountPaid, status: "confirmed" }, { transaction: registrationTransaction });
+			if (verifiedPayment) {
+				await Transaction.create({
+					userId,
+					amount: numericAmountPaid,
+					currency: "NGN",
+					transactionType: "auction_participation",
+					refId,
+					status: "completed",
+					metadata: { auctionProductId, channel: verifiedPayment.channel },
+				}, { transaction: registrationTransaction });
+			}
+			await registrationTransaction.commit();
+		} catch (registrationError) {
+			await registrationTransaction.rollback();
+			throw registrationError;
 		}
-
-		// Create a new interest record
-		const newInterest = await ShowInterest.create({
-			userId,
-			auctionProductId,
-			amountPaid: numericAmountPaid,
-			status: "confirmed",
-		});
 
 		// Fetch the user based on userId
 		const user = await User.findOne({ where: { id: userId } });
@@ -3903,7 +4074,7 @@ export const showInterest = async (
 		if (user.email) {
 			const message = emailTemplates.interestNotification(
 				user,
-				amountPaid,
+				numericAmountPaid,
 				auctionProduct,
 			);
 			try {
@@ -4462,6 +4633,27 @@ export const userMarkNotificationAsRead = async (
 	}
 };
 
+export const userMarkAllNotificationsAsRead = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const userId = (req as AuthenticatedRequest).user?.id;
+	if (!userId) {
+		res.status(401).json({ message: "User must be authenticated" });
+		return;
+	}
+	try {
+		const [updated] = await Notification.update(
+			{ isRead: true },
+			{ where: { userId, isRead: false } },
+		);
+		res.status(200).json({ message: "All notifications marked as read", data: { updated } });
+	} catch (error) {
+		logger.error("Error marking all notifications as read:", error);
+		res.status(500).json({ message: "Failed to mark notifications as read" });
+	}
+};
+
 export const getAllOrders = async (
 	req: Request,
 	res: Response,
@@ -4770,7 +4962,7 @@ export const updateOrderStatus = async (
 			return;
 		}
 
-		if (String(vendorId) !== String(userId)) {
+		if (!isBuyer && String(vendorId) !== String(userId)) {
 			await transaction.rollback();
 			res.status(403).json({
 				message: "You can only update the status of your own order items.",
@@ -4793,7 +4985,10 @@ export const updateOrderStatus = async (
 					.json({ message: "Delivery code is required to mark as delivered." });
 				return;
 			}
-			if (!mainOrder.deliveryCode || deliveryCode !== mainOrder.deliveryCode) {
+			if (
+				!mainOrder.deliveryCode ||
+				deliveryCode.trim().toUpperCase() !== mainOrder.deliveryCode.toUpperCase()
+			) {
 				await transaction.rollback();
 				res.status(400).json({ message: "Invalid delivery code." });
 				return;
@@ -4873,7 +5068,7 @@ export const updateOrderStatus = async (
 			(status === "delivered" && currencySymbol === "#" && vendor) ||
 			(status === "delivered" && currencySymbol === "₦" && vendor)
 		) {
-			const price = Number(order.price);
+			const price = Number(order.price) * Number(order.quantity);
 
 			vendor.wallet = Number(vendor.wallet) + price;
 
@@ -4896,7 +5091,7 @@ export const updateOrderStatus = async (
 
 		// If the order is delivered and the currency is USD, add funds to the vendor's wallet
 		if (status === "delivered" && currencySymbol === "$" && vendor) {
-			const price = Number(order.price);
+			const price = Number(order.price) * Number(order.quantity);
 
 			vendor.dollarWallet = Number(vendor.dollarWallet) + price;
 
@@ -5152,9 +5347,9 @@ export const getSavedProducts = async (
 			],
 		});
 
-		// If no saved products are found
+		// An empty collection is a successful result, not a missing resource.
 		if (savedProducts.length === 0) {
-			res.status(404).json({ message: "No saved products found" });
+			res.status(200).json({ data: [] });
 			return;
 		}
 
@@ -5870,10 +6065,26 @@ export const getUserServiceBookings = async (
 			],
 			order: [["createdAt", "DESC"]],
 		});
+		const reviewedServices = bookings.length
+			? await ServiceReviews.findAll({
+					where: {
+						userId,
+						serviceId: { [Op.in]: bookings.map((booking) => booking.serviceId) },
+					},
+					attributes: ["serviceId"],
+				})
+			: [];
+		const reviewedServiceIds = new Set(
+			reviewedServices.map((review) => review.serviceId),
+		);
+		const bookingData = bookings.map((booking) => ({
+			...booking.toJSON(),
+			hasReviewed: reviewedServiceIds.has(booking.serviceId),
+		}));
 
 		res
 			.status(200)
-			.json({ message: "Bookings retrieved successfully.", data: bookings });
+			.json({ message: "Bookings retrieved successfully.", data: bookingData });
 	} catch (error) {
 		res.status(500).json({ message: "Server error." }); // Handle server error
 	}
@@ -6032,6 +6243,12 @@ export const markServiceBookingComplete = async (
 			res.status(400).json({ message: "Booking is already completed." });
 			return;
 		}
+		if (booking.status !== "confirmed") {
+			res.status(400).json({
+				message: "Only confirmed bookings can be marked as completed.",
+			});
+			return;
+		}
 
 		// Update the booking status to completed
 		booking.status = "completed";
@@ -6112,8 +6329,12 @@ export const cancelServiceBooking = async (
 			return;
 		}
 
-		if (booking.status === "cancelled") {
+		if (booking.status === "canceled") {
 			res.status(400).json({ message: "Booking is already cancelled." });
+			return;
+		}
+		if (!["pending", "confirmed"].includes(booking.status)) {
+			res.status(400).json({ message: "This booking can no longer be cancelled." });
 			return;
 		}
 
@@ -6175,9 +6396,28 @@ export const submitOffer = async (
 	}
 
 	try {
-		const product = await Product.findByPk(productId as string);
+		const product = await Product.findOne({
+			where: { id: productId as string, status: "active" },
+			include: [
+				{
+					model: SubCategory,
+					as: "sub_category",
+					include: [{ model: Category, as: "category" }],
+				},
+			],
+		});
 		if (!product) {
 			res.status(404).json({ message: "Product not found." });
+			return;
+		}
+		if (String(product.vendorId) === String(buyerId)) {
+			res.status(400).json({ message: "You cannot make an offer on your own product." });
+			return;
+		}
+		if (getProductPurchaseType(product) !== "offer") {
+			res.status(400).json({
+				message: "This product is available for direct purchase and does not accept offers.",
+			});
 			return;
 		}
 
@@ -6194,6 +6434,13 @@ export const submitOffer = async (
 			title: "Offer Submitted",
 			message: `Your offer of ${offeredPrice} on "${product.name}" has been submitted and is awaiting review.`,
 			type: "OFFER_SUBMITTED",
+			isRead: false,
+		});
+		await Notification.create({
+			userId: product.vendorId,
+			title: "New Product Offer",
+			message: `A buyer submitted an offer of ${offeredPrice} on "${product.name}".`,
+			type: "NEW_OFFER",
 			isRead: false,
 		});
 
@@ -6232,6 +6479,20 @@ export const getMyOffers = async (
 					model: Product,
 					as: "product",
 					attributes: ["id", "name", "price", "image_url"],
+					include: [
+						{
+							model: Store,
+							as: "store",
+							attributes: ["id", "name"],
+							include: [
+								{
+									model: Currency,
+									as: "currency",
+									attributes: ["name", "symbol"],
+								},
+							],
+						},
+					],
 				},
 			],
 			order: [["createdAt", "DESC"]],
@@ -6262,7 +6523,7 @@ export const respondToCounterOffer = async (
 	try {
 		const offer = await ProductOffer.findOne({
 			where: { id: offerId as string, buyerId },
-			include: [{ model: Product, as: "product", attributes: ["id", "name"] }],
+			include: [{ model: Product, as: "product", attributes: ["id", "name", "vendorId"] }],
 		});
 
 		if (!offer) {
@@ -6278,6 +6539,13 @@ export const respondToCounterOffer = async (
 		await offer.update({ status });
 
 		const product = (offer as any).product;
+		await Notification.create({
+			userId: product.vendorId,
+			title: status === "accepted" ? "Counter Offer Accepted" : "Counter Offer Declined",
+			message: `The buyer has ${status} your counter offer on "${product.name}".`,
+			type: "OFFER_BUYER_RESPONSE",
+			isRead: false,
+		});
 		const { createAdminNotification } = await import("../services/notification.service");
 		await createAdminNotification(
 			"OFFER_BUYER_RESPONSE",
@@ -6302,7 +6570,26 @@ export const initiateOfferPayment = async (
 	try {
 		const offer = await ProductOffer.findOne({
 			where: { id: offerId as string, buyerId },
-			include: [{ model: Product, as: "product", attributes: ["id", "name"] }],
+			include: [
+				{
+					model: Product,
+					as: "product",
+					attributes: ["id", "name"],
+					include: [
+						{
+							model: Store,
+							as: "store",
+							include: [
+								{
+									model: Currency,
+									as: "currency",
+									attributes: ["name", "symbol"],
+								},
+							],
+						},
+					],
+				},
+			],
 		});
 
 		if (!offer) {
@@ -6312,6 +6599,16 @@ export const initiateOfferPayment = async (
 
 		if (offer.status !== "accepted") {
 			res.status(400).json({ message: "Payment can only be initiated for accepted offers." });
+			return;
+		}
+		const offerCurrency = (offer as any).product?.store?.currency;
+		if (
+			offerCurrency?.name?.toLowerCase() !== "naira" &&
+			!["#", "₦"].includes(offerCurrency?.symbol)
+		) {
+			res.status(400).json({
+				message: "Secure offer payment is currently available only for NGN products.",
+			});
 			return;
 		}
 
@@ -6335,6 +6632,16 @@ export const initiateOfferPayment = async (
 		const refId = `psk_offer_${uuidv4()}_${Date.now()}`;
 
 		const paystack = await initializePaystackPayment(refId, effectivePrice, user.email, paymentGateway.secretKey);
+
+		await Transaction.create({
+			userId: buyerId,
+			amount: effectivePrice,
+			currency: "NGN",
+			transactionType: "offer_payment",
+			refId,
+			status: "pending",
+			metadata: { offerId: offer.id },
+		});
 
 		res.status(200).json({
 			message: "Payment initialized.",
@@ -6369,8 +6676,27 @@ export const checkoutOffer = async (
 	try {
 		const offer = await ProductOffer.findOne({
 			where: { id: offerId as string, buyerId },
-			include: [{ model: Product, as: "product" }],
+			include: [
+				{
+					model: Product,
+					as: "product",
+					include: [
+						{
+							model: Store,
+							as: "store",
+							include: [
+								{
+									model: Currency,
+									as: "currency",
+									attributes: ["name", "symbol"],
+								},
+							],
+						},
+					],
+				},
+			],
 			transaction,
+			lock: transaction.LOCK.UPDATE,
 		});
 
 		if (!offer) {
@@ -6382,6 +6708,28 @@ export const checkoutOffer = async (
 		if (offer.status !== "accepted") {
 			await transaction.rollback();
 			res.status(400).json({ message: "Checkout is only allowed for accepted offers." });
+			return;
+		}
+
+		const paymentIntent = await Transaction.findOne({
+			where: {
+				userId: buyerId,
+				refId,
+				transactionType: "offer_payment",
+				status: "pending",
+			},
+			transaction,
+			lock: transaction.LOCK.UPDATE,
+		});
+		const paymentMetadata =
+			typeof paymentIntent?.metadata === "string"
+				? JSON.parse(paymentIntent.metadata)
+				: paymentIntent?.metadata;
+		if (!paymentIntent || String(paymentMetadata?.offerId) !== String(offer.id)) {
+			await transaction.rollback();
+			res.status(400).json({
+				message: "This payment reference was not created for the selected offer.",
+			});
 			return;
 		}
 
@@ -6417,6 +6765,34 @@ export const checkoutOffer = async (
 		}
 
 		const effectivePrice = offer.counterPrice !== null ? Number(offer.counterPrice) : Number(offer.offeredPrice);
+		const offerCurrency = (offer as any).product?.store?.currency;
+		if (
+			offerCurrency?.name?.toLowerCase() !== "naira" &&
+			!["#", "₦"].includes(offerCurrency?.symbol)
+		) {
+			await transaction.rollback();
+			res.status(400).json({
+				message: "Secure offer checkout is currently available only for NGN products.",
+			});
+			return;
+		}
+		const paidAmount = new Decimal(verificationResponse.amount || 0).div(100);
+		if (
+			String(verificationResponse.currency || "").toUpperCase() !== "NGN" ||
+			!paidAmount.equals(effectivePrice)
+		) {
+			await transaction.rollback();
+			res.status(400).json({
+				message: "The verified payment does not match this offer.",
+			});
+			return;
+		}
+		const usedPayment = await Payment.findOne({ where: { refId }, transaction });
+		if (usedPayment) {
+			await transaction.rollback();
+			res.status(409).json({ message: "This payment reference has already been used." });
+			return;
+		}
 
 		const user = await User.findByPk(buyerId, { transaction });
 
@@ -6454,6 +6830,8 @@ export const checkoutOffer = async (
 			},
 			{ transaction },
 		);
+
+		await paymentIntent.update({ status: "completed" }, { transaction });
 
 		await offer.update({ status: "completed" } as any, { transaction });
 

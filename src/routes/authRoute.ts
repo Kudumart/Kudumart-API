@@ -117,6 +117,7 @@ authRoutes.get(
 	homeController.getCategoriesWithSubcategories,
 ); // Fetch categories with subcategories
 authRoutes.get("/products", homeController.products);
+authRoutes.get("/products/:productId/share", homeController.productSharePreview);
 authRoutes.get("/products/autocomplete", homeController.productAutocomplete); // Live search suggestions
 authRoutes.get("/products/search-grouped", homeController.searchProductsGrouped); // Search results grouped by matching category
 authRoutes.get("/product", homeController.getProductById); // Fetch a single product by ID

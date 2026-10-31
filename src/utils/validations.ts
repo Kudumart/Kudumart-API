@@ -946,6 +946,11 @@ export const validateShowInterest = () => {
 		check("amountPaid")
 			.isNumeric()
 			.withMessage("Amount paid is required and must be a numeric value"),
+
+		check("refId")
+			.optional({ checkFalsy: true })
+			.isString()
+			.withMessage("Payment reference must be a string"),
 	];
 };
 
@@ -991,6 +996,13 @@ export const createAdvertValidation = () => {
 
 export const updateAdvertValidation = () => {
 	return [
+		check("advertId")
+			.isUUID()
+			.withMessage("Advert ID must be a valid UUID."),
+		check("categoryId")
+			.optional({ checkFalsy: true })
+			.isUUID()
+			.withMessage("Category ID must be a valid UUID."),
 		check("title")
 			.optional({ checkFalsy: true })
 			.isString()

@@ -55,6 +55,7 @@ class Product extends Model {
 	public meta_description!: string | null;
 	public keywords!: string | null;
 	public views!: number | null;
+	public isTrending!: boolean;
 	public status!: "active" | "inactive" | "draft";
 	public vendor?: User; // Declare the relationship to User (vendor)
 	public variants!: ProductSku[] | null; // JSON array or object for product variants
@@ -232,6 +233,11 @@ const initModel = (sequelize: Sequelize) => {
 				type: DataTypes.INTEGER,
 				allowNull: true,
 				defaultValue: 0,
+			},
+			isTrending: {
+				type: DataTypes.BOOLEAN,
+				allowNull: false,
+				defaultValue: false,
 			},
 			status: {
 				type: DataTypes.ENUM("active", "inactive", "draft"),

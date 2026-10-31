@@ -531,6 +531,12 @@ adminRoutes.put(
 	checkPermission(PERMISSIONS.MANAGE_PRODUCTS),
 	adminController.publishProduct,
 );
+adminRoutes.patch(
+	"/general/product/trending",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_PRODUCTS),
+	adminController.updateProductTrending,
+);
 adminRoutes.get(
 	"/general/auction/products",
 	adminAuthMiddleware,
@@ -597,6 +603,30 @@ adminRoutes.get(
 	"/subscribers",
 	adminAuthMiddleware,
 	adminController.getAllSubscribers,
+);
+adminRoutes.get(
+	"/vendors/:vendorId/subscription-offers",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_VENDOR_SUBSCRIPTIONS),
+	adminController.getVendorSubscriptionOffers,
+);
+adminRoutes.post(
+	"/vendors/:vendorId/subscription-offers",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_VENDOR_SUBSCRIPTIONS),
+	adminController.saveVendorSubscriptionOffer,
+);
+adminRoutes.patch(
+	"/subscription-offers/:offerId/revoke",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_VENDOR_SUBSCRIPTIONS),
+	adminController.revokeVendorSubscriptionOffer,
+);
+adminRoutes.patch(
+	"/subscription/plans/:planId/fee-waiver",
+	adminAuthMiddleware,
+	checkPermission(PERMISSIONS.MANAGE_VENDOR_SUBSCRIPTIONS),
+	adminController.setGlobalSubscriptionFeeWaiver,
 );
 
 // Transactions

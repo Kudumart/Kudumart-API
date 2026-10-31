@@ -24,6 +24,7 @@ import AuctionReminders from "../models/reminder";
 import https from "https";
 import SubscriptionPlan from "../models/subscriptionplan";
 import VendorSubscription from "../models/vendorsubscription";
+import VendorSubscriptionOffer from "../models/vendorsubscriptionoffer";
 import Notification from "../models/notification";
 import Transaction from "../models/transaction";
 import PaymentGateway from "../models/paymentgateway";
@@ -186,18 +187,23 @@ export const submitOrUpdateKYC = async (
 			// A resubmission must return to the admin review queue. Never allow
 			// client supplied verification fields to approve a KYC record.
 			const { isVerified: _ignoredVerification, adminNote: _ignoredNote, ...safeKycData } = kycData;
+			const valueAt = (source: any, field: string) =>
+				field.split(".").reduce((value: any, part: string) => value?.[part], source);
+			const comparable = (value: any) => value == null ? "" : JSON.stringify(value);
+			const submittedSnapshot = { ...existingKYC.toJSON(), ...safeKycData };
+			const nextFieldReviews = Object.fromEntries(
+				Object.entries(existingKYC.fieldReviews || {}).map(([field, review]: [string, any]) => {
+					const changed = comparable(valueAt(existingKYC.toJSON(), field)) !== comparable(valueAt(submittedSnapshot, field));
+					return [field, review?.status === "rejected" || changed ? { status: "pending" } : review];
+				}),
+			);
 			await existingKYC.update(
 				{
 					...safeKycData,
 					isVerified: false,
 					adminNote: null,
 					reviewStatus: "pending",
-					fieldReviews: Object.fromEntries(
-						Object.entries(existingKYC.fieldReviews || {}).map(([field, review]: [string, any]) => [
-							field,
-							review?.status === "rejected" ? { status: "pending" } : review,
-						]),
-					),
+					fieldReviews: nextFieldReviews,
 				},
 				{ transaction },
 			);
@@ -477,7 +483,7 @@ export const updateStore = async (
 	} = req.body;
 
 	try {
-		const store = await Store.findOne({ where: { id: storeId } });
+		const store = await Store.findOne({ where: { id: storeId, vendorId } });
 
 		if (!store) {
 			res.status(404).json({ message: "Store not found" });
@@ -530,9 +536,10 @@ export const deleteStore = async (
 	res: Response,
 ): Promise<void> => {
 	const storeId = req.query.storeId as String;
+	const vendorId = (req as AuthenticatedRequest).user?.id;
 
 	try {
-		const store = await Store.findOne({ where: { id: storeId } });
+		const store = await Store.findOne({ where: { id: storeId, vendorId } });
 
 		if (!store) {
 			res.status(404).json({ message: "Store not found" });
@@ -609,7 +616,7 @@ export const createProduct = async (
 
 		// Check if vendorId, storeId, and categoryId exist
 		const vendorExists = await User.findByPk(vendorId);
-		const storeExists = await Store.findByPk(storeId);
+		const storeExists = await Store.findOne({ where: { id: storeId, vendorId } });
 		const categoryExists = await SubCategory.findByPk(categoryId);
 
 		if (!vendorExists) {
@@ -618,7 +625,7 @@ export const createProduct = async (
 		}
 
 		if (!storeExists) {
-			res.status(404).json({ message: "Store not found." });
+			res.status(404).json({ message: "Store not found in your seller account." });
 			return;
 		}
 
@@ -682,6 +689,21 @@ export const updateProduct = async (
 		if (!product) {
 			res.status(404).json({ message: "Product not found." });
 			return;
+		}
+
+		if (updateData.storeId) {
+			const ownedStore = await Store.findOne({ where: { id: updateData.storeId, vendorId } });
+			if (!ownedStore) {
+				res.status(404).json({ message: "Store not found in your seller account." });
+				return;
+			}
+		}
+		if (updateData.categoryId) {
+			const category = await SubCategory.findByPk(updateData.categoryId);
+			if (!category) {
+				res.status(404).json({ message: "Category not found." });
+				return;
+			}
 		}
 
 		await product.update(updateData);
@@ -759,7 +781,13 @@ export const fetchVendorProducts = async (
 
 	try {
 		const products = await Product.findAll({
-			where: { vendorId },
+			where: {
+				vendorId,
+				...(name && { name: { [Op.like]: `%${name}%` } }),
+				...(sku && { sku }),
+				...(status && { status }),
+				...(condition && { condition }),
+			},
 			include: [
 				{
 					model: SubCategory,
@@ -779,14 +807,6 @@ export const fetchVendorProducts = async (
 					],
 				},
 			],
-			...((name || sku || status || condition) && {
-				where: {
-					...(name && { name: { [Op.like]: `%${name}%` } }),
-					...(sku && { sku }),
-					...(status && { status }),
-					...(condition && { condition }),
-				},
-			}),
 		});
 
 		res.status(200).json({
@@ -954,7 +974,7 @@ export const moveToDraft = async (
 		await product.save();
 
 		// Remove the product from all carts
-		await Cart.destroy({ where: { productId } });
+		await Cart.destroy({ where: { productId: product.id } });
 
 		// Respond with the updated product
 		res.status(200).json({
@@ -1035,6 +1055,15 @@ export const createAuctionProduct = async (
 	} = req.body;
 
 	try {
+		const startsAt = new Date(startDate);
+		const endsAt = new Date(endDate);
+		if (startsAt <= new Date() || endsAt <= startsAt) {
+			res.status(400).json({
+				message: "Auction must start in the future and end after it starts.",
+			});
+			return;
+		}
+
 		// Use the utility function to check the product limit
 		const { status, message } = await checkVendorAuctionProductLimit(vendorId);
 
@@ -1045,7 +1074,7 @@ export const createAuctionProduct = async (
 
 		// Check if vendorId, storeId, and categoryId exist
 		const vendorExists = await User.findByPk(vendorId);
-		const storeExists = await Store.findByPk(storeId);
+		const storeExists = await Store.findOne({ where: { id: storeId, vendorId } });
 		const categoryExists = await SubCategory.findByPk(categoryId);
 
 		if (!vendorExists) {
@@ -1167,6 +1196,21 @@ export const updateAuctionProduct = async (
 			res.status(404).json({ message: "Auction product not found." });
 			return;
 		}
+		if (auctionProduct.auctionStatus !== "upcoming") {
+			res.status(409).json({
+				message: "Only upcoming auctions can be edited.",
+			});
+			return;
+		}
+
+		const startsAt = new Date(startDate);
+		const endsAt = new Date(endDate);
+		if (startsAt <= new Date() || endsAt <= startsAt) {
+			res.status(400).json({
+				message: "Auction must start in the future and end after it starts.",
+			});
+			return;
+		}
 
 		// Check if vendorId matches the auction product's vendorId
 		if (auctionProduct.vendorId !== vendorId) {
@@ -1178,7 +1222,7 @@ export const updateAuctionProduct = async (
 
 		// Check if vendor, store, and category exist
 		const vendorExists = await User.findByPk(vendorId);
-		const storeExists = await Store.findByPk(storeId);
+		const storeExists = await Store.findOne({ where: { id: storeId, vendorId } });
 		const categoryExists = await SubCategory.findByPk(categoryId);
 
 		if (!vendorExists || !storeExists || !categoryExists) {
@@ -1209,21 +1253,7 @@ export const updateAuctionProduct = async (
 		auctionProduct.additionalImages =
 			additionalImages || auctionProduct.additionalImages;
 
-		// Dynamically update auctionStatus based on dates, or accept explicitly passed status
-		if (req.body.auctionStatus) {
-			auctionProduct.auctionStatus = req.body.auctionStatus;
-		} else {
-			const now = new Date();
-			const effectiveStartDate = new Date(auctionProduct.startDate);
-			const effectiveEndDate = new Date(auctionProduct.endDate);
-			if (now >= effectiveEndDate) {
-				auctionProduct.auctionStatus = "ended";
-			} else if (now >= effectiveStartDate) {
-				auctionProduct.auctionStatus = "ongoing";
-			} else {
-				auctionProduct.auctionStatus = "upcoming";
-			}
-		}
+		auctionProduct.auctionStatus = "upcoming";
 
 		// Save the updated auction product
 		await auctionProduct.save();
@@ -1260,6 +1290,12 @@ export const deleteAuctionProduct = async (
 
 		if (!auctionProduct) {
 			res.status(404).json({ message: "Auction product not found." });
+			return;
+		}
+		if (!["ended", "cancelled"].includes(auctionProduct.auctionStatus)) {
+			res.status(409).json({
+				message: "Only ended or cancelled auctions can be deleted.",
+			});
 			return;
 		}
 
@@ -1333,6 +1369,12 @@ export const cancelAuctionProduct = async (
 				.json({ message: "Auction product is already cancelled." });
 			return;
 		}
+		if (!["upcoming", "ongoing"].includes(auctionProduct.auctionStatus)) {
+			res.status(409).json({
+				message: "Only upcoming or ongoing auctions can be cancelled.",
+			});
+			return;
+		}
 
 		// Check if vendorId matches the auction product's vendorId
 		if (auctionProduct.vendorId !== vendorId) {
@@ -1371,6 +1413,10 @@ export const fetchVendorAuctionProducts = async (
 		const auctionProducts = await AuctionProduct.findAll({
 			where: {
 				vendorId,
+				...(name && { name: { [Op.like]: `%${name}%` } }),
+				...(sku && { sku }),
+				...(status && { auctionStatus: status }),
+				...(condition && { condition }),
 			},
 			include: [
 				{
@@ -1391,14 +1437,6 @@ export const fetchVendorAuctionProducts = async (
 					],
 				},
 			],
-			...((name || sku || status || condition) && {
-				where: {
-					...(name && { name: { [Op.like]: `%${name}%` } }),
-					...(sku && { sku }),
-					...(status && { status }),
-					...(condition && { condition }),
-				},
-			}),
 		});
 
 		if (auctionProducts.length === 0) {
@@ -1473,9 +1511,19 @@ export const getAllBidsByAuctionProductId = async (
 ): Promise<void> => {
 	try {
 		const { auctionProductId } = req.query; // Get auctionProductId from request params
+		const vendorId = (req as AuthenticatedRequest).user?.id as string;
 
 		if (!auctionProductId) {
 			res.status(400).json({ message: "Auction Product ID is required." });
+			return;
+		}
+
+		const auctionProduct = await AuctionProduct.findOne({
+			where: { id: auctionProductId, vendorId },
+			attributes: ["id"],
+		});
+		if (!auctionProduct) {
+			res.status(404).json({ message: "Auction product not found." });
 			return;
 		}
 
@@ -1486,6 +1534,7 @@ export const getAllBidsByAuctionProductId = async (
 				{
 					model: User,
 					as: "user",
+					attributes: ["id", "firstName", "lastName", "email"],
 				},
 			],
 			order: [["createdAt", "DESC"]], // Order bids from newest to oldest
@@ -1541,15 +1590,43 @@ export const subscriptionPlans = async (
 			},
 		});
 
-		// Mark active plan in the list
-		if (activeSubscription) {
-			subscriptionPlans.forEach((plan) => {
-				plan.setDataValue(
-					"isActiveForVendor",
-					plan.id === activeSubscription.subscriptionPlanId,
-				);
-			});
-		}
+		const offers = await VendorSubscriptionOffer.findAll({
+			where: {
+				vendorId,
+				isActive: true,
+				redeemedAt: null,
+				[Op.or]: [{ expiresAt: null }, { expiresAt: { [Op.gt]: new Date() } }],
+			},
+		});
+		const offersByPlan = new Map(offers.map((offer) => [offer.subscriptionPlanId, offer]));
+
+		subscriptionPlans.forEach((plan) => {
+			const offer = offersByPlan.get(plan.id);
+			const originalPrice = Number(plan.price);
+			plan.setDataValue("isActiveForVendor", plan.id === activeSubscription?.subscriptionPlanId);
+			plan.setDataValue("originalPrice", originalPrice.toFixed(2));
+			if (plan.isFeeWaived) {
+				plan.setDataValue("price", "0.00");
+				plan.setDataValue("hasMarketingOffer", true);
+				plan.setDataValue("marketingOffer", {
+					reason: "Subscription fee waived by KuduMart",
+					expiresAt: null,
+					isWaived: true,
+					isGlobal: true,
+				});
+			} else if (offer) {
+				plan.setDataValue("price", Number(offer.specialPrice).toFixed(2));
+				plan.setDataValue("hasMarketingOffer", true);
+				plan.setDataValue("marketingOffer", {
+					id: offer.id,
+					reason: offer.reason,
+					expiresAt: offer.expiresAt,
+					isWaived: Number(offer.specialPrice) === 0,
+				});
+			} else {
+				plan.setDataValue("hasMarketingOffer", false);
+			}
+		});
 
 		res.status(200).json({ data: subscriptionPlans });
 	} catch (error: any) {
@@ -1598,9 +1675,25 @@ export const subscribe = async (req: Request, res: Response): Promise<void> => {
 			return;
 		}
 
+		const marketingOffer = await VendorSubscriptionOffer.findOne({
+			where: {
+				vendorId,
+				subscriptionPlanId,
+				isActive: true,
+				redeemedAt: null,
+				[Op.or]: [{ expiresAt: null }, { expiresAt: { [Op.gt]: new Date() } }],
+			},
+			transaction,
+			lock: true,
+			order: [["createdAt", "DESC"]],
+		});
+		const effectivePrice = subscriptionPlan.isFeeWaived ? 0 : marketingOffer ? Number(marketingOffer.specialPrice) : Number(subscriptionPlan.price);
+
 		// Step 3: Function to Handle Payment (Wallet or External)
 		const handleTransaction = async (amount: number) => {
-			if (isWallet) {
+			if (amount <= 0) {
+				// A zero-price marketing waiver is activated without a payment gateway.
+			} else if (isWallet) {
 				const vendor = await User.findByPk(vendorId, {
 					transaction,
 					lock: true,
@@ -1676,7 +1769,7 @@ export const subscribe = async (req: Request, res: Response): Promise<void> => {
 					amount,
 					transactionType: "subscription",
 					status: "success",
-					refId: isWallet ? null : refId,
+					refId: isWallet || amount <= 0 ? null : refId,
 				},
 				{ transaction },
 			);
@@ -1685,7 +1778,7 @@ export const subscribe = async (req: Request, res: Response): Promise<void> => {
 		};
 
 		// Step 4: Process Payment
-		const transactionSuccess = await handleTransaction(subscriptionPlan.price);
+		const transactionSuccess = await handleTransaction(effectivePrice);
 		if (!transactionSuccess) return;
 
 		endDate.setMonth(startDate.getMonth() + subscriptionPlan.duration);
@@ -1706,6 +1799,9 @@ export const subscribe = async (req: Request, res: Response): Promise<void> => {
 			},
 			{ transaction },
 		);
+		if (marketingOffer && !subscriptionPlan.isFeeWaived) {
+			await marketingOffer.update({ redeemedAt: new Date(), isActive: false }, { transaction });
+		}
 
 		// Step 7: Send Notification
 		await Notification.create(
@@ -1724,6 +1820,9 @@ export const subscribe = async (req: Request, res: Response): Promise<void> => {
 		res.status(200).json({
 			message: "Switched to new subscription plan successfully",
 			subscription: newSubscription,
+			amountPaid: effectivePrice,
+			marketingOfferApplied: Boolean(marketingOffer && !subscriptionPlan.isFeeWaived),
+			globalFeeWaiverApplied: subscriptionPlan.isFeeWaived,
 		});
 	} catch (error) {
 		await transaction.rollback(); // Rollback changes on error
@@ -1771,9 +1870,25 @@ export const subscribeDollar = async (
 			return;
 		}
 
+		const marketingOffer = await VendorSubscriptionOffer.findOne({
+			where: {
+				vendorId,
+				subscriptionPlanId,
+				isActive: true,
+				redeemedAt: null,
+				[Op.or]: [{ expiresAt: null }, { expiresAt: { [Op.gt]: new Date() } }],
+			},
+			transaction,
+			lock: true,
+			order: [["createdAt", "DESC"]],
+		});
+		const effectivePrice = subscriptionPlan.isFeeWaived ? 0 : marketingOffer ? Number(marketingOffer.specialPrice) : Number(subscriptionPlan.price);
+
 		// Step 3: Function to Handle Payment (Wallet or External)
 		const handleTransaction = async (amount: number) => {
-			if (isWallet) {
+			if (amount <= 0) {
+				// A zero-price marketing waiver is activated without a payment gateway.
+			} else if (isWallet) {
 				const vendor = await User.findByPk(vendorId, {
 					transaction,
 					lock: true,
@@ -1820,7 +1935,7 @@ export const subscribeDollar = async (
 					amount,
 					transactionType: "subscription",
 					status: "success",
-					refId: isWallet ? null : refId,
+					refId: isWallet || amount <= 0 ? null : refId,
 				},
 				{ transaction },
 			);
@@ -1829,7 +1944,7 @@ export const subscribeDollar = async (
 		};
 
 		// Step 4: Process Payment
-		const transactionSuccess = await handleTransaction(subscriptionPlan.price);
+		const transactionSuccess = await handleTransaction(effectivePrice);
 		if (!transactionSuccess) return;
 
 		endDate.setMonth(startDate.getMonth() + subscriptionPlan.duration);
@@ -1850,6 +1965,9 @@ export const subscribeDollar = async (
 			},
 			{ transaction },
 		);
+		if (marketingOffer && !subscriptionPlan.isFeeWaived) {
+			await marketingOffer.update({ redeemedAt: new Date(), isActive: false }, { transaction });
+		}
 
 		// Step 7: Send Notification
 		await Notification.create(
@@ -1868,6 +1986,9 @@ export const subscribeDollar = async (
 		res.status(200).json({
 			message: "Switched to new subscription plan successfully",
 			subscription: newSubscription,
+			amountPaid: effectivePrice,
+			marketingOfferApplied: Boolean(marketingOffer && !subscriptionPlan.isFeeWaived),
+			globalFeeWaiverApplied: subscriptionPlan.isFeeWaived,
 		});
 	} catch (error) {
 		await transaction.rollback(); // Rollback changes on error
@@ -2030,13 +2151,6 @@ export const getVendorOrderItems = async (
 			order: [["createdAt", "DESC"]], // Sort by most recent
 		});
 
-		if (!orderItems || orderItems.length === 0) {
-			res
-				.status(404)
-				.json({ message: "No order items found for this vendor." });
-			return;
-		}
-
 		res.status(200).json({
 			message: "Order items retrieved successfully",
 			data: orderItems,
@@ -2053,9 +2167,16 @@ export const getOrderItemsInfo = async (
 	res: Response,
 ): Promise<void> => {
 	const orderId = req.query.orderId as string;
+	const vendorId = (req as AuthenticatedRequest).user?.id as string;
+
+	if (!orderId || !vendorId) {
+		res.status(400).json({ message: "Order ID and vendor account are required." });
+		return;
+	}
 
 	try {
-		// Fetch Order related to the vendor
+		// Return only the authenticated vendor's items. This prevents a seller
+		// from discovering another seller's portion of a multi-vendor order.
 		const order = await Order.findOne({
 			where: { id: orderId },
 			include: [
@@ -2064,9 +2185,19 @@ export const getOrderItemsInfo = async (
 					as: "user",
 					attributes: ["id", "firstName", "lastName", "email", "phoneNumber"], // Include user details
 				},
+				{
+					model: OrderItem,
+					as: "orderItems",
+					where: { vendorId },
+					required: true,
+				},
 			],
-			order: [["createdAt", "DESC"]], // Sort by most recent
 		});
+
+		if (!order) {
+			res.status(404).json({ message: "Order not found in your seller account." });
+			return;
+		}
 
 		res.status(200).json({
 			message: "Order details retrieved successfully",
@@ -2089,12 +2220,11 @@ export const activeProducts = async (
 
 	try {
 		const products = await Product.findAll({
-			where: { vendorId, status: "active" },
-			...(name && {
-				where: {
-					...(name && { name: { [Op.like]: `%${name}%` } }),
-				},
-			}),
+			where: {
+				vendorId,
+				status: "active",
+				...(name && { name: { [Op.like]: `%${name}%` } }),
+			},
 		});
 
 		res.status(200).json({
@@ -2139,7 +2269,9 @@ export const createAdvert = async (
 		}
 
 		if (productId) {
-			const productExists = await Product.findByPk(productId);
+			const productExists = await Product.findOne({
+				where: { id: productId, vendorId },
+			});
 
 			if (!productExists) {
 				res.status(404).json({ message: "Product not found." });
@@ -2172,6 +2304,7 @@ export const updateAdvert = async (
 	req: Request,
 	res: Response,
 ): Promise<void> => {
+	const vendorId = (req as AuthenticatedRequest).user?.id as string;
 	const {
 		advertId,
 		categoryId,
@@ -2185,15 +2318,18 @@ export const updateAdvert = async (
 
 	try {
 		// Check if categoryId and productId exist
-		const categoryExists = await SubCategory.findByPk(categoryId);
-
-		if (!categoryExists) {
-			res.status(404).json({ message: "Category not found." });
-			return;
+		if (categoryId) {
+			const categoryExists = await SubCategory.findByPk(categoryId);
+			if (!categoryExists) {
+				res.status(404).json({ message: "Category not found." });
+				return;
+			}
 		}
 
 		if (productId) {
-			const productExists = await Product.findByPk(productId);
+			const productExists = await Product.findOne({
+				where: { id: productId, vendorId },
+			});
 
 			if (!productExists) {
 				res.status(404).json({ message: "Product not found." });
@@ -2201,20 +2337,24 @@ export const updateAdvert = async (
 			}
 		}
 
-		const advert = await Advert.findByPk(advertId);
+		const advert = await Advert.findOne({
+			where: { id: advertId, userId: vendorId },
+		});
 
 		if (!advert) {
 			res.status(404).json({ message: "Advert not found" });
 			return;
 		}
 
-		advert.categoryId = categoryId || advert.categoryId;
-		advert.productId = productId || advert.productId;
-		advert.title = title || advert.title;
-		advert.description = description || advert.description;
-		advert.media_url = media_url || advert.media_url;
-		advert.showOnHomepage = showOnHomepage || advert.showOnHomepage;
-		advert.link = link || advert.link;
+		if (categoryId !== undefined) advert.categoryId = categoryId;
+		if (productId !== undefined) (advert as any).productId = productId || null;
+		if (title !== undefined) advert.title = title;
+		if (description !== undefined) advert.description = description;
+		if (media_url !== undefined) advert.media_url = media_url;
+		if (showOnHomepage !== undefined) advert.showOnHomepage = showOnHomepage;
+		if (link !== undefined) advert.link = link;
+		advert.status = "pending";
+		(advert as any).adminNote = null;
 
 		await advert.save();
 
@@ -2263,20 +2403,6 @@ export const getAdverts = async (
 			order: [["createdAt", "DESC"]], // Order by latest adverts
 		});
 
-		// Handle case where no adverts are found
-		if (!adverts || adverts.length === 0) {
-			res.status(404).json({
-				message: "No adverts found",
-				data: [],
-				pagination: {
-					total: 0,
-					page: pageNumber,
-					pages: 0,
-				},
-			});
-			return;
-		}
-
 		// Calculate total pages
 		const totalPages = Math.ceil(count / limitNumber);
 
@@ -2302,9 +2428,11 @@ export const viewAdvert = async (
 	res: Response,
 ): Promise<void> => {
 	const advertId = req.query.advertId as string;
+	const vendorId = (req as AuthenticatedRequest).user?.id as string;
 
 	try {
-		const advert = await Advert.findByPk(advertId, {
+		const advert = await Advert.findOne({
+			where: { id: advertId, userId: vendorId },
 			include: [
 				{ model: Product, as: "product" },
 				{ model: SubCategory, as: "sub_category" },
@@ -2331,9 +2459,12 @@ export const deleteAdvert = async (
 	res: Response,
 ): Promise<void> => {
 	const advertId = req.query.advertId as string;
+	const vendorId = (req as AuthenticatedRequest).user?.id as string;
 
 	try {
-		const advert = await Advert.findByPk(advertId);
+		const advert = await Advert.findOne({
+			where: { id: advertId, userId: vendorId },
+		});
 
 		if (!advert) {
 			res.status(404).json({ message: "Advert not found" });
@@ -2632,10 +2763,11 @@ export const getSingleBankInformation = async (
 	res: Response,
 ): Promise<void> => {
 	const bankId = req.query.bankId; // bankId is required
+	const vendorId = (req as AuthenticatedRequest).user?.id;
 
 	try {
 		// Fetch bank details
-		const bankInfo = await BankInformation.findOne({ where: { id: bankId } });
+		const bankInfo = await BankInformation.findOne({ where: { id: bankId, vendorId } });
 
 		if (!bankInfo) {
 			res.status(404).json({ message: "Bank information not found" });
@@ -2848,7 +2980,10 @@ export const requestWithdrawal = async (
 	const transaction = await sequelizeService.connection!.transaction();
 
 	try {
-		const vendor = await User.findByPk(vendorId, { transaction });
+		const vendor = await User.findByPk(vendorId, {
+			transaction,
+			lock: transaction.LOCK.UPDATE,
+		});
 
 		if (
 			!vendor ||
@@ -2862,7 +2997,19 @@ export const requestWithdrawal = async (
 			return;
 		}
 
-		const { bankInformationId, amount, currency } = req.body;
+		const { bankInformationId } = req.body;
+		const currency = String(req.body.currency || "").toUpperCase();
+		const amount = Number(req.body.amount);
+		if (!Number.isFinite(amount) || amount <= 0) {
+			await transaction.rollback();
+			res.status(400).json({ message: "Withdrawal amount must be greater than zero." });
+			return;
+		}
+		if (!["NGN", "USD"].includes(currency)) {
+			await transaction.rollback();
+			res.status(400).json({ message: "Withdrawal currency must be NGN or USD." });
+			return;
+		}
 
 		const bankInformation = await BankInformation.findOne({
 			where: { id: bankInformationId, vendorId },
@@ -3119,9 +3266,10 @@ export const getWithdrawalById = async (
 ): Promise<void> => {
 	try {
 		const id = req.query.id as string;
+		const vendorId = (req as AuthenticatedRequest).user?.id;
 
 		// Find withdrawal with associated BankInformation and Vendor details
-		const withdrawal = await Withdrawal.findByPk(id);
+		const withdrawal = await Withdrawal.findOne({ where: { id, vendorId } });
 
 		if (!withdrawal) {
 			res.status(404).json({ message: "Withdrawal not found" });
@@ -3998,15 +4146,16 @@ export const getService = async (
 	res: Response,
 ): Promise<void> => {
 	const serviceId = req.params.serviceId as string;
+	const vendorId = (req as AuthenticatedRequest).user?.id as string;
 
-	if (!serviceId) {
-		res.status(400).json({ message: "Service ID is required." });
+	if (!serviceId || !vendorId) {
+		res.status(400).json({ message: "Service ID and vendor account are required." });
 		return;
 	}
 
 	try {
 		const services = await Services.findAll({
-			where: { id: serviceId },
+			where: { id: serviceId, vendorId },
 			include: [
 				{
 					model: ServiceCategories,
@@ -4249,7 +4398,7 @@ export const getServiceBookings = async (
 					{
 						model: User,
 						as: "user",
-						attributes: ["id", "firstName", "lastName", "email", "photo"],
+						attributes: ["id", "firstName", "lastName", "email", "phoneNumber", "photo"],
 					},
 				],
 				order: [["createdAt", "DESC"]],
@@ -4413,6 +4562,20 @@ export const getVendorOffers = async (
 					attributes: ["id", "name", "price", "image_url"],
 					where: { vendorId },
 					required: true,
+					include: [
+						{
+							model: Store,
+							as: "store",
+							attributes: ["id", "name"],
+							include: [
+								{
+									model: Currency,
+									as: "currency",
+									attributes: ["name", "symbol"],
+								},
+							],
+						},
+					],
 				},
 				{
 					model: User,

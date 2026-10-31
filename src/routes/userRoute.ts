@@ -2,12 +2,12 @@
 import { Router } from "express";
 import * as userController from "../controllers/userController";
 import authMiddleware, { optionalAuthMiddleware } from "../middlewares/authMiddleware";
+import authorizeCustomer from "../middlewares/authorizeCustomer";
 import {
 	updatePasswordValidationRules,
 	updateProfileEmailValidationRules,
 	confirmProfileEmailValidationRules,
 	updateProfilePhoneNumberValidationRules,
-	confirmProfilePhoneNumberValidationRules,
 	validateSendMessage,
 	validatePlaceBid,
 	validateAddItemToCart,
@@ -51,13 +51,6 @@ userRoutes.put(
 	userController.updateProfilePhoneNumber,
 );
 userRoutes.put(
-	"/profile/confirm/phone/number",
-	authMiddleware,
-	confirmProfilePhoneNumberValidationRules(),
-	validate,
-	userController.confirmPhoneNumberUpdate,
-);
-userRoutes.put(
 	"/profile/update/password",
 	authMiddleware,
 	updatePasswordValidationRules(),
@@ -86,6 +79,7 @@ userRoutes.delete(
 userRoutes.post(
 	"/cart/add",
 	authMiddleware,
+	authorizeCustomer,
 	validateAddItemToCart(),
 	validate,
 	userController.addItemToCart,
@@ -93,6 +87,7 @@ userRoutes.post(
 userRoutes.put(
 	"/cart/update",
 	authMiddleware,
+	authorizeCustomer,
 	validateUpdateCartItem(),
 	validate,
 	userController.updateCartItem,
@@ -100,11 +95,12 @@ userRoutes.put(
 userRoutes.delete(
 	"/cart/remove",
 	authMiddleware,
+	authorizeCustomer,
 	userController.removeCartItem,
 );
-userRoutes.get("/cart", authMiddleware, userController.getCartContents);
-userRoutes.delete("/cart/clear", authMiddleware, userController.clearCart);
-userRoutes.get("/cart/charges", authMiddleware, userController.getCartCharges);
+userRoutes.get("/cart", authMiddleware, authorizeCustomer, userController.getCartContents);
+userRoutes.delete("/cart/clear", authMiddleware, authorizeCustomer, userController.clearCart);
+userRoutes.get("/cart/charges", authMiddleware, authorizeCustomer, userController.getCartCharges);
 userRoutes.get(
 	"/payment/gateway",
 	authMiddleware,
@@ -122,23 +118,26 @@ userRoutes.get(
 	authMiddleware,
 	userController.calculateAliexpressDeliveryFee,
 );
-userRoutes.post("/checkout", authMiddleware, userController.checkout);
+userRoutes.post("/checkout", authMiddleware, authorizeCustomer, userController.checkout);
 
 userRoutes.post(
 	"/checkout/naira/prepare",
 	authMiddleware,
+	authorizeCustomer,
 	userController.prepareCheckoutNaira,
 );
 
 userRoutes.post(
 	"/checkout/dollar",
 	authMiddleware,
+	authorizeCustomer,
 	userController.checkoutDollar,
 );
 
 userRoutes.post(
 	"/checkout/dollar/prepare",
 	authMiddleware,
+	authorizeCustomer,
 	userController.prepareCheckoutDollar,
 );
 
@@ -172,6 +171,11 @@ userRoutes.patch(
 );
 
 // Bid
+userRoutes.post(
+	"/auction/interest/initialize-payment",
+	authMiddleware,
+	userController.initializeAuctionInterestPayment,
+);
 userRoutes.post(
 	"/auction/interest",
 	authMiddleware,
@@ -209,6 +213,11 @@ userRoutes.patch(
 	"/mark/notification/as/read",
 	authMiddleware,
 	userController.userMarkNotificationAsRead,
+);
+userRoutes.patch(
+	"/mark/notifications/as/read",
+	authMiddleware,
+	userController.userMarkAllNotificationsAsRead,
 );
 
 // Order, OrderItem and Payment
@@ -301,30 +310,35 @@ userRoutes.patch(
 userRoutes.post(
 	"/products/:productId/offers",
 	authMiddleware,
+	authorizeCustomer,
 	userController.submitOffer,
 );
 
 userRoutes.get(
 	"/offers",
 	authMiddleware,
+	authorizeCustomer,
 	userController.getMyOffers,
 );
 
 userRoutes.put(
 	"/offers/:offerId/respond",
 	authMiddleware,
+	authorizeCustomer,
 	userController.respondToCounterOffer,
 );
 
 userRoutes.post(
 	"/offers/:offerId/initiate-payment",
 	authMiddleware,
+	authorizeCustomer,
 	userController.initiateOfferPayment,
 );
 
 userRoutes.post(
 	"/offers/:offerId/checkout",
 	authMiddleware,
+	authorizeCustomer,
 	userController.checkoutOffer,
 );
 
