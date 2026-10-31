@@ -2372,7 +2372,7 @@ export const getGeneralProducts = async (
 	req: Request,
 	res: Response,
 ): Promise<void> => {
-	const { name, sku, status, condition, categoryName, page, limit } = req.query;
+	const { name, sku, status, condition, categoryName, categoryId, page, limit } = req.query;
 
 	try {
 		// Get pagination parameters
@@ -2397,7 +2397,11 @@ export const getGeneralProducts = async (
 					{
 						model: SubCategory,
 						as: "sub_category",
-						where: categoryName ? { name: categoryName } : undefined,
+						where: categoryName
+							? { name: categoryName }
+							: categoryId
+								? { categoryId }
+								: undefined,
 					},
 					{
 						model: Store,
