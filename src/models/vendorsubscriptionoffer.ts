@@ -39,8 +39,8 @@ const initModel = (sequelize: Sequelize) => {
 			tableName: "vendor_subscription_offers",
 			timestamps: true,
 			indexes: [
-				{ fields: ["vendorId", "subscriptionPlanId", "isActive"] },
-				{ fields: ["expiresAt"] },
+				{ name: "vendor_subscription_offer_lookup", fields: ["vendorId", "subscriptionPlanId", "isActive"] },
+				{ name: "vendor_subscription_offer_expiry", fields: ["expiresAt"] },
 			],
 		},
 	);
