@@ -202,7 +202,11 @@ authRoutes.post(
 	authController.createAliexpressAccount,
 );
 
-authRoutes.get("/aliexpress/auth", authController.aliExpressAuth);
+authRoutes.get(
+	"/aliexpress/auth",
+	adminAuthMiddleware,
+	authController.aliExpressAuth,
+);
 
 authRoutes.get(
 	"/aliexpress/auth-callback",

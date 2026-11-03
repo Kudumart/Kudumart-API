@@ -6,8 +6,8 @@ import { NotFoundError } from "../utils/ApiError";
 
 interface ProductSearchOptions {
 	vendorId: string;
-	keywords: string;
-	categoryId: string;
+	keywords?: string;
+	categoryId?: string;
 	minPrice?: number;
 	maxPrice?: number;
 	shipToCountry?: string;
@@ -425,8 +425,10 @@ export class DropShippingService {
 		);
 
 		const params = {
-			// KeyWord: options.keywords || "",
-			categoryId: options.categoryId,
+			...(options.keywords?.trim()
+				? { keyWord: options.keywords.trim() }
+				: {}),
+			...(options.categoryId ? { categoryId: options.categoryId } : {}),
 			countryCode: options.shipToCountry || "NG",
 			currency: options.currency || "USD",
 			pageIndex: options.pageNo || 1,

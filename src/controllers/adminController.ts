@@ -8075,11 +8075,6 @@ export const getAliExpressProducts = async (
 		const pageSize = req.query.pageSize ? parseInt(req.query.pageSize as string, 10) : 20;
 		const shippingCountry = req.query.shippingCountry as string;
 
-		if (!categoryId) {
-			res.status(400).json({ message: "Category ID is required" });
-			return;
-		}
-
 		if (currency && currency !== 'USD' && currency !== "NGN") {
 			res.status(400).json({ message: "Currency must be either 'USD' or 'NGN'" });
 			return;
@@ -8252,6 +8247,21 @@ export async function addAliexpressProductToInventory(req: Request, res: Respons
 			return;
 		}
 
+		const existingProduct = await DropshipProducts.findOne({
+			where: {
+				dropshipProductId: String(productId),
+				vendorId,
+			},
+			transaction,
+		});
+		if (existingProduct) {
+			await transaction.rollback();
+			res.status(409).json({
+				message: "This AliExpress product has already been imported.",
+			});
+			return;
+		}
+
 		if (store.currency.name.toLowerCase() === "dollar" && currency !== 'USD' || store.currency.name.toLowerCase() === "naira" && currency !== 'NGN') {
 
 			res.status(400).json({ message: `Currency mismatch: Store currency is ${store.currency.name}, but received ${currency}` });
@@ -8309,8 +8319,8 @@ export async function addAliexpressProductToInventory(req: Request, res: Respons
 			specification: productDetails.ae_item_base_info_dto.mobile_detail,
 			sku: `KDM-${uuidv4()}`,
 			type: 'dropship',
-			price: lowestPricedVariant.sku_price,
-			discount_price: productPrice,
+			price: productPrice,
+			discount_price: null,
 			condition: "brand_new",
 			quantity: lowestPricedVariant.sku_available_stock,
 			image_url: productImages[0],
