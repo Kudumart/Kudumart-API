@@ -432,21 +432,24 @@ export const createStoreValidation = () => {
 			.isObject()
 			.withMessage("Business hours must be a valid object."),
 		check("deliveryOptions")
-			.optional({ checkFalsy: true })
-			.isArray()
-			.withMessage("Delivery options must be an array.")
+			.isArray({ min: 1 })
+			.withMessage("At least one delivery option is required.")
+			.bail()
 			.custom((value) => {
 				for (const option of value) {
 					if (typeof option !== "object" || option === null) {
 						throw new Error("Each delivery option must be a valid object.");
 					}
-					if (!option.city || typeof option.city !== "string") {
-						throw new Error("City must be a string.");
+					if (!option.city || typeof option.city !== "string" || !option.city.trim()) {
+						throw new Error("Delivery destination must be a string.");
 					}
-					if (option.price === undefined || typeof option.price !== "number") {
-						throw new Error("Price must be a number.");
+					if (option.scope && !["city", "state", "country"].includes(option.scope)) {
+						throw new Error("Delivery coverage must be city, state, or country.");
 					}
-					if (!option.arrival_day || typeof option.arrival_day !== "string") {
+					if (typeof option.price !== "number" || !Number.isFinite(option.price) || option.price < 0) {
+						throw new Error("Delivery price must be a non-negative number.");
+					}
+					if (!option.arrival_day || typeof option.arrival_day !== "string" || !option.arrival_day.trim()) {
 						throw new Error("Arrival day must be a string.");
 					}
 				}
@@ -480,21 +483,24 @@ export const updateStoreValidation = () => {
 			.isObject()
 			.withMessage("Business hours must be a valid object."),
 		check("deliveryOptions")
-			.optional({ checkFalsy: true })
-			.isArray()
-			.withMessage("Delivery options must be an array.")
+			.isArray({ min: 1 })
+			.withMessage("At least one delivery option is required.")
+			.bail()
 			.custom((value) => {
 				for (const option of value) {
 					if (typeof option !== "object" || option === null) {
 						throw new Error("Each delivery option must be a valid object.");
 					}
-					if (!option.city || typeof option.city !== "string") {
-						throw new Error("City must be a string.");
+					if (!option.city || typeof option.city !== "string" || !option.city.trim()) {
+						throw new Error("Delivery destination must be a string.");
 					}
-					if (option.price === undefined || typeof option.price !== "number") {
-						throw new Error("Price must be a number.");
+					if (option.scope && !["city", "state", "country"].includes(option.scope)) {
+						throw new Error("Delivery coverage must be city, state, or country.");
 					}
-					if (!option.arrival_day || typeof option.arrival_day !== "string") {
+					if (typeof option.price !== "number" || !Number.isFinite(option.price) || option.price < 0) {
+						throw new Error("Delivery price must be a non-negative number.");
+					}
+					if (!option.arrival_day || typeof option.arrival_day !== "string" || !option.arrival_day.trim()) {
 						throw new Error("Arrival day must be a string.");
 					}
 				}

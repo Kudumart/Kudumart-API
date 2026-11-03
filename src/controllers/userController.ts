@@ -1693,6 +1693,10 @@ async function getTotalMarketplaceDeliveryFee(
 			: [];
 		const option = options.find((candidate) => {
 			const area = normalizeDeliveryArea(candidate?.city);
+			const scope = candidate?.scope;
+			if (scope === "city") return area === normalizeDeliveryArea(user.location?.city);
+			if (scope === "state") return area === normalizeDeliveryArea(user.location?.state);
+			if (scope === "country") return area === normalizeDeliveryArea(user.location?.country);
 			return destinations.has(area) || ["all", "nationwide", "anywhere"].includes(area);
 		});
 
