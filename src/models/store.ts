@@ -8,6 +8,7 @@ interface DeliveryOption {
   city: string;
   price: string;
   arrival_day: string;
+  scope?: 'city' | 'state' | 'country';
 }
 
 class Store extends Model {
