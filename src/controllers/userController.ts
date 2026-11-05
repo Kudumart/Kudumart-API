@@ -1635,6 +1635,22 @@ const normalizeDeliveryArea = (value: unknown) =>
 		.replace(/[^a-z0-9]+/g, " ")
 		.replace(/\s+/g, " ");
 
+const normalizeDeliveryCountry = (value: unknown) => {
+	const country = normalizeDeliveryArea(value);
+	const aliases: Record<string, string> = {
+		ng: "nigeria",
+		nga: "nigeria",
+		nigeria: "nigeria",
+		us: "united states",
+		usa: "united states",
+		"united states of america": "united states",
+		gb: "united kingdom",
+		uk: "united kingdom",
+		"great britain": "united kingdom",
+	};
+	return aliases[country] || country;
+};
+
 /**
  * Store delivery options are configured per destination city. Charge each
  * marketplace store once, even when the cart contains multiple items from it.
@@ -1691,14 +1707,55 @@ async function getTotalMarketplaceDeliveryFee(
 		const options = Array.isArray(store.deliveryOptions)
 			? store.deliveryOptions
 			: [];
-		const option = options.find((candidate) => {
-			const area = normalizeDeliveryArea(candidate?.city);
-			const scope = candidate?.scope;
-			if (scope === "city") return area === normalizeDeliveryArea(user.location?.city);
-			if (scope === "state") return area === normalizeDeliveryArea(user.location?.state);
-			if (scope === "country") return area === normalizeDeliveryArea(user.location?.country);
-			return destinations.has(area) || ["all", "nationwide", "anywhere"].includes(area);
-		});
+		const matchingOptions = options
+			.map((candidate, index) => {
+				const area = normalizeDeliveryArea(candidate?.city);
+				const scope = String(candidate?.scope || "").trim().toLowerCase();
+				const candidateCity = normalizeDeliveryArea(candidate?.city);
+				const candidateState = normalizeDeliveryArea(
+					candidate?.state || candidate?.city,
+				);
+				const candidateCountry = normalizeDeliveryCountry(
+					candidate?.countryCode || candidate?.country || candidate?.city,
+				);
+				let matches = false;
+				let specificity = 0;
+				if (scope === "city") {
+					matches =
+						candidateCity === normalizeDeliveryArea(user.location?.city);
+					specificity = 3;
+				}
+				if (scope === "state") {
+					matches =
+						candidateState === normalizeDeliveryArea(user.location?.state);
+					specificity = 2;
+				}
+				if (scope === "country") {
+					matches =
+						candidateCountry === normalizeDeliveryCountry(user.location?.country);
+					specificity = 1;
+				}
+				if (!scope) {
+					const isGenericNationwide = [
+						"all",
+						"nationwide",
+						"anywhere",
+					].includes(area);
+					const isCountryWide = [
+						`all of ${normalizeDeliveryCountry(user.location?.country)}`,
+						`all ${normalizeDeliveryCountry(user.location?.country)}`,
+					].includes(area);
+					matches =
+						destinations.has(area) || isGenericNationwide || isCountryWide;
+					specificity = destinations.has(area) ? 2 : 1;
+				}
+				return { candidate, index, matches, specificity };
+			})
+			.filter(({ matches }) => matches)
+			.sort((left, right) =>
+				right.specificity - left.specificity || left.index - right.index,
+			);
+		const option = matchingOptions[0]?.candidate;
 
 		if (!option) {
 			throw new BadRequestError(
