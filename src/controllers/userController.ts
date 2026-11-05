@@ -1580,7 +1580,7 @@ async function getTotalAliexpressDeliveryFee(
 						{
 							sku_id: String(cartItem.dropshipProductSkuId),
 							ship_to_country_code: shipToCountryCode,
-							ship_to_city_code: `${user.location?.city} ${user.location?.state}`,
+							ship_to_city_code: user.location?.city,
 							ship_to_province_code: user.location?.state,
 							//@ts-ignore
 							product_id: product.dropshipDetails?.dropshipProductId,
@@ -1590,32 +1590,24 @@ async function getTotalAliexpressDeliveryFee(
 						},
 					);
 
-					const response = deliveryFee.aliexpress_ds_freight_query_response;
+					const options =
+						deliveryFee.aliexpress_ds_freight_query_response?.result
+							?.delivery_options?.delivery_option_d_t_o;
+					const availableOptions = (Array.isArray(options) ? options : [])
+						.map((option) => ({
+							option,
+							fee: Number(option.shipping_fee_cent),
+						}))
+						.filter(({ fee }) => Number.isFinite(fee) && fee >= 0)
+						.sort((left, right) => left.fee - right.fee);
 
-					if (!response) {
-						return {
-							deliveryFee: 0,
-						};
+					if (!availableOptions.length) {
+						throw new BadRequestError(
+							`No AliExpress delivery option is available for ${product.name} to this address.`,
+						);
 					}
 
-					const result = response.result.delivery_options;
-
-					if (
-						!result.delivery_option_d_t_o ||
-						!result.delivery_option_d_t_o[0].shipping_fee_cent ||
-						result.delivery_option_d_t_o.length === 0
-					) {
-						return {
-							deliveryFee: 0,
-						};
-					}
-
-					return {
-						//@ts-ignore
-						deliveryFee:
-							//@ts-ignore
-							result.delivery_option_d_t_o[0].shipping_fee_cent || 0,
-					};
+					return { deliveryFee: availableOptions[0].fee };
 				}),
 			);
 		} else {
@@ -1639,6 +1631,8 @@ const normalizeDeliveryArea = (value: unknown) =>
 	String(value ?? "")
 		.trim()
 		.toLowerCase()
+		.replace(/\b(state|province|region)\b/g, "")
+		.replace(/[^a-z0-9]+/g, " ")
 		.replace(/\s+/g, " ");
 
 /**
@@ -1673,10 +1667,23 @@ async function getTotalMarketplaceDeliveryFee(
 		],
 	});
 
-	const destination = normalizeDeliveryArea(user.location?.city);
+	const destinations = new Set(
+		[
+			user.location?.city,
+			user.location?.state,
+			user.location?.country,
+		]
+			.map(normalizeDeliveryArea)
+			.filter(Boolean),
+	);
 	const stores = new Map<string, Store>();
 	for (const product of products) {
 		if (product.store) stores.set(product.store.id, product.store);
+	}
+	if (products.length !== marketplaceProductIds.length) {
+		throw new BadRequestError(
+			"One or more products no longer have an active store. Review your cart and try again.",
+		);
 	}
 
 	let total = new Decimal(0);
@@ -1686,7 +1693,11 @@ async function getTotalMarketplaceDeliveryFee(
 			: [];
 		const option = options.find((candidate) => {
 			const area = normalizeDeliveryArea(candidate?.city);
-			return area === destination || ["all", "nationwide", "anywhere"].includes(area);
+			const scope = candidate?.scope;
+			if (scope === "city") return area === normalizeDeliveryArea(user.location?.city);
+			if (scope === "state") return area === normalizeDeliveryArea(user.location?.state);
+			if (scope === "country") return area === normalizeDeliveryArea(user.location?.country);
+			return destinations.has(area) || ["all", "nationwide", "anywhere"].includes(area);
 		});
 
 		if (!option) {
@@ -1695,6 +1706,9 @@ async function getTotalMarketplaceDeliveryFee(
 			);
 		}
 
+		if (option.price === null || option.price === undefined || String(option.price).trim() === "") {
+			throw new Error(`Invalid delivery rate configured for ${store.name}`);
+		}
 		const price = Number(option.price);
 		if (!Number.isFinite(price) || price < 0) {
 			throw new Error(`Invalid delivery rate configured for ${store.name}`);

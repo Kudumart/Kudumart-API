@@ -1005,11 +1005,15 @@ export const createAliexpressAccount = async (
 	res: Response,
 ): Promise<void> => {
 	// const {} = req.user;
-	const vendorId = (req as any).admin.id;
+	const vendorId = (req as any).adminId || (req as any).admin?.id;
 
 	const { account } = req.body;
 
 	try {
+		if (!vendorId) {
+			res.status(401).json({ message: "Administrator authentication is required" });
+			return;
+		}
 		// Validate input
 		if (!account) {
 			res.status(400).json({ message: "Account is required" });
@@ -1023,16 +1027,22 @@ export const createAliexpressAccount = async (
 
 		// Check if the dropshipping account already exists
 		const existingAccount = await DropShippingCred.findOne({
-			where: { account },
+			where: { vendorId },
 		});
 		if (existingAccount) {
-			res.status(400).json({ message: "Account already exists" });
+			if (existingAccount.account !== account.trim()) {
+				await existingAccount.update({ account: account.trim() });
+			}
+			res.status(200).json({
+				message: "Dropshipping account is ready for authorization.",
+				data: { account: account.trim() },
+			});
 			return;
 		}
 
 		// Create the new dropshipping account
 		await DropShippingCred.create({
-			account,
+			account: account.trim(),
 			vendorId,
 		});
 

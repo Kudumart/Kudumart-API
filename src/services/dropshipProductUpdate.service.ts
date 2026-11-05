@@ -181,7 +181,7 @@ async function processDropshipProduct(
 
 		// Calculate prices
 		const incrementPercent = product.dropshipDetails.priceIncrementPercent;
-		const discountPrice = calculateIncrementedPrice(
+		const retailPrice = calculateIncrementedPrice(
 			lowestPricedVariant.offer_sale_price,
 			incrementPercent,
 		);
@@ -197,8 +197,8 @@ async function processDropshipProduct(
 			name: productDetails.ae_item_base_info_dto.subject,
 			description: productDetails.ae_item_base_info_dto.detail,
 			specification: productDetails.ae_item_base_info_dto.mobile_detail,
-			price: lowestPricedVariant.sku_price,
-			discount_price: discountPrice,
+			price: retailPrice,
+			discount_price: null,
 			condition: "brand_new",
 			quantity: lowestPricedVariant.sku_available_stock,
 			image_url: images[0],
