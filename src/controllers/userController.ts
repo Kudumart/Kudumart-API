@@ -1636,7 +1636,10 @@ const normalizeDeliveryArea = (value: unknown) =>
 		.replace(/\s+/g, " ");
 
 const normalizeDeliveryCountry = (value: unknown) => {
-	const country = normalizeDeliveryArea(value);
+	const country = normalizeDeliveryArea(value).replace(
+		/^(?:all of|all|entire|nationwide)\s+/,
+		"",
+	);
 	const aliases: Record<string, string> = {
 		ng: "nigeria",
 		nga: "nigeria",
@@ -1693,8 +1696,10 @@ async function getTotalMarketplaceDeliveryFee(
 			.map(normalizeDeliveryArea)
 			.filter(Boolean),
 	);
+	// The checkout country is explicit and current. Prefer it over older profile
+	// records, which may contain a city/state value in the country field.
 	const targetCountry = normalizeDeliveryCountry(
-		user.location?.country || shipToCountryCode,
+		shipToCountryCode || user.location?.country,
 	);
 	const stores = new Map<string, Store>();
 	for (const product of products) {
@@ -1714,7 +1719,12 @@ async function getTotalMarketplaceDeliveryFee(
 		const matchingOptions = options
 			.map((candidate, index) => {
 				const area = normalizeDeliveryArea(candidate?.city);
-				const scope = String(candidate?.scope || "").trim().toLowerCase();
+				const rawScope = String(candidate?.scope || "").trim().toLowerCase();
+				const scope = ["nationwide", "entire country", "all country"].includes(
+					rawScope,
+				)
+					? "country"
+					: rawScope;
 				const candidateCity = normalizeDeliveryArea(candidate?.city);
 				const candidateState = normalizeDeliveryArea(
 					candidate?.state || candidate?.city,
@@ -1722,9 +1732,23 @@ async function getTotalMarketplaceDeliveryFee(
 				const candidateCountry = normalizeDeliveryCountry(
 					candidate?.countryCode || candidate?.country || candidate?.city,
 				);
+				// Some existing storefront records predate structured coverage. The
+				// nationwide UI stored `city: "Nigeria"`; some of those rows retained
+				// the default city scope. Treat that shape as country-wide so existing
+				// vendor rates keep working.
+				const candidateCityIsCountry = Boolean(
+					candidateCountry &&
+						normalizeDeliveryCountry(candidate?.city) === candidateCountry,
+				);
+				const isImplicitCountryScope = Boolean(
+					candidateCountry &&
+						targetCountry &&
+						candidateCountry === targetCountry &&
+						candidateCityIsCountry,
+				);
 				let matches = false;
 				let specificity = 0;
-				if (scope === "city") {
+				if (scope === "city" && !isImplicitCountryScope) {
 					matches =
 						candidateCity === normalizeDeliveryArea(user.location?.city);
 					specificity = 3;
@@ -1734,7 +1758,7 @@ async function getTotalMarketplaceDeliveryFee(
 						candidateState === normalizeDeliveryArea(user.location?.state);
 					specificity = 2;
 				}
-				if (scope === "country") {
+				if (scope === "country" || isImplicitCountryScope) {
 					matches = Boolean(
 						candidateCountry && targetCountry && candidateCountry === targetCountry,
 					);
