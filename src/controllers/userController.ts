@@ -1658,6 +1658,7 @@ const normalizeDeliveryCountry = (value: unknown) => {
 async function getTotalMarketplaceDeliveryFee(
 	cartItems: Cart[],
 	user: User,
+	shipToCountryCode?: string,
 ): Promise<number> {
 	const marketplaceProductIds = Array.from(
 		new Set(
@@ -1691,6 +1692,9 @@ async function getTotalMarketplaceDeliveryFee(
 		]
 			.map(normalizeDeliveryArea)
 			.filter(Boolean),
+	);
+	const targetCountry = normalizeDeliveryCountry(
+		user.location?.country || shipToCountryCode,
 	);
 	const stores = new Map<string, Store>();
 	for (const product of products) {
@@ -1731,8 +1735,9 @@ async function getTotalMarketplaceDeliveryFee(
 					specificity = 2;
 				}
 				if (scope === "country") {
-					matches =
-						candidateCountry === normalizeDeliveryCountry(user.location?.country);
+					matches = Boolean(
+						candidateCountry && targetCountry && candidateCountry === targetCountry,
+					);
 					specificity = 1;
 				}
 				if (!scope) {
@@ -1742,8 +1747,8 @@ async function getTotalMarketplaceDeliveryFee(
 						"anywhere",
 					].includes(area);
 					const isCountryWide = [
-						`all of ${normalizeDeliveryCountry(user.location?.country)}`,
-						`all ${normalizeDeliveryCountry(user.location?.country)}`,
+						`all of ${targetCountry}`,
+						`all ${targetCountry}`,
 					].includes(area);
 					matches =
 						destinations.has(area) || isGenericNationwide || isCountryWide;
@@ -1789,7 +1794,7 @@ async function getTotalDeliveryFee(
 	);
 	const [dropshipFee, marketplaceFee] = await Promise.all([
 		getTotalAliexpressDeliveryFee(dropshipItems, shipToCountryCode, user),
-		getTotalMarketplaceDeliveryFee(cartItems, user),
+		getTotalMarketplaceDeliveryFee(cartItems, user, shipToCountryCode),
 	]);
 
 	return new Decimal(dropshipFee)
