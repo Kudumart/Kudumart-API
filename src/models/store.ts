@@ -6,7 +6,11 @@ import User from './user';
 // Define the structure for deliveryOptions
 interface DeliveryOption {
   city: string;
-  price: string;
+  state?: string;
+  stateCode?: string;
+  country?: string;
+  countryCode?: string;
+  price: string | number;
   arrival_day: string;
   scope?: 'city' | 'state' | 'country';
 }
