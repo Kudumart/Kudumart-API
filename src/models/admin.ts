@@ -6,7 +6,7 @@ class Admin extends Model {
 	public id!: string; // Use '!' to indicate these fields are definitely assigned
 	public name!: string;
 	public email!: string;
-	public phoneNumber?: string;
+	public phoneNumber?: string | null;
 	public password!: string;
 	public photo?: string;
 	public roleId?: string;

@@ -144,7 +144,7 @@ export const updateProfile = async (
 		admin.photo = photo || admin.photo;
 		admin.email = email || admin.email;
 		if (phoneNumber !== undefined) {
-			admin.phoneNumber = phoneNumber || undefined;
+			admin.phoneNumber = phoneNumber || null;
 		}
 
 		await admin.save();

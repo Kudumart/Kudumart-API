@@ -2,7 +2,6 @@
 import { Router } from "express";
 import * as userController from "../controllers/userController";
 import authMiddleware, { optionalAuthMiddleware } from "../middlewares/authMiddleware";
-import authorizeCustomer from "../middlewares/authorizeCustomer";
 import {
 	updatePasswordValidationRules,
 	updateProfileEmailValidationRules,
@@ -304,35 +303,30 @@ userRoutes.patch(
 userRoutes.post(
 	"/products/:productId/offers",
 	authMiddleware,
-	authorizeCustomer,
 	userController.submitOffer,
 );
 
 userRoutes.get(
 	"/offers",
 	authMiddleware,
-	authorizeCustomer,
 	userController.getMyOffers,
 );
 
 userRoutes.put(
 	"/offers/:offerId/respond",
 	authMiddleware,
-	authorizeCustomer,
 	userController.respondToCounterOffer,
 );
 
 userRoutes.post(
 	"/offers/:offerId/initiate-payment",
 	authMiddleware,
-	authorizeCustomer,
 	userController.initiateOfferPayment,
 );
 
 userRoutes.post(
 	"/offers/:offerId/checkout",
 	authMiddleware,
-	authorizeCustomer,
 	userController.checkoutOffer,
 );
 
