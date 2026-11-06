@@ -1528,13 +1528,16 @@ export const getActivePaymentGateways = async (
 		const formattedGateways = gateways.map((gw) => {
 			const gwObj = gw.toJSON();
 			let publicKey = gwObj.publicKey;
+			let secretKey = gwObj.secretKey;
 			if (gwObj.name.toLowerCase().includes("paystack")) {
 				publicKey = process.env.PAYSTACK_PUBLIC_KEY || publicKey;
+				secretKey = process.env.PAYSTACK_SECRET_KEY || secretKey;
 			}
 			if (gwObj.name.toLowerCase().includes("stripe")) {
 				publicKey = process.env.STRIPE_PUBLIC_KEY || publicKey;
+				secretKey = process.env.STRIPE_SECRET_KEY || secretKey;
 			}
-			return { id: gwObj.id, name: gwObj.name, publicKey, isActive: gwObj.isActive };
+			return { id: gwObj.id, name: gwObj.name, publicKey, secretKey, isActive: gwObj.isActive };
 		});
 
 		if (!formattedGateways.length) {
@@ -1542,6 +1545,7 @@ export const getActivePaymentGateways = async (
 				id: "paystack-default",
 				name: "Paystack",
 				publicKey: process.env.PAYSTACK_PUBLIC_KEY || "",
+				secretKey: process.env.PAYSTACK_SECRET_KEY || "",
 				isActive: true,
 			} as any);
 		}
