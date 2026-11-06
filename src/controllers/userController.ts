@@ -1150,6 +1150,11 @@ export const addItemToCart = async (
 		const requestedQuantity = Number(quantity || 1);
 		let availableQuantity = Number(product.quantity ?? 0);
 
+		if (String(vendorId) === String(userId)) {
+			res.status(400).json({ message: "You cannot purchase your own product." });
+			return;
+		}
+
 		if (product.type === "dropship") {
 			const variant = product.variants?.find(
 				(value) => String(value.sku_id) === String(dropshipProductSkuId),
@@ -1935,6 +1940,10 @@ export const calculateAliexpressDeliveryFee = async (
 
 	// const curreny = req.query.currency as string;
 	const shipToCountryCode = req.query.shipToCountryCode as string;
+	const requestedCartItemIds = String(req.query.cartItemIds || "")
+		.split(",")
+		.map((id) => id.trim())
+		.filter(Boolean);
 	try {
 		if (!shipToCountryCode) {
 			res.status(400).json({ message: "Ship to country code is required" });
@@ -1953,7 +1962,12 @@ export const calculateAliexpressDeliveryFee = async (
 		}
 
 		const cartItems = await Cart.findAll({
-			where: { userId },
+			where: {
+				userId,
+				...(requestedCartItemIds.length > 0
+					? { id: requestedCartItemIds }
+					: {}),
+			},
 			include: [
 				{
 					model: Product,
