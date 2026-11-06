@@ -15,8 +15,12 @@ jobs:
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_PRIVATE_KEY }}
           script: |
+            set -e
             cd /var/www/kudumart-api-staging
-            git pull --ff-only origin staging
+            git fetch origin staging
+            git switch staging
+            git merge --ff-only origin/staging
+            echo "Deploying staging backend commit $(git rev-parse --short HEAD)"
             npm ci
             npm run migrate
             npm run build
