@@ -117,7 +117,7 @@ export const updateProfile = async (
 	res: Response,
 ): Promise<void> => {
 	try {
-		const { name, email, photo } = req.body;
+		const { name, email, phoneNumber, photo } = req.body;
 		const adminId = req.admin?.id;
 
 		// Fetch the admin by their ID
@@ -143,6 +143,9 @@ export const updateProfile = async (
 		admin.name = name ? capitalizeFirstLetter(name) : admin.name;
 		admin.photo = photo || admin.photo;
 		admin.email = email || admin.email;
+		if (phoneNumber !== undefined) {
+			admin.phoneNumber = phoneNumber || undefined;
+		}
 
 		await admin.save();
 

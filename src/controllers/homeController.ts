@@ -276,7 +276,7 @@ export const products = async (req: Request, res: Response): Promise<void> => {
 			{
 				model: Admin,
 				as: "admin",
-				attributes: ["id", "name", "email"],
+				attributes: ["id", "name", "email", "phoneNumber"],
 			},
 			{
 				model: SubCategory,
@@ -507,7 +507,7 @@ export const getProductById = async (
 				{
 					model: Admin,
 					as: "admin",
-					attributes: ["id", "name", "email"],
+					attributes: ["id", "name", "email", "phoneNumber"],
 				},
 				{
 					model: Store,
@@ -798,7 +798,7 @@ export const searchProductsGrouped = async (
 					where: productWhere,
 					include: [
 						{ model: User, as: "vendor" },
-						{ model: Admin, as: "admin", attributes: ["id", "name", "email"] },
+						{ model: Admin, as: "admin", attributes: ["id", "name", "email", "phoneNumber"] },
 						{
 							model: Store,
 							as: "store",
@@ -1052,7 +1052,7 @@ export const getStoreProducts = async (
 				{
 					model: Admin,
 					as: "admin",
-					attributes: ["id", "name", "email"],
+					attributes: ["id", "name", "email", "phoneNumber"],
 				},
 				{
 					model: Store,
@@ -1214,7 +1214,7 @@ export const getAuctionProducts = async (
 				{
 					model: Admin,
 					as: "admin",
-					attributes: ["id", "name", "email"],
+					attributes: ["id", "name", "email", "phoneNumber"],
 				},
 				{
 					model: Store,
@@ -1333,7 +1333,7 @@ export const getAuctionProductById = async (
 				{
 					model: Admin,
 					as: "admin",
-					attributes: ["id", "name", "email"],
+					attributes: ["id", "name", "email", "phoneNumber"],
 				},
 				{
 					model: Store,
@@ -1445,7 +1445,7 @@ export const getAdverts = async (
 				{
 					model: Admin,
 					as: "admin",
-					attributes: ["id", "name", "email"],
+					attributes: ["id", "name", "email", "phoneNumber"],
 				},
 				{
 					model: SubCategory,
@@ -1509,7 +1509,7 @@ export const viewAdvert = async (
 				{
 					model: Admin,
 					as: "admin",
-					attributes: ["id", "name", "email"],
+					attributes: ["id", "name", "email", "phoneNumber"],
 				},
 				{
 					model: SubCategory,

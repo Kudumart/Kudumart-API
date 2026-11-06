@@ -184,7 +184,13 @@ export const confirmProfilePhoneNumberValidationRules = () => {
 // Admin
 // Update Email validation rules
 export const adminUpdateProfileValidationRules = () => {
-	return [check("email").isEmail().withMessage("Please provide a valid email")];
+	return [
+		check("email").isEmail().withMessage("Please provide a valid email"),
+		check("phoneNumber")
+			.optional({ values: "falsy" })
+			.matches(/^\+[1-9]\d{7,14}$/)
+			.withMessage("Phone number must include a valid country prefix"),
+	];
 };
 
 export const createSubAdminValidationRules = () => {

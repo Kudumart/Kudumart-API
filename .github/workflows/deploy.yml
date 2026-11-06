@@ -19,5 +19,6 @@ jobs:
             git pull --ff-only origin main
             npm ci
             npm run build
+            npm run migrate
             pm2 reload kudumart-api --update-env || pm2 restart kudumart-api --update-env || pm2 start dist/index.js --name kudumart-api
             pm2 save
