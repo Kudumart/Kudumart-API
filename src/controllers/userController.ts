@@ -2861,7 +2861,12 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 				userId,
 				totalAmount,
 				refId,
-				shippingAddress: `${shippingAddress}, ${user.location?.city}, ${user.location?.state}, ${user.location?.country}`,
+				shippingAddress:
+					shippingAddress && user.location?.city && shippingAddress.includes(user.location.city)
+						? shippingAddress
+						: [shippingAddress, user.location?.city, user.location?.state, user.location?.country]
+								.filter(Boolean)
+								.join(", "),
 				status: "pending",
 			},
 			{ transaction },
@@ -3685,7 +3690,12 @@ export const checkoutDollar = async (
 				userId,
 				totalAmount,
 				refId,
-				shippingAddress: `${shippingAddress}, ${user.location?.city}, ${user.location?.state}, ${user.location?.country}`,
+				shippingAddress:
+					shippingAddress && user.location?.city && shippingAddress.includes(user.location.city)
+						? shippingAddress
+						: [shippingAddress, user.location?.city, user.location?.state, user.location?.country]
+								.filter(Boolean)
+								.join(", "),
 				status: "pending",
 			},
 			{ transaction },
