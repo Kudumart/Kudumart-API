@@ -50,6 +50,7 @@ import AttributeDefinitions from "../models/attributeDefinitions";
 import AttributeOptions from "../models/attributeOptions";
 import Services from "../models/services";
 import ServiceReviews from "../models/servicereview";
+import { getEffectiveProductPrice } from "../utils/pricing";
 
 export const getCountrySearchTerms = (countryInput?: any): string[] => {
 	if (!countryInput) return [];
@@ -2230,9 +2231,10 @@ export const getGoogleMerchantFeed = async (
 			.filter((product: any) => product.image_url)
 			.map((product: any) => {
 				const currencyCode = product.store?.currency?.code || "NGN";
-				const price = Number(product.discount_price) > 0
-					? product.discount_price
-					: product.price;
+				const price = getEffectiveProductPrice(
+					product.price,
+					product.discount_price,
+				);
 				const availability = Number(product.quantity) > 0 ? "in stock" : "out of stock";
 				const condition = product.condition === "used" ? "used" : "new";
 				const productType = product.sub_category

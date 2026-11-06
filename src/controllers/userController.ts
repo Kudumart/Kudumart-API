@@ -68,6 +68,7 @@ import DropshipProducts from "../models/dropshipProducts";
 import * as uuid from "uuid";
 import { BadRequestError } from "../utils/ApiError";
 import DropShippingCred from "../models/dropshippngCreds";
+import { getEffectiveProductPrice } from "../utils/pricing";
 
 const dropShippingService = new DropShippingService();
 
@@ -2139,9 +2140,7 @@ export const prepareCheckoutNaira = async (
 				}
 
 				productPrice = new Decimal(
-					(product.discount_price ?? 0) > 0
-						? product.discount_price ?? 0
-						: product.price ?? 0,
+					getEffectiveProductPrice(product.price, product.discount_price),
 				);
 			} else if (product.type === "dropship") {
 				const dropshipProductVariant = product.variants?.find(
@@ -2403,9 +2402,7 @@ export const prepareCheckoutDollar = async (
 				}
 
 				productPrice = new Decimal(
-					(product.discount_price ?? 0) > 0
-						? product.discount_price ?? 0
-						: product.price ?? 0,
+					getEffectiveProductPrice(product.price, product.discount_price),
 				);
 			} else if (product.type === "dropship") {
 				const dropshipProductVariant = product.variants?.find(
@@ -2750,9 +2747,7 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 				}
 
 				productPrice = new Decimal(
-					(product.discount_price ?? 0) > 0
-						? product.discount_price ?? 0
-						: product.price ?? 0,
+					getEffectiveProductPrice(product.price, product.discount_price),
 				);
 			} else if (product.type === "dropship") {
 				const dropshipProductVariant = product.variants?.find(
@@ -2973,9 +2968,7 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 
 			const productPrice =
 				product.type === "in_stock"
-					? product.discount_price && product.discount_price > 0
-						? product.discount_price
-						: product.price
+					? getEffectiveProductPrice(product.price, product.discount_price)
 					: (() => {
 						const dropshipProductVariant = product.variants?.find(
 							(variant) => variant.sku_id === cartItem.dropshipProductSkuId,
@@ -3160,17 +3153,16 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 					id: cartItem.product.id,
 					sku: cartItem.product.sku,
 					name: cartItem.product.name,
-					price:
-						cartItem.product.discount_price &&
-							cartItem.product.discount_price > 0
-							? cartItem.product.discount_price
-							: cartItem.product.price,
+					price: getEffectiveProductPrice(
+						cartItem.product.price,
+						cartItem.product.discount_price,
+					),
 				}, // Ensure product is an object
 				quantity: cartItem.quantity,
-				price:
-					cartItem.product.discount_price && cartItem.product.discount_price > 0
-						? cartItem.product.discount_price
-						: cartItem.product.price,
+				price: getEffectiveProductPrice(
+					cartItem.product.price,
+					cartItem.product.discount_price,
+				),
 				status: "pending", // Default status (if required)
 				createdAt: new Date(), // Ensure timestamps if needed
 			} as OrderItem);
@@ -3455,9 +3447,7 @@ export const checkoutDollar = async (
 				}
 
 				productPrice = new Decimal(
-					(product.discount_price ?? 0) > 0
-						? product.discount_price ?? 0
-						: product.price ?? 0,
+					getEffectiveProductPrice(product.price, product.discount_price),
 				);
 			} else if (product.type === "dropship") {
 				const dropshipProductVariant = product.variants?.find(
@@ -3569,9 +3559,7 @@ export const checkoutDollar = async (
 				}
 
 				productPrice = new Decimal(
-					(product.discount_price ?? 0) > 0
-						? product.discount_price ?? 0
-						: product.price ?? 0,
+					getEffectiveProductPrice(product.price, product.discount_price),
 				);
 			} else if (product.type === "dropship") {
 				const dropshipProductVariant = product.variants?.find(
