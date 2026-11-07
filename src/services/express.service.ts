@@ -12,6 +12,7 @@ import userRouter from "../routes/userRoute";
 import adminRouter from "../routes/adminRoute";
 import vendorRouter from "../routes/vendorRoute";
 import uploadRouter from "../routes/uploadRoute";
+import crmRouter from "../routes/crmRoute";
 import logger from "../middlewares/logger";
 import * as Sentry from "@sentry/node";
 import { IsApiError } from "../utils/ApiError";
@@ -69,6 +70,7 @@ const createExpressApp = () => {
 	app.use("/api/user", userRouter);
 	app.use("/api/vendor", vendorRouter);
 	app.use("/api/admin", adminRouter);
+	app.use("/api/admin/crm", crmRouter);
 	app.use("/api/upload", uploadRouter);
 
 	// Initialize Sentry for error tracking
