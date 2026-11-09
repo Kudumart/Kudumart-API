@@ -2,6 +2,7 @@
 import { Router } from "express";
 import * as userController from "../controllers/userController";
 import * as installmentController from "../controllers/installmentController";
+import * as vendorController from "../controllers/vendorController";
 import authMiddleware, { optionalAuthMiddleware } from "../middlewares/authMiddleware";
 import authorizeCustomer from "../middlewares/authorizeCustomer";
 import {
@@ -25,6 +26,9 @@ const userRoutes = Router();
 userRoutes.post("/logout", authMiddleware, userController.logout);
 userRoutes.get("/profile", authMiddleware, userController.profile);
 userRoutes.get("/wallet", authMiddleware, userController.getWallet);
+userRoutes.post("/wallet/withdraw", authMiddleware, userController.requestCustomerWithdrawal);
+userRoutes.get("/banks", authMiddleware, vendorController.getSupportedBanks);
+userRoutes.get("/bank/resolve", authMiddleware, vendorController.resolveBankAccount);
 userRoutes.put("/profile/update", authMiddleware, userController.updateProfile);
 userRoutes.patch(
 	"/profile/photo/update",

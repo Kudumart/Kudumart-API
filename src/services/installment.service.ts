@@ -125,41 +125,39 @@ export class InstallmentService {
         );
       }
 
-      // 4. Refund Buyer
+      // 4. Refund Buyer to Wallet
       const buyer = plan.buyer;
       if (buyer && buyerRefund > 0) {
-        if (config.refund_to_wallet) {
-          buyer.wallet = Math.round((Number(buyer.wallet || 0) + buyerRefund) * 100) / 100;
-          await buyer.save({ transaction });
+        buyer.wallet = Math.round((Number(buyer.wallet || 0) + buyerRefund) * 100) / 100;
+        await buyer.save({ transaction });
 
-          await Transaction.create(
-            {
-              userId: buyer.id,
-              amount: buyerRefund,
-              currency: 'NGN',
-              transactionType: 'layaway_refund',
-              refId: plan.id,
-              status: 'completed',
-              metadata: {
-                planId: plan.id,
-                totalPaid,
-                restockingFee,
-                reason,
-              },
+        await Transaction.create(
+          {
+            userId: buyer.id,
+            amount: buyerRefund,
+            currency: 'NGN',
+            transactionType: 'layaway_refund',
+            refId: plan.id,
+            status: 'completed',
+            metadata: {
+              planId: plan.id,
+              totalPaid,
+              restockingFee,
+              reason,
             },
-            { transaction },
-          );
+          },
+          { transaction },
+        );
 
-          await Notification.create(
-            {
-              userId: buyer.id,
-              title: reason === 'grace_period_expired' ? 'Layaway Plan Expired & Refunded' : 'Layaway Cancelled & Refunded',
-              type: 'refund',
-              message: `Your layaway reservation for "${product?.name || 'your item'}" was closed. A refund of ₦${buyerRefund.toLocaleString()} (after ₦${restockingFee.toLocaleString()} restocking fee) has been credited to your KuduMart Wallet.`,
-            },
-            { transaction },
-          );
-        }
+        await Notification.create(
+          {
+            userId: buyer.id,
+            title: reason === 'grace_period_expired' ? 'Layaway Plan Expired & Refunded' : 'Layaway Cancelled & Refunded',
+            type: 'refund',
+            message: `Your layaway reservation for "${product?.name || 'your item'}" was closed. A refund of ₦${buyerRefund.toLocaleString()} (after ₦${restockingFee.toLocaleString()} restocking fee) has been credited to your KuduMart Wallet.`,
+          },
+          { transaction },
+        );
       }
 
       // 5. Update Plan & Milestone Statuses
