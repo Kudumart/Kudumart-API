@@ -1223,5 +1223,10 @@ adminRoutes.get(
 	adminAuthMiddleware,
 	installmentController.getAdminInstallmentPlanDetail,
 );
+adminRoutes.post(
+	"/installments/plans/:id/cancel",
+	adminAuthMiddleware,
+	installmentController.cancelInstallmentPlanByAdmin,
+);
 
 export default adminRoutes; // Export the router

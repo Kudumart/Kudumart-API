@@ -18,6 +18,7 @@ import sequelizeService from '../services/sequelize.service';
 import { initializePaystackPayment, verifyPayment } from '../utils/helpers';
 import { getEffectiveProductPrice } from '../utils/pricing';
 import { AuthenticatedRequest } from '../types';
+import InstallmentService from '../services/installment.service';
 
 /**
  * Helper to ensure a singleton config row exists
@@ -979,6 +980,58 @@ export const confirmMilestonePayment = async (req: Request, res: Response): Prom
     res.status(500).json({
       status: false,
       message: error instanceof Error ? error.message : 'Failed to confirm milestone payment',
+    });
+  }
+};
+
+/**
+ * Buyer voluntarily cancels an active installment plan
+ */
+export const cancelInstallmentPlanByBuyer = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as AuthenticatedRequest).user?.id;
+    const planId = req.params.id as string;
+
+    const plan = await InstallmentPlan.findOne({ where: { id: planId, userId } });
+    if (!plan) {
+      res.status(404).json({ status: false, message: 'Plan not found' });
+      return;
+    }
+
+    const result = await InstallmentService.handlePlanDefaultOrCancellation(planId, 'buyer_cancelled');
+    if (!result.status) {
+      res.status(400).json(result);
+      return;
+    }
+
+    res.status(200).json(result);
+  } catch (error) {
+    logger.error('Error cancelling installment plan by buyer:', error);
+    res.status(500).json({
+      status: false,
+      message: error instanceof Error ? error.message : 'Failed to cancel plan',
+    });
+  }
+};
+
+/**
+ * Admin cancels an active installment plan
+ */
+export const cancelInstallmentPlanByAdmin = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const planId = req.params.id as string;
+    const result = await InstallmentService.handlePlanDefaultOrCancellation(planId, 'admin_cancelled');
+    if (!result.status) {
+      res.status(400).json(result);
+      return;
+    }
+
+    res.status(200).json(result);
+  } catch (error) {
+    logger.error('Error cancelling installment plan by admin:', error);
+    res.status(500).json({
+      status: false,
+      message: error instanceof Error ? error.message : 'Failed to cancel plan',
     });
   }
 };
