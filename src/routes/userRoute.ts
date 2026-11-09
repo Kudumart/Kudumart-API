@@ -158,6 +158,11 @@ userRoutes.get(
 	installmentController.getUserInstallmentPlanDetail,
 );
 userRoutes.post(
+	"/installments/plans/:id/cancel",
+	authMiddleware,
+	installmentController.cancelInstallmentPlanByBuyer,
+);
+userRoutes.post(
 	"/installments/milestones/:milestoneId/prepare",
 	authMiddleware,
 	installmentController.prepareMilestonePayment,

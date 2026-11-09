@@ -15,6 +15,7 @@ import auctionStatusUpdate from "./job/auctionStatusUpdate"; // Import the cron 
 import { auctionReminderJob } from "./job/auctionReminder";
 import runDropshipCron from "./job/updateDropshippedProducts";
 import runDropshippingCredsRefreshCron from "./job/refreshAliexpressTokenCron";
+import runInstallmentCron from "./job/installmentCron";
 
 dotenv.config();
 
@@ -75,6 +76,7 @@ if (cronJobsEnabled) {
 	auctionReminderJob();
 	runDropshipCron();
 	runDropshippingCredsRefreshCron();
+	runInstallmentCron();
 } else {
 	console.log("Scheduled jobs are disabled for this environment");
 }

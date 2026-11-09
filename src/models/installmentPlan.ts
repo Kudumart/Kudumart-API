@@ -24,6 +24,10 @@ class InstallmentPlan extends Model {
   public reservedUntil!: Date;
   public completedAt?: Date | null;
   public defaultedAt?: Date | null;
+  public buyer?: any;
+  public product?: any;
+  public vendor?: any;
+  public milestones?: any[];
   public createdAt?: Date;
   public updatedAt?: Date;
 
