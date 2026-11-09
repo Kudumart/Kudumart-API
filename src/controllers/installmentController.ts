@@ -19,6 +19,7 @@ import { initializePaystackPayment, verifyPayment } from '../utils/helpers';
 import { getEffectiveProductPrice } from '../utils/pricing';
 import { AuthenticatedRequest } from '../types';
 import InstallmentService from '../services/installment.service';
+import InstallmentNotificationService from '../services/installmentNotification.service';
 
 /**
  * Helper to ensure a singleton config row exists
@@ -652,6 +653,11 @@ export const confirmInstallmentCheckout = async (req: Request, res: Response): P
 
     await transaction.commit();
 
+    // Trigger full plan creation notifications to Buyer, Vendor & Admin
+    InstallmentNotificationService.notifyPlanCreated(plan.id).catch((err) =>
+      logger.error('Failed to trigger plan creation notifications:', err)
+    );
+
     res.status(200).json({
       status: true,
       message: mode === 'bnpl' ? 'Installment purchase successful' : 'Layaway reservation confirmed',
@@ -968,6 +974,11 @@ export const confirmMilestonePayment = async (req: Request, res: Response): Prom
     }
 
     await transaction.commit();
+
+    // Trigger full milestone payment notifications to Buyer, Vendor & Admin
+    InstallmentNotificationService.notifyMilestonePaid(milestone.id).catch((err) =>
+      logger.error('Failed to trigger milestone paid notifications:', err)
+    );
 
     res.status(200).json({
       status: true,
