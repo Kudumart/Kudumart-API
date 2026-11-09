@@ -10,6 +10,7 @@ import Transaction from '../models/transaction';
 import Notification from '../models/notification';
 import sequelizeService from './sequelize.service';
 import { sendMail } from './mail.service';
+import InstallmentNotificationService from './installmentNotification.service';
 
 export class InstallmentService {
   /**
@@ -185,32 +186,17 @@ export class InstallmentService {
 
       await transaction.commit();
 
-      // Send Email to Buyer (non-blocking)
-      if (buyer?.email) {
-        try {
-          await sendMail(
-            buyer.email,
-            `KuduMart: Layaway Plan ${reason === 'grace_period_expired' ? 'Expired' : 'Cancelled'}`,
-            `
-              <div style="font-family: sans-serif; padding: 20px; line-height: 1.6; color: #333;">
-                <h2>Layaway Reservation Notice</h2>
-                <p>Hello ${buyer.firstName || 'Customer'},</p>
-                <p>Your layaway plan for <strong>"${product?.name || 'your item'}"</strong> has been ${reason === 'grace_period_expired' ? 'closed due to the grace period expiring' : 'cancelled'}.</p>
-                <div style="background: #f8fafc; padding: 16px; border-radius: 8px; margin: 16px 0;">
-                  <p><strong>Total Paid:</strong> ₦${totalPaid.toLocaleString()}</p>
-                  <p><strong>Restocking Fee (${cancellationFeePct}%):</strong> ₦${restockingFee.toLocaleString()}</p>
-                  <p><strong>Refund Amount:</strong> ₦${buyerRefund.toLocaleString()}</p>
-                  <p><strong>Refund Destination:</strong> ${config.refund_to_wallet ? 'Your KuduMart Wallet' : 'Original Payment Method'}</p>
-                </div>
-                <p>The product has been returned to active inventory. If you have questions, please reach out to our support team.</p>
-                <p>Warm regards,<br/>The KuduMart Team</p>
-              </div>
-            `,
-          );
-        } catch (mailErr) {
-          logger.error('[INSTALLMENT] Error sending cancellation email:', mailErr);
-        }
-      }
+      // Send comprehensive email and in-app notifications to Buyer, Vendor & Admin
+      InstallmentNotificationService.notifyPlanCancelled(
+        plan.id,
+        {
+          depositAmount: totalPaid,
+          restockingFee,
+          netRefund: buyerRefund,
+          vendorCompensation,
+        },
+        reason === 'grace_period_expired' ? 'default' : (reason as any)
+      ).catch((err) => logger.error('[INSTALLMENT] Failed to trigger plan cancellation notifications:', err));
 
       return {
         status: true,
