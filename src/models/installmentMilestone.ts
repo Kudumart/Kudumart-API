@@ -12,6 +12,7 @@ class InstallmentMilestone extends Model {
   public paymentReference?: string | null;
   public gateway?: string | null;
   public paymentMethod?: string | null;
+  public plan?: any;
   public createdAt?: Date;
   public updatedAt?: Date;
 
