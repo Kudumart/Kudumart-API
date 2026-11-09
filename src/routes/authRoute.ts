@@ -3,6 +3,7 @@ import { Router } from "express";
 import passport from "passport";
 import * as authController from "../controllers/authController";
 import * as homeController from "../controllers/homeController";
+import * as installmentController from "../controllers/installmentController";
 import {
 	registrationValidationRules,
 	verificationValidationRules,
@@ -211,6 +212,12 @@ authRoutes.get(
 authRoutes.get(
 	"/aliexpress/auth-callback",
 	authController.aliExpressAuthCallback,
+);
+
+// Public installment plan configuration for client calculators
+authRoutes.get(
+	"/installments/config",
+	installmentController.getPublicInstallmentConfig,
 );
 
 export default authRoutes; // Export the router
