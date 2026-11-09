@@ -1,6 +1,7 @@
 // src/routes/userRoute.ts
 import { Router } from "express";
 import * as userController from "../controllers/userController";
+import * as installmentController from "../controllers/installmentController";
 import authMiddleware, { optionalAuthMiddleware } from "../middlewares/authMiddleware";
 import authorizeCustomer from "../middlewares/authorizeCustomer";
 import {
@@ -133,6 +134,38 @@ userRoutes.post(
 	"/checkout/dollar/prepare",
 	authMiddleware,
 	userController.prepareCheckoutDollar,
+);
+
+// Installment / Layaway checkout & milestone management
+userRoutes.post(
+	"/installments/prepare",
+	authMiddleware,
+	installmentController.prepareInstallmentCheckout,
+);
+userRoutes.post(
+	"/installments/confirm",
+	authMiddleware,
+	installmentController.confirmInstallmentCheckout,
+);
+userRoutes.get(
+	"/installments/plans",
+	authMiddleware,
+	installmentController.getUserInstallmentPlans,
+);
+userRoutes.get(
+	"/installments/plans/:id",
+	authMiddleware,
+	installmentController.getUserInstallmentPlanDetail,
+);
+userRoutes.post(
+	"/installments/milestones/:milestoneId/prepare",
+	authMiddleware,
+	installmentController.prepareMilestonePayment,
+);
+userRoutes.post(
+	"/installments/milestones/:milestoneId/confirm",
+	authMiddleware,
+	installmentController.confirmMilestonePayment,
 );
 
 // Conversation and Message
