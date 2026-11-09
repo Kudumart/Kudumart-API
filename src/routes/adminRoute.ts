@@ -2,6 +2,7 @@
 import { Router } from "express";
 import * as adminController from "../controllers/adminController";
 import * as homeController from "../controllers/homeController";
+import * as installmentController from "../controllers/installmentController";
 import adminAuthMiddleware from "../middlewares/adminAuthMiddleware";
 import {
 	adminUpdateProfileValidationRules,
@@ -1199,6 +1200,28 @@ adminRoutes.put(
 	"/offers/:offerId",
 	adminAuthMiddleware,
 	adminController.respondToOffer,
+);
+
+// Installment payment / layaway configuration and plans
+adminRoutes.get(
+	"/installments/config",
+	adminAuthMiddleware,
+	installmentController.getInstallmentConfig,
+);
+adminRoutes.put(
+	"/installments/config",
+	adminAuthMiddleware,
+	installmentController.updateInstallmentConfig,
+);
+adminRoutes.get(
+	"/installments/plans",
+	adminAuthMiddleware,
+	installmentController.getAdminInstallmentPlans,
+);
+adminRoutes.get(
+	"/installments/plans/:id",
+	adminAuthMiddleware,
+	installmentController.getAdminInstallmentPlanDetail,
 );
 
 export default adminRoutes; // Export the router
