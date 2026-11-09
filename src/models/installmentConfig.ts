@@ -25,8 +25,8 @@ class InstallmentConfig extends Model {
   public refund_to_wallet!: boolean;
   public eligible_categories!: string[];
   public vendor_restriction!: 'all_vendors' | 'verified_only';
-  public created_at?: Date;
-  public updated_at?: Date;
+  public createdAt?: Date;
+  public updatedAt?: Date;
 
   static associate(_models: any) {
     // Global singleton configuration
@@ -117,7 +117,6 @@ const initModel = (sequelize: Sequelize) => {
       sequelize,
       tableName: 'installment_configs',
       timestamps: true,
-      underscored: true,
     }
   );
 };
