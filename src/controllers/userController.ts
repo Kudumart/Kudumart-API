@@ -6991,3 +6991,32 @@ export const checkoutOffer = async (
 		res.status(500).json({ message: "Server error." });
 	}
 };
+
+export const getWallet = async (req: Request, res: Response): Promise<void> => {
+	try {
+		const userId = (req as AuthenticatedRequest).user?.id;
+		const user = await User.findByPk(userId);
+		if (!user) {
+			res.status(404).json({ status: false, message: "User not found." });
+			return;
+		}
+
+		const transactions = await Transaction.findAll({
+			where: { userId },
+			order: [["createdAt", "DESC"]],
+			limit: 20,
+		});
+
+		res.status(200).json({
+			status: true,
+			data: {
+				balance: Number(user.wallet || 0),
+				currency: "NGN",
+				transactions,
+			},
+		});
+	} catch (error) {
+		logger.error("Error retrieving user wallet:", error);
+		res.status(500).json({ status: false, message: "Failed to retrieve wallet information." });
+	}
+};

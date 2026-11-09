@@ -24,6 +24,7 @@ const userRoutes = Router();
 // User routes
 userRoutes.post("/logout", authMiddleware, userController.logout);
 userRoutes.get("/profile", authMiddleware, userController.profile);
+userRoutes.get("/wallet", authMiddleware, userController.getWallet);
 userRoutes.put("/profile/update", authMiddleware, userController.updateProfile);
 userRoutes.patch(
 	"/profile/photo/update",
