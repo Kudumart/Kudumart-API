@@ -14,6 +14,7 @@ import OrderItem from '../models/orderitem';
 import Payment from '../models/payment';
 import Notification from '../models/notification';
 import Transaction from '../models/transaction';
+import Decimal from 'decimal.js';
 import PaymentGateway from '../models/paymentgateway';
 import sequelizeService from '../services/sequelize.service';
 import { initializePaystackPayment, verifyPayment } from '../utils/helpers';
@@ -492,6 +493,27 @@ export const confirmInstallmentCheckout = async (req: Request, res: Response): P
   try {
     const config = await getOrCreateConfig();
 
+    // Check against duplicate payment reference replay
+    const existingMilestoneWithRef = await InstallmentMilestone.findOne({
+      where: { paymentReference: refId },
+      transaction,
+    });
+    if (existingMilestoneWithRef) {
+      await transaction.rollback();
+      res.status(400).json({ status: false, message: 'This payment reference has already been used.' });
+      return;
+    }
+
+    const existingOrderWithRef = await Order.findOne({
+      where: { refId },
+      transaction,
+    });
+    if (existingOrderWithRef) {
+      await transaction.rollback();
+      res.status(400).json({ status: false, message: 'This payment reference has already been used for an order.' });
+      return;
+    }
+
     const user = await User.findByPk(userId, { transaction, lock: transaction.LOCK.UPDATE });
     if (!user) {
       await transaction.rollback();
@@ -688,7 +710,7 @@ export const confirmInstallmentCheckout = async (req: Request, res: Response): P
         { transaction },
       );
 
-      await OrderItem.create(
+      const orderItem = await OrderItem.create(
         {
           orderId: order.id,
           vendorId: product.vendorId,
@@ -699,6 +721,28 @@ export const confirmInstallmentCheckout = async (req: Request, res: Response): P
         },
         { transaction },
       );
+
+      // Connect vendor escrow & pending wallet for BNPL fulfillment
+      if (product.vendorId) {
+        const vendor = await User.findByPk(product.vendorId, { transaction });
+        if (vendor) {
+          vendor.pendingWallet = new Decimal(vendor.pendingWallet || 0).plus(orderItemTotal).toNumber();
+          await vendor.save({ transaction });
+
+          await Transaction.create(
+            {
+              userId: product.vendorId,
+              amount: orderItemTotal,
+              currency: 'NGN',
+              transactionType: 'sale',
+              refId: orderItem.id,
+              status: 'pending',
+              note: `Escrow pending for BNPL order item #${orderItem.id}`,
+            },
+            { transaction },
+          );
+        }
+      }
 
       await plan.update({ orderId: order.id }, { transaction });
     }
@@ -875,8 +919,32 @@ export const prepareMilestonePayment = async (req: Request, res: Response): Prom
       return;
     }
 
+    if (milestone.plan.status !== 'active') {
+      res.status(400).json({
+        status: false,
+        message: `Cannot process payment on a layaway plan that is ${milestone.plan.status}.`,
+      });
+      return;
+    }
+
     if (milestone.status === 'paid') {
       res.status(400).json({ status: false, message: 'This milestone has already been paid.' });
+      return;
+    }
+
+    // Enforce sequential milestone settlement
+    const priorUnpaid = await InstallmentMilestone.findOne({
+      where: {
+        planId: milestone.planId,
+        installmentNumber: { [Op.lt]: milestone.installmentNumber },
+        status: { [Op.ne]: 'paid' },
+      },
+    });
+    if (priorUnpaid) {
+      res.status(400).json({
+        status: false,
+        message: `Milestone #${priorUnpaid.installmentNumber} must be paid before Milestone #${milestone.installmentNumber}.`,
+      });
       return;
     }
 
@@ -956,9 +1024,47 @@ export const confirmMilestonePayment = async (req: Request, res: Response): Prom
       return;
     }
 
+    if (milestone.plan.status !== 'active') {
+      await transaction.rollback();
+      res.status(400).json({
+        status: false,
+        message: `Cannot process payment on a layaway plan that is ${milestone.plan.status}.`,
+      });
+      return;
+    }
+
     if (milestone.status === 'paid') {
       await transaction.rollback();
       res.status(400).json({ status: false, message: 'Milestone is already paid' });
+      return;
+    }
+
+    // Enforce sequential milestone payment
+    const priorUnpaid = await InstallmentMilestone.findOne({
+      where: {
+        planId: milestone.planId,
+        installmentNumber: { [Op.lt]: milestone.installmentNumber },
+        status: { [Op.ne]: 'paid' },
+      },
+      transaction,
+    });
+    if (priorUnpaid) {
+      await transaction.rollback();
+      res.status(400).json({
+        status: false,
+        message: `Please settle Milestone #${priorUnpaid.installmentNumber} before paying Milestone #${milestone.installmentNumber}.`,
+      });
+      return;
+    }
+
+    // Check against duplicate payment reference replay
+    const existingMilestoneWithRef = await InstallmentMilestone.findOne({
+      where: { paymentReference: refId },
+      transaction,
+    });
+    if (existingMilestoneWithRef) {
+      await transaction.rollback();
+      res.status(400).json({ status: false, message: 'This payment reference has already been used.' });
       return;
     }
 
@@ -1056,7 +1162,7 @@ export const confirmMilestonePayment = async (req: Request, res: Response): Prom
           { transaction },
         );
 
-        await OrderItem.create(
+        const orderItem = await OrderItem.create(
           {
             orderId: order.id,
             vendorId: plan.vendorId,
@@ -1067,6 +1173,28 @@ export const confirmMilestonePayment = async (req: Request, res: Response): Prom
           },
           { transaction },
         );
+
+        // Connect vendor escrow & pending wallet for layaway fulfillment
+        if (plan.vendorId) {
+          const vendor = await User.findByPk(plan.vendorId, { transaction });
+          if (vendor) {
+            vendor.pendingWallet = new Decimal(vendor.pendingWallet || 0).plus(Number(plan.productPrice)).toNumber();
+            await vendor.save({ transaction });
+
+            await Transaction.create(
+              {
+                userId: plan.vendorId,
+                amount: plan.productPrice,
+                currency: 'NGN',
+                transactionType: 'sale',
+                refId: orderItem.id,
+                status: 'pending',
+                note: `Escrow pending for completed layaway order item #${orderItem.id}`,
+              },
+              { transaction },
+            );
+          }
+        }
 
         await plan.update({ orderId: order.id }, { transaction });
 
