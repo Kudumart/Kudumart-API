@@ -2195,7 +2195,10 @@ export const getGoogleMerchantFeed = async (
 	res: Response,
 ): Promise<void> => {
 	try {
-		const frontendUrl = (process.env.FRONTEND_URL || "").replace(/\/$/, "");
+		let frontendUrl = (process.env.FRONTEND_URL || "https://kudumart.com").trim().replace(/\/$/, "");
+		if (!/^https?:\/\//i.test(frontendUrl)) {
+			frontendUrl = `https://${frontendUrl}`;
+		}
 
 		const products = await Product.findAll({
 			where: { status: "active" },
@@ -2287,7 +2290,10 @@ export const getSitemapXml = async (
 	res: Response,
 ): Promise<void> => {
 	try {
-		const frontendUrl = (process.env.FRONTEND_URL || "https://kudumart.com").replace(/\/$/, "");
+		let frontendUrl = (process.env.FRONTEND_URL || "https://kudumart.com").trim().replace(/\/$/, "");
+		if (!/^https?:\/\//i.test(frontendUrl)) {
+			frontendUrl = `https://${frontendUrl}`;
+		}
 
 		// Static pages
 		const staticUrls = [
