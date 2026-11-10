@@ -2276,3 +2276,90 @@ ${items}
 		});
 	}
 };
+
+/**
+ * Dynamic XML Sitemap endpoint conforming to https://www.sitemaps.org/schemas/sitemap/0.9
+ * Automatically queries active products, categories, auctions, and static public pages
+ * so search engines (Google, Bing) crawl and index the entire KuduMart catalog.
+ */
+export const getSitemapXml = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	try {
+		const frontendUrl = (process.env.FRONTEND_URL || "https://kudumart.com").replace(/\/$/, "");
+
+		// Static pages
+		const staticUrls = [
+			{ loc: `${frontendUrl}/`, priority: "1.0", changefreq: "daily" },
+			{ loc: `${frontendUrl}/catalog`, priority: "0.9", changefreq: "daily" },
+			{ loc: `${frontendUrl}/auctions`, priority: "0.8", changefreq: "daily" },
+			{ loc: `${frontendUrl}/services`, priority: "0.8", changefreq: "daily" },
+			{ loc: `${frontendUrl}/about`, priority: "0.5", changefreq: "monthly" },
+			{ loc: `${frontendUrl}/careers`, priority: "0.5", changefreq: "weekly" },
+			{ loc: `${frontendUrl}/terms`, priority: "0.4", changefreq: "monthly" },
+			{ loc: `${frontendUrl}/privacy`, priority: "0.4", changefreq: "monthly" },
+			{ loc: `${frontendUrl}/contact`, priority: "0.5", changefreq: "monthly" },
+			{ loc: `${frontendUrl}/faqs`, priority: "0.6", changefreq: "monthly" },
+		];
+
+		// Active products
+		const products = await Product.findAll({
+			where: { status: "active" },
+			attributes: ["id", "updatedAt"],
+			order: [["updatedAt", "DESC"]],
+			limit: 50000,
+		});
+
+		// Categories
+		const categories = await Category.findAll({
+			attributes: ["id", "name", "updatedAt"],
+		});
+
+		const urlsXml: string[] = [];
+
+		// Static URLs
+		for (const page of staticUrls) {
+			urlsXml.push(`  <url>
+    <loc>${escapeXml(page.loc)}</loc>
+    <changefreq>${page.changefreq}</changefreq>
+    <priority>${page.priority}</priority>
+  </url>`);
+		}
+
+		// Category URLs
+		for (const cat of categories) {
+			const catDate = cat.updatedAt ? new Date(cat.updatedAt).toISOString().split("T")[0] : undefined;
+			urlsXml.push(`  <url>
+    <loc>${escapeXml(`${frontendUrl}/catalog?category=${cat.id}&name=${encodeURIComponent(cat.name)}`)}</loc>
+    ${catDate ? `<lastmod>${catDate}</lastmod>` : ""}
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`);
+		}
+
+		// Product URLs
+		for (const prod of products) {
+			const prodDate = prod.updatedAt ? new Date(prod.updatedAt).toISOString().split("T")[0] : undefined;
+			urlsXml.push(`  <url>
+    <loc>${escapeXml(`${frontendUrl}/product/${prod.id}`)}</loc>
+    ${prodDate ? `<lastmod>${prodDate}</lastmod>` : ""}
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>`);
+		}
+
+		const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urlsXml.join("\n")}
+</urlset>`;
+
+		res.set("Content-Type", "application/xml; charset=utf-8");
+		res.status(200).send(sitemap);
+	} catch (error: any) {
+		logger.error("Error generating XML sitemap:", error);
+		res.status(500).json({
+			message: error.message || "Failed to generate sitemap.",
+		});
+	}
+};
