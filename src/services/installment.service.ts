@@ -85,11 +85,14 @@ export class InstallmentService {
       const vendorSplitPct = Number(config.vendor_split_percentage) || 50.0;
 
       // Restocking fee calculated against product price
-      const restockingFee = Math.round(((Number(plan.productPrice) * cancellationFeePct) / 100) * 100) / 100;
-      // Vendor compensation portion
-      const vendorCompensation = Math.round(((restockingFee * vendorSplitPct) / 100) * 100) / 100;
-      // Actual buyer refund
-      const buyerRefund = Math.max(0, Math.round((totalPaid - restockingFee) * 100) / 100);
+      const calculatedRestockingFee = Math.round(((Number(plan.productPrice) * cancellationFeePct) / 100) * 100) / 100;
+      // Actual fee collected can never exceed what the customer has actually paid
+      const actualFeeCollected = Math.min(totalPaid, calculatedRestockingFee);
+
+      // Vendor and platform split only what was actually collected
+      const vendorCompensation = Math.round(((actualFeeCollected * vendorSplitPct) / 100) * 100) / 100;
+      const platformFee = Math.max(0, Math.round((actualFeeCollected - vendorCompensation) * 100) / 100);
+      const buyerRefund = Math.max(0, Math.round((totalPaid - actualFeeCollected) * 100) / 100);
 
       // 3. Compensate Vendor for holding inventory
       const vendor = plan.vendor;
@@ -125,41 +128,39 @@ export class InstallmentService {
         );
       }
 
-      // 4. Refund Buyer
+      // 4. Refund Buyer to Wallet
       const buyer = plan.buyer;
       if (buyer && buyerRefund > 0) {
-        if (config.refund_to_wallet) {
-          buyer.wallet = Math.round((Number(buyer.wallet || 0) + buyerRefund) * 100) / 100;
-          await buyer.save({ transaction });
+        buyer.wallet = Math.round((Number(buyer.wallet || 0) + buyerRefund) * 100) / 100;
+        await buyer.save({ transaction });
 
-          await Transaction.create(
-            {
-              userId: buyer.id,
-              amount: buyerRefund,
-              currency: 'NGN',
-              transactionType: 'layaway_refund',
-              refId: plan.id,
-              status: 'completed',
-              metadata: {
-                planId: plan.id,
-                totalPaid,
-                restockingFee,
-                reason,
-              },
+        await Transaction.create(
+          {
+            userId: buyer.id,
+            amount: buyerRefund,
+            currency: 'NGN',
+            transactionType: 'layaway_refund',
+            refId: plan.id,
+            status: 'completed',
+            metadata: {
+              planId: plan.id,
+              totalPaid,
+              restockingFee: actualFeeCollected,
+              reason,
             },
-            { transaction },
-          );
+          },
+          { transaction },
+        );
 
-          await Notification.create(
-            {
-              userId: buyer.id,
-              title: reason === 'grace_period_expired' ? 'Layaway Plan Expired & Refunded' : 'Layaway Cancelled & Refunded',
-              type: 'refund',
-              message: `Your layaway reservation for "${product?.name || 'your item'}" was closed. A refund of ₦${buyerRefund.toLocaleString()} (after ₦${restockingFee.toLocaleString()} restocking fee) has been credited to your KuduMart Wallet.`,
-            },
-            { transaction },
-          );
-        }
+        await Notification.create(
+          {
+            userId: buyer.id,
+            title: reason === 'grace_period_expired' ? 'Layaway Plan Expired & Refunded' : 'Layaway Cancelled & Refunded',
+            type: 'refund',
+            message: `Your layaway reservation for "${product?.name || 'your item'}" was closed. A refund of ₦${buyerRefund.toLocaleString()} (after ₦${actualFeeCollected.toLocaleString()} restocking fee) has been credited to your KuduMart Wallet.`,
+          },
+          { transaction },
+        );
       }
 
       // 5. Update Plan & Milestone Statuses
@@ -191,7 +192,7 @@ export class InstallmentService {
         plan.id,
         {
           depositAmount: totalPaid,
-          restockingFee,
+          restockingFee: actualFeeCollected,
           netRefund: buyerRefund,
           vendorCompensation,
         },
@@ -204,7 +205,7 @@ export class InstallmentService {
         data: {
           planId: plan.id,
           status: finalStatus,
-          restockingFee,
+          restockingFee: actualFeeCollected,
           vendorCompensation,
           buyerRefund,
         },

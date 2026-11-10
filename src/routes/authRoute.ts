@@ -134,6 +134,7 @@ authRoutes.get(
 ); // Fetch a single product by ID (public, optional auth for interest check)
 
 authRoutes.get("/feed/google-merchant.xml", homeController.getGoogleMerchantFeed); // Google Merchant Center product feed
+authRoutes.get("/sitemap.xml", homeController.getSitemapXml); // Dynamic XML Sitemap for Google & Bing
 authRoutes.get("/adverts", homeController.getAdverts);
 authRoutes.get("/advert", homeController.viewAdvert);
 

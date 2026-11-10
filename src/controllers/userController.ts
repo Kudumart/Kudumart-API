@@ -48,6 +48,8 @@ import SaveProduct from "../models/saveproduct";
 import ReviewProduct from "../models/reviewproduct";
 import crypto from "crypto";
 import ProductReport from "../models/productreport";
+import Withdrawal from "../models/withdrawal";
+import Role from "../models/role";
 import BlockedVendor from "../models/blockedvendor";
 import KYC from "../models/kyc";
 import BlockedProduct from "../models/blockedproduct";
@@ -68,7 +70,6 @@ import DropshipProducts from "../models/dropshipProducts";
 import * as uuid from "uuid";
 import { BadRequestError } from "../utils/ApiError";
 import DropShippingCred from "../models/dropshippngCreds";
-import { getEffectiveProductPrice } from "../utils/pricing";
 
 const dropShippingService = new DropShippingService();
 
@@ -1528,16 +1529,13 @@ export const getActivePaymentGateways = async (
 		const formattedGateways = gateways.map((gw) => {
 			const gwObj = gw.toJSON();
 			let publicKey = gwObj.publicKey;
-			let secretKey = gwObj.secretKey;
 			if (gwObj.name.toLowerCase().includes("paystack")) {
 				publicKey = process.env.PAYSTACK_PUBLIC_KEY || publicKey;
-				secretKey = process.env.PAYSTACK_SECRET_KEY || secretKey;
 			}
 			if (gwObj.name.toLowerCase().includes("stripe")) {
 				publicKey = process.env.STRIPE_PUBLIC_KEY || publicKey;
-				secretKey = process.env.STRIPE_SECRET_KEY || secretKey;
 			}
-			return { id: gwObj.id, name: gwObj.name, publicKey, secretKey, isActive: gwObj.isActive };
+			return { id: gwObj.id, name: gwObj.name, publicKey, isActive: gwObj.isActive };
 		});
 
 		if (!formattedGateways.length) {
@@ -1545,7 +1543,6 @@ export const getActivePaymentGateways = async (
 				id: "paystack-default",
 				name: "Paystack",
 				publicKey: process.env.PAYSTACK_PUBLIC_KEY || "",
-				secretKey: process.env.PAYSTACK_SECRET_KEY || "",
 				isActive: true,
 			} as any);
 		}
@@ -2052,9 +2049,10 @@ export const prepareCheckoutNaira = async (
 		// Optional "Buy It Now" support: when the client only wants to check
 		// out a specific cart item (or items) rather than the whole cart, it
 		// sends the cart item id(s) here and everything else is ignored.
-		const { cartItemIds, deliveryMethod = "delivery" } = req.body as {
+		const { cartItemIds, deliveryMethod = "delivery", useWallet = false } = req.body as {
 			cartItemIds?: string[];
 			deliveryMethod?: "delivery" | "pickup";
+			useWallet?: boolean;
 		};
 
 		const userCart = await Cart.findAll({
@@ -2158,7 +2156,9 @@ export const prepareCheckoutNaira = async (
 				}
 
 				productPrice = new Decimal(
-					getEffectiveProductPrice(product.price, product.discount_price),
+					(product.discount_price ?? 0) > 0
+						? product.discount_price ?? 0
+						: product.price ?? 0,
 				);
 			} else if (product.type === "dropship") {
 				const dropshipProductVariant = product.variants?.find(
@@ -2244,35 +2244,53 @@ export const prepareCheckoutNaira = async (
 
 		totalAmount = totalAmount.plus(new Decimal(deliveryFee)).toNearest(0.01);
 
-		const paymentGateway = await PaymentGateway.findOne({
-			where: {
-				name: "Paystack",
-				isActive: true,
-			},
-		});
-
-		if (!paymentGateway || !paymentGateway.publicKey) {
-			throw new Error("Active Paystack gateway not configured");
-		}
-
-		const secretKey = paymentGateway.secretKey;
+		const totalNum = totalAmount.toNumber();
+		const walletBalance = Number(user.wallet || 0);
+		const walletDeduction = useWallet && walletBalance > 0
+			? Math.min(walletBalance, totalNum)
+			: 0;
+		const amountToPay = Math.round((totalNum - walletDeduction) * 100) / 100;
 
 		const uuidv4 = uuid.v4;
+		let refId = "";
+		let paystack: any = null;
+		let paidWithWallet = false;
 
-		const refId = `psk_${uuidv4()}_${Date.now()}`;
+		if (amountToPay === 0 && useWallet && walletDeduction > 0) {
+			refId = `wlt_${uuidv4().substring(0, 8)}_${Date.now()}`;
+			paidWithWallet = true;
+		} else {
+			const paymentGateway = await PaymentGateway.findOne({
+				where: {
+					name: "Paystack",
+					isActive: true,
+				},
+			});
 
-		const paystack = await initializePaystackPayment(
-			refId,
-			totalAmount.toNumber(),
-			user.email,
-			secretKey,
-		);
+			if (!paymentGateway || !paymentGateway.publicKey) {
+				throw new Error("Active Paystack gateway not configured");
+			}
+
+			const secretKey = paymentGateway.secretKey;
+			refId = `psk_${uuidv4()}_${Date.now()}`;
+
+			paystack = await initializePaystackPayment(
+				refId,
+				amountToPay,
+				user.email,
+				secretKey,
+			);
+		}
 
 		res.status(200).json({
 			message: "Cart validated for Naira checkout",
 			data: {
 				refId,
-				totalAmount: totalAmount.toNumber(),
+				totalAmount: totalNum,
+				walletBalance,
+				walletDeduction,
+				amountToPay,
+				paidWithWallet,
 				subTotalAmount: {
 					amount: totalAmount
 						.minus(new Decimal(deliveryFee))
@@ -2420,7 +2438,9 @@ export const prepareCheckoutDollar = async (
 				}
 
 				productPrice = new Decimal(
-					getEffectiveProductPrice(product.price, product.discount_price),
+					(product.discount_price ?? 0) > 0
+						? product.discount_price ?? 0
+						: product.price ?? 0,
 				);
 			} else if (product.type === "dropship") {
 				const dropshipProductVariant = product.variants?.find(
@@ -2542,12 +2562,13 @@ export const prepareCheckoutDollar = async (
 
 export const checkout = async (req: Request, res: Response): Promise<void> => {
 	const userId = (req as AuthenticatedRequest).user?.id; // Get authenticated user ID
-	const { refId, shippingAddress, shippingAddressZipCode, cartItemIds, deliveryMethod = "delivery" } = req.body as {
+	const { refId, shippingAddress, shippingAddressZipCode, cartItemIds, deliveryMethod = "delivery", useWallet = false } = req.body as {
 		refId: string;
 		shippingAddress: string;
 		shippingAddressZipCode?: string;
 		cartItemIds?: string[];
 		deliveryMethod?: "delivery" | "pickup";
+		useWallet?: boolean;
 	};
 
 	if (!userId) {
@@ -2569,38 +2590,51 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 	let transactionCommitted = false;
 
 	// Fetch user before the for loop so it's available
-	const user = await User.findByPk(userId, { transaction });
+	const user = await User.findByPk(userId, { transaction, lock: transaction.LOCK.UPDATE });
 	if (!user) {
 		throw new Error(`User not found.`);
 	}
 
 	try {
-		// Fetch active Paystack secret key from PaymentGateway model or process.env
-		const paymentGateway = await PaymentGateway.findOne({
-			where: {
-				name: { [Op.like]: "%paystack%" },
-				isActive: true,
-			},
-		});
+		let paymentData: any;
 
-		const PAYSTACK_SECRET_KEY = paymentGateway?.secretKey || process.env.PAYSTACK_SECRET_KEY;
+		if (refId.startsWith("wlt_")) {
+			// Entirely funded from customer wallet
+			paymentData = {
+				status: "success",
+				amount: 0,
+				currency: "NGN",
+				channel: "wallet",
+				transaction_date: new Date(),
+			};
+		} else {
+			// Fetch active Paystack secret key from PaymentGateway model or process.env
+			const paymentGateway = await PaymentGateway.findOne({
+				where: {
+					name: { [Op.like]: "%paystack%" },
+					isActive: true,
+				},
+			});
 
-		if (!PAYSTACK_SECRET_KEY) {
-			throw new Error("Active Paystack gateway not configured");
+			const PAYSTACK_SECRET_KEY = paymentGateway?.secretKey || process.env.PAYSTACK_SECRET_KEY;
+
+			if (!PAYSTACK_SECRET_KEY) {
+				throw new Error("Active Paystack gateway not configured");
+			}
+
+			// Verify payment reference with Paystack
+			const verificationResponse = await verifyPayment(
+				refId,
+				PAYSTACK_SECRET_KEY,
+			);
+
+			if (verificationResponse.status !== "success") {
+				res.status(400).json({ message: "Payment verification failed." });
+				return;
+			}
+
+			paymentData = verificationResponse;
 		}
-
-		// Verify payment reference with Paystack
-		const verificationResponse = await verifyPayment(
-			refId,
-			PAYSTACK_SECRET_KEY,
-		);
-
-		if (verificationResponse.status !== "success") {
-			res.status(400).json({ message: "Payment verification failed." });
-			return;
-		}
-
-		const paymentData = verificationResponse;
 
 		// Fetch cart items (or just the requested "Buy It Now" item(s))
 		const cartItems = await Cart.findAll({
@@ -2765,7 +2799,9 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 				}
 
 				productPrice = new Decimal(
-					getEffectiveProductPrice(product.price, product.discount_price),
+					(product.discount_price ?? 0) > 0
+						? product.discount_price ?? 0
+						: product.price ?? 0,
 				);
 			} else if (product.type === "dropship") {
 				const dropshipProductVariant = product.variants?.find(
@@ -2845,14 +2881,63 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 			.toNearest(0.01)
 			.toNumber();
 
-		// Validate that the total amount matches the Paystack transaction amount
-		if (paymentData.amount / 100 !== totalAmount) {
-			console.log("Payment amount does not match cart total");
-			console.log(`Payment amount From Paystack: ${paymentData.amount}`);
-			console.log(
-				`Payment amount: ${paymentData.amount / 100}, Cart total: ${totalAmount}`,
+		let walletAmountDeducted = 0;
+		if (refId.startsWith("wlt_")) {
+			// Entirely paid using KuduMart wallet
+			const currentWallet = Number(user.wallet || 0);
+			if (currentWallet < totalAmount) {
+				throw new Error(`Insufficient wallet balance. You have ₦${currentWallet.toLocaleString()}, but total is ₦${totalAmount.toLocaleString()}`);
+			}
+			walletAmountDeducted = totalAmount;
+			user.wallet = Math.round((currentWallet - totalAmount) * 100) / 100;
+			await user.save({ transaction });
+
+			await Transaction.create(
+				{
+					userId,
+					amount: totalAmount,
+					currency: "NGN",
+					transactionType: "purchase_wallet",
+					refId,
+					status: "completed",
+					note: "Order payment with KuduMart wallet balance",
+				},
+				{ transaction },
 			);
-			throw new Error("Payment amount does not match cart total");
+		} else {
+			// Verify payment amount matches Paystack (+ optional partial wallet deduction)
+			const paidViaPaystack = Number(paymentData.amount) / 100;
+			if (useWallet) {
+				const walletPortion = Math.max(0, Math.round((totalAmount - paidViaPaystack) * 100) / 100);
+				if (walletPortion > 0) {
+					const currentWallet = Number(user.wallet || 0);
+					if (currentWallet < walletPortion) {
+						throw new Error("Insufficient wallet balance for split payment");
+					}
+					walletAmountDeducted = walletPortion;
+					user.wallet = Math.round((currentWallet - walletPortion) * 100) / 100;
+					await user.save({ transaction });
+
+					await Transaction.create(
+						{
+							userId,
+							amount: walletPortion,
+							currency: "NGN",
+							transactionType: "purchase_wallet_partial",
+							refId,
+							status: "completed",
+							note: "Partial order payment with KuduMart wallet balance",
+						},
+						{ transaction },
+					);
+				}
+			}
+
+			if (Math.round((paidViaPaystack + walletAmountDeducted) * 100) / 100 < Math.round(totalAmount * 100) / 100) {
+				console.log("Payment amount does not match cart total");
+				console.log(`Paid via Paystack: ${paidViaPaystack}, Wallet: ${walletAmountDeducted}, Cart total: ${totalAmount}`);
+				throw new Error("Payment amount does not match cart total");
+			}
 		}
 
 		// Create order
@@ -2861,12 +2946,7 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 				userId,
 				totalAmount,
 				refId,
-				shippingAddress:
-					shippingAddress && user.location?.city && shippingAddress.includes(user.location.city)
-						? shippingAddress
-						: [shippingAddress, user.location?.city, user.location?.state, user.location?.country]
-								.filter(Boolean)
-								.join(", "),
+				shippingAddress: `${shippingAddress}, ${user.location?.city}, ${user.location?.state}, ${user.location?.country}`,
 				status: "pending",
 			},
 			{ transaction },
@@ -2991,7 +3071,9 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 
 			const productPrice =
 				product.type === "in_stock"
-					? getEffectiveProductPrice(product.price, product.discount_price)
+					? product.discount_price && product.discount_price > 0
+						? product.discount_price
+						: product.price
 					: (() => {
 						const dropshipProductVariant = product.variants?.find(
 							(variant) => variant.sku_id === cartItem.dropshipProductSkuId,
@@ -3142,11 +3224,15 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 			{
 				orderId: order.id,
 				refId,
-				amount: paymentData.amount / 100,
-				currency: paymentData.currency,
-				status: paymentData.status,
-				channel: paymentData.channel,
-				paymentDate: paymentData.transaction_date,
+				amount: totalAmount,
+				currency: paymentData.currency || "NGN",
+				status: paymentData.status || "success",
+				channel: refId.startsWith("wlt_")
+					? "wallet"
+					: walletAmountDeducted > 0
+						? "paystack+wallet"
+						: paymentData.channel || "card",
+				paymentDate: paymentData.transaction_date || new Date(),
 			},
 			{ transaction },
 		);
@@ -3176,16 +3262,17 @@ export const checkout = async (req: Request, res: Response): Promise<void> => {
 					id: cartItem.product.id,
 					sku: cartItem.product.sku,
 					name: cartItem.product.name,
-					price: getEffectiveProductPrice(
-						cartItem.product.price,
-						cartItem.product.discount_price,
-					),
+					price:
+						cartItem.product.discount_price &&
+							cartItem.product.discount_price > 0
+							? cartItem.product.discount_price
+							: cartItem.product.price,
 				}, // Ensure product is an object
 				quantity: cartItem.quantity,
-				price: getEffectiveProductPrice(
-					cartItem.product.price,
-					cartItem.product.discount_price,
-				),
+				price:
+					cartItem.product.discount_price && cartItem.product.discount_price > 0
+						? cartItem.product.discount_price
+						: cartItem.product.price,
 				status: "pending", // Default status (if required)
 				createdAt: new Date(), // Ensure timestamps if needed
 			} as OrderItem);
@@ -3470,7 +3557,9 @@ export const checkoutDollar = async (
 				}
 
 				productPrice = new Decimal(
-					getEffectiveProductPrice(product.price, product.discount_price),
+					(product.discount_price ?? 0) > 0
+						? product.discount_price ?? 0
+						: product.price ?? 0,
 				);
 			} else if (product.type === "dropship") {
 				const dropshipProductVariant = product.variants?.find(
@@ -3582,7 +3671,9 @@ export const checkoutDollar = async (
 				}
 
 				productPrice = new Decimal(
-					getEffectiveProductPrice(product.price, product.discount_price),
+					(product.discount_price ?? 0) > 0
+						? product.discount_price ?? 0
+						: product.price ?? 0,
 				);
 			} else if (product.type === "dropship") {
 				const dropshipProductVariant = product.variants?.find(
@@ -3690,12 +3781,7 @@ export const checkoutDollar = async (
 				userId,
 				totalAmount,
 				refId,
-				shippingAddress:
-					shippingAddress && user.location?.city && shippingAddress.includes(user.location.city)
-						? shippingAddress
-						: [shippingAddress, user.location?.city, user.location?.state, user.location?.country]
-								.filter(Boolean)
-								.join(", "),
+				shippingAddress: `${shippingAddress}, ${user.location?.city}, ${user.location?.state}, ${user.location?.country}`,
 				status: "pending",
 			},
 			{ transaction },
@@ -7020,5 +7106,157 @@ export const getWallet = async (req: Request, res: Response): Promise<void> => {
 	} catch (error) {
 		logger.error("Error retrieving user wallet:", error);
 		res.status(500).json({ status: false, message: "Failed to retrieve wallet information." });
+	}
+};
+
+/**
+ * Request Customer Wallet Withdrawal to a Nigerian bank account
+ */
+export const requestCustomerWithdrawal = async (
+	req: Request,
+	res: Response,
+): Promise<void> => {
+	const userId = (req as AuthenticatedRequest).user?.id;
+	if (!userId) {
+		res.status(401).json({ status: false, message: "Unauthorized" });
+		return;
+	}
+
+	const { amount, accountNumber, bankCode, bankName, accountName } = req.body;
+	const withdrawAmount = Number(amount);
+
+	if (!Number.isFinite(withdrawAmount) || withdrawAmount <= 0) {
+		res.status(400).json({ status: false, message: "Withdrawal amount must be greater than zero." });
+		return;
+	}
+
+	if (!accountNumber || !/^\d{10}$/.test(String(accountNumber).trim())) {
+		res.status(400).json({ status: false, message: "A valid 10-digit account number is required." });
+		return;
+	}
+
+	if (!bankCode || !bankName || !accountName) {
+		res.status(400).json({ status: false, message: "Bank name, bank code, and verified account name are required." });
+		return;
+	}
+
+	const transaction = await sequelizeService.connection!.transaction();
+	try {
+		const user = await User.findByPk(userId, {
+			transaction,
+			lock: transaction.LOCK.UPDATE,
+		});
+
+		if (!user) {
+			await transaction.rollback();
+			res.status(404).json({ status: false, message: "User not found." });
+			return;
+		}
+
+		const currentBalance = Number(user.wallet || 0);
+		if (currentBalance < withdrawAmount) {
+			await transaction.rollback();
+			res.status(400).json({
+				status: false,
+				message: `Insufficient wallet balance. You have ₦${currentBalance.toLocaleString()}, but requested ₦${withdrawAmount.toLocaleString()}.`,
+			});
+			return;
+		}
+
+		// Deduct from wallet
+		user.wallet = Math.round((currentBalance - withdrawAmount) * 100) / 100;
+		await user.save({ transaction });
+
+		const bankInformation = {
+			bankName: String(bankName).trim(),
+			bankCode: String(bankCode).trim(),
+			accountNumber: String(accountNumber).trim(),
+			accountName: String(accountName).trim(),
+		};
+
+		// Create withdrawal record
+		const withdrawal = await Withdrawal.create(
+			{
+				vendorId: userId,
+				bankInformation,
+				amount: withdrawAmount,
+				currency: "NGN",
+				status: "pending",
+				note: `Customer wallet payout to ${bankName} (${accountNumber})`,
+			},
+			{ transaction },
+		);
+
+		// Record Transaction
+		await Transaction.create(
+			{
+				userId,
+				amount: withdrawAmount,
+				currency: "NGN",
+				transactionType: "withdrawal",
+				refId: withdrawal.id,
+				status: "pending",
+				note: `Withdrawal request to ${bankName} (${accountNumber})`,
+				metadata: {
+					withdrawalId: withdrawal.id,
+					bankInformation,
+				},
+			},
+			{ transaction },
+		);
+
+		// User Notification
+		await Notification.create(
+			{
+				userId,
+				title: "Withdrawal Request Submitted",
+				type: "withdrawal_request",
+				message: `Your withdrawal request of ₦${withdrawAmount.toLocaleString()} to ${bankName} (${accountNumber}) has been submitted and is under review.`,
+			},
+			{ transaction },
+		);
+
+		// Notify superadmins
+		const adminUsers = await Admin.findAll({
+			include: [
+				{
+					model: Role,
+					as: "role",
+					where: { name: "superadmin" },
+					attributes: [],
+				},
+			],
+			transaction,
+		});
+
+		for (const admin of adminUsers) {
+			await Notification.create(
+				{
+					userId: admin.id,
+					title: "Customer Withdrawal Request",
+					type: "withdrawal_request",
+					message: `Customer ${user.firstName || ""} ${user.lastName || ""} requested a wallet withdrawal of ₦${withdrawAmount.toLocaleString()} to ${bankName}.`,
+				},
+				{ transaction },
+			);
+		}
+
+		await transaction.commit();
+
+		res.status(200).json({
+			status: true,
+			message: "Withdrawal request submitted successfully.",
+			data: {
+				withdrawal,
+				newBalance: user.wallet,
+			},
+		});
+	} catch (error: any) {
+		await transaction.rollback();
+		logger.error("Error processing customer withdrawal:", error);
+		res.status(500).json({
+			status: false,
+			message: error.message || "Failed to submit withdrawal request.",
+		});
 	}
 };

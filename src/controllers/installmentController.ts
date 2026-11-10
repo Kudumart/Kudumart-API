@@ -13,6 +13,8 @@ import Order from '../models/order';
 import OrderItem from '../models/orderitem';
 import Payment from '../models/payment';
 import Notification from '../models/notification';
+import Transaction from '../models/transaction';
+import Decimal from 'decimal.js';
 import PaymentGateway from '../models/paymentgateway';
 import sequelizeService from '../services/sequelize.service';
 import { initializePaystackPayment, verifyPayment } from '../utils/helpers';
@@ -411,10 +413,24 @@ export const prepareInstallmentCheckout = async (req: Request, res: Response): P
       });
     }
 
-    // Initialize Paystack for Milestone #1
-    const secretKey = await getPaystackSecretKey();
-    const refId = `psk_inst_${uuidv4().substring(0, 8)}_${Date.now()}`;
-    const paystack = await initializePaystackPayment(refId, depositAmount, user.email, secretKey);
+    // Check customer wallet for deposit
+    const userWallet = Number(user.wallet || 0);
+    const wantsWallet = Boolean(req.body.useWallet);
+    const walletDeduction = wantsWallet && userWallet > 0 ? Math.min(userWallet, depositAmount) : 0;
+    const amountToPay = Math.round((depositAmount - walletDeduction) * 100) / 100;
+
+    let refId = '';
+    let paystack: any = null;
+    let paidWithWallet = false;
+
+    if (amountToPay === 0 && wantsWallet && walletDeduction > 0) {
+      refId = `wlt_inst_${uuidv4().substring(0, 8)}_${Date.now()}`;
+      paidWithWallet = true;
+    } else {
+      const secretKey = await getPaystackSecretKey();
+      refId = `psk_inst_${uuidv4().substring(0, 8)}_${Date.now()}`;
+      paystack = await initializePaystackPayment(refId, amountToPay, user.email, secretKey);
+    }
 
     res.status(200).json({
       status: true,
@@ -427,6 +443,10 @@ export const prepareInstallmentCheckout = async (req: Request, res: Response): P
         totalAmount,
         depositAmount,
         remainingBalance,
+        walletBalance: userWallet,
+        walletDeduction,
+        amountToPay,
+        paidWithWallet,
         tenure: chosenTenure,
         milestones,
         shippingAddress,
@@ -472,13 +492,32 @@ export const confirmInstallmentCheckout = async (req: Request, res: Response): P
   const transaction = await sequelizeService.connection!.transaction();
   try {
     const config = await getOrCreateConfig();
-    const secretKey = await getPaystackSecretKey();
 
-    // Verify Paystack payment
-    const verification = await verifyPayment(refId, secretKey);
-    if (verification.status !== 'success') {
+    // Check against duplicate payment reference replay
+    const existingMilestoneWithRef = await InstallmentMilestone.findOne({
+      where: { paymentReference: refId },
+      transaction,
+    });
+    if (existingMilestoneWithRef) {
       await transaction.rollback();
-      res.status(400).json({ status: false, message: 'Payment verification failed' });
+      res.status(400).json({ status: false, message: 'This payment reference has already been used.' });
+      return;
+    }
+
+    const existingOrderWithRef = await Order.findOne({
+      where: { refId },
+      transaction,
+    });
+    if (existingOrderWithRef) {
+      await transaction.rollback();
+      res.status(400).json({ status: false, message: 'This payment reference has already been used for an order.' });
+      return;
+    }
+
+    const user = await User.findByPk(userId, { transaction, lock: transaction.LOCK.UPDATE });
+    if (!user) {
+      await transaction.rollback();
+      res.status(404).json({ status: false, message: 'User not found' });
       return;
     }
 
@@ -518,6 +557,75 @@ export const confirmInstallmentCheckout = async (req: Request, res: Response): P
     const totalAmount = orderItemTotal + shipping + financingFee;
     const depositAmount = Math.round((totalAmount * (chosenDepositPct / 100)) * 100) / 100;
     const remainingBalance = Math.round((totalAmount - depositAmount) * 100) / 100;
+
+    let paymentGateway = 'Paystack';
+    let paymentMethod = 'card';
+
+    if (refId.startsWith('wlt_inst_')) {
+      const currentWallet = Number(user.wallet || 0);
+      if (currentWallet < depositAmount) {
+        await transaction.rollback();
+        res.status(400).json({ status: false, message: 'Insufficient wallet balance for layaway deposit.' });
+        return;
+      }
+      user.wallet = Math.round((currentWallet - depositAmount) * 100) / 100;
+      await user.save({ transaction });
+
+      await Transaction.create(
+        {
+          userId,
+          amount: depositAmount,
+          currency: 'NGN',
+          transactionType: 'layaway_deposit_wallet',
+          refId,
+          status: 'completed',
+          note: `Layaway deposit paid via KuduMart wallet for product "${product.name}"`,
+        },
+        { transaction },
+      );
+
+      paymentGateway = 'Wallet';
+      paymentMethod = 'wallet';
+    } else {
+      const secretKey = await getPaystackSecretKey();
+      const verification = await verifyPayment(refId, secretKey);
+      if (verification.status !== 'success') {
+        await transaction.rollback();
+        res.status(400).json({ status: false, message: 'Payment verification failed' });
+        return;
+      }
+
+      if (req.body.useWallet) {
+        const paidViaPaystack = Number(verification.amount) / 100;
+        const walletPortion = Math.max(0, Math.round((depositAmount - paidViaPaystack) * 100) / 100);
+        if (walletPortion > 0) {
+          const currentWallet = Number(user.wallet || 0);
+          if (currentWallet < walletPortion) {
+            await transaction.rollback();
+            res.status(400).json({ status: false, message: 'Insufficient wallet balance for deposit portion.' });
+            return;
+          }
+          user.wallet = Math.round((currentWallet - walletPortion) * 100) / 100;
+          await user.save({ transaction });
+
+          await Transaction.create(
+            {
+              userId,
+              amount: walletPortion,
+              currency: 'NGN',
+              transactionType: 'layaway_deposit_wallet_partial',
+              refId,
+              status: 'completed',
+              note: `Partial layaway deposit paid via KuduMart wallet for product "${product.name}"`,
+            },
+            { transaction },
+          );
+
+          paymentGateway = 'Paystack + Wallet';
+          paymentMethod = 'card+wallet';
+        }
+      }
+    }
 
     const holdingDays = (chosenTenure.tenure_days || 60) + (config.grace_period_days || 5);
     const reservedUntil = new Date(Date.now() + holdingDays * 86400000);
@@ -560,8 +668,8 @@ export const confirmInstallmentCheckout = async (req: Request, res: Response): P
         paidAt: new Date(),
         status: 'paid',
         paymentReference: refId,
-        gateway: 'Paystack',
-        paymentMethod: 'card',
+        gateway: paymentGateway,
+        paymentMethod,
       },
       { transaction },
     );
@@ -602,7 +710,7 @@ export const confirmInstallmentCheckout = async (req: Request, res: Response): P
         { transaction },
       );
 
-      await OrderItem.create(
+      const orderItem = await OrderItem.create(
         {
           orderId: order.id,
           vendorId: product.vendorId,
@@ -613,6 +721,28 @@ export const confirmInstallmentCheckout = async (req: Request, res: Response): P
         },
         { transaction },
       );
+
+      // Connect vendor escrow & pending wallet for BNPL fulfillment
+      if (product.vendorId) {
+        const vendor = await User.findByPk(product.vendorId, { transaction });
+        if (vendor) {
+          vendor.pendingWallet = new Decimal(vendor.pendingWallet || 0).plus(orderItemTotal).toNumber();
+          await vendor.save({ transaction });
+
+          await Transaction.create(
+            {
+              userId: product.vendorId,
+              amount: orderItemTotal,
+              currency: 'NGN',
+              transactionType: 'sale',
+              refId: orderItem.id,
+              status: 'pending',
+              note: `Escrow pending for BNPL order item #${orderItem.id}`,
+            },
+            { transaction },
+          );
+        }
+      }
 
       await plan.update({ orderId: order.id }, { transaction });
     }
@@ -789,8 +919,32 @@ export const prepareMilestonePayment = async (req: Request, res: Response): Prom
       return;
     }
 
+    if (milestone.plan.status !== 'active') {
+      res.status(400).json({
+        status: false,
+        message: `Cannot process payment on a layaway plan that is ${milestone.plan.status}.`,
+      });
+      return;
+    }
+
     if (milestone.status === 'paid') {
       res.status(400).json({ status: false, message: 'This milestone has already been paid.' });
+      return;
+    }
+
+    // Enforce sequential milestone settlement
+    const priorUnpaid = await InstallmentMilestone.findOne({
+      where: {
+        planId: milestone.planId,
+        installmentNumber: { [Op.lt]: milestone.installmentNumber },
+        status: { [Op.ne]: 'paid' },
+      },
+    });
+    if (priorUnpaid) {
+      res.status(400).json({
+        status: false,
+        message: `Milestone #${priorUnpaid.installmentNumber} must be paid before Milestone #${milestone.installmentNumber}.`,
+      });
       return;
     }
 
@@ -800,9 +954,22 @@ export const prepareMilestonePayment = async (req: Request, res: Response): Prom
       return;
     }
 
-    const secretKey = await getPaystackSecretKey();
-    const refId = `psk_ms_${uuidv4().substring(0, 8)}_${Date.now()}`;
-    const paystack = await initializePaystackPayment(refId, Number(milestone.amount), user.email, secretKey);
+    const userWallet = Number(user.wallet || 0);
+    const wantsWallet = Boolean(req.body.useWallet);
+    const milestoneAmount = Number(milestone.amount);
+
+    let refId = '';
+    let paystack: any = null;
+    let paidWithWallet = false;
+
+    if (wantsWallet && userWallet >= milestoneAmount) {
+      refId = `wlt_ms_${uuidv4().substring(0, 8)}_${Date.now()}`;
+      paidWithWallet = true;
+    } else {
+      const secretKey = await getPaystackSecretKey();
+      refId = `psk_ms_${uuidv4().substring(0, 8)}_${Date.now()}`;
+      paystack = await initializePaystackPayment(refId, milestoneAmount, user.email, secretKey);
+    }
 
     res.status(200).json({
       status: true,
@@ -811,6 +978,8 @@ export const prepareMilestonePayment = async (req: Request, res: Response): Prom
         milestoneId,
         amount: milestone.amount,
         installmentNumber: milestone.installmentNumber,
+        walletBalance: userWallet,
+        paidWithWallet,
         paystackDetails: paystack,
       },
     });
@@ -838,16 +1007,6 @@ export const confirmMilestonePayment = async (req: Request, res: Response): Prom
 
   const transaction = await sequelizeService.connection!.transaction();
   try {
-    const secretKey = await getPaystackSecretKey();
-
-    // Verify Paystack
-    const verification = await verifyPayment(refId, secretKey);
-    if (verification.status !== 'success') {
-      await transaction.rollback();
-      res.status(400).json({ status: false, message: 'Payment verification failed' });
-      return;
-    }
-
     const milestone = await InstallmentMilestone.findByPk(milestoneId, {
       include: [
         {
@@ -865,10 +1024,93 @@ export const confirmMilestonePayment = async (req: Request, res: Response): Prom
       return;
     }
 
+    if (milestone.plan.status !== 'active') {
+      await transaction.rollback();
+      res.status(400).json({
+        status: false,
+        message: `Cannot process payment on a layaway plan that is ${milestone.plan.status}.`,
+      });
+      return;
+    }
+
     if (milestone.status === 'paid') {
       await transaction.rollback();
       res.status(400).json({ status: false, message: 'Milestone is already paid' });
       return;
+    }
+
+    // Enforce sequential milestone payment
+    const priorUnpaid = await InstallmentMilestone.findOne({
+      where: {
+        planId: milestone.planId,
+        installmentNumber: { [Op.lt]: milestone.installmentNumber },
+        status: { [Op.ne]: 'paid' },
+      },
+      transaction,
+    });
+    if (priorUnpaid) {
+      await transaction.rollback();
+      res.status(400).json({
+        status: false,
+        message: `Please settle Milestone #${priorUnpaid.installmentNumber} before paying Milestone #${milestone.installmentNumber}.`,
+      });
+      return;
+    }
+
+    // Check against duplicate payment reference replay
+    const existingMilestoneWithRef = await InstallmentMilestone.findOne({
+      where: { paymentReference: refId },
+      transaction,
+    });
+    if (existingMilestoneWithRef) {
+      await transaction.rollback();
+      res.status(400).json({ status: false, message: 'This payment reference has already been used.' });
+      return;
+    }
+
+    let paymentGateway = 'Paystack';
+    let paymentMethod = 'card';
+
+    if (refId.startsWith('wlt_ms_')) {
+      const user = await User.findByPk(userId, { transaction, lock: transaction.LOCK.UPDATE });
+      if (!user) {
+        await transaction.rollback();
+        res.status(404).json({ status: false, message: 'User not found' });
+        return;
+      }
+      const currentWallet = Number(user.wallet || 0);
+      const milestoneAmount = Number(milestone.amount);
+      if (currentWallet < milestoneAmount) {
+        await transaction.rollback();
+        res.status(400).json({ status: false, message: 'Insufficient wallet balance to pay milestone.' });
+        return;
+      }
+      user.wallet = Math.round((currentWallet - milestoneAmount) * 100) / 100;
+      await user.save({ transaction });
+
+      await Transaction.create(
+        {
+          userId,
+          amount: milestoneAmount,
+          currency: 'NGN',
+          transactionType: 'layaway_milestone_wallet',
+          refId,
+          status: 'completed',
+          note: `Layaway milestone #${milestone.installmentNumber} paid from KuduMart wallet`,
+        },
+        { transaction },
+      );
+
+      paymentGateway = 'Wallet';
+      paymentMethod = 'wallet';
+    } else {
+      const secretKey = await getPaystackSecretKey();
+      const verification = await verifyPayment(refId, secretKey);
+      if (verification.status !== 'success') {
+        await transaction.rollback();
+        res.status(400).json({ status: false, message: 'Payment verification failed' });
+        return;
+      }
     }
 
     // Mark milestone paid
@@ -877,8 +1119,8 @@ export const confirmMilestonePayment = async (req: Request, res: Response): Prom
         status: 'paid',
         paidAt: new Date(),
         paymentReference: refId,
-        gateway: 'Paystack',
-        paymentMethod: 'card',
+        gateway: paymentGateway,
+        paymentMethod,
       },
       { transaction },
     );
@@ -920,7 +1162,7 @@ export const confirmMilestonePayment = async (req: Request, res: Response): Prom
           { transaction },
         );
 
-        await OrderItem.create(
+        const orderItem = await OrderItem.create(
           {
             orderId: order.id,
             vendorId: plan.vendorId,
@@ -931,6 +1173,28 @@ export const confirmMilestonePayment = async (req: Request, res: Response): Prom
           },
           { transaction },
         );
+
+        // Connect vendor escrow & pending wallet for layaway fulfillment
+        if (plan.vendorId) {
+          const vendor = await User.findByPk(plan.vendorId, { transaction });
+          if (vendor) {
+            vendor.pendingWallet = new Decimal(vendor.pendingWallet || 0).plus(Number(plan.productPrice)).toNumber();
+            await vendor.save({ transaction });
+
+            await Transaction.create(
+              {
+                userId: plan.vendorId,
+                amount: plan.productPrice,
+                currency: 'NGN',
+                transactionType: 'sale',
+                refId: orderItem.id,
+                status: 'pending',
+                note: `Escrow pending for completed layaway order item #${orderItem.id}`,
+              },
+              { transaction },
+            );
+          }
+        }
 
         await plan.update({ orderId: order.id }, { transaction });
 

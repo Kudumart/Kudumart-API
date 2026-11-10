@@ -10,6 +10,7 @@ import apiRouter from "./routes/authRoute"; // Import your routes here
 import { configureSocket } from "./services/socket.service";
 import "./config/passportConfig"; // Import Password Configuration
 import passport from "passport";
+import { getSitemapXml, getGoogleMerchantFeed } from "./controllers/homeController";
 import runSubscriptionCron from "./job/subscriptionCron"; // Import the cron job
 import auctionStatusUpdate from "./job/auctionStatusUpdate"; // Import the cron job
 import { auctionReminderJob } from "./job/auctionReminder";
@@ -41,6 +42,10 @@ const io = new Server(server, {
 app.use(passport.initialize());
 
 app.use("/api", apiRouter); // Mount the router to /api
+
+// Root SEO sitemap & product feeds
+app.get("/sitemap.xml", getSitemapXml);
+app.get("/feed/google-merchant.xml", getGoogleMerchantFeed);
 
 app.set("trust proxy", true);
 
