@@ -50,6 +50,7 @@ import AttributeDefinitions from "../models/attributeDefinitions";
 import AttributeOptions from "../models/attributeOptions";
 import Services from "../models/services";
 import ServiceReviews from "../models/servicereview";
+import { getEffectiveProductPrice } from "../utils/pricing";
 
 export const getCountrySearchTerms = (countryInput?: any): string[] => {
 	if (!countryInput) return [];
@@ -276,7 +277,7 @@ export const products = async (req: Request, res: Response): Promise<void> => {
 			{
 				model: Admin,
 				as: "admin",
-				attributes: ["id", "name", "email"],
+				attributes: ["id", "name", "email", "phoneNumber"],
 			},
 			{
 				model: SubCategory,
@@ -516,7 +517,7 @@ export const getProductById = async (
 				{
 					model: Admin,
 					as: "admin",
-					attributes: ["id", "name", "email"],
+					attributes: ["id", "name", "email", "phoneNumber"],
 				},
 				{
 					model: Store,
@@ -807,7 +808,7 @@ export const searchProductsGrouped = async (
 					where: productWhere,
 					include: [
 						{ model: User, as: "vendor" },
-						{ model: Admin, as: "admin", attributes: ["id", "name", "email"] },
+						{ model: Admin, as: "admin", attributes: ["id", "name", "email", "phoneNumber"] },
 						{
 							model: Store,
 							as: "store",
@@ -1061,7 +1062,7 @@ export const getStoreProducts = async (
 				{
 					model: Admin,
 					as: "admin",
-					attributes: ["id", "name", "email"],
+					attributes: ["id", "name", "email", "phoneNumber"],
 				},
 				{
 					model: Store,
@@ -1223,7 +1224,7 @@ export const getAuctionProducts = async (
 				{
 					model: Admin,
 					as: "admin",
-					attributes: ["id", "name", "email"],
+					attributes: ["id", "name", "email", "phoneNumber"],
 				},
 				{
 					model: Store,
@@ -1342,7 +1343,7 @@ export const getAuctionProductById = async (
 				{
 					model: Admin,
 					as: "admin",
-					attributes: ["id", "name", "email"],
+					attributes: ["id", "name", "email", "phoneNumber"],
 				},
 				{
 					model: Store,
@@ -1454,7 +1455,7 @@ export const getAdverts = async (
 				{
 					model: Admin,
 					as: "admin",
-					attributes: ["id", "name", "email"],
+					attributes: ["id", "name", "email", "phoneNumber"],
 				},
 				{
 					model: SubCategory,
@@ -1518,7 +1519,7 @@ export const viewAdvert = async (
 				{
 					model: Admin,
 					as: "admin",
-					attributes: ["id", "name", "email"],
+					attributes: ["id", "name", "email", "phoneNumber"],
 				},
 				{
 					model: SubCategory,
@@ -2242,9 +2243,10 @@ export const getGoogleMerchantFeed = async (
 			.filter((product: any) => product.image_url)
 			.map((product: any) => {
 				const currencyCode = product.store?.currency?.code || "NGN";
-				const price = Number(product.discount_price) > 0
-					? product.discount_price
-					: product.price;
+				const price = getEffectiveProductPrice(
+					product.price,
+					product.discount_price,
+				);
 				const availability = Number(product.quantity) > 0 ? "in stock" : "out of stock";
 				const condition = product.condition === "used" ? "used" : "new";
 				const productType = product.sub_category

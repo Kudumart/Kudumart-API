@@ -23,6 +23,7 @@ import { DropShippingService } from "./dropShipping.service";
 import { emailTemplates } from "../utils/messages";
 import { sendMail } from "./mail.service";
 import { sendPushNotificationSingle, PushNotificationTypes } from "../firebase/pushNotification";
+import { getEffectiveProductPrice } from "../utils/pricing";
 
 const dropShippingService = new DropShippingService();
 
@@ -51,9 +52,9 @@ export class PaymentService {
 
             let itemPrice = new Decimal(0);
             if (product.type === "in_stock") {
-                const discountPrice = Number(product.discount_price);
-                const regularPrice = Number(product.price);
-                itemPrice = new Decimal(discountPrice > 0 ? discountPrice : regularPrice);
+				itemPrice = new Decimal(
+					getEffectiveProductPrice(product.price, product.discount_price),
+				);
             } else if (product.type === "dropship") {
                 const variant = product.variants?.find(v => v.sku_id === item.dropshipProductSkuId);
                 if (!variant) throw new Error(`Variant not found for product ${product.name}`);

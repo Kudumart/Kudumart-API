@@ -15,9 +15,14 @@ jobs:
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_PRIVATE_KEY }}
           script: |
+            set -e
             cd /var/www/kudumart-api
-            git pull --ff-only origin main
+            git fetch origin main
+            git switch main
+            git merge --ff-only origin/main
+            echo "Deploying backend commit $(git rev-parse --short HEAD)"
             npm ci
             npm run build
+            npm run migrate
             pm2 reload kudumart-api --update-env || pm2 restart kudumart-api --update-env || pm2 start dist/index.js --name kudumart-api
             pm2 save
