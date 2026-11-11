@@ -431,15 +431,24 @@ const escapeShareHtml = (value: unknown): string => String(value ?? "")
 // render product details before the JavaScript storefront has loaded.
 export const productSharePreview = async (req: Request, res: Response): Promise<void> => {
 	try {
+		const rawStorefront = (process.env.FRONTEND_URL || "https://kudumart.com").trim().replace(/\/$/, "");
+		const storefront = /^https?:\/\//i.test(rawStorefront) ? rawStorefront : `https://${rawStorefront}`;
+
+		const productId = String(req.params.productId || "").trim();
 		const product = await Product.findOne({
-			where: { id: req.params.productId, status: "active" },
+			where: {
+				[Op.or]: [
+					{ id: productId },
+					{ SKU: productId },
+				],
+				status: "active",
+			},
 		});
 		if (!product) {
-			res.status(404).send("Product not found");
+			res.redirect(302, `${storefront}/product/${encodeURIComponent(productId)}`);
 			return;
 		}
 
-		const storefront = (process.env.FRONTEND_URL || "https://kudumart.com").replace(/\/$/, "");
 		const productUrl = `${storefront}/product/${encodeURIComponent(product.id)}`;
 		const additionalImages = Array.isArray(product.additional_images) ? product.additional_images : [];
 		const rawImage = product.image_url || additionalImages[0] || "";
