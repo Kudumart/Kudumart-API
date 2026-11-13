@@ -3831,7 +3831,13 @@ export const fetchProducts = async (
 
 	try {
 		const products = await Product.findAll({
-			where: { vendorId: adminId },
+			where: {
+				vendorId: adminId,
+				...(name && { name: { [Op.like]: `%${name}%` } }),
+				...(sku && { sku }),
+				...(status && { status }),
+				...(condition && { condition }),
+			},
 			include: [
 				{
 					model: SubCategory,
@@ -3851,14 +3857,7 @@ export const fetchProducts = async (
 					],
 				},
 			],
-			...((name || sku || status || condition) && {
-				where: {
-					...(name && { name: { [Op.like]: `%${name}%` } }),
-					...(sku && { sku }),
-					...(status && { status }),
-					...(condition && { condition }),
-				},
-			}),
+			order: [["createdAt", "DESC"]],
 		});
 
 		res.status(200).json({
