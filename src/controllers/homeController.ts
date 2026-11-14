@@ -342,7 +342,7 @@ export const products = async (req: Request, res: Response): Promise<void> => {
 			? [
 				[
 					literal(
-						"CASE WHEN name = :exactTerm THEN 0 WHEN name LIKE :prefixTerm THEN 1 WHEN name LIKE :containsTerm THEN 2 ELSE 3 END",
+						"CASE WHEN `Product`.`name` = :exactTerm THEN 0 WHEN `Product`.`name` LIKE :prefixTerm THEN 1 WHEN `Product`.`name` LIKE :containsTerm THEN 2 ELSE 3 END",
 					),
 					"ASC",
 				],
