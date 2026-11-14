@@ -210,9 +210,10 @@ export const products = async (req: Request, res: Response): Promise<void> => {
 		}
 		// Search term used for both the where-clause matching below and the
 		// relevance ranking further down (kept in one place so the two never
-		// drift out of sync).
-		const normalizedName = name
-			? String(name).trim().replace(/\s+/g, " ")
+		// drift out of sync). Accepts `name`, `search`, or `q`.
+		const rawSearch = name || req.query.search || req.query.q;
+		const normalizedName = rawSearch
+			? String(rawSearch).trim().replace(/\s+/g, " ")
 			: "";
 
 		if (normalizedName) {

@@ -423,13 +423,18 @@ export const prepareInstallmentCheckout = async (req: Request, res: Response): P
     let paystack: any = null;
     let paidWithWallet = false;
 
+    const userAgent = String(req.headers['user-agent'] || '');
+    const isMobileClient = userAgent.includes('Dart') || (req.body as any)?.isMobile === true;
+
     if (amountToPay === 0 && wantsWallet && walletDeduction > 0) {
       refId = `wlt_inst_${uuidv4().substring(0, 8)}_${Date.now()}`;
       paidWithWallet = true;
     } else {
       const secretKey = await getPaystackSecretKey();
       refId = `psk_inst_${uuidv4().substring(0, 8)}_${Date.now()}`;
-      paystack = await initializePaystackPayment(refId, amountToPay, user.email, secretKey);
+      if (!isMobileClient) {
+        paystack = await initializePaystackPayment(refId, amountToPay, user.email, secretKey);
+      }
     }
 
     res.status(200).json({
@@ -962,13 +967,18 @@ export const prepareMilestonePayment = async (req: Request, res: Response): Prom
     let paystack: any = null;
     let paidWithWallet = false;
 
+    const userAgent = String(req.headers['user-agent'] || '');
+    const isMobileClient = userAgent.includes('Dart') || (req.body as any)?.isMobile === true;
+
     if (wantsWallet && userWallet >= milestoneAmount) {
       refId = `wlt_ms_${uuidv4().substring(0, 8)}_${Date.now()}`;
       paidWithWallet = true;
     } else {
       const secretKey = await getPaystackSecretKey();
       refId = `psk_ms_${uuidv4().substring(0, 8)}_${Date.now()}`;
-      paystack = await initializePaystackPayment(refId, milestoneAmount, user.email, secretKey);
+      if (!isMobileClient) {
+        paystack = await initializePaystackPayment(refId, milestoneAmount, user.email, secretKey);
+      }
     }
 
     res.status(200).json({

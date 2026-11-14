@@ -2260,6 +2260,9 @@ export const prepareCheckoutNaira = async (
 		let paystack: any = null;
 		let paidWithWallet = false;
 
+		const userAgent = String(req.headers["user-agent"] || "");
+		const isMobileClient = userAgent.includes("Dart") || (req.body as any)?.isMobile === true;
+
 		if (amountToPay === 0 && useWallet && walletDeduction > 0) {
 			refId = `wlt_${uuidv4().substring(0, 8)}_${Date.now()}`;
 			paidWithWallet = true;
@@ -2278,12 +2281,17 @@ export const prepareCheckoutNaira = async (
 			const secretKey = paymentGateway.secretKey;
 			refId = `psk_${uuidv4()}_${Date.now()}`;
 
-			paystack = await initializePaystackPayment(
-				refId,
-				amountToPay,
-				user.email,
-				secretKey,
-			);
+			// Web clients (PaystackPop.resumeTransaction) require a pre-initialized Paystack session and access_code.
+			// Mobile Flutter clients (pay_with_paystack) initialize the transaction directly on the client with refId.
+			// Pre-initializing on Paystack here for mobile causes Paystack to return 400 "Duplicate Transaction Reference".
+			if (!isMobileClient) {
+				paystack = await initializePaystackPayment(
+					refId,
+					amountToPay,
+					user.email,
+					secretKey,
+				);
+			}
 		}
 
 		res.status(200).json({
