@@ -70,6 +70,32 @@ const sequelizeService = {
 
 			// Sync the models with the database
 			await sequelizeService.connection.sync({ force: false });
+
+			// Ensure foreign key constraint on installment_plans.vendorId is dropped
+			// so products listed by Admin (admins table) or dropship suppliers can be purchased on Layaway
+			try {
+				await sequelizeService.connection.query(`
+					SET @fk_name = (
+						SELECT CONSTRAINT_NAME
+						FROM information_schema.KEY_COLUMN_USAGE
+						WHERE TABLE_SCHEMA = DATABASE()
+							AND TABLE_NAME = 'installment_plans'
+							AND COLUMN_NAME = 'vendorId'
+							AND REFERENCED_TABLE_NAME IS NOT NULL
+						LIMIT 1
+					);
+					SET @sql = IF(@fk_name IS NOT NULL, CONCAT('ALTER TABLE installment_plans DROP FOREIGN KEY ', @fk_name), 'SELECT 1');
+					PREPARE stmt FROM @sql;
+					EXECUTE stmt;
+					DEALLOCATE PREPARE stmt;
+				`);
+				await sequelizeService.connection.query(`
+					ALTER TABLE installment_plans MODIFY COLUMN vendorId CHAR(36) NULL;
+				`);
+			} catch (_fkErr) {
+				// Non-fatal if table does not exist yet or already altered
+			}
+
 			console.log("[SEQUELIZE] Database service initialized");
 		} catch (error) {
 			console.error(

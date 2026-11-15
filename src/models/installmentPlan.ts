@@ -43,6 +43,12 @@ class InstallmentPlan extends Model {
     this.belongsTo(models.User, {
       as: 'vendor',
       foreignKey: 'vendorId',
+      constraints: false,
+    });
+    this.belongsTo(models.Admin, {
+      as: 'admin',
+      foreignKey: 'vendorId',
+      constraints: false,
     });
     this.hasMany(models.InstallmentMilestone, {
       as: 'milestones',
@@ -82,11 +88,7 @@ const initModel = (sequelize: Sequelize) => {
       },
       vendorId: {
         type: DataTypes.UUID,
-        allowNull: false,
-        references: {
-          model: 'users',
-          key: 'id',
-        },
+        allowNull: true,
       },
       storeId: {
         type: DataTypes.UUID,

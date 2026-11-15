@@ -644,8 +644,8 @@ export const confirmInstallmentCheckout = async (req: Request, res: Response): P
       {
         userId,
         productId,
-        vendorId: product.vendorId,
-        storeId: product.storeId,
+        vendorId: product.vendorId || null,
+        storeId: product.storeId || null,
         mode,
         fulfillment_trigger,
         productPrice: orderItemTotal,
@@ -771,19 +771,22 @@ export const confirmInstallmentCheckout = async (req: Request, res: Response): P
       { transaction },
     );
 
-    // Notify Vendor
+    // Notify Vendor (if product belongs to a registered marketplace vendor)
     if (product.vendorId) {
-      await Notification.create(
-        {
-          userId: product.vendorId,
-          title: mode === 'bnpl' ? 'New BNPL Order Dispatched' : 'Product Placed on Layaway Reservation',
-          type: 'new_order',
-          message: mode === 'bnpl'
-            ? `An installment order for "${product.name}" was approved and is ready to fulfill.`
-            : `Product "${product.name}" has been reserved under customer layaway. Stock has been placed on hold.`,
-        },
-        { transaction },
-      );
+      const vendorUser = await User.findByPk(product.vendorId, { transaction });
+      if (vendorUser) {
+        await Notification.create(
+          {
+            userId: product.vendorId,
+            title: mode === 'bnpl' ? 'New BNPL Order Dispatched' : 'Product Placed on Layaway Reservation',
+            type: 'new_order',
+            message: mode === 'bnpl'
+              ? `An installment order for "${product.name}" was approved and is ready to fulfill.`
+              : `Product "${product.name}" has been reserved under customer layaway. Stock has been placed on hold.`,
+          },
+          { transaction },
+        );
+      }
     }
 
     await transaction.commit();
@@ -1219,17 +1222,20 @@ export const confirmMilestonePayment = async (req: Request, res: Response): Prom
           { transaction },
         );
 
-        // Notify Vendor
+        // Notify Vendor (if product belongs to a registered marketplace vendor)
         if (plan.vendorId) {
-          await Notification.create(
-            {
-              userId: plan.vendorId,
-              title: 'Layaway Fully Completed – Fulfill Order',
-              type: 'new_order',
-              message: `Customer has completed all installment payments for "${plan.product?.name || 'the item'}". Please fulfill and ship the order.`,
-            },
-            { transaction },
-          );
+          const vendorUser = await User.findByPk(plan.vendorId, { transaction });
+          if (vendorUser) {
+            await Notification.create(
+              {
+                userId: plan.vendorId,
+                title: 'Layaway Fully Completed – Fulfill Order',
+                type: 'new_order',
+                message: `Customer has completed all installment payments for "${plan.product?.name || 'the item'}". Please fulfill and ship the order.`,
+              },
+              { transaction },
+            );
+          }
         }
       }
     } else {
