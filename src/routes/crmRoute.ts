@@ -29,4 +29,10 @@ routes.get("/payouts", checkPermission("view-crm"), crm.listPayouts);
 routes.post("/payouts", checkPermission("manage-crm"), crm.createPayout);
 routes.patch("/payouts/:payoutId/status", checkPermission("manage-crm"), crm.updatePayout);
 
+routes.get("/coupons", checkPermission("view-crm"), crm.listCoupons);
+routes.post("/coupons", checkPermission("manage-crm"), crm.createCoupon);
+routes.put("/coupons/:couponId", checkPermission("manage-crm"), crm.updateCoupon);
+routes.patch("/coupons/:couponId/status", checkPermission("manage-crm"), crm.updateCouponStatus);
+routes.delete("/coupons/:couponId", checkPermission("manage-crm"), crm.deleteCoupon);
+
 export default routes;

@@ -7,29 +7,59 @@ import CrmVendorReferral from "../models/crmvendorreferral";
 import CrmCommissionRule from "../models/crmcommissionrule";
 import CrmCommission from "../models/crmcommission";
 import CrmPayout from "../models/crmpayout";
+import CrmCoupon from "../models/crmcoupon";
 import User from "../models/user";
 import Order from "../models/order";
 
 interface AdminRequest extends Request { adminId?: string }
 const fail = (res: Response, error: any) => res.status(500).json({ message: error?.message || "Internal server error" });
 const required = (body: any, fields: string[]) => fields.filter(field => body[field] === undefined || body[field] === null || body[field] === "");
+const cleanUuid = (value: any) => (value === undefined || value === null || String(value).trim() === "" ? null : String(value).trim());
 const page = (req: Request) => ({ limit: Math.min(Math.max(Number(req.query.limit) || 20, 1), 100), offset: (Math.max(Number(req.query.page) || 1, 1) - 1) * Math.min(Math.max(Number(req.query.limit) || 20, 1), 100) });
 const paginated = (rows: any[], count: number, req: Request) => ({ data: rows, pagination: { page: Math.max(Number(req.query.page) || 1, 1), limit: Math.min(Math.max(Number(req.query.limit) || 20, 1), 100), total: count, pages: Math.ceil(count / Math.min(Math.max(Number(req.query.limit) || 20, 1), 100)) } });
 
 export const dashboard = async (_req: Request, res: Response) => {
 	try {
-		const [activeCampaigns, activeRepresentatives, referredVendors, pendingCommission, pendingPayouts] = await Promise.all([
-			CrmCampaign.count({ where: { status: "active" } }), CrmRepresentative.count({ where: { status: "active" } }), CrmVendorReferral.count(),
-			CrmCommission.sum("amount", { where: { status: { [Op.in]: ["pending", "qualified", "approved"] } } }), CrmPayout.count({ where: { status: "pending" } }),
+		const [activeCampaigns, marketCampaigns, vendorCampaigns, activeCoupons, activeRepresentatives, referredVendors, pendingCommission, pendingPayouts] = await Promise.all([
+			CrmCampaign.count({ where: { status: "active" } }),
+			CrmCampaign.count({ where: { campaignType: "market_campaign" } }),
+			CrmCampaign.count({ where: { campaignType: { [Op.in]: ["vendor_acquisition", "vendor_promo"] } } }),
+			CrmCoupon.count({ where: { status: "active" } }),
+			CrmRepresentative.count({ where: { status: "active" } }),
+			CrmVendorReferral.count(),
+			CrmCommission.sum("amount", { where: { status: { [Op.in]: ["pending", "qualified", "approved"] } } }),
+			CrmPayout.count({ where: { status: "pending" } }),
 		]);
-		res.json({ data: { activeCampaigns, activeRepresentatives, referredVendors, pendingCommission: Number(pendingCommission || 0), pendingPayouts } });
+		res.json({ data: { activeCampaigns, marketCampaigns, vendorCampaigns, activeCoupons, activeRepresentatives, referredVendors, pendingCommission: Number(pendingCommission || 0), pendingPayouts } });
 	} catch (error) { fail(res, error); }
 };
 
 export const listCampaigns = async (req: Request, res: Response) => {
 	try {
-		const where: any = {}; if (req.query.status) where.status = req.query.status; if (req.query.search) where.name = { [Op.like]: `%${req.query.search}%` };
-		const result = await CrmCampaign.findAndCountAll({ where, ...page(req), order: [["createdAt", "DESC"]], include: [{ model: CrmRepresentative, as: "representatives", attributes: ["id", "firstName", "lastName", "referralCode"], through: { attributes: [] } }] });
+		const where: any = {};
+		if (req.query.status) where.status = req.query.status;
+		if (req.query.campaignType) where.campaignType = req.query.campaignType;
+		if (req.query.vendorId) where.vendorId = req.query.vendorId;
+		if (req.query.marketName) where.marketName = { [Op.like]: `%${req.query.marketName}%` };
+		if (req.query.search) {
+			where[Op.or] = [
+				{ name: { [Op.like]: `%${req.query.search}%` } },
+				{ code: { [Op.like]: `%${req.query.search}%` } },
+				{ marketName: { [Op.like]: `%${req.query.search}%` } },
+				{ marketLocation: { [Op.like]: `%${req.query.search}%` } },
+			];
+		}
+		const result = await CrmCampaign.findAndCountAll({
+			where,
+			...page(req),
+			order: [["createdAt", "DESC"]],
+			distinct: true,
+			include: [
+				{ model: CrmRepresentative, as: "representatives", attributes: ["id", "firstName", "lastName", "referralCode"], through: { attributes: [] } },
+				{ model: User, as: "vendor", attributes: ["id", "firstName", "lastName", "email"] },
+				{ model: CrmCoupon, as: "coupons", attributes: ["id", "code", "status", "usageCount"] },
+			],
+		});
 		res.json(paginated(result.rows, result.count, req));
 	} catch (error) { fail(res, error); }
 };
@@ -38,13 +68,41 @@ export const createCampaign = async (req: AdminRequest, res: Response) => {
 	try {
 		const missing = required(req.body, ["name", "code", "startsAt", "endsAt"]); if (missing.length) return res.status(422).json({ message: `Required fields: ${missing.join(", ")}` });
 		if (new Date(req.body.endsAt) <= new Date(req.body.startsAt)) return res.status(422).json({ message: "endsAt must be after startsAt" });
-		const campaign = await CrmCampaign.create({ ...req.body, code: String(req.body.code).trim().toUpperCase(), createdBy: req.adminId });
+		const campaignType = req.body.campaignType || "vendor_acquisition";
+		if (!["vendor_acquisition", "market_campaign", "vendor_promo"].includes(campaignType)) return res.status(422).json({ message: "Invalid campaignType" });
+		const vendorId = cleanUuid(req.body.vendorId);
+		if (vendorId) {
+			const vendor = await User.findOne({ where: { id: vendorId, accountType: "Vendor" } });
+			if (!vendor) return res.status(404).json({ message: "Selected vendor not found" });
+		}
+		const campaign = await CrmCampaign.create({
+			...req.body,
+			campaignType,
+			marketName: req.body.marketName ? String(req.body.marketName).trim() : null,
+			marketLocation: req.body.marketLocation ? String(req.body.marketLocation).trim() : null,
+			vendorId,
+			code: String(req.body.code).trim().toUpperCase(),
+			createdBy: req.adminId,
+		});
 		res.status(201).json({ message: "Campaign created", data: campaign });
 	} catch (error: any) { if (error?.name === "SequelizeUniqueConstraintError") return res.status(409).json({ message: "Campaign code already exists" }); fail(res, error); }
 };
 
 export const updateCampaign = async (req: Request, res: Response) => {
-	try { const campaign = await CrmCampaign.findByPk(String(req.params.campaignId)); if (!campaign) return res.status(404).json({ message: "Campaign not found" }); await campaign.update(req.body); res.json({ message: "Campaign updated", data: campaign }); } catch (error) { fail(res, error); }
+	try {
+		const campaign = await CrmCampaign.findByPk(String(req.params.campaignId));
+		if (!campaign) return res.status(404).json({ message: "Campaign not found" });
+		const payload: any = { ...req.body };
+		if (payload.code !== undefined) payload.code = String(payload.code).trim().toUpperCase();
+		if (payload.vendorId !== undefined) payload.vendorId = cleanUuid(payload.vendorId);
+		if (payload.marketName !== undefined) payload.marketName = payload.marketName ? String(payload.marketName).trim() : null;
+		if (payload.marketLocation !== undefined) payload.marketLocation = payload.marketLocation ? String(payload.marketLocation).trim() : null;
+		const startsAt = payload.startsAt ? new Date(payload.startsAt) : (campaign as any).startsAt;
+		const endsAt = payload.endsAt ? new Date(payload.endsAt) : (campaign as any).endsAt;
+		if (endsAt <= startsAt) return res.status(422).json({ message: "endsAt must be after startsAt" });
+		await campaign.update(payload);
+		res.json({ message: "Campaign updated", data: campaign });
+	} catch (error: any) { if (error?.name === "SequelizeUniqueConstraintError") return res.status(409).json({ message: "Campaign code already exists" }); fail(res, error); }
 };
 
 export const listRepresentatives = async (req: Request, res: Response) => {
@@ -143,5 +201,119 @@ export const updatePayout = async (req: AdminRequest, res: Response) => {
 		await payout.update({ status, reference: req.body.reference || (payout as any).reference, notes: req.body.notes, approvedBy: req.adminId, approvedAt: status === "approved" ? new Date() : (payout as any).approvedAt, paidAt: status === "paid" ? new Date() : null });
 		if (status === "paid") await CrmCommission.update({ status: "paid", paidAt: new Date() }, { where: { id: { [Op.in]: ((payout as any).commissionIds || []) }, status: "approved" } });
 		res.json({ message: `Payout ${status}`, data: payout });
+	} catch (error) { fail(res, error); }
+};
+
+export const listCoupons = async (req: Request, res: Response) => {
+	try {
+		const where: any = {};
+		if (req.query.status) where.status = req.query.status;
+		if (req.query.scope) where.scope = req.query.scope;
+		if (req.query.campaignId) where.campaignId = req.query.campaignId;
+		if (req.query.vendorId) where.vendorId = req.query.vendorId;
+		if (req.query.search) {
+			where[Op.or] = [
+				{ code: { [Op.like]: `%${req.query.search}%` } },
+				{ name: { [Op.like]: `%${req.query.search}%` } },
+				{ marketName: { [Op.like]: `%${req.query.search}%` } },
+			];
+		}
+		const result = await CrmCoupon.findAndCountAll({
+			where,
+			...page(req),
+			order: [["createdAt", "DESC"]],
+			include: [
+				{ model: CrmCampaign, as: "campaign", attributes: ["id", "name", "code", "campaignType", "marketName"] },
+				{ model: User, as: "vendor", attributes: ["id", "firstName", "lastName", "email"] },
+			],
+		});
+		res.json(paginated(result.rows, result.count, req));
+	} catch (error) { fail(res, error); }
+};
+
+export const createCoupon = async (req: AdminRequest, res: Response) => {
+	try {
+		const missing = required(req.body, ["code", "name", "discountValue", "startsAt", "endsAt"]);
+		if (missing.length) return res.status(422).json({ message: `Required fields: ${missing.join(", ")}` });
+		if (new Date(req.body.endsAt) <= new Date(req.body.startsAt)) return res.status(422).json({ message: "endsAt must be after startsAt" });
+		const discountType = req.body.discountType || "percentage";
+		if (!["percentage", "fixed"].includes(discountType)) return res.status(422).json({ message: "Invalid discountType" });
+		const discountValue = Number(req.body.discountValue);
+		if (!(discountValue > 0)) return res.status(422).json({ message: "discountValue must be greater than 0" });
+		if (discountType === "percentage" && discountValue > 100) return res.status(422).json({ message: "Percentage discount cannot exceed 100%" });
+		const scope = req.body.scope || "all";
+		if (!["all", "market", "vendor"].includes(scope)) return res.status(422).json({ message: "Invalid coupon scope" });
+		const vendorId = cleanUuid(req.body.vendorId);
+		const campaignId = cleanUuid(req.body.campaignId);
+		if (vendorId) {
+			const vendor = await User.findOne({ where: { id: vendorId, accountType: "Vendor" } });
+			if (!vendor) return res.status(404).json({ message: "Selected vendor not found" });
+		}
+		if (campaignId) {
+			const campaign = await CrmCampaign.findByPk(campaignId);
+			if (!campaign) return res.status(404).json({ message: "Selected campaign not found" });
+		}
+		const coupon = await CrmCoupon.create({
+			...req.body,
+			code: String(req.body.code).trim().toUpperCase().replace(/\s+/g, ""),
+			name: String(req.body.name).trim(),
+			discountType,
+			discountValue,
+			currency: req.body.currency || "NGN",
+			minOrderAmount: Number(req.body.minOrderAmount || 0),
+			maxDiscountAmount: req.body.maxDiscountAmount ? Number(req.body.maxDiscountAmount) : null,
+			usageLimit: req.body.usageLimit ? Number(req.body.usageLimit) : null,
+			perUserLimit: Number(req.body.perUserLimit || 1),
+			scope,
+			marketName: req.body.marketName ? String(req.body.marketName).trim() : null,
+			vendorId,
+			campaignId,
+			status: req.body.status || "active",
+			createdBy: req.adminId,
+		});
+		res.status(201).json({ message: "Coupon created", data: coupon });
+	} catch (error: any) { if (error?.name === "SequelizeUniqueConstraintError") return res.status(409).json({ message: "Coupon code already exists" }); fail(res, error); }
+};
+
+export const updateCoupon = async (req: Request, res: Response) => {
+	try {
+		const coupon = await CrmCoupon.findByPk(String(req.params.couponId));
+		if (!coupon) return res.status(404).json({ message: "Coupon not found" });
+		const payload: any = { ...req.body };
+		if (payload.code !== undefined) payload.code = String(payload.code).trim().toUpperCase().replace(/\s+/g, "");
+		if (payload.vendorId !== undefined) payload.vendorId = cleanUuid(payload.vendorId);
+		if (payload.campaignId !== undefined) payload.campaignId = cleanUuid(payload.campaignId);
+		if (payload.marketName !== undefined) payload.marketName = payload.marketName ? String(payload.marketName).trim() : null;
+		if (payload.maxDiscountAmount === "") payload.maxDiscountAmount = null;
+		if (payload.usageLimit === "") payload.usageLimit = null;
+		const startsAt = payload.startsAt ? new Date(payload.startsAt) : (coupon as any).startsAt;
+		const endsAt = payload.endsAt ? new Date(payload.endsAt) : (coupon as any).endsAt;
+		if (endsAt <= startsAt) return res.status(422).json({ message: "endsAt must be after startsAt" });
+		const discountType = payload.discountType || (coupon as any).discountType;
+		const discountValue = payload.discountValue !== undefined ? Number(payload.discountValue) : Number((coupon as any).discountValue);
+		if (discountType === "percentage" && discountValue > 100) return res.status(422).json({ message: "Percentage discount cannot exceed 100%" });
+		await coupon.update(payload);
+		res.json({ message: "Coupon updated", data: coupon });
+	} catch (error: any) { if (error?.name === "SequelizeUniqueConstraintError") return res.status(409).json({ message: "Coupon code already exists" }); fail(res, error); }
+};
+
+export const updateCouponStatus = async (req: Request, res: Response) => {
+	try {
+		const coupon = await CrmCoupon.findByPk(String(req.params.couponId));
+		if (!coupon) return res.status(404).json({ message: "Coupon not found" });
+		const status = req.body.status;
+		if (!["draft", "active", "paused", "expired"].includes(status)) return res.status(422).json({ message: "Invalid coupon status" });
+		await coupon.update({ status });
+		res.json({ message: `Coupon ${status}`, data: coupon });
+	} catch (error) { fail(res, error); }
+};
+
+export const deleteCoupon = async (req: Request, res: Response) => {
+	try {
+		const coupon = await CrmCoupon.findByPk(String(req.params.couponId));
+		if (!coupon) return res.status(404).json({ message: "Coupon not found" });
+		if (Number((coupon as any).usageCount || 0) > 0) return res.status(409).json({ message: "Coupon has already been redeemed; pause or expire it instead" });
+		await coupon.destroy();
+		res.json({ message: "Coupon deleted" });
 	} catch (error) { fail(res, error); }
 };

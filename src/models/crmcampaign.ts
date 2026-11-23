@@ -5,6 +5,10 @@ class CrmCampaign extends Model {
 	public name!: string;
 	public code!: string;
 	public description?: string;
+	public campaignType!: "vendor_acquisition" | "market_campaign" | "vendor_promo";
+	public marketName?: string | null;
+	public marketLocation?: string | null;
+	public vendorId?: string | null;
 	public channel!: "field_reps" | "referral" | "event" | "digital" | "other";
 	public status!: "draft" | "active" | "paused" | "completed";
 	public targetVendors!: number;
@@ -15,9 +19,11 @@ class CrmCampaign extends Model {
 
 	static associate(models: any) {
 		this.belongsTo(models.Admin, { as: "creator", foreignKey: "createdBy" });
+		this.belongsTo(models.User, { as: "vendor", foreignKey: "vendorId" });
 		this.belongsToMany(models.CrmRepresentative, { through: models.CrmCampaignRepresentative, as: "representatives", foreignKey: "campaignId" });
 		this.hasMany(models.CrmVendorReferral, { as: "referrals", foreignKey: "campaignId" });
 		this.hasMany(models.CrmCommissionRule, { as: "commissionRules", foreignKey: "campaignId" });
+		this.hasMany(models.CrmCoupon, { as: "coupons", foreignKey: "campaignId" });
 	}
 }
 
@@ -26,6 +32,10 @@ const initModel = (sequelize: Sequelize) => CrmCampaign.init({
 	name: { type: DataTypes.STRING, allowNull: false },
 	code: { type: DataTypes.STRING(30), allowNull: false, unique: true },
 	description: DataTypes.TEXT,
+	campaignType: { type: DataTypes.ENUM("vendor_acquisition", "market_campaign", "vendor_promo"), allowNull: false, defaultValue: "vendor_acquisition" },
+	marketName: { type: DataTypes.STRING, allowNull: true },
+	marketLocation: { type: DataTypes.STRING, allowNull: true },
+	vendorId: { type: DataTypes.UUID, allowNull: true },
 	channel: { type: DataTypes.ENUM("field_reps", "referral", "event", "digital", "other"), allowNull: false, defaultValue: "field_reps" },
 	status: { type: DataTypes.ENUM("draft", "active", "paused", "completed"), allowNull: false, defaultValue: "draft" },
 	targetVendors: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false, defaultValue: 0 },
