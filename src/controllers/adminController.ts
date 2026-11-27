@@ -2018,16 +2018,30 @@ export const getAllCustomers = async (
 	const { page = 1, limit = 10, search = "" } = req.query;
 
 	try {
-		const offset = (Number(page) - 1) * Number(limit);
+		const pageNumber = Math.max(1, Number(page) || 1);
+		const limitNumber = Math.min(10000, Math.max(1, Number(limit) || 10));
+		const offset = (pageNumber - 1) * limitNumber;
+		const term = String(search || "").trim();
 
-		const searchCondition = {
-			[Op.or]: [
-				{ firstName: { [Op.like]: `%${search}%` } },
-				{ lastName: { [Op.like]: `%${search}%` } },
-				{ email: { [Op.like]: `%${search}%` } },
-				{ phoneNumber: { [Op.like]: `%${search}%` } },
-			],
-		};
+		const searchCondition = term
+			? {
+					[Op.or]: [
+						{ firstName: { [Op.like]: `%${term}%` } },
+						{ lastName: { [Op.like]: `%${term}%` } },
+						{ email: { [Op.like]: `%${term}%` } },
+						{ phoneNumber: { [Op.like]: `%${term}%` } },
+						Sequelize.where(
+							Sequelize.fn(
+								"CONCAT",
+								Sequelize.fn("COALESCE", Sequelize.col("firstName"), ""),
+								" ",
+								Sequelize.fn("COALESCE", Sequelize.col("lastName"), ""),
+							),
+							{ [Op.like]: `%${term}%` },
+						),
+					],
+				}
+			: {};
 
 		const { rows: customers, count: totalCustomers } =
 			await User.findAndCountAll({
@@ -2035,7 +2049,7 @@ export const getAllCustomers = async (
 					accountType: "Customer",
 					...searchCondition,
 				},
-				limit: Number(limit),
+				limit: limitNumber,
 				offset,
 				order: [["createdAt", "DESC"]],
 			});
@@ -2045,9 +2059,15 @@ export const getAllCustomers = async (
 			data: customers,
 			meta: {
 				totalCustomers,
-				currentPage: Number(page),
-				totalPages: Math.ceil(totalCustomers / Number(limit)),
-				limit: Number(limit),
+				currentPage: pageNumber,
+				totalPages: Math.ceil(totalCustomers / limitNumber),
+				limit: limitNumber,
+			},
+			pagination: {
+				total: totalCustomers,
+				page: pageNumber,
+				pages: Math.ceil(totalCustomers / limitNumber),
+				limit: limitNumber,
 			},
 		});
 	} catch (error) {
@@ -2063,24 +2083,38 @@ export const getAllVendors = async (
 	const { page = 1, limit = 10, search = "" } = req.query;
 
 	try {
-		const offset = (Number(page) - 1) * Number(limit);
+		const pageNumber = Math.max(1, Number(page) || 1);
+		const limitNumber = Math.min(10000, Math.max(1, Number(limit) || 10));
+		const offset = (pageNumber - 1) * limitNumber;
+		const term = String(search || "").trim();
 
-		const searchCondition = {
-			[Op.or]: [
-				{ firstName: { [Op.like]: `%${search}%` } },
-				{ lastName: { [Op.like]: `%${search}%` } },
-				{ email: { [Op.like]: `%${search}%` } },
-				{ phoneNumber: { [Op.like]: `%${search}%` } },
-				{ trackingId: { [Op.like]: `%${search}%` } },
-			],
-		};
+		const searchCondition = term
+			? {
+					[Op.or]: [
+						{ firstName: { [Op.like]: `%${term}%` } },
+						{ lastName: { [Op.like]: `%${term}%` } },
+						{ email: { [Op.like]: `%${term}%` } },
+						{ phoneNumber: { [Op.like]: `%${term}%` } },
+						{ trackingId: { [Op.like]: `%${term}%` } },
+						Sequelize.where(
+							Sequelize.fn(
+								"CONCAT",
+								Sequelize.fn("COALESCE", Sequelize.col("firstName"), ""),
+								" ",
+								Sequelize.fn("COALESCE", Sequelize.col("lastName"), ""),
+							),
+							{ [Op.like]: `%${term}%` },
+						),
+					],
+				}
+			: {};
 
 		const { rows: vendors, count: totalVendors } = await User.findAndCountAll({
 			where: {
 				accountType: "Vendor",
 				...searchCondition,
 			},
-			limit: Number(limit),
+			limit: limitNumber,
 			offset,
 			order: [["createdAt", "DESC"]],
 		});
@@ -2090,9 +2124,15 @@ export const getAllVendors = async (
 			data: vendors,
 			meta: {
 				totalVendors,
-				currentPage: Number(page),
-				totalPages: Math.ceil(totalVendors / Number(limit)),
-				limit: Number(limit),
+				currentPage: pageNumber,
+				totalPages: Math.ceil(totalVendors / limitNumber),
+				limit: limitNumber,
+			},
+			pagination: {
+				total: totalVendors,
+				page: pageNumber,
+				pages: Math.ceil(totalVendors / limitNumber),
+				limit: limitNumber,
 			},
 		});
 	} catch (error) {
@@ -2375,13 +2415,26 @@ export const getGeneralProducts = async (
 	req: Request,
 	res: Response,
 ): Promise<void> => {
-	const { name, sku, status, condition, categoryName, categoryId, page, limit } = req.query;
+	const { name, search, sku, status, condition, categoryName, categoryId, page, limit } = req.query;
 
 	try {
 		// Get pagination parameters
-		const pageNumber = parseInt(page as string, 10) || 1; // Default to page 1 if not provided
-		const limitNumber = parseInt(limit as string, 10) || 10; // Default to 10 items per page
+		const pageNumber = Math.max(1, parseInt(page as string, 10) || 1);
+		const limitNumber = Math.min(10000, Math.max(1, parseInt(limit as string, 10) || 10));
 		const offset = (pageNumber - 1) * limitNumber;
+		const term = String(search || name || "").trim();
+
+		const whereClause: any = {};
+		if (term) {
+			whereClause[Op.or] = [
+				{ name: { [Op.like]: `%${term}%` } },
+				{ sku: { [Op.like]: `%${term}%` } },
+				{ description: { [Op.like]: `%${term}%` } },
+			];
+		}
+		if (sku) whereClause.sku = sku;
+		if (status) whereClause.status = status;
+		if (condition) whereClause.condition = condition;
 
 		// Fetch products with filters, pagination, and associated data
 		const { rows: products, count: totalProducts } =
@@ -2419,41 +2472,24 @@ export const getGeneralProducts = async (
 						],
 					},
 				],
-				...((name || sku || status || condition) && {
-					where: {
-						...(name && { name: { [Op.like]: `%${name}%` } }),
-						...(sku && { sku }),
-						...(status && { status }),
-						...(condition && { condition }),
-					},
-				}),
-				offset, // Apply offset for pagination
-				limit: limitNumber, // Apply limit for pagination
-				order: [["createdAt", "DESC"]], // Order by creation date (newest first)
+				where: whereClause,
+				offset,
+				limit: limitNumber,
+				order: [["createdAt", "DESC"]],
 			});
 
-		// Check if products were found
-		if (!products || products.length === 0) {
-			res.status(404).json({
-				message: "No products found.",
-				data: [],
-				pagination: {
-					total: totalProducts,
-					page: pageNumber,
-					pages: Math.ceil(totalProducts / limitNumber),
-				},
-			});
-			return;
-		}
-
-		// Return products with pagination metadata
+		// Return products with pagination metadata (200 even when empty so search shows clean empty state)
 		res.status(200).json({
-			message: "Products retrieved successfully.",
+			message:
+				products.length > 0
+					? "Products retrieved successfully."
+					: "No products found.",
 			data: products,
 			pagination: {
 				total: totalProducts,
 				page: pageNumber,
 				pages: Math.ceil(totalProducts / limitNumber),
+				limit: limitNumber,
 			},
 		});
 	} catch (error: any) {
