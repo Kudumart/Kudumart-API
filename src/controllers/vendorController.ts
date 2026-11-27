@@ -1249,7 +1249,9 @@ export const updateAuctionProduct = async (
 		auctionProduct.startDate = startDate || auctionProduct.startDate;
 		auctionProduct.endDate = endDate || auctionProduct.endDate;
 		auctionProduct.image = image || auctionProduct.image;
-		auctionProduct.video = video || auctionProduct.video;
+		if (video !== undefined) {
+			auctionProduct.video = video || null;
+		}
 		auctionProduct.additionalImages =
 			additionalImages || auctionProduct.additionalImages;
 

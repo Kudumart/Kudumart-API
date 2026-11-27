@@ -32,9 +32,12 @@ export const upload = multer({
         const allowedVideoTypes = [
             "video/mp4",
             "video/mkv",
+            "video/x-matroska",
             "video/avi",
+            "video/x-msvideo",
             "video/webm",
             "video/mov",
+            "video/quicktime",
             "video/flv",
         ];
 
@@ -98,13 +101,16 @@ export const uploadFile = async (req: Request, res: Response): Promise<void> => 
         else if (
             req.file.mimetype === "video/mp4" ||
             req.file.mimetype === "video/mkv" ||
+            req.file.mimetype === "video/x-matroska" ||
             req.file.mimetype === "video/avi" ||
+            req.file.mimetype === "video/x-msvideo" ||
             req.file.mimetype === "video/webm" ||
             req.file.mimetype === "video/mov" ||
+            req.file.mimetype === "video/quicktime" ||
             req.file.mimetype === "video/flv"
         ) {
-            const ext = path.extname(req.file.originalname); // Get the original file extension
-            filename += ext; // Use original file extension (e.g., .mp4, .mkv, etc.)
+            const ext = path.extname(req.file.originalname) || ".mp4"; // Get the original file extension
+            filename += ext; // Use original file extension (e.g., .mp4, .mov, .webm)
             filePath = path.join(uploadDir, filename);
 
             await fs.promises.writeFile(filePath, req.file.buffer); // Save the video as-is
@@ -129,6 +135,64 @@ export const uploadFile = async (req: Request, res: Response): Promise<void> => 
     } catch (error) {
         logger.error(error);
         res.status(500).json({ message: "Error processing file" });
+    }
+};
+
+// Dedicated disk-backed multer uploader for auction videos (up to 50MB)
+const ALLOWED_VIDEO_MIMES = new Set([
+    "video/mp4",
+    "video/webm",
+    "video/quicktime",
+    "video/mov",
+    "video/x-matroska",
+    "video/mkv",
+    "video/avi",
+    "video/x-msvideo",
+]);
+
+const videoDiskStorage = multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, uploadDir),
+    filename: (_req, file, cb) => {
+        const rawExt = path.extname(file.originalname || "").toLowerCase();
+        const safeExt = /^\.(mp4|webm|mov|mkv|avi)$/.test(rawExt) ? rawExt : ".mp4";
+        const prefix = (process.env.APP_NAME || "kudumart").toLowerCase();
+        cb(null, `${prefix}-video-${Date.now()}${safeExt}`);
+    },
+});
+
+export const uploadVideo = multer({
+    storage: videoDiskStorage,
+    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit for pre-recorded auction videos
+    fileFilter: (req: Request, file, cb) => {
+        if (ALLOWED_VIDEO_MIMES.has(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(null, false);
+            (req as any).fileValidationError =
+                "Only MP4, WebM, MOV, MKV, or AVI videos up to 50MB are allowed.";
+        }
+    },
+});
+
+export const uploadVideoFile = async (req: Request, res: Response): Promise<void> => {
+    try {
+        if ((req as any).fileValidationError) {
+            res.status(400).json({ message: (req as any).fileValidationError });
+            return;
+        }
+        if (!req.file) {
+            res.status(400).json({ message: "No video file uploaded." });
+            return;
+        }
+        const protocol =
+            process.env.NODE_ENV === "production"
+                ? "https"
+                : req.headers["x-forwarded-proto"] || req.protocol;
+        const fileUrl = `${protocol}://${req.get("host")}/uploads/${req.file.filename}`;
+        res.json({ message: "Video uploaded successfully", data: fileUrl });
+    } catch (error) {
+        logger.error(error);
+        res.status(500).json({ message: "Error uploading video" });
     }
 };
 
