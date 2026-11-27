@@ -3,6 +3,7 @@ import { Router } from "express";
 import * as adminController from "../controllers/adminController";
 import * as homeController from "../controllers/homeController";
 import * as installmentController from "../controllers/installmentController";
+import * as platformSettingsController from "../controllers/platformSettingsController";
 import adminAuthMiddleware from "../middlewares/adminAuthMiddleware";
 import {
 	adminUpdateProfileValidationRules,
@@ -1227,6 +1228,18 @@ adminRoutes.post(
 	"/installments/plans/:id/cancel",
 	adminAuthMiddleware,
 	installmentController.cancelInstallmentPlanByAdmin,
+);
+
+// Platform pickup address configuration
+adminRoutes.get(
+	"/settings/pickup",
+	adminAuthMiddleware,
+	platformSettingsController.getPickupSettings,
+);
+adminRoutes.put(
+	"/settings/pickup",
+	adminAuthMiddleware,
+	platformSettingsController.updatePickupSettings,
 );
 
 export default adminRoutes; // Export the router

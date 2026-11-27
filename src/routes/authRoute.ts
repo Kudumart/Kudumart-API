@@ -4,6 +4,7 @@ import passport from "passport";
 import * as authController from "../controllers/authController";
 import * as homeController from "../controllers/homeController";
 import * as installmentController from "../controllers/installmentController";
+import * as platformSettingsController from "../controllers/platformSettingsController";
 import {
 	registrationValidationRules,
 	verificationValidationRules,
@@ -220,6 +221,12 @@ authRoutes.get(
 authRoutes.get(
 	"/installments/config",
 	installmentController.getPublicInstallmentConfig,
+);
+
+// Public KuduMart store pickup address settings for checkout
+authRoutes.get(
+	"/pickup-address",
+	platformSettingsController.getPickupSettings,
 );
 
 export default authRoutes; // Export the router
